@@ -1,0 +1,35 @@
+---
+title: "Getting started"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(metaUI)
+library(dplyr)
+```
+
+
+## Preparing data
+
+If you have the data prepared for metaUI, you can read it in directly with `import_data()`. If any preprocessing needs to be done (e.g., for labels), you can also read in the file, preprocess it and then pass it to `import_data()`.
+
+```{r}
+df <- read.csv(system.file("extdata", "barroso2021.csv", package = "metaUI"))
+
+df <- df %>% mutate(study_label = paste0(study_id, ": ", author, " (", pub_year, ")"))
+
+df <- import_data(df, study_label = "study_label", es_field = "yi", sample_size = "ni",
+                  variance = "vi", filters = c("pub_year", "continent", "teachers"))
+
+```
