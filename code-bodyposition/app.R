@@ -385,6 +385,7 @@ server <- function(input, output) { # , session
                                    , sei = pp_agg$se
                                    , ni = pp_agg$nhighlow
                                    , data = pp_agg)$vi
+                    
       
       pet_agg <- lm(esg~sqrt(vi), data = pp_agg, weights=1/vi)
       

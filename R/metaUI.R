@@ -13,4 +13,8 @@
 #' @return The result of calling `rhs(lhs)`.
 NULL
 
-#' @import htmltools
+#' @import shiny
+#' @importFrom rlang :=
+#' @importFrom stats sd lm confint aggregate
+#' @importFrom utils read.csv
+NULL

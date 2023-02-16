@@ -24,12 +24,34 @@ library(dplyr)
 
 If you have the data prepared for metaUI, you can read it in directly with `import_data()`. If any preprocessing needs to be done (e.g., for labels), you can also read in the file, preprocess it and then pass it to `import_data()`.
 
+TK - is Fisher's z in this example equivalent to SMD?
+
 ```{r}
 df <- read.csv(system.file("extdata", "barroso2021.csv", package = "metaUI"))
 
-df <- df %>% mutate(study_label = paste0(study_id, ": ", author, " (", pub_year, ")"))
+df <- df %>% mutate(
+  study_label = paste0(study_id, ": ", author, " (", pub_year, ")"),
+  se = sqrt(vi), p.value = 2 * pnorm(-abs(yi)),
+  continent = factor(continent) %>% 
+    forcats::fct_recode("North America" = "1", "South America" = "2", "Europe" = "3",
+                        "Asia" = "4", "Africa" = "5", "Oceania" = "6", "NA" = "-999"),
+  teachers = factor(teachers) %>% 
+    forcats::fct_recode(yes = "1", no = "2")
+)
 
-df <- import_data(df, study_label = "study_label", es_field = "yi", sample_size = "ni",
-                  variance = "vi", filters = c("pub_year", "continent", "teachers"))
 
+
+
+df <- import_data(df,
+  study_label = "study_label", es_field = "yi", se = "se", pvalue = "p.value",
+  sample_size = "ni",
+  variance = "vi", filters = c("pub_year", "continent", "teachers"), es_type = "SMD"
+)
 ```
+
+## Running the app
+
+```{r}
+launch_shiny(df, "Barroso et al 2021 - Maths Anxiety", "Fisher's Z scores")
+```
+

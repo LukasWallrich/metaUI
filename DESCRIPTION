@@ -12,15 +12,31 @@ LazyData: true
 Suggests: 
     knitr,
     rmarkdown,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    forcats
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 Imports: 
     dplyr,
+    effsize,
+    esc,
+    ggplot2,
     glue,
-    htmltools,
     magrittr,
-    shiny
+    meta,
+    metafor,
+    plotly,
+    poibin,
+    puniform,
+    purrr,
+    rlang,
+    robumeta,
+    shiny,
+    shinycssloaders,
+    stringr,
+    tibble,
+    weightr,
+    writexl
 VignetteBuilder: knitr
 URL: https://lukaswallrich.github.io/metaUI/
