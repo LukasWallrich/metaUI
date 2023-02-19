@@ -32,9 +32,11 @@ import_data <- function(data, study_label, es_field, se, pvalue, sample_size, va
       dplyr::na_if("") %>%
       dplyr::coalesce(filters) %>%
       setNames(filters)
+    names(filters) <- NULL
   } else {
     filter_names <- filters %>% setNames(filters)
   }
+
 
   # Rename the fields
   data <- data %>%

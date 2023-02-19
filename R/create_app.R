@@ -37,9 +37,8 @@ launch_shiny <- function(dataset, dataset_name, eff_size_type_label = NA, ...) {
 
   metaUI_eff_size_type_label <<- eff_size_type_label
 
-  ui <- generate_ui(dataset_name, about)
+  ui <- eval(parse(text = generate_ui(dataset, dataset_name, about)))
 
   shinyApp(ui = ui, server = server)
 
 }
-

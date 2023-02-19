@@ -30,7 +30,7 @@ TK - is Fisher's z in this example equivalent to SMD?
 df <- read.csv(system.file("extdata", "barroso2021.csv", package = "metaUI"))
 
 df <- df %>% mutate(
-  study_label = paste0(study_id, ": ", author, " (", pub_year, ")"),
+  study_label = paste0(author, " (", pub_year, ")", ": ", study_id),
   se = sqrt(vi), p.value = 2 * pnorm(-abs(yi)),
   continent = factor(continent) %>% 
     forcats::fct_recode("North America" = "1", "South America" = "2", "Europe" = "3",
@@ -39,8 +39,7 @@ df <- df %>% mutate(
     forcats::fct_recode(yes = "1", no = "2")
 )
 
-
-
+c("Publication year" = "pub_year", Continent = "continent", "Teacher sample" = "teachers")
 
 df <- import_data(df,
   study_label = "study_label", es_field = "yi", se = "se", pvalue = "p.value",

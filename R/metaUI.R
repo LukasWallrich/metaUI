@@ -14,7 +14,7 @@
 NULL
 
 #' @import shiny
-#' @importFrom rlang :=
+#' @importFrom rlang := .data
 #' @importFrom stats sd lm confint aggregate
 #' @importFrom utils read.csv
 NULL
