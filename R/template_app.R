@@ -1,4 +1,8 @@
 
+# TK - defaults? Advanced options?
+aggregation_method <- c("aggregate", "first")
+correlation_dependent <- .6
+
 # Fixed texts
 go <- HTML("<br /><p style=\"color:blue\">Choose your set of studies and click on <b>Analyze data</b> to see the results.</p><br/>")
 
@@ -37,18 +41,16 @@ scroll <- HTML("Scroll down to see forest plot.")
 
 
 generate_ui_filters <- function(data) {
-
   filter_cols <- colnames(data) %>% stringr::str_subset("metaUI__filter_")
 
- purrr::map_chr(filter_cols, function(filter_col) {
-
+  purrr::map_chr(filter_cols, function(filter_col) {
     if (is.numeric(data[[filter_col]])) {
       # Round slider ends to (same) appropriate number of significant digits
       l <- log10(max(abs(max(data[[filter_col]], na.rm = TRUE)), abs(min(data[[filter_col]], na.rm = TRUE))))
       sig_dig <- dplyr::case_when(
-         l < 2 ~ max(abs(l), 2),
-         l >= 4 ~ 4,
-         TRUE ~ l
+        l < 2 ~ max(abs(l), 2),
+        l >= 4 ~ 4,
+        TRUE ~ l
       )
       sig_dig <- log10(max(abs(max(data[[filter_col]], na.rm = TRUE)), abs(min(data[[filter_col]], na.rm = TRUE)))) + 1
       glue::glue('
@@ -59,22 +61,21 @@ generate_ui_filters <- function(data) {
                             {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)}),
                         sep = ""
       )')
-
     } else {
-
       glue::glue('checkboxGroupInput("{filter_col}", "{stringr::str_remove(filter_col, "metaUI__filter_")}",
         choices = c("{glue::glue_collapse(unique(data[[filter_col]]), sep = \'", "\')}"),
         selected = c("{glue::glue_collapse(unique(data[[filter_col]]), sep = \'", "\')}")
         )')
     }
   }) %>% glue::glue_collapse(sep = ",\n")
-
 }
 
 generate_moderator_selection <- function(data) {
-    filter_cols <- colnames(data) %>% stringr::str_subset("metaUI__filter_")  %>% setNames(., stringr::str_remove(., "metaUI__filter_"))
-# Create a selection drop-down with filter_cols as values
-glue::glue('
+  filter_cols <- colnames(data) %>%
+    stringr::str_subset("metaUI__filter_") %>%
+    setNames(., stringr::str_remove(., "metaUI__filter_"))
+  # Create a selection drop-down with filter_cols as values
+  glue::glue('
     selectInput("moderator", "Moderator",
       choices = c("{glue::glue_collapse(filter_cols, sep = \'", "\')}"),
       selected = "{filter_cols[1]}"
@@ -82,7 +83,7 @@ glue::glue('
 }
 
 generate_ui <- function(data, dataset_name, about) {
-glue::glue('
+  glue::glue('
 
   fluidPage(
     theme = shinythemes::shinytheme("yeti"),
@@ -164,17 +165,22 @@ server <- function(input, output) { # , session
   insertUI(
     selector = "#z_score_filter",
     where = "beforeEnd",
-    ui = sliderInput("outliers", "Exclude based on z-scores", min = signif_floor(min(metaUI__df$metaUI__es_z), z_sig_dig),
-        max = signif_ceiling(max(metaUI__df$metaUI__es_z), z_sig_dig), value = c(
-            signif_floor(min(metaUI__df$metaUI__es_z), z_sig_dig),
-            signif_ceiling(max(metaUI__df$metaUI__es_z, na.rm = TRUE))), sep = "")
+    ui = sliderInput("outliers", "Exclude based on z-scores",
+      min = signif_floor(min(metaUI__df$metaUI__es_z), z_sig_dig),
+      max = signif_ceiling(max(metaUI__df$metaUI__es_z), z_sig_dig), value = c(
+        signif_floor(min(metaUI__df$metaUI__es_z), z_sig_dig),
+        signif_ceiling(max(metaUI__df$metaUI__es_z, na.rm = TRUE))
+      ), sep = ""
     )
+  )
 
   filter_cols <- colnames(metaUI__df) %>% stringr::str_subset("metaUI__filter_")
 
-  filters_types <- purrr::map_chr(filter_cols, \(x) {if(is.numeric(metaUI__df[[x]])) "numeric" else "selection"})
+  filters_types <- purrr::map_chr(filter_cols, \(x) {
+    if (is.numeric(metaUI__df[[x]])) "numeric" else "selection"
+  })
 
-  filters <- purrr::map2(filter_cols, filters_types, ~list(id = .x, type = .y))
+  filters <- purrr::map2(filter_cols, filters_types, ~ list(id = .x, type = .y))
 
   # Apply reactive filtering of dataset when clicking on the button
   df_filtered <- eventReactive(input$go, {
@@ -182,34 +188,29 @@ server <- function(input, output) { # , session
   })
 
   df_reactive <- reactive({
-    pp <- metaUI__df
+    df <- metaUI__df
 
+    # Filter by specified metadata filters
     for (i in seq_along(filters)) {
       if (filters[[i]]$type == "numeric") {
-        pp <- pp[pp[[filters[[i]]$id]] >= input[[filters[[i]]$id]][1] & pp[[filters[[i]]$id]] <= input[[filters[[i]]$id]][2], ]
+        df <- df[df[[filters[[i]]$id]] >= input[[filters[[i]]$id]][1] & df[[filters[[i]]$id]] <= input[[filters[[i]]$id]][2], ]
       } else {
-        pp <- pp[pp[[filters[[i]]$id]] %in% input[[filters[[i]]$id]], ]
+        df <- df[df[[filters[[i]]$id]] %in% input[[filters[[i]]$id]], ]
       }
     }
 
     # Filter by zscore
-    pp <- pp[pp$metaUI__es_z >= input$outliers[1] & pp$metaUI__es_z <= input$outliers[2], ]
-    pp
+    df <- df[df$metaUI__es_z >= input$outliers[1] & df$metaUI__es_z <= input$outliers[2], ]
+    df
   })
 
   # Data for forest plot and table ------------------------------------------
 
-  estimatesfiltered <- eventReactive(input$go, {
-
-    estimatesreactive()$table
-  })
-
   estimatesreactive <- reactive({
-    pp <- df_filtered()
-
+    df <- df_filtered()
 
     # Check if there are any studies left after filtering
-    if (nrow(pp) == 0) {
+    if (nrow(df) == 0) {
       showModal(modalDialog(
         title = "No effect sizes selected!",
         "Your selection criteria do not match any effect sizes. Please adjust them and try again."
@@ -218,119 +219,74 @@ server <- function(input, output) { # , session
       return(NULL)
     }
 
-        metapp_total <- metafor::rma.mv(
-      yi = metaUI__effect_size,
-      V = metaUI__variance,
-      random = ~ 1 | metaUI__study_id,
-      tdist = TRUE, # knapp-hartung adjustment
-      data = pp,
-      method = "REML"
-    )
+    if (aggregation_method[1] == "aggregate") {
+      # Aggregate dependent effects based on https://www.jepusto.com/sometimes-aggregating-effect-sizes-is-fine/
+      # note that this requires an assumption regarding the degree of correlation
+      agg_effects <- function(yi, vi, r = correlation_dependent) {
+        corr_mat <- r + diag(1 - r, nrow = length(vi))
+        sd_mat <- tcrossprod(sqrt(vi))
+        V_inv_mat <- chol2inv(chol(sd_mat * corr_mat))
+        V <- 1 / sum(V_inv_mat)
+        data.frame(es = V * sum(yi * V_inv_mat), var = V)
+      }
 
-    pp_agg <- pp %>%
-      dplyr::group_by(metaUI__study_id) %>%
-      dplyr::summarise(
-        dplyr::across(c(metaUI__effect_size, metaUI__se, metaUI__N), mean, na.rm = TRUE),
-        metaUI__es_type = dplyr::first(metaUI__es_type),
-        .groups = "drop"
+      df_agg <-
+        df %>%
+        dplyr::group_by(metaUI__study_id) %>%
+        dplyr::summarise(
+          es = list(agg_effects(yi = metaUI__effect_size, vi = metaUI__variance)),
+          metaUI__N = max(metaUI__N),
+          metaUI__es_type = dplyr::first(metaUI__es_type), # Could also aggregate filters - if length(unique(FILTER)) == 1
+          .groups = "drop"
+        ) %>%
+        tidyr::unnest(cols = "es") %>%
+        dplyr::rename(metaUI__effect_size = es, metaUI__variance = var) %>%
+        dplyr::mutate(metaUI__se = sqrt(metaUI__variance))
+    } else if (aggregation_method[1] == "first") {
+      df_agg <-
+        df %>%
+        dplyr::group_by(metaUI__study_id) %>%
+        dplyr::slice_head(n = 1) %>%
+        dplyr::ungroup()
+    } else {
+      stop("Aggregation method not recognized")
+    }
+
+    # Run all specified models
+    models <- purrr::pmap(models_to_run, \(...){
+      mod_spec <- tibble::tibble(...)
+      if (mod_spec$aggregated == TRUE) {
+        df <- df_agg
+      }
+      mod <- eval(parse(text = mod_spec$code))
+      mod_res <- tibble::tibble(
+        Model = mod_spec$name,
+        es = eval(parse(text = mod_spec$es)) %>% as.numeric(),
+        LCL = eval(parse(text = mod_spec$LCL)) %>% as.numeric(),
+        UCL = eval(parse(text = mod_spec$UCL)) %>% as.numeric(),
+        k = eval(parse(text = mod_spec$k)) %>% as.numeric()
       )
+      list(mod = mod, mod_res = mod_res)
+    }) %>% purrr::transpose()
 
-    pp_agg$vi <- metafor::escalc(
-      measure = pp_agg$metaUI__es_type[1],
-      yi = pp_agg$metaUI__effect_size,
-      sei = pp_agg$metaUI__se,
-      ni = pp_agg$metaUI__N,
-      data = pp_agg
-    )$vi
+    # Generate table
 
-    metapp_metagen_mean <- meta::metagen(
-      TE = metaUI__effect_size,
-      seTE = metaUI__se,
-      data = pp_agg,
-      studlab = pp_agg$metaUI__study_id,
-      comb.fixed = FALSE,
-      comb.random = TRUE,
-      method.tau = "ML", # as recommended by  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4950030/
-      hakn = TRUE,
-      prediction = TRUE,
-      sm = pp_agg$metaUI__es_type[1]
-    )
-
-    pp_first <- pp %>%
-      dplyr::group_by(metaUI__study_id) %>%
-      dplyr::slice_head(n = 1) %>%
-      dplyr::ungroup() %>%
-      dplyr::rename(
-        "studlab" = metaUI__study_id,
-        "TE" = metaUI__effect_size,
-        "seTE" = metaUI__se,
-        "n" = metaUI__N
-      )
-
-    pp_last <- pp %>%
-      dplyr::group_by(metaUI__study_id) %>%
-      dplyr::slice_tail(n = 1) %>%
-      dplyr::ungroup() %>%
-      dplyr::rename(
-        "studlab" = metaUI__study_id,
-        "TE" = metaUI__effect_size,
-        "seTE" = metaUI__se,
-        "n" = metaUI__N
-      )
-
-    # TK - this always returns positive es estimates - so what about situations when effect is negative? Just align sign?
-    pcurve_estimates1 <- (purrr::possibly(pcurve, otherwise = list(dEstimate = NA, kAnalyzed = NA), quiet = FALSE))(pp_first, effect.estimation = TRUE, N = pp_first$n, dmin = 0, dmax = max(pp_first$TE))
-    pcurve_estimates2 <- (purrr::possibly(pcurve, otherwise = list(dEstimate = NA, kAnalyzed = NA), quiet = FALSE))(pp_last, effect.estimation = TRUE, N = pp_first$n, dmin = 0, max(pp_last$TE))
-
-    taf_agg <- metafor::trimfill(metapp_metagen_mean)
-
-    punif_agg <- puniform::puni_star(
-      yi = pp_agg$metaUI__effect_size, vi = pp_agg$metaUI__se^2,
-      alpha = .05,
-      side = "right", method = "ML", boot = FALSE
-    )
-
-
-    # PET PEESE for aggregated data
-
-    pet_agg <- lm(metaUI__effect_size ~ sqrt(vi), data = pp_agg, weights = 1 / vi)
-
-    peese_agg <- lm(metaUI__effect_size ~ vi, data = pp_agg, weights = 1 / vi)
-
-    # RVE
-    rve <- robumeta::robu(metaUI__effect_size ~ 1, data = pp, studynum = metaUI__study_id, var.eff.size = metaUI__variance, small = FALSE)
-
-    # Hedges-Vevea selection model
-    hvsm <- weightr::weightfunct(pp_agg$metaUI__effect_size, pp_agg$vi, steps = c(0.025, 1), fe = FALSE)
-
-    # Generate table and plot
-
-    estimates_explo_agg <- tibble::tribble(
-      ~Model, ~es, ~LCL, ~UCL, ~k,
-      "Random-Effects Multilevel Model", metapp_total$b, metapp_total$ci.lb, metapp_total$ci.ub, metapp_total$k,
-      "Robust Variance Estimation", as.numeric(rve$reg_table$b.r), rve$reg_table$CI.L, rve$reg_table$CI.U, length(rve$k),
-      "Trim-and-fill", taf_agg$TE.random, taf_agg$lower.random, taf_agg$upper.random, taf_agg$k,
-      "P-uniform star", punif_agg$est, punif_agg$ci.lb, punif_agg$ci.ub, punif_agg$k,
-      "Hedges-Vevea Selection Model", as.numeric(hvsm$output_adj$par[2]), hvsm$ci.lb_adj[2], hvsm$ci.ub_adj[2], hvsm$k,
-      "P-Curve (first value)", pcurve_estimates1$dEstimate, NA, NA, pcurve_estimates1$kAnalyzed,
-      "P-Curve (last value)", pcurve_estimates2$dEstimate, NA, NA, pcurve_estimates2$kAnalyzed,
-      "Precision Effect Test", as.numeric(pet_agg$coefficients[1]), confint(pet_agg)[1, 1], confint(pet_agg)[1, 2], pet_agg$df+2,
-      "Precision Effect Estimate using Standard Error", as.numeric(peese_agg$coefficients[1]), confint(peese_agg)[1, 1], confint(peese_agg)[1, 2], peese_agg$df+2
-    ) %>%
-      dplyr::mutate(dplyr::across(c(es, LCL, UCL), as.numeric))
+    estimates_explo_agg <- models$mod_res %>% dplyr::bind_rows()
 
     print(estimates_explo_agg)
 
-    list(metapp_agg = metapp_metagen_mean, table = estimates_explo_agg, metapp_total = metapp_total, p_curve = pcurve_estimates1)
+    list(df_agg = df_agg, table = estimates_explo_agg)
   })
 
-
+  estimatesfiltered <- eventReactive(input$go, {
+    estimatesreactive()$table
+  })
 
   # Aggregated values meta-analysis ----------------------------------------------
 
 
-  metapp_agg <- eventReactive(input$go, {
-    estimatesreactive()$metapp_agg
+  df_agg <- reactive({
+    estimatesreactive()$df_agg
   })
 
   output$sample <- renderTable({
@@ -348,8 +304,8 @@ server <- function(input, output) { # , session
     }
 
     print(paste("The current dataset contains", overview$Sources, "sources,", overview$Studies,
-                "independent studies and", overview$Effects, "effects.",
-                sep = " "
+      "independent studies and", overview$Effects, "effects.",
+      sep = " "
     ))
 
     if (overview$Sources == "not specified") {
@@ -358,180 +314,6 @@ server <- function(input, output) { # , session
 
     overview
   })
-
-
-
-  # Sample overview -----------------------------------------------------------
-  output$summary_metaUI__filter_pub_year_table <- renderTable({
-      df <- df_filtered()
-      summarise_numeric(df[["metaUI__filter_pub_year"]], "pub_year")
-  })
-
-  output$summary_metaUI__filter_pub_year_plot <- renderPlot({
-      df <- df_filtered()
-
-     ggplot2::ggplot(df, ggplot2::aes(x = metaUI__filter_pub_year)) +
-      ggplot2::geom_density() +
-      ggplot2::geom_rug(alpha = .1) +
-      ggplot2::theme_light() +
-      ggplot2::xlab("pub_year")
-
-  })
-
-  output$summary_metaUI__filter_continent_table <- renderTable({
-      df <- df_filtered()
-      summarise_categorical(df[["metaUI__filter_continent"]], "continent")
-  })
-
-  output$summary_metaUI__filter_continent_plot <- renderPlot({
-      df <- df_filtered()
-
-            counts <- summarise_categorical(df[["metaUI__filter_continent"]], "continent")
-
-        counts$Count  %>% setNames(counts$continent)  %>%
-        waffle::waffle(rows=ceiling(sqrt(sum(.)/2)), size = max(2, 2/(sum(.)/100)))
-
-  })
-
-
-
-  output$sample_table <- DT::renderDataTable({
-    df <- df_filtered()
-
-    out <- df %>% dplyr::select(dplyr::any_of("metaUI__article_label"), Study =
-    "metaUI__study_id", N = "metaUI__N",
-    "Effect size" = "metaUI__effect_size", p = "metaUI__pvalue",
-    dplyr::starts_with("metaUI__filter_"), dplyr::any_of("metaUI__url"))  %>%
-    dplyr::rename_with(~stringr::str_replace(.x, "metaUI__filter_", "")  %>%
-      stringr::str_replace("metaUI__article_label", "Source")  %>%
-      stringr::str_replace("metaUI__url", "URL")) %>%
-    dplyr::mutate(p = fmt_p(p, include_equal = FALSE))  %>%
-    dplyr::arrange(.data$Study)
-
-    if ("Source" %in% names(out)) {
-      out <- out %>% dplyr::mutate(Study = stringr::str_remove(Study, Source)  %>%
-        stringr::str_remove("^[[:punct:] ]+"))
-    }
-
-    if ("URL" %in% names(out)) {
-      out <- out %>% dplyr::mutate(URL = glue::glue("<a href={URL}>{URL}</a>"))
-    }
-
-      out %>% DT::datatable(filter = "bottom", rownames = FALSE,
-          caption = tags$caption(
-        style="caption-side: bottom; text-align: left; margin: 8px 0;",
-        glue::glue("The effect size is given as {metaUI_eff_size_type_label}")
-    ))
-
-
-  })
-
-
-  # Moderators  -----------------------------------------------------------
-
-
-    output$moderation_plot <- plotly::renderPlotly({
-        df <- df_filtered()
-        mod <- df[[input$moderator]]
-        df$mod <- df[[input$moderator]]
-
-    if (is.numeric(mod)) {
-      p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = mod)) +
-            ggplot2::geom_point() +
-            ggplot2::theme_bw() +
-            ggplot2::xlab(input$moderator %>% stringr::str_remove("metaUI__filter_")) +
-            ggplot2::ylab(metaUI_eff_size_type_label) +
-            ggplot2::geom_smooth(data = df, aes(y = metaUI__effect_size, x = mod, color = NULL), formula = y ~ x, method = "lm") +
-            ggplot2::geom_hline(yintercept = 0, linetype = "dashed")
-    } else {
-      p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = forcats::fct_rev(mod))) +
-            ggplot2::geom_violin(fill = NA) +
-            ggplot2::theme_bw() +
-            ggplot2::geom_jitter(width = .1, alpha = .25) +
-            ggplot2::xlab(input$moderator) +
-            ggplot2::ylab(metaUI_eff_size_type_label)  +
-            ggplot2::geom_hline(yintercept = 0, linetype = "dashed") +
-            ggplot2::coord_flip()
-    }
-    plotly::ggplotly(p) %>%
-            plotly::config(displayModeBar = FALSE) %>%
-            plotly::layout(xaxis = list(fixedrange = TRUE), yaxis = list(fixedrange = TRUE))
-
-    })
-
-
-moderator_model <- reactive({
-    df <- df_filtered()
-  model <- metafor::rma.mv(yi = metaUI__effect_size,
-                            V = metaUI__variance,
-                            random = ~1 | metaUI__study_id,
-                            tdist = TRUE,
-                            data = df,
-                            mods = as.formula(glue::glue("~{input$moderator} - 1")),
-                            method = "ML")
-
-})
-
-
-  output$moderation_table <- renderTable({
-    model <- moderator_model()
-      df <- df_filtered()
-    if(length(model$b) == 1) {
-            modtable <- psych::describe(df[input$moderator] %>% as.data.frame(), fast = TRUE) #[c(2:5, 8, 9)]
-            modtable[, 2:6] <- round(as.data.frame(modtable)[, 2:6], digits = 2)
-            modtable <- modtable %>% dplyr::rename(k = n)
-            modtable$`&beta;` <- round(model$b[1], digits = 2)
-            modtable$vars <- NULL
-            modtable$range <- NULL
-            modtable$se <- NULL
-        } else {
-            modtable <- data.frame("Moderator_Levels" = rownames(model$b)  %>% stringr::str_remove(input$moderator),
-                                    "Effect size" =        round(model$b, digits = 3),
-                                    "95% CI" = fmt_ci(model$ci.lb, model$ci.ub, digits = 3), check.names = FALSE)
-
-        }
-
-modtable
-
-  })
-
-
-
-    output$moderation_text <- shiny::renderText({
-
-     model <- moderator_model()
-     df <- df_filtered()
-
-        HTML(glue::glue('<br><br>The {ifelse(is.numeric(df[[input$moderator]]), "linear ", "")}relationship between  <b> {input$moderator  %>% stringr::str_remove("metaUI__filter_")} </b>',
-        'and the observed effect sizes is {ifelse(model[["QMp"]] < .05, "", "<b>not</b> ")} significant at the 5% level. ',
-        ' Test of moderators: <i>F</i>({model[["QMdf"]][1]}, {model[["QMdf"]][2]}) = {round(model[["QM"]], digits = 2)}, ',
-        '<i>p</i> {fmt_p(model[["QMp"]])}.'))
-    })
-
-  # Heterogeneity -----------------------------------------------------------
-
-  metapp_total <- eventReactive(input$go, {
-    estimatesreactive()$metapp_total
-  })
-
-  output$heterogeneity <- renderTable({
-    metapp_total_model <- metapp_total()
-    het <- data.frame(
-      "Sigma2_Level1" = metapp_total_model$sigma2[1],
-      "Sigma2_Level2" = metapp_total_model$sigma2[2],
-      "Tau" = metapp_total_model$tau2,
-      "Q" = round(metapp_total_model$QE, digits = 2),
-      "Q_p" = ifelse(round(metapp_total_model$QEp, digits = 3) == 0,
-                     "< .001", round(metapp_total_model$QEp, digits = 3)
-      )
-    )
-
-
-    print(het)
-  })
-
-
-
 
   # MODEL COMPARISON -----------------------------------------------------
   output$model_comparison <- renderPlot({
@@ -558,6 +340,185 @@ modtable
   )
 
 
+
+  # Sample overview -----------------------------------------------------------
+  output$summary_metaUI__filter_pub_year_table <- renderTable({
+    df <- df_filtered()
+    summarise_numeric(df[["metaUI__filter_pub_year"]], "pub_year")
+  })
+
+  output$summary_metaUI__filter_pub_year_plot <- renderPlot({
+    df <- df_filtered()
+
+    ggplot2::ggplot(df, ggplot2::aes(x = metaUI__filter_pub_year)) +
+      ggplot2::geom_density() +
+      ggplot2::geom_rug(alpha = .1) +
+      ggplot2::theme_light() +
+      ggplot2::xlab("pub_year")
+  })
+
+  output$summary_metaUI__filter_continent_table <- renderTable({
+    df <- df_filtered()
+    summarise_categorical(df[["metaUI__filter_continent"]], "continent")
+  })
+
+  output$summary_metaUI__filter_continent_plot <- renderPlot({
+    df <- df_filtered()
+
+    counts <- summarise_categorical(df[["metaUI__filter_continent"]], "continent")
+
+    counts$Count %>%
+      setNames(counts$continent) %>%
+      waffle::waffle(rows = ceiling(sqrt(sum(.) / 2)), size = max(2, 2 / (sum(.) / 100)))
+  })
+
+
+
+  output$sample_table <- DT::renderDataTable({
+    df <- df_filtered()
+
+    out <- df %>%
+      dplyr::select(dplyr::any_of("metaUI__article_label"),
+        Study =
+          "metaUI__study_id", N = "metaUI__N",
+        "Effect size" = "metaUI__effect_size", p = "metaUI__pvalue",
+        dplyr::starts_with("metaUI__filter_"), dplyr::any_of("metaUI__url")
+      ) %>%
+      dplyr::rename_with(~ stringr::str_replace(.x, "metaUI__filter_", "") %>%
+        stringr::str_replace("metaUI__article_label", "Source") %>%
+        stringr::str_replace("metaUI__url", "URL")) %>%
+      dplyr::mutate(p = fmt_p(p, include_equal = FALSE)) %>%
+      dplyr::arrange(.data$Study)
+
+    if ("Source" %in% names(out)) {
+      out <- out %>% dplyr::mutate(Study = stringr::str_remove(Study, Source) %>%
+        stringr::str_remove("^[[:punct:] ]+"))
+    }
+
+    if ("URL" %in% names(out)) {
+      out <- out %>% dplyr::mutate(URL = glue::glue("<a href={URL}>{URL}</a>"))
+    }
+
+    out %>% DT::datatable(
+      filter = "bottom", rownames = FALSE,
+      caption = tags$caption(
+        style = "caption-side: bottom; text-align: left; margin: 8px 0;",
+        glue::glue("The effect size is given as {metaUI_eff_size_type_label}")
+      )
+    )
+  })
+
+
+  # Moderators  -----------------------------------------------------------
+
+
+  output$moderation_plot <- plotly::renderPlotly({
+    df <- df_filtered()
+    mod <- df[[input$moderator]]
+    df$mod <- df[[input$moderator]]
+
+    if (is.numeric(mod)) {
+      p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = mod)) +
+        ggplot2::geom_point() +
+        ggplot2::theme_bw() +
+        ggplot2::xlab(input$moderator %>% stringr::str_remove("metaUI__filter_")) +
+        ggplot2::ylab(metaUI_eff_size_type_label) +
+        ggplot2::geom_smooth(data = df, aes(y = metaUI__effect_size, x = mod, color = NULL), formula = y ~ x, method = "lm") +
+        ggplot2::geom_hline(yintercept = 0, linetype = "dashed")
+    } else {
+      p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = forcats::fct_rev(mod))) +
+        ggplot2::geom_violin(fill = NA) +
+        ggplot2::theme_bw() +
+        ggplot2::geom_jitter(width = .1, alpha = .25) +
+        ggplot2::xlab(input$moderator) +
+        ggplot2::ylab(metaUI_eff_size_type_label) +
+        ggplot2::geom_hline(yintercept = 0, linetype = "dashed") +
+        ggplot2::coord_flip()
+    }
+    plotly::ggplotly(p) %>%
+      plotly::config(displayModeBar = FALSE) %>%
+      plotly::layout(xaxis = list(fixedrange = TRUE), yaxis = list(fixedrange = TRUE))
+  })
+
+
+  moderator_model <- reactive({
+    df <- df_filtered()
+    model <- metafor::rma.mv(
+      yi = metaUI__effect_size,
+      V = metaUI__variance,
+      random = ~ 1 | metaUI__study_id,
+      tdist = TRUE,
+      data = df,
+      mods = as.formula(glue::glue("~{input$moderator} - 1")),
+      method = "ML"
+    )
+  })
+
+
+  output$moderation_table <- renderTable({
+    model <- moderator_model()
+    df <- df_filtered()
+    if (length(model$b) == 1) {
+      modtable <- psych::describe(df[input$moderator] %>% as.data.frame(), fast = TRUE) # [c(2:5, 8, 9)]
+      modtable[, 2:6] <- round(as.data.frame(modtable)[, 2:6], digits = 2)
+      modtable <- modtable %>% dplyr::rename(k = n)
+      modtable$`&beta;` <- round(model$b[1], digits = 2)
+      modtable$vars <- NULL
+      modtable$range <- NULL
+      modtable$se <- NULL
+    } else {
+      modtable <- data.frame(
+        "Moderator_Levels" = rownames(model$b) %>% stringr::str_remove(input$moderator),
+        "Effect size" = round(model$b, digits = 3),
+        "95% CI" = fmt_ci(model$ci.lb, model$ci.ub, digits = 3), check.names = FALSE
+      )
+    }
+
+    modtable
+  })
+
+
+
+  output$moderation_text <- shiny::renderText({
+    model <- moderator_model()
+    df <- df_filtered()
+
+    HTML(glue::glue(
+      '<br><br>The {ifelse(is.numeric(df[[input$moderator]]), "linear ", "")}relationship between  <b> {input$moderator  %>% stringr::str_remove("metaUI__filter_")} </b>',
+      'and the observed effect sizes is {ifelse(model[["QMp"]] < .05, "", "<b>not</b> ")} significant at the 5% level. ',
+      ' Test of moderators: <i>F</i>({model[["QMdf"]][1]}, {model[["QMdf"]][2]}) = {round(model[["QM"]], digits = 2)}, ',
+      '<i>p</i> {fmt_p(model[["QMp"]])}.'
+    ))
+  })
+
+  # Heterogeneity -----------------------------------------------------------
+
+
+
+  output$heterogeneity <- renderTable({
+    df <- df_filtered()
+
+    metapp_total <- metafor::rma.mv(
+      yi = metaUI__effect_size,
+      V = metaUI__variance,
+      random = ~ 1 | metaUI__study_id ,
+      tdist = TRUE, # knapp-hartung adjustment
+      data = df,
+      method = "ML" # REML failed to converge in tests
+    )
+
+    metapp_total_model <- metapp_total()
+    het <- data.frame(
+      "Sigma2_Level1" = metapp_total_model$sigma2[1],
+      "Sigma2_Level2" = metapp_total_model$sigma2[2],
+      "Tau" = metapp_total_model$tau2,
+      "Q" = round(metapp_total_model$QE, digits = 2),
+      "Q_p" = fmt_p(metapp_total_model$QEp, include_equal = FALSE)
+      )
+
+    print(het)
+  })
+
   # FOREST PLOT FOR ALL INCLUDED STUDIES ------------------------------------
   output$foreststudies <- renderPlot(
     {
@@ -567,8 +528,8 @@ modtable
       rve <- robumeta::robu(metaUI__effect_size ~ 1, data = pp, studynum = metaUI__study_id, var.eff.size = metaUI__variance, small = FALSE)
 
       robumeta::forest.robu(rve,
-                            es.lab = "metaUI__es_label", study.lab = "metaUI__study_id",
-                            "Effect size" = metaUI__effect_size
+        es.lab = "metaUI__es_label", study.lab = "metaUI__study_id",
+        "Effect size" = metaUI__effect_size
       )
     },
     # TK - create a function that adjusts the height of the plot based on the number of studies
@@ -578,18 +539,33 @@ modtable
 
   # FUNNEL PLOT -------------------------------------------------------------
 
-  output$funnel <- renderPlot({
-    metapp_metagen_mean <- metapp_agg()
+  meta_agg <- reactive({
+    df_agg <- df_agg()
 
-    metafor::funnel(metapp_metagen_mean, xlab = metaUI_eff_size_type_label, studlab = FALSE, contour = .95, col.contour = "light grey")
+    meta::metagen(
+      TE = metaUI__effect_size,
+      seTE = metaUI__se,
+      data = df_agg,
+      studlab = pp_agg$metaUI__study_id,
+      comb.fixed = FALSE,
+      comb.random = TRUE,
+      method.tau = "ML", # as recommended by  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4950030/
+      hakn = TRUE,
+      prediction = TRUE,
+      sm = pp_agg$metaUI__es_type[1]
+    )
+  })
+
+  output$funnel <- renderPlot({
+    meta_agg <- meta_agg()
+
+    metafor::funnel(meta_agg, xlab = metaUI_eff_size_type_label, studlab = FALSE, contour = .95, col.contour = "light grey")
   })
 
   output$eggers <- renderTable({
-    metapp_metagen_mean <- metapp_agg()
+    meta_agg <- meta_agg()
 
-    # eggers <- eggers.test(x = metapp_metagen_mean)
-    # names(eggers) <- c("Intercept",	"95% CI",	"t",	"p")
-    eggers <- meta::metabias(metapp_metagen_mean, k.min = 3, method.bias = "Egger")
+    eggers <- meta::metabias(meta_agg, k.min = 3, method.bias = "Egger")
     eggers_table <- data.frame(
       "Intercept" = eggers$estimate, "Tau²" = eggers$tau,
       "t" = eggers$statistic,
@@ -621,14 +597,12 @@ modtable
     pcurve_estimates1 <- ifelse(substr(pcurve_estimates1, 1, 5) == "Error", 0, pcurve_estimates1)
 
     pcurve_estimates1
-
   })
 
   # ZCURVE ------------------------------------------------------------------
 
 
   output$zcurve <- renderPlot({
-
     pp <- df_filtered()
 
     # Use only first p-value as they need to be statistically independent
@@ -694,22 +668,22 @@ modtable
         x = ~1, y = ~ (metaUI__effect_size - efm) / efsd, colors = NULL, yaxis = "y2",
         data = pp, showlegend = FALSE, inherit = FALSE
       ) %>%
-      plotly::layout(yaxis2 = ay,
-                     margin = list(
-                       r = 45
-                     ))
+      plotly::layout(
+        yaxis2 = ay,
+        margin = list(
+          r = 45
+        )
+      )
 
     # Hide boxplot outliers so that they are not shown multiple times
-    plotly_plot$x$data <- lapply(plotly_plot$x$data, FUN = function(x){
-
+    plotly_plot$x$data <- lapply(plotly_plot$x$data, FUN = function(x) {
       if (x$type == "box") {
-        x$marker = list(opacity = 0)
+        x$marker <- list(opacity = 0)
       }
       return(x)
     })
 
     plotly_plot
-
   })
 
 
@@ -740,6 +714,3 @@ modtable
     }
   )
 }
-
-
-

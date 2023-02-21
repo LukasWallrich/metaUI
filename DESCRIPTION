@@ -19,6 +19,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
 Imports: 
     dplyr,
+    DT,
     effsize,
     esc,
     ggplot2,
@@ -34,9 +35,12 @@ Imports:
     robumeta,
     shiny,
     shinycssloaders,
+    shinythemes,
     stringr,
     tibble,
+    waffle,
     weightr,
-    writexl
+    writexl,
+    zcurve
 VignetteBuilder: knitr
 URL: https://lukaswallrich.github.io/metaUI/
