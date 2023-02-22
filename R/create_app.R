@@ -156,6 +156,7 @@ generate_app.R <- function() {
     f <- getCurrentFileLocation()
 
   # Source and set elements of app
+  library(shiny)
   source(file.path(f, 'helpers.R'))
   source(file.path(f, 'models.R'))
   source(file.path(f, 'labels_and_options.R'))
