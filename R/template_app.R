@@ -70,17 +70,43 @@ generate_ui_filters <- function(data) {
   }) %>% glue::glue_collapse(sep = ",\n")
 }
 
+
+generate_sample_description_ui <- function(data) {
+  filter_cols <- colnames(data) %>%
+    stringr::str_subset("metaUI__filter_")
+  filter_names <- stringr::str_remove(filter_cols, "metaUI__filter_")
+
+  purrr::map2_chr(filter_cols, filter_names, \(fc, fn) {
+    glue::glue('
+            fluidRow(h4("{fn}"),
+              div(column(4, tableOutput("summary_{fc}_table")),
+                column(7, shinycssloaders::withSpinner(plotOutput("summary_{fc}_plot")))
+              )
+            )
+                ')
+  }) %>% glue::glue_collapse(sep = ",\n")
+
+
+}
+
 generate_moderator_selection <- function(data) {
   filter_cols <- colnames(data) %>%
     stringr::str_subset("metaUI__filter_") %>%
     setNames(., stringr::str_remove(., "metaUI__filter_"))
+
+  filter_vector <- purrr::imap_chr(filter_cols, \(fc, fn) {
+    paste('"', fn, '" = "', fc, '"', sep = '')
+  })  %>% glue::glue_collapse(sep = ", ")
+
   # Create a selection drop-down with filter_cols as values
   glue::glue('
     selectInput("moderator", "Moderator",
-      choices = c("{glue::glue_collapse(filter_cols, sep = \'", "\')}"),
+      choices = c({filter_vector}),
       selected = "{filter_cols[1]}"
     )')
 }
+
+
 
 generate_ui <- function(data, dataset_name, about) {
   glue::glue('
@@ -92,6 +118,7 @@ generate_ui <- function(data, dataset_name, about) {
     # Sidebar with a slider input for number of bins
     sidebarLayout(
       sidebarPanel(
+        width = 3,
         {generate_ui_filters(data)},
         uiOutput("z_score_filter"),
         actionButton("go", "Analyze data")#,
@@ -100,6 +127,7 @@ generate_ui <- function(data, dataset_name, about) {
 
       # Show a plot of the generated distribution
       mainPanel(
+        width = 9,
         tabsetPanel(
           type = "tabs",
           tabPanel(
@@ -115,21 +143,18 @@ generate_ui <- function(data, dataset_name, about) {
           tabPanel(
             "Sample",
             sample_overview_main,
-            h4("Pub year"),
-            div(column(4, tableOutput("summary_metaUI__filter_pub_year_table")),
-                column(7, shinycssloaders::withSpinner(plotOutput("summary_metaUI__filter_pub_year_plot")))),
-            h4("Continent"),
-            div(column(4, tableOutput("summary_metaUI__filter_continent_table")),
-                column(7, shinycssloaders::withSpinner(plotOutput("summary_metaUI__filter_continent_plot")))),
+            {generate_sample_description_ui(data)},
             h3("Sample table"),
             DT::dataTableOutput("sample_table"),
           ),
           tabPanel(
             "Moderation",
-            {generate_moderator_selection(data)},
             sample_moderation_main,
-            div(column(4, tableOutput("moderation_table"), shiny::htmlOutput("moderation_text")),
-            column(7, shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot")))),
+            {generate_moderator_selection(data)},
+            fluidRow(
+            div(column(4, DT::dataTableOutput("moderation_table"), shiny::htmlOutput("moderation_text")),
+              column(7, shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot"))))
+            ),
             sample_moderation_notes
           ),
           tabPanel("Forest Plot", go, scroll, plotOutput("foreststudies") %>% shinycssloaders::withSpinner(), cellArgs = list(style = "vertical-align: top")),
@@ -156,8 +181,11 @@ generate_ui <- function(data, dataset_name, about) {
   ')
 }
 
-# Define server logic
-server <- function(input, output) { # , session
+
+generate_server <- function() {
+
+glue::glue(.open = '<<', .close = '>>', '
+    function(input, output) {
 
   # Create slider to filter by z-scores
   z_sig_dig <- 2
@@ -174,13 +202,15 @@ server <- function(input, output) { # , session
     )
   )
 
-  filter_cols <- colnames(metaUI__df) %>% stringr::str_subset("metaUI__filter_")
-
-  filters_types <- purrr::map_chr(filter_cols, \(x) {
-    if (is.numeric(metaUI__df[[x]])) "numeric" else "selection"
-  })
-
-  filters <- purrr::map2(filter_cols, filters_types, ~ list(id = .x, type = .y))
+  filters <- list(<<
+    filter_cols <- colnames(metaUI__df) %>% stringr::str_subset("metaUI__filter_")
+    filters_types <- purrr::map_chr(filter_cols, \\(x) {
+      if (is.numeric(metaUI__df[[x]])) "numeric" else "selection"
+    })
+   filters <- purrr::map2(filter_cols, filters_types, ~list(id = .x, type =  .y))
+        purrr::map2_chr(filter_cols, filters_types, ~ paste0("list(id = \'", .x, "\', type = \'", .y, "\')"))  %>%
+        glue::glue_collapse(sep = ",\n")
+      >>)
 
   # Apply reactive filtering of dataset when clicking on the button
   df_filtered <- eventReactive(input$go, {
@@ -191,13 +221,13 @@ server <- function(input, output) { # , session
     df <- metaUI__df
 
     # Filter by specified metadata filters
-    for (i in seq_along(filters)) {
-      if (filters[[i]]$type == "numeric") {
-        df <- df[df[[filters[[i]]$id]] >= input[[filters[[i]]$id]][1] & df[[filters[[i]]$id]] <= input[[filters[[i]]$id]][2], ]
+    <<purrr::map_chr(filters, \\(f) {
+      if (f$type == "numeric") {
+        glue::glue("df <- df[df[[\'{f$id}\']] >= input[[\'{f$id}\']][1] & df[[\'{f$id}\']] <= input[[\'{f$id}\']][2], ]")
       } else {
-        df <- df[df[[filters[[i]]$id]] %in% input[[filters[[i]]$id]], ]
+        glue::glue("df <- df[df[[\'{f$id}\']] %in% input[[\'{f$id}\']], ]")
       }
-    }
+    }) %>% paste(collapse = "\n")>>
 
     # Filter by zscore
     df <- df[df$metaUI__es_z >= input$outliers[1] & df$metaUI__es_z <= input$outliers[2], ]
@@ -220,6 +250,7 @@ server <- function(input, output) { # , session
     }
 
     if (aggregation_method[1] == "aggregate") {
+      # TK - do we want this, or actually just average, despite the problems with that?
       # Aggregate dependent effects based on https://www.jepusto.com/sometimes-aggregating-effect-sizes-is-fine/
       # note that this requires an assumption regarding the degree of correlation
       agg_effects <- function(yi, vi, r = correlation_dependent) {
@@ -253,7 +284,7 @@ server <- function(input, output) { # , session
     }
 
     # Run all specified models
-    models <- purrr::pmap(models_to_run, \(...){
+    models <- purrr::pmap(models_to_run, \\(...){
       mod_spec <- tibble::tibble(...)
       if (mod_spec$aggregated == TRUE) {
         df <- df_agg
@@ -290,13 +321,13 @@ server <- function(input, output) { # , session
   })
 
   output$sample <- renderTable({
-    pp <- df_filtered()
+    df <- df_filtered()
 
     overview <- tibble::tribble(
       ~Sources, ~Studies,
       ~Effects, ~`Sample size`,
-      length(unique(pp$metaUI__article_label)), length(unique(pp$metaUI__study_id)),
-      length(pp$metaUI__study_id), sum(aggregate(metaUI__N ~ metaUI__study_id, data = pp, FUN = "min")$metaUI__N) %>% round()
+      length(unique(df$metaUI__article_label)), length(unique(df$metaUI__study_id)),
+      length(df$metaUI__study_id), sum(aggregate(metaUI__N ~ metaUI__study_id, data = df, FUN = "min")$metaUI__N) %>% round()
     )
 
     if (overview$Sources == 0) {
@@ -334,7 +365,8 @@ server <- function(input, output) { # , session
   # MODEL COMPARISON TABLE -------------------------------------------------------------------
   output$effectestimate <- renderTable(
     {
-      estimatesfiltered()
+      estimatesfiltered()  %>%
+        dplyr::mutate(k = as.integer(k)) # Remove decimal points from k
     },
     digits = 2
   )
@@ -342,37 +374,46 @@ server <- function(input, output) { # , session
 
 
   # Sample overview -----------------------------------------------------------
-  output$summary_metaUI__filter_pub_year_table <- renderTable({
-    df <- df_filtered()
-    summarise_numeric(df[["metaUI__filter_pub_year"]], "pub_year")
-  })
 
-  output$summary_metaUI__filter_pub_year_plot <- renderPlot({
+    <<purrr::map_chr(filters, \\(f) {
+      if (f$type == "numeric") {
+        glue::glue("
+    output$`summary_{f$id}_table` <- renderTable({{ # {{ escapes the glue syntax
     df <- df_filtered()
+    summarise_numeric(df[[\'{f$id}\']], \'{f$id  %>% stringr::str_remove(\'metaUI__filter_\')}\')
+  }})
 
-    ggplot2::ggplot(df, ggplot2::aes(x = metaUI__filter_pub_year)) +
+  output$`summary_{f$id}_plot` <- renderPlot({{
+    df <- df_filtered()
+    ggplot2::ggplot(df, ggplot2::aes(x = `{f$id}`)) +
       ggplot2::geom_density() +
       ggplot2::geom_rug(alpha = .1) +
       ggplot2::theme_light() +
-      ggplot2::xlab("pub_year")
-  })
-
-  output$summary_metaUI__filter_continent_table <- renderTable({
+      ggplot2::xlab(\'{f$id %>% stringr::str_remove(\'metaUI__filter_\')}\')
+  }})
+  ")
+      } else {
+        glue::glue("
+          output$`summary_{f$id}_table` <- renderTable({{
     df <- df_filtered()
-    summarise_categorical(df[["metaUI__filter_continent"]], "continent")
-  })
+    summarise_categorical(df[[\'{f$id}\']], \'{f$id  %>% stringr::str_remove(\'metaUI__filter_\')}\')
+  }})
 
-  output$summary_metaUI__filter_continent_plot <- renderPlot({
+  output$`summary_{f$id}_plot` <- renderPlot({{
     df <- df_filtered()
 
-    counts <- summarise_categorical(df[["metaUI__filter_continent"]], "continent")
+    counts <- summarise_categorical(df[[\'{f$id}\']], \'{f$id  %>% stringr::str_remove(\'metaUI__filter_\')}\')
 
     counts$Count %>%
-      setNames(counts$continent) %>%
+      setNames(counts[[\'{f$id  %>% stringr::str_remove(\'metaUI__filter_\')}\']]) %>%
       waffle::waffle(rows = ceiling(sqrt(sum(.) / 2)), size = max(2, 2 / (sum(.) / 100)))
-  })
+  }})
+        ")
+      }
+    }) %>% paste(collapse = "\n")>>
 
 
+  # Sample table -----------------------------------------------------------
 
   output$sample_table <- DT::renderDataTable({
     df <- df_filtered()
@@ -400,7 +441,7 @@ server <- function(input, output) { # , session
     }
 
     out %>% DT::datatable(
-      filter = "bottom", rownames = FALSE,
+      rownames = FALSE,
       caption = tags$caption(
         style = "caption-side: bottom; text-align: left; margin: 8px 0;",
         glue::glue("The effect size is given as {metaUI_eff_size_type_label}")
@@ -443,57 +484,96 @@ server <- function(input, output) { # , session
 
   moderator_model <- reactive({
     df <- df_filtered()
-    model <- metafor::rma.mv(
-      yi = metaUI__effect_size,
-      V = metaUI__variance,
-      random = ~ 1 | metaUI__study_id,
-      tdist = TRUE,
-      data = df,
-      mods = as.formula(glue::glue("~{input$moderator} - 1")),
-      method = "ML"
-    )
+
+    if (is.numeric(df[[input$moderator]])) {
+
+      model <- metafor::rma.mv(
+        yi = metaUI__effect_size,
+        V = metaUI__variance,
+        random = ~ 1 | metaUI__study_id,
+        tdist = TRUE,
+        data = df,
+        mods = as.formula(glue::glue("~`{input$moderator}`")),
+        method = "ML"
+      )
+     moderation_text <-     HTML(glue::glue(
+      \'<br><br>The {ifelse(is.numeric(df[[input$moderator]]), "linear ", "")}relationship between  <b> {input$moderator  %>% stringr::str_remove("metaUI__filter_")} </b>\',
+      \'and the observed effect sizes <b>is {ifelse(model[["QMp"]] < .05, "", "not ")}significant </b> at the 5% level. \',
+     \' Test of moderators: <i>F</i>({model[["QMdf"]][1]}, {model[["QMdf"]][2]}) = {round(model[["QM"]], digits = 2)}, \',
+      \'<i>p</i> {fmt_p(model[["QMp"]])}.\'
+    ))
+
+    } else {
+     model_sig <- metafor::rma.mv(
+        yi = metaUI__effect_size,
+        V = metaUI__variance,
+        random = ~ 1 | metaUI__study_id,
+        tdist = TRUE,
+        data = df,
+        mods = as.formula(glue::glue("~`{input$moderator}`")),
+        method = "ML"
+      )
+     model <- metafor::rma.mv(
+        yi = metaUI__effect_size,
+        V = metaUI__variance,
+        random = ~ 1 | metaUI__study_id,
+        tdist = TRUE,
+        data = df,
+        mods = as.formula(glue::glue("~`{input$moderator}` - 1")),
+        method = "ML"
+      )
+
+     moderation_text <-     HTML(glue::glue(
+      \'<br><br>The {ifelse(is.numeric(df[[input$moderator]]), "linear ", "")}relationship between  <b> {input$moderator  %>% stringr::str_remove("metaUI__filter_")} </b>\',
+      \'and the observed effect sizes <b>is {ifelse(model_sig[["QMp"]] < .05, "", "not ")} significant</b> at the 5% level. \',
+     \' Test of moderators: <i>F</i>({model_sig[["QMdf"]][1]}, {model_sig[["QMdf"]][2]}) = {round(model_sig[["QM"]], digits = 2)}, \',
+      \'<i>p</i> {fmt_p(model_sig[["QMp"]])}.\'
+    ))
+    }
+    model$moderation_text <- moderation_text
+  model
   })
 
 
-  output$moderation_table <- renderTable({
+  output$moderation_table <- DT::renderDataTable(escape = FALSE, {
     model <- moderator_model()
     df <- df_filtered()
-    if (length(model$b) == 1) {
+    if (is.numeric(df[[input$moderator]])) {
       modtable <- psych::describe(df[input$moderator] %>% as.data.frame(), fast = TRUE) # [c(2:5, 8, 9)]
-      modtable[, 2:6] <- round(as.data.frame(modtable)[, 2:6], digits = 2)
+      modtable[, 2:6] <- round_(as.data.frame(modtable)[, 2:6], digits = 2)
       modtable <- modtable %>% dplyr::rename(k = n)
-      modtable$`&beta;` <- round(model$b[1], digits = 2)
+      modtable$Intercept <- round_(model$b[1], digits = 2)
+      modtable$`&beta;` <- round_(model$b[2], digits = 2)
       modtable$vars <- NULL
       modtable$range <- NULL
       modtable$se <- NULL
+
+      modtable <- modtable %>% dplyr::mutate(Moderator = input$moderator %>% stringr::str_remove("metaUI__filter_"),
+                                            dplyr::across(dplyr::everything(), as.character))  %>%
+                               dplyr::select("Moderator", Intercept, "&beta;", "k", dplyr::everything()) %>%
+    tidyr::pivot_longer(dplyr::everything(), names_to = "Statistic", values_to = "Value")
+
     } else {
       modtable <- data.frame(
-        "Moderator_Levels" = rownames(model$b) %>% stringr::str_remove(input$moderator),
+        "Moderator Levels" = rownames(model$b) %>% stringr::str_remove(input$moderator),
         "Effect size" = round(model$b, digits = 3),
         "95% CI" = fmt_ci(model$ci.lb, model$ci.ub, digits = 3), check.names = FALSE
       )
+
+      modtable <- df %>% dplyr::count(!!rlang::sym(input$moderator)) %>% rename(k = n) %>%
+      left_join(modtable, ., by = c("Moderator Levels" = input$moderator))
+
     }
 
-    modtable
+    modtable %>% DT::datatable(options = list(dom = "t"))
   })
-
-
 
   output$moderation_text <- shiny::renderText({
     model <- moderator_model()
-    df <- df_filtered()
-
-    HTML(glue::glue(
-      '<br><br>The {ifelse(is.numeric(df[[input$moderator]]), "linear ", "")}relationship between  <b> {input$moderator  %>% stringr::str_remove("metaUI__filter_")} </b>',
-      'and the observed effect sizes is {ifelse(model[["QMp"]] < .05, "", "<b>not</b> ")} significant at the 5% level. ',
-      ' Test of moderators: <i>F</i>({model[["QMdf"]][1]}, {model[["QMdf"]][2]}) = {round(model[["QM"]], digits = 2)}, ',
-      '<i>p</i> {fmt_p(model[["QMp"]])}.'
-    ))
+    model$moderation_text
   })
 
   # Heterogeneity -----------------------------------------------------------
-
-
 
   output$heterogeneity <- renderTable({
     df <- df_filtered()
@@ -522,10 +602,10 @@ server <- function(input, output) { # , session
   # FOREST PLOT FOR ALL INCLUDED STUDIES ------------------------------------
   output$foreststudies <- renderPlot(
     {
-      # TK - reconsider package version
-      pp <- df_filtered()
+      # TK - reconsider which package to use for forest plots
+      df <- df_filtered()
 
-      rve <- robumeta::robu(metaUI__effect_size ~ 1, data = pp, studynum = metaUI__study_id, var.eff.size = metaUI__variance, small = FALSE)
+      rve <- robumeta::robu(metaUI__effect_size ~ 1, data = df, studynum = metaUI__study_id, var.eff.size = metaUI__variance, small = FALSE)
 
       robumeta::forest.robu(rve,
         es.lab = "metaUI__es_label", study.lab = "metaUI__study_id",
@@ -546,13 +626,13 @@ server <- function(input, output) { # , session
       TE = metaUI__effect_size,
       seTE = metaUI__se,
       data = df_agg,
-      studlab = pp_agg$metaUI__study_id,
+      studlab = df_agg$metaUI__study_id,
       comb.fixed = FALSE,
       comb.random = TRUE,
       method.tau = "ML", # as recommended by  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4950030/
       hakn = TRUE,
       prediction = TRUE,
-      sm = pp_agg$metaUI__es_type[1]
+      sm = df_agg$metaUI__es_type[1]
     )
   })
 
@@ -579,9 +659,9 @@ server <- function(input, output) { # , session
 
   output$pcurve <- renderPlot({
     # Plot is created as side-effect in pcurve function - so needs to be recalculated here
-    pp <- df_filtered()
+    df <- df_filtered()
 
-    pp_first <- pp %>%
+    pp_first <- df %>%
       dplyr::group_by(metaUI__study_id) %>%
       dplyr::slice_head(n = 1) %>%
       dplyr::ungroup() %>%
@@ -603,10 +683,10 @@ server <- function(input, output) { # , session
 
 
   output$zcurve <- renderPlot({
-    pp <- df_filtered()
+    df <- df_filtered()
 
     # Use only first p-value as they need to be statistically independent
-    pp_first <- pp %>%
+    pp_first <- df %>%
       dplyr::group_by(metaUI__study_id) %>%
       dplyr::slice_head(n = 1) %>%
       dplyr::ungroup() %>%
@@ -617,16 +697,16 @@ server <- function(input, output) { # , session
         "n" = metaUI__N
       )
 
-    pp_first$z <- abs(pp_first$TE / pp_first$seTE)
+    df_first$z <- abs(df_first$TE / df_first$seTE)
 
-    zcurve_estimates1 <- try(zcurve::zcurve(pp_first$z, bootstrap = FALSE), silent = TRUE)
+    zcurve_estimates1 <- try(zcurve::zcurve(df_first$z, bootstrap = FALSE), silent = TRUE)
 
     zcurve::plot.zcurve(zcurve_estimates1, annotation = TRUE, main = "")
   })
 
   # VIOLIN PLOTLY -------------------------------------------------------------
   output$violin <- plotly::renderPlotly({
-    pp <- df_filtered()
+    df <- df_filtered()
 
     efm <- mean(pp$metaUI__effect_size)
     efsd <- sd(pp$metaUI__effect_size)
@@ -637,9 +717,9 @@ server <- function(input, output) { # , session
     bounds[1] <- bounds[1] - 1.5 * diff(range(qs))
     bounds[2] <- bounds[2] + 1.5 * diff(range(qs))
 
-    outliers <- pp %>% dplyr::filter(metaUI__effect_size < bounds[1] | metaUI__effect_size > bounds[2])
+    outliers <- df %>% dplyr::filter(metaUI__effect_size < bounds[1] | metaUI__effect_size > bounds[2])
 
-    violinplot <- ggplot2::ggplot(data = pp, ggplot2::aes(x = 1, y = metaUI__effect_size)) +
+    violinplot <- ggplot2::ggplot(data = df, ggplot2::aes(x = 1, y = metaUI__effect_size)) +
       ggplot2::xlab("") +
       ggplot2::geom_violin(fill = grDevices::rgb(100 / 255, 180 / 255, 1, .5)) +
       ggplot2::theme_bw() +
@@ -666,7 +746,7 @@ server <- function(input, output) { # , session
       plotly::config(modeBarButtons = list(list("toImage")), displaylogo = FALSE) %>%
       plotly::add_lines(
         x = ~1, y = ~ (metaUI__effect_size - efm) / efsd, colors = NULL, yaxis = "y2",
-        data = pp, showlegend = FALSE, inherit = FALSE
+        data = df, showlegend = FALSE, inherit = FALSE
       ) %>%
       plotly::layout(
         yaxis2 = ay,
@@ -713,4 +793,7 @@ server <- function(input, output) { # , session
       writexl::write_xlsx(data_list())
     }
   )
+}
+
+')
 }

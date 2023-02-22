@@ -23,11 +23,12 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'
 #' @param dataset Dataframe as returned from [import_data()]
 #' @param eff_size_type_label The label to be used to describe the effect size. If NA, effect type code from dataset is used.
+#' @param models A tibble with the models to be included in the app. If you want to change the default models, have a look at the vignette and/or the [get_model_tibble()] documentation.
 #' @inheritParams create_about
 #' @inheritDotParams create_about
 #' @export
 
-launch_shiny <- function(dataset, dataset_name, eff_size_type_label = NA, ...) {
+launch_shiny <- function(dataset, dataset_name, eff_size_type_label = NA, models = get_model_tibble(), ...) {
   about <- create_about(dataset_name, ...)
   metaUI__df <<- dataset
 
@@ -36,8 +37,10 @@ launch_shiny <- function(dataset, dataset_name, eff_size_type_label = NA, ...) {
   }
 
   metaUI_eff_size_type_label <<- eff_size_type_label
+  models_to_run <<- models
 
   ui <- eval(parse(text = generate_ui(dataset, dataset_name, about)))
+  server <- eval(parse(text = generate_server()))
 
   shinyApp(ui = ui, server = server)
 
