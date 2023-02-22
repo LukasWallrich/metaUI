@@ -7,6 +7,9 @@
     <loc>https://lukaswallrich.github.io/metaUI/LICENSE.html</loc>
   </url>
   <url>
+    <loc>https://lukaswallrich.github.io/metaUI/articles/customise_models.html</loc>
+  </url>
+  <url>
     <loc>https://lukaswallrich.github.io/metaUI/articles/getting_started.html</loc>
   </url>
   <url>
@@ -22,7 +25,16 @@
     <loc>https://lukaswallrich.github.io/metaUI/reference/create_about.html</loc>
   </url>
   <url>
-    <loc>https://lukaswallrich.github.io/metaUI/reference/eggers.test.html</loc>
+    <loc>https://lukaswallrich.github.io/metaUI/reference/fmt_ci.html</loc>
+  </url>
+  <url>
+    <loc>https://lukaswallrich.github.io/metaUI/reference/fmt_p.html</loc>
+  </url>
+  <url>
+    <loc>https://lukaswallrich.github.io/metaUI/reference/generate_shiny.html</loc>
+  </url>
+  <url>
+    <loc>https://lukaswallrich.github.io/metaUI/reference/get_model_tibble.html</loc>
   </url>
   <url>
     <loc>https://lukaswallrich.github.io/metaUI/reference/hello.html</loc>
@@ -34,15 +46,18 @@
     <loc>https://lukaswallrich.github.io/metaUI/reference/index.html</loc>
   </url>
   <url>
-    <loc>https://lukaswallrich.github.io/metaUI/reference/launch_shiny.html</loc>
-  </url>
-  <url>
     <loc>https://lukaswallrich.github.io/metaUI/reference/pcurve.html</loc>
   </url>
   <url>
     <loc>https://lukaswallrich.github.io/metaUI/reference/pipe.html</loc>
   </url>
   <url>
+    <loc>https://lukaswallrich.github.io/metaUI/reference/round_.html</loc>
+  </url>
+  <url>
     <loc>https://lukaswallrich.github.io/metaUI/reference/se.from.p.html</loc>
+  </url>
+  <url>
+    <loc>https://lukaswallrich.github.io/metaUI/reference/to_tribble.html</loc>
   </url>
 </urlset>

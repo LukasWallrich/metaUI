@@ -41,6 +41,7 @@
 <li class="active nav-item dropdown">
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
+    <a class="dropdown-item" href="../articles/customise_models.html">Customising the models to compare</a>
     <a class="dropdown-item" href="../articles/getting_started.html">Getting started</a>
   </div>
 </li>
@@ -102,21 +103,19 @@ then pass it to <code><a href="../reference/import_data.html">import_data()</a><
 <span>    <span class="fu">forcats</span><span class="fu">::</span><span class="fu"><a href="https://forcats.tidyverse.org/reference/fct_recode.html" class="external-link">fct_recode</a></span><span class="op">(</span>yes <span class="op">=</span> <span class="st">"1"</span>, no <span class="op">=</span> <span class="st">"2"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Publication year"</span> <span class="op">=</span> <span class="st">"pub_year"</span>, Continent <span class="op">=</span> <span class="st">"continent"</span>, <span class="st">"Teacher sample"</span> <span class="op">=</span> <span class="st">"teachers"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Publication year        Continent   Teacher sample </span></span>
-<span><span class="co">#&gt;       "pub_year"      "continent"       "teachers"</span></span>
-<span></span>
 <span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/import_data.html">import_data</a></span><span class="op">(</span><span class="va">df</span>,</span>
 <span>  study_label <span class="op">=</span> <span class="st">"study_label"</span>, es_field <span class="op">=</span> <span class="st">"yi"</span>, se <span class="op">=</span> <span class="st">"se"</span>, pvalue <span class="op">=</span> <span class="st">"p.value"</span>,</span>
 <span>  sample_size <span class="op">=</span> <span class="st">"ni"</span>,</span>
-<span>  variance <span class="op">=</span> <span class="st">"vi"</span>, filters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pub_year"</span>, <span class="st">"continent"</span>, <span class="st">"teachers"</span><span class="op">)</span>, es_type <span class="op">=</span> <span class="st">"SMD"</span></span>
+<span>  variance <span class="op">=</span> <span class="st">"vi"</span>, </span>
+<span>  filters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Publication year"</span> <span class="op">=</span> <span class="st">"pub_year"</span>, Continent <span class="op">=</span> <span class="st">"continent"</span>, <span class="st">"Teacher sample"</span> <span class="op">=</span> <span class="st">"teachers"</span><span class="op">)</span>, </span>
+<span>  es_type <span class="op">=</span> <span class="st">"SMD"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="running-the-app">Running the app<a class="anchor" aria-label="anchor" href="#running-the-app"></a>
 </h2>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/launch_shiny.html">launch_shiny</a></span><span class="op">(</span><span class="va">df</span>, <span class="st">"Barroso et al 2021 - Maths Anxiety"</span>, <span class="st">"Fisher's Z scores"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/generate_shiny.html">generate_shiny</a></span><span class="op">(</span><span class="va">df</span>, <span class="st">"Barroso et al 2021 - Maths Anxiety"</span>, <span class="st">"Fisher's Z scores"</span><span class="op">)</span></span></code></pre></div>
 <div style="width: 100% ; height: 400px ; text-align: center; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box;" class="muted well">Shiny applications not supported in static R Markdown documents</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

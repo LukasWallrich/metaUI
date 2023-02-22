@@ -2,8 +2,9 @@ pandoc: 2.19.2
 pkgdown: 2.0.7
 pkgdown_sha: ~
 articles:
+  customise_models: customise_models.html
   getting_started: getting_started.html
-last_built: 2023-02-22T11:37Z
+last_built: 2023-02-22T14:28Z
 urls:
   reference: https://lukaswallrich.github.io/metaUI/reference
   article: https://lukaswallrich.github.io/metaUI/articles
