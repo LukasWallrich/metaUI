@@ -39,18 +39,18 @@ df <- df %>% mutate(
     forcats::fct_recode(yes = "1", no = "2")
 )
 
-c("Publication year" = "pub_year", Continent = "continent", "Teacher sample" = "teachers")
-
 df <- import_data(df,
   study_label = "study_label", es_field = "yi", se = "se", pvalue = "p.value",
   sample_size = "ni",
-  variance = "vi", filters = c("pub_year", "continent", "teachers"), es_type = "SMD"
+  variance = "vi", 
+  filters = c("Publication year" = "pub_year", Continent = "continent", "Teacher sample" = "teachers"), 
+  es_type = "SMD"
 )
 ```
 
 ## Running the app
 
 ```{r}
-launch_shiny(df, "Barroso et al 2021 - Maths Anxiety", "Fisher's Z scores")
+generate_shiny(df, "Barroso et al 2021 - Maths Anxiety", "Fisher's Z scores")
 ```
 

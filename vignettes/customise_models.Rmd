@@ -1,0 +1,28 @@
+---
+title: "Customising the models to compare"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Customising the models to compare}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(metaUI)
+```
+
+# Adding and removing models
+
+You might wish to show different models.
+
+```{r}
+
+```
+
