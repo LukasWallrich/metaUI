@@ -40,12 +40,12 @@ import_data(
 
 \item{es_type}{Character. Type of effect size. Defaults to "SMD" (standardized mean difference). Check the \code{\link[metafor:escalc]{metafor::escalc()}} function for other options.}
 
-\item{article_label}{Character. Field with article labels. Only used to report number of references in addition to number of independent samples. Defaults to NA.}
+\item{article_label}{Character. Field with article labels. Only used to report number of references in addition to number of independent samples.}
 
-\item{es_label}{Character. Label for individual effect sizes - only needed when there are multiple effect sizes per study. Defaults to NA.}
+\item{es_label}{Character. Label for individual effect sizes - only needed when there are multiple effect sizes per study/sample. Defaults to NA. Defaults to NA, in that case, multiple effect sizes are simply numbered.}
 }
 \value{
-tibble with the data from the file reformatted for metaUI
+tibble with the data from the file/input reformatted for metaUI
 }
 \description{
 You may want to use the \code{\link[metafor:escalc]{metafor::escalc()}} function in the metafor package to calculate effect sizes and their variances in preparation for this function.
