@@ -80,7 +80,7 @@ summarise_categorical <- function(x, name) {
 #'
 #' Constructs a confidence intervals from upper and lower bounds,
 #' placing them in between square brackets
-#'
+#' 
 #' Taken from timesaveR package, copyright also Lukas Wallrich, 2022
 #'
 #' @param lower Lower bound(s) of confidence interval(s). Numeric, or a vector of numbers
@@ -113,13 +113,4 @@ round_ <- function(x, digits = 2) {
   attributes(out) <- attributes(x)
   out[is.na(x)] <- NA
   out
-}
-
-# Thanks to https://stackoverflow.com/a/41194093/10581449
-allglobal <- function() {
-  if (identical(parent.frame(), globalenv())) return(FALSE)
-  lss <- ls(envir = parent.frame())
-  for (i in lss) {
-    assign(i, get(i, envir = parent.frame()), envir = .GlobalEnv)
-  }
 }

@@ -1,41 +1,56 @@
+# Wrap in function so that it can be saved more easily
 
-# TK - defaults? Advanced options?
-aggregation_method <- c("aggregate", "first")
-correlation_dependent <- .6
+labels_and_options <- function(for_saving = FALSE) {
+  glue::glue('
 
-# Fixed texts
-go <- HTML("<br /><p style=\"color:blue\">Choose your set of studies and click on <b>Analyze data</b> to see the results.</p><br/>")
+      # TK - defaults? Advanced options?
+      aggregation_method <- c("aggregate", "first")
+      correlation_dependent <- .6
 
-summary_overview_main <- HTML("<br/><br/><h3>Sample Overview</h3>") # <b></b>
-summary_table_main <- HTML("<br/><br/><h3>Effect Size Estimates</h3>") # <b></b>
-summary_table_notes <- HTML("<i>Notes:</i> LCL = Lower Confidence Limit, UCL = Upper Confidence Limit, k = number of effects.")
+      # Fixed texts
+      welcome_title <- HTML("Welcome to our dynamic meta-analysis app!")
+      welcome_text <- HTML("<br /><p style=\'color:blue;\'>To get started, choose a set of studies and click on <b>Analyze data</b>.</p><br/>")
 
-sample_overview_main <- HTML("<br/><br/><h3>Sample Breakdown</h3>") # <b></b>
-sample_table <- HTML("<br/><br/><h3>List of Studies</h3>") # <b></b>
-sample_moderation_main <- HTML("<br/><br/><h3>Simple tests of moderation</h3>") # <b></b>
-sample_moderation_notes <- HTML("<br /><i>Notes:</i> This does <i>not</i> consider correlations between moderators, and is thus only intended for exploration, k = number of effects.")
+      go <- ""
+      #HTML("<br /><p style=\'color:blue;\'>Choose your set of studies and click on <b>Analyze data</b> to see the results.</p><br/>")
 
-firstvalues <- HTML("<br/><br/><i>Notes:</i> First reported values are selected for p- and z-curve analyses.")
+      summary_overview_main <- HTML("<br/><br/><h3>Sample Overview</h3>") # <b></b>
+      summary_table_main <- HTML("<br/><br/><h3>Effect Size Estimates</h3>") # <b></b>
+      summary_table_notes <- HTML("<i>Notes:</i> LCL = Lower Confidence Limit, UCL = Upper Confidence Limit, k = number of effects.")
 
-qrppb_main <- HTML("<h3>Publication Bias and Questionable Research Practices</h3>")
-funnel_main <- HTML("<h3>Funnel Plot of Effects</h3>")
+      sample_overview_main <- HTML("<br/><br/><h3>Sample Breakdown</h3>") # <b></b>
+      sample_table <- HTML("<br/><br/><h3>List of Studies</h3>") # <b></b>
+      sample_moderation_main <- HTML("<br/><br/><h3>Simple tests of moderation</h3>") # <b></b>
+      sample_moderation_notes <- HTML("<br /><i>Notes:</i> This does <i>not</i> consider correlations between moderators, and is thus only intended for exploration, k = number of effects.")
 
-eggers_main <- HTML("<h3>Egger's Test of Funnel Plot Asymmetry</h3>")
+      firstvalues <- HTML("<br/><br/><i>Notes:</i> First reported values are selected for p- and z-curve analyses.")
 
-pcurve_main <- HTML("<h3>P-Curve of Effects")
+      qrppb_main <- HTML("<h3>Publication Bias and Questionable Research Practices</h3>")
+      funnel_main <- HTML("<h3>Funnel Plot of Effects</h3>")
 
-pcurve_notes <- HTML(paste(
-  "<h5><br/><br/><i>Notes:</i> P-curve can only be plotted if there are 2 or more significant effects. Only the first <i>p</i>-value",
-  "coded from each study is considered here, since the <i>p</i>-values need to be statistically independent.</h5>"
-))
+      eggers_main <- HTML("<h3>Egger\'s Test of Funnel Plot Asymmetry</h3>")
 
-zcurve_main <- HTML("<h3>Z-Curve of Effects (EM via EM, no bootstrapping)")
+      pcurve_main <- HTML("<h3>P-Curve of Effects")
 
-diagnostics_main <- HTML("<h3>Distribution of Effect Sizes")
-diagnostics_het <- HTML("<h3>Heterogeneity (REML)<h5>")
-diagnostics_notes <- HTML("<h5><br/><br/><i>Notes:</i> More tools for outlier diagnostics will be added soon.</h5>")
+      pcurve_notes <- HTML(paste(
+        "<h5><br/><br/><i>Notes:</i> P-curve can only be plotted if there are 2 or more significant effects. Only the first <i>p</i>-value",
+        "coded from each study is considered here, since the <i>p</i>-values need to be statistically independent.</h5>"
+      ))
 
-scroll <- HTML("Scroll down to see forest plot.")
+      zcurve_main <- HTML("<h3>Z-Curve of Effects (EM via EM, no bootstrapping)")
+
+      diagnostics_main <- HTML("<h3>Distribution of Effect Sizes")
+      diagnostics_het <- HTML("<h3>Heterogeneity (REML)<h5>")
+      diagnostics_notes <- HTML("<h5><br/><br/><i>Notes:</i> More tools for outlier diagnostics will be added soon.</h5>")
+
+      scroll <- HTML("Scroll down to see forest plot.")
+
+      {if (!for_saving) "allglobal()" else ""}
+
+  ')
+}
+
+
 
 # Wrapped in function so that it is only created once custom variables are set
 
@@ -173,7 +188,7 @@ generate_ui <- function(data, dataset_name, about) {
             tableOutput("heterogeneity") %>% shinycssloaders::withSpinner(),
             diagnostics_notes
           ),
-          tabPanel("About", about)
+          tabPanel("About", HTML("{about}"))
         )
       )
     )
@@ -186,6 +201,11 @@ generate_server <- function() {
 
 glue::glue(.open = '<<', .close = '>>', '
     function(input, output) {
+
+    showModal(modalDialog(
+        title = welcome_title,
+       welcome_text
+      ))
 
   # Create slider to filter by z-scores
   z_sig_dig <- 2
@@ -302,7 +322,8 @@ glue::glue(.open = '<<', .close = '>>', '
 
     # Generate table
 
-    estimates_explo_agg <- models$mod_res %>% dplyr::bind_rows()
+    estimates_explo_agg <- models$mod_res %>% dplyr::bind_rows() %>%
+      dplyr::mutate(Model = factor(Model, levels = Model))
 
     print(estimates_explo_agg)
 
@@ -464,7 +485,7 @@ glue::glue(.open = '<<', .close = '>>', '
         ggplot2::theme_bw() +
         ggplot2::xlab(input$moderator %>% stringr::str_remove("metaUI__filter_")) +
         ggplot2::ylab(metaUI_eff_size_type_label) +
-        ggplot2::geom_smooth(data = df, aes(y = metaUI__effect_size, x = mod, color = NULL), formula = y ~ x, method = "lm") +
+        ggplot2::geom_smooth(data = df, ggplot2::aes(y = metaUI__effect_size, x = mod, color = NULL), formula = y ~ x, method = "lm") +
         ggplot2::geom_hline(yintercept = 0, linetype = "dashed")
     } else {
       p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = forcats::fct_rev(mod))) +
@@ -587,13 +608,12 @@ glue::glue(.open = '<<', .close = '>>', '
       method = "ML" # REML failed to converge in tests
     )
 
-    metapp_total_model <- metapp_total()
     het <- data.frame(
-      "Sigma2_Level1" = metapp_total_model$sigma2[1],
-      "Sigma2_Level2" = metapp_total_model$sigma2[2],
-      "Tau" = metapp_total_model$tau2,
-      "Q" = round(metapp_total_model$QE, digits = 2),
-      "Q_p" = fmt_p(metapp_total_model$QEp, include_equal = FALSE)
+      "Sigma2_Level1" = metapp_total$sigma2[1],
+      "Sigma2_Level2" = metapp_total$sigma2[2],
+      "Tau" = metapp_total$tau2,
+      "Q" = round(metapp_total$QE, digits = 2),
+      "Q_p" = fmt_p(metapp_total$QEp, include_equal = FALSE)
       )
 
     print(het)
@@ -672,7 +692,7 @@ glue::glue(.open = '<<', .close = '>>', '
         "n" = metaUI__N
       )
 
-    pcurve_estimates1 <- try(pcurve(pp_first, effect.estimation = FALSE, N = pppcurve_first$n, dmin = 0, dmax = 1), silent = TRUE)
+    pcurve_estimates1 <- try(pcurve(pp_first, effect.estimation = FALSE, N = pp_first$n, dmin = 0, dmax = 1), silent = FALSE)
 
     pcurve_estimates1 <- ifelse(substr(pcurve_estimates1, 1, 5) == "Error", 0, pcurve_estimates1)
 
@@ -686,7 +706,7 @@ glue::glue(.open = '<<', .close = '>>', '
     df <- df_filtered()
 
     # Use only first p-value as they need to be statistically independent
-    pp_first <- df %>%
+    df_first <- df %>%
       dplyr::group_by(metaUI__study_id) %>%
       dplyr::slice_head(n = 1) %>%
       dplyr::ungroup() %>%
@@ -708,11 +728,11 @@ glue::glue(.open = '<<', .close = '>>', '
   output$violin <- plotly::renderPlotly({
     df <- df_filtered()
 
-    efm <- mean(pp$metaUI__effect_size)
-    efsd <- sd(pp$metaUI__effect_size)
+    efm <- mean(df$metaUI__effect_size)
+    efsd <- sd(df$metaUI__effect_size)
 
     # Outliers in boxplot are quartiles + 1.5 * IQR - so cutsoffs calculated here to show points with labels
-    qs <- quantile(pp$metaUI__effect_size, c(.25, .75))
+    qs <- quantile(df$metaUI__effect_size, c(.25, .75))
     bounds <- qs
     bounds[1] <- bounds[1] - 1.5 * diff(range(qs))
     bounds[2] <- bounds[2] + 1.5 * diff(range(qs))

@@ -27,6 +27,7 @@ Imports:
     magrittr,
     meta,
     metafor,
+    pacman,
     plotly,
     poibin,
     puniform,
