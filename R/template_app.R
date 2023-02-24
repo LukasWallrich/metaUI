@@ -180,7 +180,7 @@ generate_ui <- function(data, dataset_name, about) {
           tabPanel("Forest Plot", go, scroll, plotOutput("foreststudies") %>% shinycssloaders::withSpinner(), cellArgs = list(style = "vertical-align: top")),
           tabPanel(
             "QRP/PB", go, qrppb_main, funnel_main, plotOutput("funnel", width = "100%") %>% shinycssloaders::withSpinner(),
-            eggers_main, tableOutput("eggers") %>% shinycssloaders::withSpinner(),
+            eggers_main, DT::dataTableOutput("eggers") %>% shinycssloaders::withSpinner(),
             firstvalues,
             pcurve_main, plotOutput("pcurve") %>% shinycssloaders::withSpinner(), pcurve_notes,
             zcurve_main, plotOutput("zcurve") %>% shinycssloaders::withSpinner()
@@ -591,7 +591,7 @@ glue::glue(.open = '<<', .close = '>>', '
 
     }
 
-    modtable %>% DT::datatable(options = list(dom = "t"))
+    modtable %>% DT::datatable(options = list(dom = "t"), escape = FALSE)
   })
 
   output$moderation_text <- shiny::renderText({
@@ -667,16 +667,19 @@ glue::glue(.open = '<<', .close = '>>', '
     metafor::funnel(meta_agg, xlab = metaUI_eff_size_type_label, studlab = FALSE, contour = .95, col.contour = "light grey")
   })
 
-  output$eggers <- renderTable({
+  output$eggers <- DT::renderDataTable({
     meta_agg <- meta_agg()
 
     eggers <- meta::metabias(meta_agg, k.min = 3, method.bias = "Egger")
     eggers_table <- data.frame(
-      "Intercept" = eggers$estimate, "Tau²" = eggers$tau,
+      "Intercept" = eggers$estimate, "Tau<sup>2</sup>" = eggers$tau,
       "t" = eggers$statistic,
-      "p" = ifelse(round(eggers$p.value, 3) == 0, "< .001", round(eggers$p.value, 3))
+      "p" = ifelse(round(eggers$p.value, 3) == 0, "< .001", round(eggers$p.value, 3)),
+      check.names = FALSE
     )
-    print(eggers_table[1, ])
+    eggers_table[1, ] %>% DT::datatable(options = list(dom = "t"), escape = FALSE) %>%
+     DT::formatRound(columns = 1:3, digits=3)
+
   })
 
 
