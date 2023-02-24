@@ -39,7 +39,7 @@ df <- df %>% mutate(
     forcats::fct_recode(yes = "1", no = "2")
 )
 
-df <- import_data(df,
+df <- prepare_data(df,
   study_label = "study_label", es_field = "yi", se = "se", pvalue = "p.value",
   sample_size = "ni",
   variance = "vi", 

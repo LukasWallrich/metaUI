@@ -11,7 +11,7 @@
 #' @param pvalue Character. Name of the field to use as the p-value for the effect size.
 #' @param filters Character. List of fields to use as filters - can be named if different labels should be displayed
 #' @param url Character. Field with URLs or DOIs to link to. DOIs can be in the format "10.1234/5678" or full links. Defaults to NA.
-#' @param article_label Character. Field with article labels. Only used to report number of references in addition to number of independent samples. 
+#' @param article_label Character. Field with article labels. Only used to report number of references in addition to number of independent samples.
 #' @param es_type Character. Type of effect size. Defaults to "SMD" (standardized mean difference). Check the [metafor::escalc()] function for other options.
 #' @param es_label Character. Label for individual effect sizes - only needed when there are multiple effect sizes per study/sample. Defaults to NA. Defaults to NA, in that case, multiple effect sizes are simply numbered.
 #'
@@ -21,7 +21,7 @@
 #' \dontrun{
 #' import_data("my_meta.csv", "study_id", "cohens_d", c("Country" = "country", "Year" = "year"))
 #' }
-import_data <- function(data, study_label, es_field, se, pvalue, sample_size, variance, filters, url = NA, es_type = "SMD", article_label = NA, es_label = NA) {
+prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, variance, filters, url = NA, es_type = "SMD", article_label = NA, es_label = NA) {
   if (is.character(data)) {
     # Read the file
     data <- read.csv(data, stringsAsFactors = FALSE)

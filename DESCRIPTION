@@ -2,10 +2,15 @@ Package: metaUI
 Type: Package
 Title: What the Package Does (Title Case)
 Version: 0.1.0
-Authors@R: person("Lukas", "Wallrich", , "lukas.wallrich@gmail.com", role = c("aut", "cre"),
-           comment = c(ORCID = "0000-0003-2121-5177")),
-           person("Lukas", "Röseler", , "lukas.roeseler@uni-bamberg.de", role = c("aut"),
-           comment = c(ORCID = "0000-0002-6446-1901"))
+Authors@R: c(
+  person("Lukas", "Wallrich", , "lukas.wallrich@gmail.com", role = c("aut", "cre"),
+          comment = c(ORCID = "0000-0003-2121-5177")),
+  person("Lukas", "Röseler", , "lukas.roeseler@uni-bamberg.de", role = c("aut"),
+          comment = c(ORCID = "0000-0002-6446-1901")),
+  person("Mathias", "Harrer", email = "mathias.h.harrer@gmail.com", role = "cph", 
+          comment = c(ORCID = "0000-0001-7016-2687", 
+                      "Author of included p-curve code and related helper functions (from dmetar package)"))
+ )
 Maintainer: The package maintainer <yourself@somewhere.net>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.

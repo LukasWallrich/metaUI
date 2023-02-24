@@ -18,3 +18,6 @@ NULL
 #' @importFrom stats sd lm confint aggregate
 #' @importFrom utils read.csv
 NULL
+
+# Declare . as global variable to remove warnings
+utils::globalVariables(".")
