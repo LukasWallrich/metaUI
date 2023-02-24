@@ -37,12 +37,6 @@
     <loc>https://lukaswallrich.github.io/metaUI/reference/get_model_tibble.html</loc>
   </url>
   <url>
-    <loc>https://lukaswallrich.github.io/metaUI/reference/hello.html</loc>
-  </url>
-  <url>
-    <loc>https://lukaswallrich.github.io/metaUI/reference/import_data.html</loc>
-  </url>
-  <url>
     <loc>https://lukaswallrich.github.io/metaUI/reference/index.html</loc>
   </url>
   <url>
@@ -50,6 +44,9 @@
   </url>
   <url>
     <loc>https://lukaswallrich.github.io/metaUI/reference/pipe.html</loc>
+  </url>
+  <url>
+    <loc>https://lukaswallrich.github.io/metaUI/reference/prepare_data.html</loc>
   </url>
   <url>
     <loc>https://lukaswallrich.github.io/metaUI/reference/round_.html</loc>
