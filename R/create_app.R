@@ -64,6 +64,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     stop("Invalid argument type. models must be a function, a tibble, or a path to a file.")
   }
 
+  eval(parse(text = labels_and_options()))
   ui <- generate_ui(dataset, dataset_name, about)
   server <- generate_server()
 
@@ -114,7 +115,7 @@ if (launch_app) {
 #' @noRd
 
 generate_app.R <- function() {
-  req_packages <- pacman::p_depends(metaUI, local = TRUE) %>% purrr::pluck("Imports")
+  req_packages <- pacman::p_depends("metaUI", local = TRUE) %>% purrr::pluck("Imports")
   metaUI_eff_size_type_label <- metaUI_eff_size_type_label  %>% stringr::str_replace("'", stringr::fixed("\\\\'"))
 
   glue::glue("

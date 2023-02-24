@@ -45,6 +45,8 @@ labels_and_options <- function(for_saving = FALSE) {
 
       scroll <- HTML("Scroll down to see forest plot.")
 
+      favicon <- "{readLines(system.file("template_code", "favicon.base64", package = "metaUI"))}"
+
       {if (!for_saving) "allglobal()" else ""}
 
   ')
@@ -121,15 +123,18 @@ generate_moderator_selection <- function(data) {
     )')
 }
 
-
-
 generate_ui <- function(data, dataset_name, about) {
   glue::glue('
 
   fluidPage(
     theme = shinythemes::shinytheme("yeti"),
     # Application title
-    titlePanel(glue::glue("Dynamic Meta-Analysis of {dataset_name}")),
+    titlePanel(
+    windowTitle = glue::glue("Dynamic Meta-Analysis of {dataset_name}"),
+    title = tags$head(tags$link(rel="icon",
+                              href="data:image/x-icon;base64,{favicon}",
+                              type="image/x-icon")
+    )),
     # Sidebar with a slider input for number of bins
     sidebarLayout(
       sidebarPanel(
