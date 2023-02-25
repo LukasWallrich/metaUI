@@ -31,7 +31,7 @@ A dataframe containing the following columns:
 \item \code{(log)EffectSize}: The input effect size. Log-transformed if \code{effect.size.type} is \code{"ratio"}.
 \item \code{Hedges.g}: The calculated Hedges' g values (only if \code{calculate.g=TRUE}).
 \item \code{(log)StandardError}: The standard error (SE) for the effect size. Log-transformed if \code{effect.size.type} is \code{"ratio"}.
-\item \code{(log)LLCI} and \code{(log)ULCI}: The lower and upper 95\\% confidence interval of the effect size. Log-transformed if \code{effect.size.type="ratio"}.}
+\item \code{(log)LLCI} and \code{(log)ULCI}: The lower and upper 95\% confidence interval of the effect size. Log-transformed if \code{effect.size.type="ratio"}.}
 }
 \description{
 This function calculates the standard error of an effect size provided the exact
@@ -39,7 +39,7 @@ This function calculates the standard error of an effect size provided the exact
 by \href{https://www.ncbi.nlm.nih.gov/pubmed/21824904}{Altman and Bland (2011)}.
 }
 \details{
-This function calculates the standard error, standard deviation and 95\\% confidence
+This function calculates the standard error, standard deviation and 95\% confidence
 interval of an effect size given the effect size and exact \eqn{p}-value. The function can be used for:
 \itemize{
 \item effect sizes based on \strong{differences} (e.g., mean differences) by setting \code{effect.size.type}
