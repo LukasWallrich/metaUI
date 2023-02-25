@@ -24,7 +24,7 @@
 #' @param calculate.g Logical. Calculates the standardized mean difference
 #' corrected for small sample bias (Hedges' \eqn{g}). \code{FALSE} by default.
 #'
-#' @details This function calculates the standard error, standard deviation and 95\% confidence
+#' @details This function calculates the standard error, standard deviation and 95% confidence
 #' interval of an effect size given the effect size and exact \eqn{p}-value. The function can be used for:
 #' \itemize{
 #' \item effect sizes based on \strong{differences} (e.g., mean differences) by setting \code{effect.size.type}
@@ -48,7 +48,7 @@
 #' \item \code{(log)EffectSize}: The input effect size. Log-transformed if \code{effect.size.type} is \code{"ratio"}.
 #' \item \code{Hedges.g}: The calculated Hedges' g values (only if \code{calculate.g=TRUE}).
 #' \item \code{(log)StandardError}: The standard error (SE) for the effect size. Log-transformed if \code{effect.size.type} is \code{"ratio"}.
-#' \item \code{(log)LLCI} and \code{(log)ULCI}: The lower and upper 95\% confidence interval of the effect size. Log-transformed if \code{effect.size.type="ratio"}.}
+#' \item \code{(log)LLCI} and \code{(log)ULCI}: The lower and upper 95% confidence interval of the effect size. Log-transformed if \code{effect.size.type="ratio"}.}
 #'
 #' @examples
 #' # Example 1: one single effect size
@@ -264,7 +264,7 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
 #' used for the half-curve tests.
 #' \item \strong{Test results}: The results for the right-skewness and flatness test, including the
 #' \eqn{p_{binomial}} value, as well as the \eqn{z} and \eqn{p} value for the full and half-curve test.
-#' \item \strong{Power Estimate}: The power estimate and 95\% confidence interval.
+#' \item \strong{Power Estimate}: The power estimate and 95% confidence interval.
 #' \item \strong{Evidential value}: Two lines displaying if evidential value is present and/or absent/inadequate based
 #' on the results (using the guidelines by Simonsohn et al., 2015, see Details).
 #' \item \strong{True effect estimate}: If \code{effect.estimation} is set to \code{TRUE}, the estimated true effect
@@ -276,7 +276,7 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
 #' \itemize{
 #' \item \code{pcurveResults}: A data frame containing the results for the right-skewness and flatness test, including the
 #' \eqn{p_{binomial}} value, as well as the \eqn{z} and \eqn{p} value for the full and half-curve test.
-#' \item \code{Power}: The power estimate and 95\% confidence interval.
+#' \item \code{Power}: The power estimate and 95% confidence interval.
 #' \item \code{PlotData}: A data frame with the data used in the \eqn{p}-curve plot.
 #' \item \code{Input}: A data frame containing the provided effect sizes, calculated \eqn{p}-values and individual results for each included (significant) effect.
 #' \item \code{EvidencePresent}, \code{EvidenceAbsent}, \code{kInput}, \code{kAnalyzed}, \code{kp0.25}: Further results of the \eqn{p}-curve analysis, including the presence/absence of evidence interpretation,

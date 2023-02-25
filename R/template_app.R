@@ -71,7 +71,7 @@ generate_ui_filters <- function(data) {
       )
       sig_dig <- log10(max(abs(max(data[[filter_col]], na.rm = TRUE)), abs(min(data[[filter_col]], na.rm = TRUE)))) + 1
       glue::glue('
-      sliderInput("{filter_col}", "{stringr::str_remove(filter_col, "metaUI__filter_")}",
+      sliderInput("{filter_col %>% stringr::str_replace_all(" ", "_")}", "{stringr::str_remove(filter_col, "metaUI__filter_")}",
                          min = {signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
                          max = {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)},
                          value = c({signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
@@ -79,7 +79,7 @@ generate_ui_filters <- function(data) {
                         sep = ""
       )')
     } else {
-      glue::glue('checkboxGroupInput("{filter_col}", "{stringr::str_remove(filter_col, "metaUI__filter_")}",
+      glue::glue('checkboxGroupInput("{filter_col %>% stringr::str_replace_all(" ", "_")}", "{stringr::str_remove(filter_col, "metaUI__filter_")}",
         choices = c("{glue::glue_collapse(unique(data[[filter_col]]), sep = \'", "\')}"),
         selected = c("{glue::glue_collapse(unique(data[[filter_col]]), sep = \'", "\')}")
         )')
@@ -141,10 +141,21 @@ generate_ui <- function(data, dataset_name, about) {
         width = 3,
         {generate_ui_filters(data)},
         uiOutput("z_score_filter"),
-        actionButton("go", "Analyze data")#,
-        #downloadButton("downloadData", "Download dataset") # does not work yet (see roadmap)
+        actionButton("go", "Analyze data"),
+        tags$hr(),
+        shinyjs::useShinyjs(),
+        actionButton("downloadData", "Download dataset", icon = icon("download")),
+        conditionalPanel("false",
+          downloadButton("executeDownload", "Execute the download")
+        ),
+             # Input: Select a file ----
+        tags$hr(),
+      fileInput("uploadData", "Upload metaUI xlsx file",
+                multiple = FALSE,
+                accept = c(".xlsx")
       ),
-
+      actionButton("executeUpload", "Upload dataset", icon = icon("upload")),
+      ),
       # Show a plot of the generated distribution
       mainPanel(
         width = 9,
@@ -212,13 +223,19 @@ glue::glue(.open = '<<', .close = '>>', '
        welcome_text
       ))
 
+  # Set app states
+    state_values <- reactiveValues(
+      to_upload = FALSE,
+      ever_analyzed = FALSE
+    )
+
   # Create slider to filter by z-scores
   z_sig_dig <- 2
 
   insertUI(
     selector = "#z_score_filter",
     where = "beforeEnd",
-    ui = sliderInput("outliers", "Exclude based on z-scores",
+    ui = sliderInput("outliers_z_scores", "Exclude based on z-scores",
       min = signif_floor(min(metaUI__df$metaUI__es_z), z_sig_dig),
       max = signif_ceiling(max(metaUI__df$metaUI__es_z), z_sig_dig), value = c(
         signif_floor(min(metaUI__df$metaUI__es_z), z_sig_dig),
@@ -229,13 +246,23 @@ glue::glue(.open = '<<', .close = '>>', '
 
   filters <- list(<<
     filter_cols <- colnames(metaUI__df) %>% stringr::str_subset("metaUI__filter_")
+    filter_ids <- colnames(metaUI__df) %>% stringr::str_subset("metaUI__filter_") %>% stringr::str_replace_all(" ", "_")
     filters_types <- purrr::map_chr(filter_cols, \\(x) {
       if (is.numeric(metaUI__df[[x]])) "numeric" else "selection"
     })
-   filters <- purrr::map2(filter_cols, filters_types, ~list(id = .x, type =  .y))
-        purrr::map2_chr(filter_cols, filters_types, ~ paste0("list(id = \'", .x, "\', type = \'", .y, "\')"))  %>%
+   filters <- purrr::pmap(list(filter_cols, filter_ids, filters_types), ~list(col = ..1, id = ..2, type =  ..3))
+       purrr::pmap(list(filter_cols, filter_ids, filters_types), ~ paste0("list(col = \'", ..1, "\', id = \'", ..2, "\', type = \'", ..3, "\')"))  %>%
         glue::glue_collapse(sep = ",\n")
       >>)
+
+
+  file_input <- reactive({
+    if (state_values$to_upload == TRUE) {
+      return(input$uploadData)
+    } else {
+      return(NULL)
+    }
+  })
 
   # Apply reactive filtering of dataset when clicking on the button
   df_filtered <- eventReactive(input$go, {
@@ -243,19 +270,34 @@ glue::glue(.open = '<<', .close = '>>', '
   })
 
   df_reactive <- reactive({
-    df <- metaUI__df
+    if (!is.null(file_input())) {
+      df <- readxl::read_xlsx(input$uploadData$datapath, "dataset")
+      filter_values <- readxl::read_xlsx(input$uploadData$datapath, "filters") %>% split(.$id)
+      for (i in filters) {
+        if (i$type == "numeric") {
+          updateSliderInput(inputId = i$id, value = c(as.numeric(filter_values[[i$id]]$selection[1]), as.numeric(filter_values[[i$id]]$selection[2])))
+        } else {
+          updateCheckboxGroupInput(inputId = i$id, selected = filter_values[[i$id]]$selection)
+        }
+      }
+          updateSliderInput(inputId = "outliers_z_scores", value = c(as.numeric(filter_values[["outliers_z_scores"]]$selection[1]), as.numeric(filter_values[["outliers_z_scores"]]$selection[2])))
+
+      state_values$to_upload <- FALSE
+    } else {
+      df <- metaUI__df
+    }
 
     # Filter by specified metadata filters
     <<purrr::map_chr(filters, \\(f) {
       if (f$type == "numeric") {
-        glue::glue("df <- df[df[[\'{f$id}\']] >= input[[\'{f$id}\']][1] & df[[\'{f$id}\']] <= input[[\'{f$id}\']][2], ]")
+        glue::glue("df <- df[df[[\'{f$col}\']] >= input[[\'{f$id}\']][1] & df[[\'{f$col}\']] <= input[[\'{f$id}\']][2], ]")
       } else {
-        glue::glue("df <- df[df[[\'{f$id}\']] %in% input[[\'{f$id}\']], ]")
+        glue::glue("df <- df[df[[\'{f$col}\']] %in% input[[\'{f$id}\']], ]")
       }
     }) %>% paste(collapse = "\n")>>
 
     # Filter by zscore
-    df <- df[df$metaUI__es_z >= input$outliers[1] & df$metaUI__es_z <= input$outliers[2], ]
+    df <- df[df$metaUI__es_z >= input$outliers_z_scores[1] & df$metaUI__es_z <= input$outliers_z_scores[2], ]
     df
   })
 
@@ -273,6 +315,8 @@ glue::glue(.open = '<<', .close = '>>', '
 
       return(NULL)
     }
+
+   state_values$ever_analyzed <- TRUE
 
     if (aggregation_method[1] == "aggregate") {
       # TK - do we want this, or actually just average, despite the problems with that?
@@ -406,32 +450,32 @@ glue::glue(.open = '<<', .close = '>>', '
         glue::glue("
     output$`summary_{f$id}_table` <- renderTable({{ # {{ escapes the glue syntax
     df <- df_filtered()
-    summarise_numeric(df[[\'{f$id}\']], \'{f$id  %>% stringr::str_remove(\'metaUI__filter_\')}\')
+    summarise_numeric(df[[\'{f$col}\']], \'{f$id  %>% stringr::str_remove(\'metaUI__filter_\')}\')
   }})
 
   output$`summary_{f$id}_plot` <- renderPlot({{
     df <- df_filtered()
-    ggplot2::ggplot(df, ggplot2::aes(x = `{f$id}`)) +
+    ggplot2::ggplot(df, ggplot2::aes(x = `{f$col}`)) +
       ggplot2::geom_density() +
       ggplot2::geom_rug(alpha = .1) +
       ggplot2::theme_light() +
-      ggplot2::xlab(\'{f$id %>% stringr::str_remove(\'metaUI__filter_\')}\')
+      ggplot2::xlab(\'{f$col %>% stringr::str_remove(\'metaUI__filter_\')}\')
   }})
   ")
       } else {
         glue::glue("
           output$`summary_{f$id}_table` <- renderTable({{
     df <- df_filtered()
-    summarise_categorical(df[[\'{f$id}\']], \'{f$id  %>% stringr::str_remove(\'metaUI__filter_\')}\')
+    summarise_categorical(df[[\'{f$col}\']], \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\')
   }})
 
   output$`summary_{f$id}_plot` <- renderPlot({{
     df <- df_filtered()
 
-    counts <- summarise_categorical(df[[\'{f$id}\']], \'{f$id  %>% stringr::str_remove(\'metaUI__filter_\')}\')
+    counts <- summarise_categorical(df[[\'{f$col}\']], \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\')
 
     counts$Count %>%
-      setNames(counts[[\'{f$id  %>% stringr::str_remove(\'metaUI__filter_\')}\']]) %>%
+      setNames(counts[[\'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\']]) %>%
       waffle::waffle(rows = ceiling(sqrt(sum(.) / 2)), size = max(2, 2 / (sum(.) / 100)))
   }})
         ")
@@ -794,16 +838,15 @@ glue::glue(.open = '<<', .close = '>>', '
     plotly_plot
   })
 
-
-
-
   # DOWNLOAD ----------------------------------------------------------------
 
   data_list <- reactive({
     filter_selections <- tibble::tibble()
     for (i in filters) {
-      filter_selections <- cbind(filter_selections, tibble::tibble(i$id := input[i$id]))
+      filter_selections <- rbind(filter_selections, tibble::tibble(id = i$id, selection = input[[i$id]]))
     }
+
+    filter_selections <- rbind(filter_selections, tibble::tibble(id = "outliers_z_scores", selection = input[["outliers_z_scores"]]))
 
     list(
       dataset = df_filtered(),
@@ -813,14 +856,43 @@ glue::glue(.open = '<<', .close = '>>', '
   })
 
 
-  output$downloadData <- downloadHandler(
+  output$executeDownload <- downloadHandler(
     filename = function() {
-      paste0(Sys.Date(), gsub(" ", "_", dataset_name), "-metaUIdata.xlsx")
+      paste0(Sys.Date(), "-", gsub(" ", "_", dataset_name), "-metaUIdata.xlsx")
     },
     content = function(file) {
-      writexl::write_xlsx(data_list())
+      writexl::write_xlsx(data_list(), file)
     }
   )
+
+  observeEvent(input$downloadData, {
+    if (state_values$ever_analyzed == TRUE) {
+      shinyjs::runjs("$(\'#executeDownload\')[0].click();")
+    } else {
+      showModal(modalDialog(title = "Download not yet possible", HTML("Click on <i>Analyze data</i> first. As the download will also include model estimates, these need to be created first.")))
+    }
+
+}
+)
+
+  # UPLOAD ----------------------------------------------------------------
+
+  observeEvent(input$executeUpload, {
+    state_values$to_upload <- TRUE
+
+    if (class(try(nrow(input$uploadData))) != "try-error") {
+      sheets <- readxl::excel_sheets(input$uploadData$datapath)
+      if (!("dataset" %in% sheets && "filters" %in% sheets)) {
+      showModal(modalDialog(title = "Invalid file", "The file needs to contain a dataset and a filters sheet. Typically, you should start from a file downloaded from this application."))
+      } else {
+        shinyjs::runjs("$(\'#go\')[0].click();")
+      }
+    } else {
+      showModal(modalDialog(title = "No file selected", HTML("Make sure to select a file prior to upload")))
+    }
+  })
+
+
 }
 
 ')

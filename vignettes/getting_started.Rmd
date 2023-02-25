@@ -43,7 +43,7 @@ df <- prepare_data(df,
   study_label = "study_label", es_field = "yi", se = "se", pvalue = "p.value",
   sample_size = "ni",
   variance = "vi", 
-  filters = c("Publication year" = "pub_year", Continent = "continent", "Teacher sample" = "teachers"), 
+  filters = c("Publication Year" = "pub_year", Continent = "continent", "Teacher Sample" = "teachers"), 
   es_type = "SMD"
 )
 ```
