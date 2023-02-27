@@ -202,6 +202,8 @@ generate_app.R <- function() {
 #' @param x The tibble/dataframe to be converted into tribble code
 #' @param show Logical. Print code (otherwise, returned - print with `cat()` to get linebreaks etc)
 #' @param digits Number of digits to round numeric columns to.
+#' @export
+#' @keywords internal
 #' @examples
 #' to_tribble(mtcars, show = TRUE)
 
