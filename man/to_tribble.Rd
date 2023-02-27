@@ -25,3 +25,4 @@ Taken from timesaveR package, copyright also by Lukas Wallrich, 2023
 \examples{
 to_tribble(mtcars, show = TRUE)
 }
+\keyword{internal}
