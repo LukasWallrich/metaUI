@@ -14,6 +14,11 @@
 #' @param article_label Character. Field with article labels. Only used to report number of references in addition to number of independent samples.
 #' @param es_type Character. Type of effect size. Defaults to "SMD" (standardized mean difference). Check the [metafor::escalc()] function for other options.
 #' @param es_label Character. Label for individual effect sizes - only needed when there are multiple effect sizes per study/sample. Defaults to NA. Defaults to NA, in that case, multiple effect sizes are simply numbered.
+#' @param na.rm Should rows with any missing values be removed? Can be TRUE, FALSE or "es_related" -
+#' the last is the default and drops rows with missing values for any of the variables used in the standard meta-analysis models, namely
+#' `es_field`, `sample_size`, `variance`, `se` and `pvalue`. Setting this to TRUE also drops rows with missing values on any of the filters
+#' etc, which might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
+#' or change the models and analyses to be included in the app.
 #'
 #' @return tibble with the data from the file/input reformatted for metaUI
 #' @export
@@ -21,7 +26,7 @@
 #' \dontrun{
 #' import_data("my_meta.csv", "study_id", "cohens_d", c("Country" = "country", "Year" = "year"))
 #' }
-prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, variance, filters, url = NA, es_type = "SMD", article_label = NA, es_label = NA) {
+prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, variance, filters, url = NA, es_type = "SMD", article_label = NA, es_label = NA, na.rm = "es_related") {
   if (is.character(data)) {
     # Read the file
     data <- read.csv(data, stringsAsFactors = FALSE)
@@ -69,6 +74,15 @@ prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, v
       dplyr::ungroup()
   }
   data$metaUI__es_z <- c(scale(data$metaUI__effect_size))
+
+  if (!(na.rm[1] %in% c("es_related", FALSE, TRUE))) stop('`na.rm` must be TRUE, FALSE or "es_related"')
+
+  if (na.rm[1] == "es_related") {
+    data <- data %>%
+      tidyr::drop_na(.data$metaUI__effect_size, .data$metaUI__se, .data$metaUI__variance, .data$metaUI__pvalue, .data$metaUI__N)
+  } else if (na.rm[1] == TRUE) {
+    data <- data %>% tidyr::drop_na()
+  }
 
   # Return the data frame
   return(data)
