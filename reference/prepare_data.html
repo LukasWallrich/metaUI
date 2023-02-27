@@ -61,7 +61,8 @@
 <span>  url <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  es_type <span class="op">=</span> <span class="st">"SMD"</span>,</span>
 <span>  article_label <span class="op">=</span> <span class="cn">NA</span>,</span>
-<span>  es_label <span class="op">=</span> <span class="cn">NA</span></span>
+<span>  es_label <span class="op">=</span> <span class="cn">NA</span>,</span>
+<span>  na.rm <span class="op">=</span> <span class="st">"es_related"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -113,6 +114,14 @@
 
 <dt>es_label</dt>
 <dd><p>Character. Label for individual effect sizes - only needed when there are multiple effect sizes per study/sample. Defaults to NA. Defaults to NA, in that case, multiple effect sizes are simply numbered.</p></dd>
+
+
+<dt>na.rm</dt>
+<dd><p>Should rows with any missing values be removed? Can be TRUE, FALSE or "es_related" -
+the last is the default and drops rows with missing values for any of the variables used in the standard meta-analysis models, namely
+<code>es_field</code>, <code>sample_size</code>, <code>variance</code>, <code>se</code> and <code>pvalue</code>. Setting this to TRUE also drops rows with missing values on any of the filters
+etc, which might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
+or change the models and analyses to be included in the app.</p></dd>
 
 </dl></div>
     <div class="section level2">
