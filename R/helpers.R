@@ -69,7 +69,7 @@ summarise_categorical <- function(x, name) {
   out <- dplyr::bind_rows(
     counts  %>% dplyr::slice(1:10),
     tibble::tibble(x = "Other", Count = sum(counts$Count) - sum(counts$Count[1:10])) %>% tidyr::drop_na())  %>%
-    dplyr::mutate(Percentage = paste0(round(Count / sum(Count) * 100, 1), "%"))
+    dplyr::mutate(Percentage = paste0(round(.data$Count / sum(.data$Count) * 100, 1), "%"))
 
   names(out)[1] <- name
 
@@ -119,7 +119,8 @@ round_ <- function(x, digits = 2) {
 allglobal <- function() {
   if (identical(parent.frame(), globalenv())) return(FALSE)
   lss <- ls(envir = parent.frame())
+  my_assign <- function(name, value, envir = 1L) assign(name, value, pos = envir)
   for (i in lss) {
-    assign(i, get(i, envir = parent.frame()), envir = .GlobalEnv)
+    my_assign(i, get(i, envir = parent.frame()))
   }
 }

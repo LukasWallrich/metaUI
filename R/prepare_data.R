@@ -57,7 +57,7 @@ prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, v
   if (!is.na(url)) {
     data <- data %>%
       dplyr::rename("metaUI__url" = !!rlang::sym(url)) %>%
-      dplyr::mutate(metaUI__url = ifelse(grepl("^10\\.", metaUI__url), paste0("https://doi.org/", metaUI__url), metaUI__url))
+      dplyr::mutate(metaUI__url = ifelse(grepl("^10\\.", .data$metaUI__url), paste0("https://doi.org/", .data$metaUI__url), .data$metaUI__url))
   }
   if (!is.na(article_label)) {
     data <- data %>%
@@ -69,7 +69,7 @@ prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, v
       dplyr::rename("metaUI__es_label" = !!rlang::sym(es_label))
   } else {
     data <- data %>%
-      dplyr::group_by(metaUI__study_id) %>%
+      dplyr::group_by(.data$metaUI__study_id) %>%
       dplyr::mutate(metaUI__es_label = dplyr::row_number()) %>%
       dplyr::ungroup()
   }

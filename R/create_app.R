@@ -8,7 +8,7 @@
 #' @export
 
 
-create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", ...) {
+create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "") {
 
   glue::glue("<h3>Interactive multiverse meta-analysis of {dataset_name} </h3>
           <br/><br/><b>Last Update:</b> {date}
@@ -25,7 +25,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' a folder. If saved, that folder will contain all the code and data needed to run the app. The app can then be launched by sourcing
 #' the app.R file in the folder and running launch_app().
 #'
-#' @param dataset Dataframe as returned from [import_data()]
+#' @param dataset Dataframe as returned from [prepare_data()]
 #' @param eff_size_type_label The label to be used to describe the effect size. If NA, effect type code from dataset is used.
 #' @param models The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. If you want to change the default models, have a look at the vignette and/or the [get_model_tibble()] documentation.
 #' Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
@@ -43,23 +43,23 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 
   if (!is.data.frame(dataset)) stop("Dataset must be a data.frame or tibble")
 
-  metaUI__df <<- dataset
+  my_assign("metaUI__df", dataset)
 
   if (is.na(eff_size_type_label)) {
     eff_size_type_label <- dataset$metaUI__es_type[1]
   }
 
-  metaUI_eff_size_type_label <<- eff_size_type_label
+  my_assign("metaUI_eff_size_type_label", eff_size_type_label)
 
   models_from_function <- FALSE
 
   if (is.character(models)) {
     source(models)
   } else if (is.function(models)) {
-    models_to_run <<- models()
+    my_assign("models_to_run", models())
     models_from_function <- TRUE
-  } else if (is.data.frame(models) || is_tibble(models)) {
-    models_to_run <<- models
+  } else if (is.data.frame(models)) {
+    my_assign("models_to_run", models)
   } else {
     stop("Invalid argument type. models must be a function, a tibble, or a path to a file.")
   }

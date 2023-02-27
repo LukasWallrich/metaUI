@@ -290,14 +290,13 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
 #' @importFrom graphics abline axis lines mtext par plot points rect segments text
 #' @importFrom stats as.formula hat influence ks.test optimize pbinom pchisq pf pnorm pt punif qchisq qf qnorm qt reformulate reorder setNames uniroot
 #'
-#' @seealso
-#' \code{\link{eggers.test}}
-#'
 #' @examples
 #' # Example 1: Use metagen object, do not estimate d
+#' # (Note that this dataset contains dependent effect sizes and should thus *not* be used as is.)
 #' suppressPackageStartupMessages(library(meta))
-#' data("ThirdWave")
-#' meta1 <- metagen(TE, seTE, studlab = ThirdWave$Author, data = ThirdWave)
+#' barroso2021 <- read.csv(system.file("extdata", "barroso2021.csv", package = "metaUI"))[1:50,]
+#' barroso2021$se <- sqrt(barroso2021$vi)
+#' meta1 <- metagen(yi, se, studlab = barroso2021$es_id, data = barroso2021)
 #' pcurve(meta1)
 #'
 #' # Example 2: Provide Ns, calculate d estimate

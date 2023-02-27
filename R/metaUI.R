@@ -21,6 +21,10 @@ NULL
 
 # Declare . as global variable to remove warnings
 utils::globalVariables(".")
+# Declare models_to_run as global variable, since it can be created as such by user
+utils::globalVariables("models_to_run")
+
+my_assign <- function(name, value, envir = 1L) assign(name, value, pos = envir)
 
 # Dummy function to remove CMD CHECK warning for packages only used in code saved as character
 # Since most of the code for the Shiny app is not actually saved as code in this package
@@ -34,6 +38,13 @@ no_check_warnings <- function() {
   shinycssloaders::withSpinner()
   shinythemes::themeSelector()
   waffle::waffle()
+  DT::datatable()
+  shinyjs::useShinyjs()
+  ggplot2::ggplot()
+
+  #Import/export
+  readxl::read_excel()
+  writexl::write_xlsx()
 
   # Estimation packages
   metafor::rma.mv()

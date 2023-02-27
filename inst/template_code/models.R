@@ -1,15 +1,3 @@
-#' Get model specifications
-#'
-#' This function contains the model specifications that will be compared in the Shiny app.
-#' If you want to maintain the default, just call [generate_shiny()] without specifying the models argument.
-#' If you want to change the default models, have a look at the vignette and/or the source code of this function
-#' (by running \code{get_model_tibble} in the console) and modify it accordingly.
-#'
-#' @return A tibble with the models to be included in the app - including details on how to estimate them
-#'   and how to extract the relevant information from the model output.
-#' @export
-
-get_model_tibble <- function() {
 
         models_to_run <- tibble::tribble(
         ~name, ~aggregated, ~es, ~LCL, ~UCL, ~k,
@@ -63,37 +51,31 @@ get_model_tibble <- function() {
         )
 
         # Can set up any helper functions for use in models_code (or to extract data in models_to_run)
-        # However, they need to be assigned to the global environment, so users should use <<- instead of <-
-        # (Inside the package, a different workaround is needed)
+        # However, they need to be assigned to the global environment, so use <<- instead of <-
 
-        p_curve <- function(data, p_selection = c("first", "last")) {
+        p_curve <<- function(data, p_selection = c("first", "last")) {
         if (p_selection == "first") {
             p_vals <- data %>%
-            dplyr::group_by(.data$metaUI__study_id) %>%
+            dplyr::group_by(metaUI__study_id) %>%
             dplyr::slice_head(n = 1) %>%
             dplyr::ungroup()
         } else {
             p_vals <- data %>%
-            dplyr::group_by(.data$metaUI__study_id) %>%
+            dplyr::group_by(metaUI__study_id) %>%
             dplyr::slice_tail(n = 1) %>%
             dplyr::ungroup()
         }
             p_vals <- p_vals  %>%
             dplyr::rename(
-                "studlab" = .data$metaUI__study_id,
-                "TE" = .data$metaUI__effect_size,
-                "seTE" = .data$metaUI__se,
-                "n" = .data$metaUI__N
+                "studlab" = metaUI__study_id,
+                "TE" = metaUI__effect_size,
+                "seTE" = metaUI__se,
+                "n" = metaUI__N
             )  %>%
             dplyr::mutate(TE = abs(.data$TE))
-
             pcurve(p_vals, effect.estimation = TRUE,
                             N = p_vals$n, dmin = 0, dmax = max(abs(p_vals$TE)))
         }
 
-        my_assign("p_curve", p_curve)
-
         # Keep this at the end of the file!
-        models_to_run %>% dplyr::left_join(models_code, by = "name")
-
-}
+        models_to_run <<- models_to_run %>% dplyr::left_join(models_code, by = "name")
