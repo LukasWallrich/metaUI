@@ -157,7 +157,7 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
 
 #' Perform a \emph{p}-curve analysis
 #'
-#' This function performs a \eqn{p}-curve analysis using a \code{meta} object or calculated effect size data.
+#' This function performs a \eqn{p}-curve analysis using a \code{meta} object or calculated effect size data. See [demetar::pcurve()] for examples.
 #'
 #' @usage pcurve(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1)
 #'
@@ -290,43 +290,7 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
 #' @importFrom graphics abline axis lines mtext par plot points rect segments text
 #' @importFrom stats as.formula hat influence ks.test optimize pbinom pchisq pf pnorm pt punif qchisq qf qnorm qt reformulate reorder setNames uniroot
 #'
-#' @examples
-#' # Example 1: Use metagen object, do not estimate d
-#' # (Note that this dataset contains dependent effect sizes and should thus *not* be used as is.)
-#' suppressPackageStartupMessages(library(meta))
-#' barroso2021 <- read.csv(system.file("extdata", "barroso2021.csv", package = "metaUI"))[1:50,]
-#' barroso2021$se <- sqrt(barroso2021$vi)
-#' meta1 <- metagen(yi, se, studlab = barroso2021$es_id, data = barroso2021)
-#' pcurve(meta1)
-#'
-#' # Example 2: Provide Ns, calculate d estimate
-#' N <- c(105, 161, 60, 37, 141, 82, 97, 61, 200, 79, 124, 25, 166, 59, 201, 95, 166, 144)
-#' pcurve(meta1, effect.estimation = TRUE, N = N)
-#'
-#' # Example 3: Use metacont object, calculate d estimate
-#' data("amlodipine")
-#' meta2 <- metacont(n.amlo, mean.amlo, sqrt(var.amlo),
-#'   n.plac, mean.plac, sqrt(var.plac),
-#'   data = amlodipine, studlab = study, sm = "SMD"
-#' )
-#' N <- amlodipine$n.amlo + amlodipine$n.plac
-#' pcurve(meta2, effect.estimation = TRUE, N = N, dmin = 0, dmax = 1)
-#'
-#' # Example 4: Construct x object from scratch
-#' sim <- data.frame(
-#'   "studlab" = c(paste("Study_", 1:18, sep = "")),
-#'   "TE" = c(
-#'     0.561, 0.296, 0.648, 0.362, 0.770, 0.214, 0.476,
-#'     0.459, 0.343, 0.804, 0.357, 0.476, 0.638, 0.396, 0.497,
-#'     0.384, 0.568, 0.415
-#'   ),
-#'   "seTE" = c(
-#'     0.338, 0.297, 0.264, 0.258, 0.279, 0.347, 0.271, 0.319,
-#'     0.232, 0.237, 0.385, 0.398, 0.342, 0.351, 0.296, 0.325,
-#'     0.322, 0.225
-#'   )
-#' )
-#' pcurve(sim)
+
 pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
   # Rename x to metaobject, remove x
   metaobject <- x
