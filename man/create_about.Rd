@@ -9,7 +9,8 @@ create_about(
   date = format(Sys.Date(), "\%d \%b \%Y"),
   citation = "",
   osf_link = "",
-  contact = ""
+  contact = "",
+  list_packages = TRUE
 )
 }
 \arguments{
@@ -22,6 +23,9 @@ create_about(
 \item{osf_link}{Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.}
 
 \item{contact}{Contact information, typically email. Defaults to an empty string.}
+
+\item{list_packages}{Should all packages used by the app be listed on the About page? Please note that this is based on the default
+configuration, so it needs to be tailored if you adjust the models.}
 }
 \description{
 Create the about text for the app
