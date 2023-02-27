@@ -220,7 +220,8 @@ glue::glue(.open = '<<', .close = '>>', '
 
     showModal(modalDialog(
         title = welcome_title,
-       welcome_text
+       welcome_text,
+       easyClose = TRUE
       ))
 
   # Set app states

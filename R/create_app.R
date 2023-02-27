@@ -5,18 +5,34 @@
 #' @param citation Citation requested by the author. Defaults to an empty string.
 #' @param osf_link Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.
 #' @param contact Contact information, typically email. Defaults to an empty string.
+#' @param list_packages Should all packages used by the app be listed on the About page? Please note that this is based on the default
+#' configuration, so it needs to be tailored if you adjust the models.
 #' @export
 
 
-create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "") {
+create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE) {
 
-  glue::glue("<h3>Interactive multiverse meta-analysis of {dataset_name} </h3>
+  out <- glue::glue("<h3>Interactive multiverse meta-analysis of {dataset_name} </h3>
           <br/><br/><b>Last Update:</b> {date}
           {if (citation != '') glue::glue('<br/><br/><b>Citation:</b> {citation}') else ''}
           {if (osf_link != '') glue::glue('<br/><br/><b>Data and materials:</b> <a href={osf_link}>{osf_link}</a>') else ''}
           {if (contact != '') glue::glue('<br/><br/><b><b>Contact:</b> Contact us with suggestions or bug reports:</b> {contact}') else ''}
           <br/><br/><br/><br/> <b>Created with <a href='https://github.com/LukasWallrich/metaUI'> metaUI </a> </b>
           ")
+  if (list_packages == TRUE) {
+  req_packages <- pacman::p_depends("metaUI", local = TRUE) %>% purrr::pluck("Imports")
+  package_versions <- purrr::map_chr(req_packages, \(p) utils::packageVersion(p) %>% as.character())
+
+  HTML(glue::glue(out, "<br /> &nbsp;<br /> &nbsp;<br /> &nbsp; <h4>R packages used</h4>",
+                  purrr::map(1:3, \(i) {
+                    start <- (i-1) * ceiling(length(req_packages)/3) + 1
+                    end <- min(i * ceiling(length(req_packages)/3), length(req_packages))
+                    glue::glue("<table style='display: inline-block;vertical-align:top;'><tr><th tyle='text-align: left;'>Package&nbsp;&nbsp;&nbsp;</th><th tyle='text-align: left;'>Version&nbsp;</th></tr>\n",
+             purrr::map2(req_packages[start:end], package_versions[start:end], \(p, v) glue::glue("<tr><td>{p}</td><td>{v}</td></tr>")) %>% glue::glue_collapse("\n"),
+             "</table>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}) %>% glue::glue_collapse("\n")))
+  } else {
+    out
+  }
 }
 
 #' Generate Shiny app
