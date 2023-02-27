@@ -56,7 +56,7 @@ and number of provided/significant/\eqn{p<0.025} studies.
 }
 }
 \description{
-This function performs a \eqn{p}-curve analysis using a \code{meta} object or calculated effect size data. See \code{\link[demetar:pcurve]{demetar::pcurve()}} for examples.
+This function performs a \eqn{p}-curve analysis using a \code{meta} object or calculated effect size data. See the \href{https://dmetar.protectlab.org/}{dmetar documentation} for examples.
 }
 \details{
 \strong{P-curve Analysis}

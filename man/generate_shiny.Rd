@@ -37,6 +37,8 @@ be asked to confirm overwriting it - unless the script is run in non-interactive
     \item{\code{citation}}{Citation requested by the author. Defaults to an empty string.}
     \item{\code{osf_link}}{Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.}
     \item{\code{contact}}{Contact information, typically email. Defaults to an empty string.}
+    \item{\code{list_packages}}{Should all packages used by the app be listed on the About page? Please note that this is based on the default
+configuration, so it needs to be tailored if you adjust the models.}
   }}
 }
 \description{
