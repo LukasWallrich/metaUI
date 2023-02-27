@@ -116,9 +116,11 @@ of the meta-analysis is substantial (i.e., \eqn{I^2} greater than 50 percent).
 }
 \examples{
 # Example 1: Use metagen object, do not estimate d
+# (Note that this dataset contains dependent effect sizes and should thus *not* be used as is.)
 suppressPackageStartupMessages(library(meta))
-data("ThirdWave")
-meta1 <- metagen(TE, seTE, studlab = ThirdWave$Author, data = ThirdWave)
+barroso2021 <- read.csv(system.file("extdata", "barroso2021.csv", package = "metaUI"))[1:50,]
+barroso2021$se <- sqrt(barroso2021$vi)
+meta1 <- metagen(yi, se, studlab = barroso2021$es_id, data = barroso2021)
 pcurve(meta1)
 
 # Example 2: Provide Ns, calculate d estimate
@@ -171,9 +173,6 @@ Simonsohn, U. (2017). R code for the P-Curve App 4.052. http://p-curve.com/app4/
 Van Aert, R. C., Wicherts, J. M., & van Assen, M. A. (2016).
 Conducting meta-analyses based on p values: Reservations and recommendations for applying
 \emph{p}-uniform and \emph{p}-curve. \emph{Perspectives on Psychological Science, 11}(5), 713-729.
-}
-\seealso{
-\code{\link{eggers.test}}
 }
 \author{
 Mathias Harrer & David Daniel Ebert

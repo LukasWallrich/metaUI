@@ -12,7 +12,7 @@ and how to extract the relevant information from the model output.
 }
 \description{
 This function contains the model specifications that will be compared in the Shiny app.
-If you want to maintain the default, just call \code{\link[=create_app]{create_app()}} without specifying the models argument.
+If you want to maintain the default, just call \code{\link[=generate_shiny]{generate_shiny()}} without specifying the models argument.
 If you want to change the default models, have a look at the vignette and/or the source code of this function
 (by running \code{get_model_tibble} in the console) and modify it accordingly.
 }

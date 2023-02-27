@@ -15,7 +15,7 @@ generate_shiny(
 )
 }
 \arguments{
-\item{dataset}{Dataframe as returned from \code{\link[=import_data]{import_data()}}}
+\item{dataset}{Dataframe as returned from \code{\link[=prepare_data]{prepare_data()}}}
 
 \item{dataset_name}{Name of the dataset}
 

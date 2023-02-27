@@ -9,8 +9,7 @@ create_about(
   date = format(Sys.Date(), "\%d \%b \%Y"),
   citation = "",
   osf_link = "",
-  contact = "",
-  ...
+  contact = ""
 )
 }
 \arguments{

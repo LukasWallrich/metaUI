@@ -16,7 +16,8 @@ prepare_data(
   url = NA,
   es_type = "SMD",
   article_label = NA,
-  es_label = NA
+  es_label = NA,
+  na.rm = "es_related"
 )
 }
 \arguments{
@@ -43,6 +44,12 @@ prepare_data(
 \item{article_label}{Character. Field with article labels. Only used to report number of references in addition to number of independent samples.}
 
 \item{es_label}{Character. Label for individual effect sizes - only needed when there are multiple effect sizes per study/sample. Defaults to NA. Defaults to NA, in that case, multiple effect sizes are simply numbered.}
+
+\item{na.rm}{Should rows with any missing values be removed? Can be TRUE, FALSE or "es_related" -
+the last is the default and drops rows with missing values for any of the variables used in the standard meta-analysis models, namely
+\code{es_field}, \code{sample_size}, \code{variance}, \code{se} and \code{pvalue}. Setting this to TRUE also drops rows with missing values on any of the filters
+etc, which might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
+or change the models and analyses to be included in the app.}
 }
 \value{
 tibble with the data from the file/input reformatted for metaUI
