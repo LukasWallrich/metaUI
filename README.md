@@ -1,4 +1,4 @@
-# metaUI <img src="man/figures/logo.png" align="right", style="height:200px; padding: 10px;" />
+# metaUI <img src="man/figures/logo.png" align="right" style="height:200px; padding: 10px;" />
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/lukaswallrich/metaUI/workflows/R-CMD-check/badge.svg)](https://github.com/lukaswallrich/metaUI/actions)
