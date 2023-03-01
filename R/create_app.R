@@ -79,7 +79,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     stop("Invalid argument type. models must be a function, a tibble, or a path to a file.")
   }
 
-  eval(parse(text = labels_and_options()))
+  eval(parse(text = labels_and_options(dataset_name)))
   ui <- generate_ui(dataset, dataset_name, about, for_saving = !is.na(save_to_folder))
   server <- generate_server()
 
@@ -120,7 +120,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     }
   }
   # Could consider keeping labels in this file - but then ui.R needs less readable glue::glue syntax
-  writeLines(labels_and_options(for_saving = TRUE), file.path(save_to_folder, "labels_and_options.R"))
+  writeLines(labels_and_options(dataset_name, for_saving = TRUE), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
   writeLines(generate_global.R(), file.path(save_to_folder, "global.R"))

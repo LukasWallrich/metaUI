@@ -1,6 +1,6 @@
 # Wrap in function so that it can be saved more easily
 
-labels_and_options <- function(for_saving = FALSE) {
+labels_and_options <- function(dataset_name, for_saving = FALSE) {
   glue::glue('
 
       # TK - defaults? Advanced options?
@@ -10,7 +10,7 @@ labels_and_options <- function(for_saving = FALSE) {
       # Fixed texts
       welcome_title <- HTML("Welcome to our dynamic meta-analysis app!")
       welcome_text <- HTML("<br /><p style=\'color:blue;\'>To get started, choose a set of studies and click on <b>Analyze data</b>.</p><br/>")
-
+      dataset_name <- "{dataset_name}"
       go <- ""
       #HTML("<br /><p style=\'color:blue;\'>Choose your set of studies and click on <b>Analyze data</b> to see the results.</p><br/>")
 
