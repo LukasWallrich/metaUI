@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
+```{r setup, message=FALSE}
 library(metaUI)
 library(dplyr)
 ```
@@ -23,8 +23,6 @@ library(dplyr)
 ## Preparing data
 
 If you have the data prepared for metaUI, you can read it in directly with `import_data()`. If any preprocessing needs to be done (e.g., for labels), you can also read in the file, preprocess it and then pass it to `import_data()`.
-
-TK - is Fisher's z in this example equivalent to SMD?
 
 ```{r}
 df <- read.csv(system.file("extdata", "barroso2021.csv", package = "metaUI"))
@@ -50,7 +48,7 @@ df <- prepare_data(df,
 
 ## Running the app
 
-```{r}
+```{r eval = FALSE}
 generate_shiny(df, "Barroso et al 2021 - Maths Anxiety", "Fisher's Z scores")
 ```
 
