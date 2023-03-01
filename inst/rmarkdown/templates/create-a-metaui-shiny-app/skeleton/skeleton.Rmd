@@ -30,7 +30,7 @@ In a first step, you will need to load and import data. For metaUI, your datafil
 
 Note that some of the fields can be calculated based on others. If you have effect sizes and their variance, for instance, you can calculate the standard error (by taking the square root of the variance), or if you have effect sizes, sample sizes and *p* values, you can calculate their standard error using the `se.from.p` function included in this package.
 
-As a first step towards your metaUI app, **load the data** and create any of the fields that need to be calculated or adjusted.
+As a first step towards your metaUI app, **load the data.**
 
 ```{r}
 # Load your data
@@ -38,6 +38,11 @@ As a first step towards your metaUI app, **load the data** and create any of the
 # file.choose() opens a selection window - it can also be replaced by the filepath
 my_data <- read.csv(file.choose())
 
+```
+
+Now **create or change any of the fields** that need to be calculated or adjusted.
+
+```{r}
 # Make any edits needed to get all the fields you need. 
 # All rows within mutate are just examples that you need to delete or adjust
 my_data <- my_data %>% mutate(
@@ -92,7 +97,7 @@ To then create the Shiny app in a format that can be customized and deployed to 
 generate_shiny(my_data, 
                dataset_name = "____",
                # A label for how the effect size should be described in charts
-               eff_size_label = "____",
+               eff_size_type_label = "____",
                # The folder the app should be saved to 
                # if you keep as is, you should get a popup to select it when running the code
                save_to_folder = rstudioapi::selectDirectory(),
@@ -106,11 +111,13 @@ After you have run the above, the app will be saved into the folder specified. Y
 
 To further customize the app, consider editing:
 
--   `models.R` to adjust the meta-analytic models that are compared on the main page. See the vignette on changing models for instructions on how to do that.
+-   `models.R` to adjust the meta-analytic models that are compared on the main page. See the vignette on changing models for instructions on how to do that,
 
--   `ui.R` to edit the user interface (e.g., labels or the About section) or to drop certain parts of the output apart from the main models (e.g., to display only a *z*-curve or only a *p*-curve).
+-   `ui.R` to edit the user interface (e.g., labels or the About section) or to drop certain parts of the output apart from the main models (e.g., to display only a *z*-curve or only a *p*-curve),
 
--   `server.R` to modify other other parts of the output (for instance, to use a different theme for the graphs).
+-   `server.R` to modify other other parts of the output (for instance, to use a different theme for the graphs),
+
+-   `labels_and_options.R` to change the dynamically displayed text (e.g., the welcome message) and some fundamental options (e.g., for aggregating dependent effect sizes).
 
 ## Deploy to shinyapps.io
 

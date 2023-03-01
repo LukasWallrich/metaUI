@@ -45,7 +45,7 @@ labels_and_options <- function(for_saving = FALSE) {
 
       scroll <- HTML("Scroll down to see forest plot.")
 
-      favicon <- "{readLines(system.file("template_code", "favicon.base64", package = "metaUI"))}"
+      favicon <- "{if (!for_saving) readLines(system.file("template_code", "favicon.base64", package = "metaUI")) else ""}"
 
       {if (!for_saving) "allglobal()" else ""}
 
@@ -89,15 +89,15 @@ generate_ui_filters <- function(data) {
 
 
 generate_sample_description_ui <- function(data) {
-  filter_cols <- colnames(data) %>%
-    stringr::str_subset("metaUI__filter_")
-  filter_names <- stringr::str_remove(filter_cols, "metaUI__filter_")
+  filter_ids <- colnames(data) %>%
+    stringr::str_subset("metaUI__filter_") %>% stringr::str_replace_all(" ", "_")
+  filter_names <- stringr::str_remove(filter_ids, "metaUI__filter_")
 
-  purrr::map2_chr(filter_cols, filter_names, \(fc, fn) {
+  purrr::map2_chr(filter_ids, filter_names, \(fid, fn) {
     glue::glue('
             fluidRow(h4("{fn}"),
-              div(column(4, tableOutput("summary_{fc}_table")),
-                column(7, shinycssloaders::withSpinner(plotOutput("summary_{fc}_plot")))
+              div(column(4, tableOutput("summary_{fid}_table")),
+                column(7, shinycssloaders::withSpinner(plotOutput("summary_{fid}_plot")))
               )
             )
                 ')
@@ -123,21 +123,25 @@ generate_moderator_selection <- function(data) {
     )')
 }
 
-favicon_tag <- ",
-               title = tags$head(tags$link(rel=\"icon\",
+get_favicon_tag <- function() {
+glue::glue('tagList(
+               tags$head(tags$link(rel=\"icon\",
                               href=\"data:image/x-icon;base64,{favicon}\",
-                              type=\"image/x-icon\")
-    )"
+                              type=\"image/x-icon\")),
+                tags$span(\"Dynamic Meta-Analysis of {dataset_name}\"))
+    ')
+}
+
 
 generate_ui <- function(data, dataset_name, about, for_saving) {
-  glue::glue('
+  out <- glue::glue('
 
   fluidPage(
     theme = shinythemes::shinytheme("yeti"),
     # Application title
     titlePanel(
-    windowTitle = glue::glue("Dynamic Meta-Analysis of {dataset_name}")
-   {if (!for_saving) favicon_tag else ""}),
+    windowTitle = glue::glue("Dynamic Meta-Analysis of {dataset_name}"),
+    title = {if (!for_saving) get_favicon_tag() else glue::glue(\'\"Dynamic Meta-Analysis of {dataset_name}\"\')}),
     # Sidebar with a slider input for number of bins
     sidebarLayout(
       sidebarPanel(
@@ -213,6 +217,8 @@ generate_ui <- function(data, dataset_name, about, for_saving) {
     )
   )
   ')
+
+  out
 }
 
 
@@ -362,14 +368,26 @@ glue::glue(.open = '<<', .close = '>>', '
       if (mod_spec$aggregated == TRUE) {
         df <- df_agg
       }
-      mod <- eval(parse(text = mod_spec$code))
-      mod_res <- tibble::tibble(
-        Model = mod_spec$name,
-        es = eval(parse(text = mod_spec$es)) %>% as.numeric(),
-        LCL = eval(parse(text = mod_spec$LCL)) %>% as.numeric(),
-        UCL = eval(parse(text = mod_spec$UCL)) %>% as.numeric(),
-        k = eval(parse(text = mod_spec$k)) %>% as.numeric()
-      )
+      mod <- try(eval(parse(text = mod_spec$code)))
+      if ("try-error" %in% class(mod)) {{
+        warning("Model ", mod_spec$name, " could not be estimated. Error was ", mod)
+        mod <- NULL
+        mod_res <- tibble::tibble(
+            Model = mod_spec$name,
+            es = NA_real_,
+            LCL = NA_real_,
+            UCL = NA_real_,
+            k = NA_real_
+          )
+      }} else {{
+        mod_res <- tibble::tibble(
+          Model = mod_spec$name,
+          es = eval(parse(text = mod_spec$es)) %>% as.numeric(),
+          LCL = eval(parse(text = mod_spec$LCL)) %>% as.numeric(),
+          UCL = eval(parse(text = mod_spec$UCL)) %>% as.numeric(),
+          k = eval(parse(text = mod_spec$k)) %>% as.numeric()
+        )
+      }}
       list(mod = mod, mod_res = mod_res)
     }) %>% purrr::transpose()
 

@@ -26,4 +26,4 @@
         f <- getCurrentFileLocation()
       }
       source(file.path(f, "global.R"))
-    }, ui = ui, server = server)
+    }, ui = ui, server = server, options = c(launch.browser = interactive()))

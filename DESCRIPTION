@@ -1,6 +1,6 @@
 Package: metaUI
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Create Shiny apps for dynamic meta-analyes
 Version: 0.1.0
 Authors@R: c(
   person("Lukas", "Wallrich", , "lukas.wallrich@gmail.com", role = c("aut", "cre"),

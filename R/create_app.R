@@ -67,13 +67,12 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 
   my_assign("metaUI_eff_size_type_label", eff_size_type_label)
 
-  models_from_function <- FALSE
+  models_from_function <- models
 
   if (is.character(models)) {
     source(models)
   } else if (is.function(models)) {
     my_assign("models_to_run", models())
-    models_from_function <- TRUE
   } else if (is.data.frame(models)) {
     my_assign("models_to_run", models)
   } else {
@@ -87,8 +86,10 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   if (!is.na(save_to_folder)) {
   if (dir.exists(save_to_folder)) {
     if (interactive()) {
+      if (length(list.files(save_to_folder)) > 0) {
       if (!utils::askYesNo(glue::glue("Folder {save_to_folder} already exists. Overwrite?"))) {
         stop("Folder already exists. Aborting.")
+      }
       }
     }
   } else {
@@ -99,23 +100,27 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   }
 
   file.copy(system.file("template_code", "helpers.R", package="metaUI"),
-            file.path(save_to_folder, "helpers.R"))
+            file.path(save_to_folder, "helpers.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "favicon.ico", package="metaUI"),
-            file.path(save_to_folder, "www", "favicon.ico"))
+            file.path(save_to_folder, "www", "favicon.ico"), overwrite = TRUE)
   file.copy(system.file("template_code", "app.R", package="metaUI"),
-            file.path(save_to_folder, "app.R"))
+            file.path(save_to_folder, "app.R"), overwrite = TRUE)
+  file.copy(system.file("template_code", "dmetar_contributions.R", package="metaUI"),
+            file.path(save_to_folder, "dmetar_contributions.R"), overwrite = TRUE)
   if (is.character(models)) {
     file.copy(models, file.path(save_to_folder, "models.R"))
   } else {
     writeLines(paste("models_to_run <- ", to_tribble(models_to_run)), file.path(save_to_folder, "models.R"))
-    if (models_from_function) {
+    if (is.function(models_from_function)) {
+      if (!(identical(models_from_function, get_model_tibble))) {
       warning("Models tibble was created from a function. Note that any side effects (e.g., helper functions)",
         " of that function were not be saved. If you need them, edit the models.R file manually.",
         call. = FALSE, immediate. = TRUE)
-  }
+      }
+    }
   }
   # Could consider keeping labels in this file - but then ui.R needs less readable glue::glue syntax
-  # writeLines(labels_and_options(for_saving = TRUE), file.path(save_to_folder, "labels_and_options.R"))
+  writeLines(labels_and_options(for_saving = TRUE), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
   writeLines(generate_global.R(), file.path(save_to_folder, "global.R"))
@@ -126,7 +131,7 @@ if (launch_app) {
   eval(parse(text = labels_and_options()))
   ui <- eval(parse(text = ui))
   server <- eval(parse(text = server))
-  shinyApp(ui = ui, server = server)
+  shinyApp(ui = ui, server = server, options = c(launch.browser = interactive()))
 }
 
 }
@@ -155,13 +160,13 @@ generate_global.R <- function() {
         }}'))  %>% glue::glue_collapse(sep = '\n')}
 
   # Ensure component files can be found
-   f <- ''
+   f <- '.'
 
   if(!(file.exists('server.R'))) {{
     message('server.R not found in current working directory. Trying to automatically ',
             'identify location of this script - in case of errors, please set the ',
             'working directory.')
-  }}
+
 
     # With thanks to https://stackoverflow.com/a/55322344/10581449
     getCurrentFileLocation <-  function()
@@ -179,12 +184,14 @@ generate_global.R <- function() {
     }}
 
     f <- getCurrentFileLocation()
+  }}
 
   # Source and set elements of app
   library(shiny)
   source(file.path(f, 'helpers.R'))
   source(file.path(f, 'models.R'))
   source(file.path(f, 'labels_and_options.R'))
+  source(file.path(f, 'dmetar_contributions.R'))
   server <<- source(file.path(f, 'server.R')) %>% purrr::pluck('value')
   ui <<- source(file.path(f, 'ui.R'))  %>% purrr::pluck('value')
   metaUI_eff_size_type_label <<- '{metaUI_eff_size_type_label}'
