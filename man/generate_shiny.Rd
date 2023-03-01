@@ -43,6 +43,6 @@ configuration, so it needs to be tailored if you adjust the models.}
 }
 \description{
 This function generates the Shiny app. It is the main function of the package. The app can either be launched directly, or saved to
-a folder. If saved, that folder will contain all the code and data needed to run the app. The app can then be launched by sourcing
-the app.R file in the folder and running launch_app().
+a folder. If saved, that folder will contain all the code and data needed to run the app. The app can then be launched from the
+app.R file in the folder, or modified by editing server.R, ui.R and models.R there.
 }
