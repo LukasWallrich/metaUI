@@ -38,8 +38,8 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' Generate Shiny app
 #'
 #' This function generates the Shiny app. It is the main function of the package. The app can either be launched directly, or saved to
-#' a folder. If saved, that folder will contain all the code and data needed to run the app. The app can then be launched by sourcing
-#' the app.R file in the folder and running launch_app().
+#' a folder. If saved, that folder will contain all the code and data needed to run the app. The app can then be launched from the
+#' app.R file in the folder, or modified by editing server.R, ui.R and models.R there.
 #'
 #' @param dataset Dataframe as returned from [prepare_data()]
 #' @param eff_size_type_label The label to be used to describe the effect size. If NA, effect type code from dataset is used.
@@ -81,7 +81,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   }
 
   eval(parse(text = labels_and_options()))
-  ui <- generate_ui(dataset, dataset_name, about)
+  ui <- generate_ui(dataset, dataset_name, about, for_saving = !is.na(save_to_folder))
   server <- generate_server()
 
   if (!is.na(save_to_folder)) {
@@ -94,9 +94,16 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   } else {
     dir.create(save_to_folder)
   }
+  if (!dir.exists(file.path(save_to_folder, "www"))) {
+    dir.create(file.path(save_to_folder, "www"))
+  }
 
   file.copy(system.file("template_code", "helpers.R", package="metaUI"),
             file.path(save_to_folder, "helpers.R"))
+  file.copy(system.file("template_code", "favicon.ico", package="metaUI"),
+            file.path(save_to_folder, "www", "favicon.ico"))
+  file.copy(system.file("template_code", "app.R", package="metaUI"),
+            file.path(save_to_folder, "app.R"))
   if (is.character(models)) {
     file.copy(models, file.path(save_to_folder, "models.R"))
   } else {
@@ -107,10 +114,11 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         call. = FALSE, immediate. = TRUE)
   }
   }
-  writeLines(labels_and_options(for_saving = TRUE), file.path(save_to_folder, "labels_and_options.R"))
+  # Could consider keeping labels in this file - but then ui.R needs less readable glue::glue syntax
+  # writeLines(labels_and_options(for_saving = TRUE), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
-  writeLines(generate_app.R(), file.path(save_to_folder, "app.R"))
+  writeLines(generate_global.R(), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
 }
 
@@ -125,12 +133,12 @@ if (launch_app) {
 
 #' Generate file to launch Shiny app
 #'
-#' This function creates the app.R file that will be used if the app is saved. It brings together all code files and data
-#' and offers the launch_app() function to launch the app.
+#' This function creates the global.R file that will be used if the app is saved. It brings together all code files and data
+#' and loads them into the workspace, ready for the app to be launched.
 #'
 #' @noRd
 
-generate_app.R <- function() {
+generate_global.R <- function() {
   req_packages <- pacman::p_depends("metaUI", local = TRUE) %>% purrr::pluck("Imports")
   metaUI_eff_size_type_label <- metaUI_eff_size_type_label  %>% stringr::str_replace("'", stringr::fixed("\\\\'"))
 
@@ -177,16 +185,11 @@ generate_app.R <- function() {
   source(file.path(f, 'helpers.R'))
   source(file.path(f, 'models.R'))
   source(file.path(f, 'labels_and_options.R'))
-  server <- source(file.path(f, 'server.R')) %>% purrr::pluck('value')
-  ui <- source(file.path(f, 'ui.R'))  %>% purrr::pluck('value')
-  metaUI_eff_size_type_label <- '{metaUI_eff_size_type_label}'
-  metaUI__df <- readRDS(file.path(f, 'dataset.rds'))
-
-  # Create function to launch the app
-
-  launch_app <- function() {{
-    shinyApp(ui = ui, server = server)
-  }}")
+  server <<- source(file.path(f, 'server.R')) %>% purrr::pluck('value')
+  ui <<- source(file.path(f, 'ui.R'))  %>% purrr::pluck('value')
+  metaUI_eff_size_type_label <<- '{metaUI_eff_size_type_label}'
+  metaUI__df <<- readRDS(file.path(f, 'dataset.rds'))
+")
 }
 
 

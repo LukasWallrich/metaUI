@@ -10,6 +10,23 @@ Apart from allowing readers (and reviewers) to assess the robustness and trustwo
  
 The idea came from researchers who have created similar web apps for their meta-analyses that have been well received, yet they require substantial time investment and advanced coding skills to use. With metaUI, researchers can get a working app by simply uploading their dataset and tagging key variables – while they still have the flexibility to tailor the display in line with their interests and requirements.
 
+## Installation
+
+You can install the development version of metaUI from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("LukasWallrich/metaUI")
+```
+
+## Getting started
+
+The best way to get started in RStudio is with the metaUI template - so in RStudio, go to `File -> New File -> R Markdown` then select `From Template` and `Create a metaUI Shiny app`. To see the template in the most readable format, select `Visual` just above the file that has opened to enter the Visual Editor. Then you can follow the step-by-step instructions.
+
+Outside R Studio, you can run `file.edit(system.file("rmarkdown/templates/create-a-metaui-shiny-app/skeleton/skeleton.Rmd", package = "metaUI"))` to open the template file and then take it from there. 
+
+The [`Getting started` vignette](https://lukaswallrich.github.io/metaUI/articles/getting_started.html) provides a step-by-step example.
+
 # Sources 
 
 Much of the package code was based on two previous interactive meta-analyses apps:

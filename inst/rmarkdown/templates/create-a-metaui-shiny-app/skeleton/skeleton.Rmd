@@ -1,0 +1,123 @@
+---
+title: "Template to create a metaUI app"
+author: "Your Name"
+date: "The Date"
+---
+
+This template takes you through the key steps in using metaUI to create a Shiny app for exploration of your meta-analysis dataset. It is intended to be used in RStudio's Visual Markdown Editor.
+
+**To get started**, fill in the blanks indicated by \_ \_ \_ \_ \_ and complete the remaining instructions. When you are done with one of the blocks, you can click on the green arrow to run that code block.
+
+Further information can be found on [our webpage](https://lukaswallrich.github.io/metaUI/).
+
+```{r setup}
+# Just run this block without any changes.
+library(metaUI)
+library(dplyr)
+```
+
+## Prepare the data
+
+In a first step, you will need to load and import data. For metaUI, your datafile needs to contain:
+
+-   a **study label** to identify individual samples (You can include multiple effect sizes with the same study label to indicate that they are dependent.),
+-   an **effect size** measure,
+-   the **variance** of the effect size
+-   the **standard error** of the effect size
+-   the **sample size** it is based on
+-   the ***p*****-value** for each effect size
+-   data on any **moderators / filters** you want to include
+
+Note that some of the fields can be calculated based on others. If you have effect sizes and their variance, for instance, you can calculate the standard error (by taking the square root of the variance), or if you have effect sizes, sample sizes and *p* values, you can calculate their standard error using the `se.from.p` function included in this package.
+
+As a first step towards your metaUI app, **load the data** and create any of the fields that need to be calculated or adjusted.
+
+```{r}
+# Load your data
+# You might need a different read function depending on the file type
+# file.choose() opens a selection window - it can also be replaced by the filepath
+my_data <- read.csv(file.choose())
+
+# Make any edits needed to get all the fields you need. 
+# All rows within mutate are just examples that you need to delete or adjust
+my_data <- my_data %>% mutate(
+  # Maybe combine various fields into the study label
+  study_label = paste0(author, " (", pub_year, ")", ": ", study_id),
+  # Maybe calculate the standard error from the variance
+  se = sqrt(var), 
+  # Turn categorical moderators/filters into factors
+  continent = factor(continent) %>% 
+  # ... and make sure they have clear labels  
+    forcats::fct_recode("North America" = "1", "South America" = "2", "Europe" = "3",
+                        "Asia" = "4", "Africa" = "5", "Oceania" = "6", "NA" = "-999")
+)
+
+```
+
+Next, use the `prepare_data()` function to format the dataset for use by the metaUI package.
+
+```{r}
+# In prepare_data(), you need to specify which fields in your data contain which 
+# pieces of data. Check ?prepare_data for details.
+
+my_data <- prepare_data(my_data,
+  study_label = "____", 
+  es_field = "____", 
+  se = "____", 
+  pvalue = "____",
+  sample_size = "____",
+  variance = "____", 
+  # Filters/moderators can be named, with the "Display name" = "var_name" format
+  # Add as many as you want to use
+  filters = c("____" = "____", "___" = "____"), 
+  # Indicate the effect size type as used by the metafor::escalc package
+  # Typical options are OR (odds ratios), SMD (standardised mean differences, e.g., Cohen's d),
+  # COR (correlation coefficients) or ZCOR (Fisher's r-to-z transformed coefficient)
+  es_type = "____"
+)
+
+```
+
+## Create the app
+
+Now you are ready to launch a first version of the app. This is useful to see whether the data is read correctly, and to identify what customization you want to make.
+
+```{r}
+generate_shiny(my_data, dataset_name = "____")
+```
+
+To then create the Shiny app in a format that can be customized and deployed to shinyapps.io, you need to provide some more details regarding the information that should be displayed and **the path that the app should be saved to**.
+
+```{r}
+generate_shiny(my_data, 
+               dataset_name = "____",
+               # A label for how the effect size should be described in charts
+               eff_size_label = "____",
+               # The folder the app should be saved to 
+               # if you keep as is, you should get a popup to select it when running the code
+               save_to_folder = rstudioapi::selectDirectory(),
+               # Details to show on the about page - see ?create_about for all options
+               citation = "____",
+               contact = "____"
+               )
+```
+
+After you have run the above, the app will be saved into the folder specified. You can open `app.R` in that folder to run the Shiny app.
+
+To further customize the app, consider editing:
+
+-   `models.R` to adjust the meta-analytic models that are compared on the main page. See the vignette on changing models for instructions on how to do that.
+
+-   `ui.R` to edit the user interface (e.g., labels or the About section) or to drop certain parts of the output apart from the main models (e.g., to display only a *z*-curve or only a *p*-curve).
+
+-   `server.R` to modify other other parts of the output (for instance, to use a different theme for the graphs).
+
+## Deploy to shinyapps.io
+
+Follow the instructions provided by Posit/RStudio [here](https://shiny.rstudio.com/articles/shinyapps.html). In essence, you need to create an account, install the `rsconnect` package and authenticate within that package. Then you can run the following to deploy your app:
+
+```{r}
+rsconnect::deployApp(appDir = rstudioapi::selectDirectory())
+```
+
+Once that is done, the app should open in your browser, and you can copy the link from the address bar. That's it - you now have your own meta-analysis Shiny app.

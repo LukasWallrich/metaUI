@@ -54,3 +54,9 @@ df <- prepare_data(df,
 generate_shiny(df, "Barroso et al 2021 - Maths Anxiety", "Fisher's Z scores")
 ```
 
+## Saving the app
+
+```{r eval=FALSE}
+generate_shiny(df, "Barroso et al 2021 - Maths Anxiety", "Fisher's Z scores", save_to_folder = "my_app")
+```
+

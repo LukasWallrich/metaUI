@@ -1,0 +1,6 @@
+name: Create a metaUI Shiny app
+description: >
+   This template guides users through the process of creating a metaUI Shiny app.
+   Note that it is not intended to be knitted, but just to guide the interactive
+   work.
+create_dir: FALSE

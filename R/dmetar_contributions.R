@@ -51,6 +51,23 @@
 #' \item \code{(log)StandardError}: The standard error (SE) for the effect size. Log-transformed if \code{effect.size.type} is \code{"ratio"}.
 #' \item \code{(log)LLCI} and \code{(log)ULCI}: The lower and upper 95% confidence interval of the effect size. Log-transformed if \code{effect.size.type="ratio"}.}
 #'
+#' @export
+#'
+#' @examples
+#' # Example 1: one single effect size
+#' se.from.p(
+#'   effect.size = 0.71, p = 0.013, N = 75,
+#'   effect.size.type = "difference", calculate.g = TRUE
+#' )
+#'
+#' # Example 2: vector of effect sizes (Odds Ratio)
+#' effect.size <- c(0.91, 1.01, 0.72, 0.43)
+#' p <- c(0.05, 0.031, 0.001, 0.09)
+#' N <- c(120, 86, 450, 123)
+#' se.from.p(
+#'   effect.size = effect.size, p = p, N = N,
+#'   effect.size.type = "ratio"
+#' )
 
 se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calculate.g = FALSE) {
   # Define helper funcs

@@ -123,18 +123,21 @@ generate_moderator_selection <- function(data) {
     )')
 }
 
-generate_ui <- function(data, dataset_name, about) {
+favicon_tag <- ",
+               title = tags$head(tags$link(rel=\"icon\",
+                              href=\"data:image/x-icon;base64,{favicon}\",
+                              type=\"image/x-icon\")
+    )"
+
+generate_ui <- function(data, dataset_name, about, for_saving) {
   glue::glue('
 
   fluidPage(
     theme = shinythemes::shinytheme("yeti"),
     # Application title
     titlePanel(
-    windowTitle = glue::glue("Dynamic Meta-Analysis of {dataset_name}"),
-    title = tags$head(tags$link(rel="icon",
-                              href="data:image/x-icon;base64,{favicon}",
-                              type="image/x-icon")
-    )),
+    windowTitle = glue::glue("Dynamic Meta-Analysis of {dataset_name}")
+   {if (!for_saving) favicon_tag else ""}),
     # Sidebar with a slider input for number of bins
     sidebarLayout(
       sidebarPanel(
