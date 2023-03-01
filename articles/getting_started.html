@@ -80,15 +80,7 @@
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://lukaswallrich.github.io/metaUI/">metaUI</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Attaching package: 'dplyr'</span></span>
-<span><span class="co">#&gt; The following objects are masked from 'package:stats':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     filter, lag</span></span>
-<span><span class="co">#&gt; The following objects are masked from 'package:base':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     intersect, setdiff, setequal, union</span></span></code></pre></div>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="preparing-data">Preparing data<a class="anchor" aria-label="anchor" href="#preparing-data"></a>
 </h2>
@@ -96,7 +88,6 @@
 with <code>import_data()</code>. If any preprocessing needs to be done
 (e.g., for labels), you can also read in the file, preprocess it and
 then pass it to <code>import_data()</code>.</p>
-<p>TK - is Fisher’s z in this example equivalent to SMD?</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"barroso2021.csv"</span>, package <span class="op">=</span> <span class="st">"metaUI"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -123,7 +114,6 @@ then pass it to <code>import_data()</code>.</p>
 </h2>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/generate_shiny.html">generate_shiny</a></span><span class="op">(</span><span class="va">df</span>, <span class="st">"Barroso et al 2021 - Maths Anxiety"</span>, <span class="st">"Fisher's Z scores"</span><span class="op">)</span></span></code></pre></div>
-<div style="width: 100% ; height: 400px ; text-align: center; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box;" class="muted well">Shiny applications not supported in static R Markdown documents</div>
 </div>
 <div class="section level2">
 <h2 id="saving-the-app">Saving the app<a class="anchor" aria-label="anchor" href="#saving-the-app"></a>

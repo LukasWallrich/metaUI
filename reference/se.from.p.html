@@ -121,6 +121,36 @@ of a <em>p</em> value. <em>BMJ 343</em>:d2090.</p>
     <p>Mathias Harrer &amp; David Daniel Ebert</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Example 1: one single effect size</span></span></span>
+<span class="r-in"><span><span class="fu">se.from.p</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  effect.size <span class="op">=</span> <span class="fl">0.71</span>, p <span class="op">=</span> <span class="fl">0.013</span>, N <span class="op">=</span> <span class="fl">75</span>,</span></span>
+<span class="r-in"><span>  effect.size.type <span class="op">=</span> <span class="st">"difference"</span>, calculate.g <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Hedges.g StandardError StandardDeviation      LLCI     ULCI</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 0.7026804     0.2830974          2.451696 0.1478196 1.257541</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Example 2: vector of effect sizes (Odds Ratio)</span></span></span>
+<span class="r-in"><span><span class="va">effect.size</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.91</span>, <span class="fl">1.01</span>, <span class="fl">0.72</span>, <span class="fl">0.43</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">0.031</span>, <span class="fl">0.001</span>, <span class="fl">0.09</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">N</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">120</span>, <span class="fl">86</span>, <span class="fl">450</span>, <span class="fl">123</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">se.from.p</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  effect.size <span class="op">=</span> <span class="va">effect.size</span>, p <span class="op">=</span> <span class="va">p</span>, N <span class="op">=</span> <span class="va">N</span>,</span></span>
+<span class="r-in"><span>  effect.size.type <span class="op">=</span> <span class="st">"ratio"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   logEffectSize logStandardError logStandardDeviation       logLLCI</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  -0.094310679      0.048200284           0.52800765 -0.1887814995</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   0.009950331      0.004620291           0.04284681  0.0008947275</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  -0.328504067      0.099448976           2.10963136 -0.5234204779</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4  -0.843970070      0.498293938           5.52634711 -1.8206082430</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         logULCI EffectSize      LLCI      ULCI</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  0.0001601406       0.91 0.8279674 1.0001602</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  0.0190059342       1.01 1.0008951 1.0191877</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 -0.1335876560       0.72 0.5924905 0.8749508</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4  0.1326681024       0.43 0.1619272 1.1418710</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside></div>
 
