@@ -76,6 +76,21 @@
 <p>Meta-analyses are based on rich datasets that can be analyzed in numerous ways, and it is unlikely that authors and readers will always agree on the “best ways” to analyze the data. Whether it comes to the choice of model (e.g., random versus fixed effects), the methods for assessing or adjusting for publication bias (e.g., z-curve, p-curve, robust Bayesian meta-analysis), or the moderators to be included in a meta-regression, disagreements are likely to arise. This can lead to the inclusion of lengthy robustness checks and alternative analyses that are time-consuming and difficult to digest. metaUI, as an R package that supports researchers in creating interactive Shiny web apps can help - these apps allow readers (and reviewers) to explore meta-analytic datasets in a variety of different ways.</p>
 <p>Apart from allowing readers (and reviewers) to assess the robustness and trustworthiness of results more comprehensively, metaUI allows others to assess the results that are most relevant to them, such as by filtering the dataset to focus on a specific group of participants, region, outcome variable, or research method. With the opportunity for users to download the dataset used and to upload alternatives, it will also facilitate the updating of meta-analyses.</p>
 <p>The idea came from researchers who have created similar web apps for their meta-analyses that have been well received, yet they require substantial time investment and advanced coding skills to use. With metaUI, researchers can get a working app by simply uploading their dataset and tagging key variables – while they still have the flexibility to tailor the display in line with their interests and requirements.</p>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
+<p>You can install the development version of metaUI from <a href="https://github.com/" class="external-link">GitHub</a> with:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># install.packages("devtools")</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"LukasWallrich/metaUI"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="getting-started">Getting started<a class="anchor" aria-label="anchor" href="#getting-started"></a>
+</h2>
+<p>The best way to get started in RStudio is with the metaUI template - so in RStudio, go to <code>File -&gt; New File -&gt; R Markdown</code> then select <code>From Template</code> and <code>Create a metaUI Shiny app</code>. To see the template in the most readable format, select <code>Visual</code> just above the file that has opened to enter the Visual Editor. Then you can follow the step-by-step instructions.</p>
+<p>Outside R Studio, you can run <code>file.edit(system.file("rmarkdown/templates/create-a-metaui-shiny-app/skeleton/skeleton.Rmd", package = "metaUI"))</code> to open the template file and then take it from there.</p>
+<p>The <a href="https://lukaswallrich.github.io/metaUI/articles/getting_started.html"><code>Getting started</code> vignette</a> provides a step-by-step example.</p>
+</div>
 </div>
 <div class="section level1">
 <h1 id="sources">Sources<a class="anchor" aria-label="anchor" href="#sources"></a>

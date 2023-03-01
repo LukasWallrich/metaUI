@@ -4,7 +4,7 @@ pkgdown_sha: ~
 articles:
   customise_models: customise_models.html
   getting_started: getting_started.html
-last_built: 2023-02-28T12:21Z
+last_built: 2023-03-01T10:35Z
 urls:
   reference: https://lukaswallrich.github.io/metaUI/reference
   article: https://lukaswallrich.github.io/metaUI/articles
