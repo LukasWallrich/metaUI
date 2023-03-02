@@ -1,29 +1,24 @@
-Package: metaUI
 Type: Package
+Package: metaUI
 Title: Create Shiny apps for dynamic meta-analyes
 Version: 0.1.0
 Authors@R: c(
-  person("Lukas", "Wallrich", , "lukas.wallrich@gmail.com", role = c("aut", "cre"),
-          comment = c(ORCID = "0000-0003-2121-5177")),
-  person("Lukas", "Röseler", , "lukas.roeseler@uni-bamberg.de", role = c("aut"),
-          comment = c(ORCID = "0000-0002-6446-1901")),
-  person("Mathias", "Harrer", email = "mathias.h.harrer@gmail.com", role = "cph", 
-          comment = c(ORCID = "0000-0001-7016-2687", 
-                      "Author of included p-curve code and related helper functions (from dmetar package)"))
- )
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+    person("Lukas", "Wallrich", , "lukas.wallrich@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-2121-5177")),
+    person("Lukas", "Röseler", , "lukas.roeseler@uni-bamberg.de", role = "aut",
+           comment = c(ORCID = "0000-0002-6446-1901")),
+    person("Mathias", "Harrer", , "mathias.h.harrer@gmail.com", role = "cph",
+           comment = c(ORCID = "0000-0001-7016-2687", "Author of included p-curve code and related helper functions (from dmetar package)"))
+  )
+Description: Readers of meta-analyses are often interested in how
+    analytical choices influence results, or what the effects are for
+    subsets of the data.  'metaUI' makes it easy for authors to create
+    Shiny apps that answer such questions, and that allow to rerun
+    analyses with updated/edited datasets.
 License: GPL (>= 3)
-Encoding: UTF-8
-LazyData: true
-Suggests: 
-    knitr,
-    rmarkdown,
-    forcats
-Config/testthat/edition: 3
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.3
+URL: https://lukaswallrich.github.io/metaUI/,
+    https://github.com/LukasWallrich/metaUI
+BugReports: https://github.com/LukasWallrich/metaUI/issues
 Imports: 
     dplyr,
     DT,
@@ -51,5 +46,14 @@ Imports:
     weightr,
     writexl,
     zcurve
-VignetteBuilder: knitr
-URL: https://lukaswallrich.github.io/metaUI/
+Suggests: 
+    forcats,
+    knitr,
+    rmarkdown
+VignetteBuilder: 
+    knitr
+Config/testthat/edition: 3
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
