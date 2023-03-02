@@ -110,16 +110,16 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   if (is.character(models)) {
     file.copy(models, file.path(save_to_folder, "models.R"))
   } else {
-    writeLines(paste("models_to_run <- ", to_tribble(models_to_run)), file.path(save_to_folder, "models.R"))
+    writeLines(generate_models.R(models_to_run), file.path(save_to_folder, "models.R"))
     if (is.function(models_from_function)) {
       if (!(identical(models_from_function, get_model_tibble))) {
       warning("Models tibble was created from a function. Note that any side effects (e.g., helper functions)",
-        " of that function were not be saved. If you need them, edit the models.R file manually.",
+        " of that function were not saved. If you need them, edit the models.R file manually.",
         call. = FALSE, immediate. = TRUE)
       }
     }
   }
-  # Could consider keeping labels in this file - but then ui.R needs less readable glue::glue syntax
+  # Could consider keeping all labels in this file - but then ui.R needs less readable glue::glue syntax
   writeLines(labels_and_options(dataset_name, for_saving = TRUE), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
@@ -258,4 +258,27 @@ to_tribble <- function(x, show = FALSE, digits = 5) {
     return(invisible(code))
   }
   code
+}
+
+#' Generate models.R file
+#'
+#' This function creates the models.R file that will be used if the app is saved. It splits the tibble into two
+#' (in line with the internal code) to simplify editing.
+#'
+#' @noRd
+
+generate_models.R <- function(models_to_run) {
+
+  models_to_run_chr <- to_tribble(models_to_run %>% dplyr::select(-"code"))
+  models_code_chr <- to_tribble(models_to_run %>% dplyr::select("name", "code"))
+
+  glue::glue('
+             models_to_run <- {models_to_run_chr}
+
+             models_code <- {models_code_chr}
+
+            # KEEP THIS AS THE **LAST** LINE! Helper functions etc must be added above
+            models_to_run %>% dplyr::left_join(models_code, by = "name")
+             ')
+
 }

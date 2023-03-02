@@ -18,11 +18,35 @@ knitr::opts_chunk$set(
 library(metaUI)
 ```
 
-# Adding and removing models
+## Adding, editing and removing models
 
-You might wish to show different models.
+You might wish to show different models. For now, the easiest way to do that is to save the app into a folder, as shown in the vignette("getting_started"). Then open models.R to edit the models.
 
-```{r}
+## Removing models
 
+To remove models, you can add a comment (`#`) in front of the line where it is *first* defined in upper part of the file where `models_to_run` are defined ... and ignore the longer part in the `models_code` below. So to remove the Trim-and-fill model, you simply need to add the `#` shown below - or alternatively to delete that line.
+
+```{r eval=FALSE}
+   "Robust Variance Estimation",                      FALSE,       "as.numeric(mod$reg_table$b.r)",      ... 
+#   "Trim-and-fill",                                   TRUE,        "mod$TE.random",                     ...
+   "P-uniform star",                                  TRUE,        "mod$est",                            ...  
 ```
 
+## Add or edit models
+
+To add or edit models, you need to understand a bit more about the structure of the file. If contains two parts - firstly, the `models_to_run` which has the names of the models and the details on how to extract summary data, and then the `models_code` that contains the code to estimate them.
+
+For `models_to_run`, you need to provide the following details for each model:
+
+- `name` of the model to be displayed
+- `aggregated` TRUE/FALSE value whether it needs to be estimated with the dataset aggregated by sample (i.e. without dependent effect sizes)
+
+And then code within "" that allows you to export the following from the model object, called `mod`:
+
+- `es`: the effect size
+- `LCL` & `UCL`: the lower and upper bounds of the 95% confidence intervals for the effect size
+-  `k`: the number of effects that the model was estimated on
+
+For `models_code`, you need to provide code, again in "", that estimates the model based on fields available in the dataset produced by `prepare_data()` (for models where `aggregated = FALSE`) or produced as `df_agg` by `server.R` By default, this only includes `metaUI__study_id`, `metaUI__effect_size`, `metaUI__variance` and `metaUI__se`, so if you need any other fields here, you need to adjust server.R as well.
+
+If your model code is complicated, it might be worthwhile to create helper functions to call from within the `models_code` entry. You can add them to `models.R` but they need to be assigned to the global environment using `<<-`, e.g., `my_meta_fun <<- function(...)`
