@@ -1,3 +1,7 @@
+.onAttach <- function(libname, pkgname) {
+  packageStartupMessage("Note re metaUI: This package is still under active development - so please report any issues and desired features on https://github.com/LukasWallrich/metaUI.")
+}
+
 #' Pipe operator
 #'
 #' See \code{magrittr::\link[magrittr:pipe]{\%>\%}} for details.
