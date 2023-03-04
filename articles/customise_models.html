@@ -57,7 +57,14 @@
         <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off">
 </form>
 
-      <ul class="navbar-nav"></ul>
+      <ul class="navbar-nav">
+<li class="nav-item">
+  <a class="external-link nav-link" href="https://github.com/LukasWallrich/metaUI/" aria-label="github">
+    <span class="fab fa fab fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
 </div>
 
     
@@ -72,20 +79,81 @@
       <img src="../logo.png" class="logo" alt=""><h1>Customising the models to compare</h1>
             
       
-      
+      <small class="dont-index">Source: <a href="https://github.com/LukasWallrich/metaUI/blob/HEAD/vignettes/customise_models.Rmd" class="external-link"><code>vignettes/customise_models.Rmd</code></a></small>
       <div class="d-none name"><code>customise_models.Rmd</code></div>
     </div>
 
     
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://lukaswallrich.github.io/metaUI/">metaUI</a></span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://lukaswallrich.github.io/metaUI/">metaUI</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; Note re metaUI: This package is still under active development - so please report any issues and desired features on https://github.com/LukasWallrich/metaUI.</span></span></code></pre></div>
 <div class="section level2">
-<h2 id="adding-and-removing-models">Adding and removing models<a class="anchor" aria-label="anchor" href="#adding-and-removing-models"></a>
+<h2 id="adding-editing-and-removing-models">Adding, editing and removing models<a class="anchor" aria-label="anchor" href="#adding-editing-and-removing-models"></a>
 </h2>
-<p>You might wish to show different models.</p>
+<p>You might wish to show different models. For now, the easiest way to
+do that is to save the app into a folder, as shown in the
+vignette(“getting_started”). Then open models.R to edit the models.</p>
 </div>
-  </main>
+<div class="section level2">
+<h2 id="removing-models">Removing models<a class="anchor" aria-label="anchor" href="#removing-models"></a>
+</h2>
+<p>To remove models, you can add a comment (<code>#</code>) in front of
+the line where it is <em>first</em> defined in upper part of the file
+where <code>models_to_run</code> are defined … and ignore the longer
+part in the <code>models_code</code> below. So to remove the
+Trim-and-fill model, you simply need to add the <code>#</code> shown
+below - or alternatively to delete that line.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>   <span class="st">"Robust Variance Estimation"</span>,                      <span class="cn">FALSE</span>,       <span class="st">"as.numeric(mod$reg_table$b.r)"</span>,      ... </span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   "Trim-and-fill",                                   TRUE,        "mod$TE.random",                     ...</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>   <span class="st">"P-uniform star"</span>,                                  <span class="cn">TRUE</span>,        <span class="st">"mod$est"</span>,                            ...  </span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="add-or-edit-models">Add or edit models<a class="anchor" aria-label="anchor" href="#add-or-edit-models"></a>
+</h2>
+<p>To add or edit models, you need to understand a bit more about the
+structure of the file. If contains two parts - firstly, the
+<code>models_to_run</code> which has the names of the models and the
+details on how to extract summary data, and then the
+<code>models_code</code> that contains the code to estimate them.</p>
+<p>For <code>models_to_run</code>, you need to provide the following
+details for each model:</p>
+<ul>
+<li>
+<code>name</code> of the model to be displayed</li>
+<li>
+<code>aggregated</code> TRUE/FALSE value whether it needs to be
+estimated with the dataset aggregated by sample (i.e. without dependent
+effect sizes)</li>
+</ul>
+<p>And then code within “” that allows you to export the following from
+the model object, called <code>mod</code>:</p>
+<ul>
+<li>
+<code>es</code>: the effect size</li>
+<li>
+<code>LCL</code> &amp; <code>UCL</code>: the lower and upper bounds
+of the 95% confidence intervals for the effect size</li>
+<li>
+<code>k</code>: the number of effects that the model was estimated
+on</li>
+</ul>
+<p>For <code>models_code</code>, you need to provide code, again in ““,
+that estimates the model based on fields available in the dataset
+produced by <code><a href="../reference/prepare_data.html">prepare_data()</a></code> (for models where
+<code>aggregated = FALSE</code>) or produced as <code>df_agg</code> by
+<code>server.R</code> By default, this only includes
+<code>metaUI__study_id</code>, <code>metaUI__effect_size</code>,
+<code>metaUI__variance</code> and <code>metaUI__se</code>, so if you
+need any other fields here, you need to adjust server.R as well.</p>
+<p>If your model code is complicated, it might be worthwhile to create
+helper functions to call from within the <code>models_code</code> entry.
+You can add them to <code>models.R</code> but they need to be assigned
+to the global environment using <code>&lt;&lt;-</code>, e.g.,
+<code>my_meta_fun &lt;&lt;- function(...)</code></p>
+</div>
+  </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 

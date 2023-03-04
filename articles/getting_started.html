@@ -57,7 +57,14 @@
         <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off">
 </form>
 
-      <ul class="navbar-nav"></ul>
+      <ul class="navbar-nav">
+<li class="nav-item">
+  <a class="external-link nav-link" href="https://github.com/LukasWallrich/metaUI/" aria-label="github">
+    <span class="fab fa fab fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
 </div>
 
     
@@ -72,26 +79,56 @@
       <img src="../logo.png" class="logo" alt=""><h1>Getting started</h1>
             
       
-      
+      <small class="dont-index">Source: <a href="https://github.com/LukasWallrich/metaUI/blob/HEAD/vignettes/getting_started.Rmd" class="external-link"><code>vignettes/getting_started.Rmd</code></a></small>
       <div class="d-none name"><code>getting_started.Rmd</code></div>
     </div>
 
     
     
+<p>This vignette shows how to use <code>metaUI</code> to generate a
+Shiny app in a few simple steps. Firstly, you need to make sure that you
+have the package installed, and then load it.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://lukaswallrich.github.io/metaUI/">metaUI</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Paste the following two lines to your Console and remove the # to install the package</span></span>
+<span><span class="co"># if (!require(remotes)) install.packages("remotes")</span></span>
+<span><span class="co"># remotes::install_github("LukasWallrich/metaUI")</span></span>
+<span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://lukaswallrich.github.io/metaUI/">metaUI</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
-<h2 id="preparing-data">Preparing data<a class="anchor" aria-label="anchor" href="#preparing-data"></a>
+<h2 id="prepare-the-data">Prepare the data<a class="anchor" aria-label="anchor" href="#prepare-the-data"></a>
 </h2>
-<p>If you have the data prepared for metaUI, you can read it in directly
-with <code>import_data()</code>. If any preprocessing needs to be done
-(e.g., for labels), you can also read in the file, preprocess it and
-then pass it to <code>import_data()</code>.</p>
+<p>In a first step, you will need to load and import data. For metaUI,
+your datafile needs to contain:</p>
+<ul>
+<li>a <strong>study label</strong> to identify individual samples (You
+can include multiple effect sizes with the same study label to indicate
+that they are dependent.),</li>
+<li>an <strong>effect size</strong> measure,</li>
+<li>the <strong>variance</strong> of the effect size</li>
+<li>the <strong>standard error</strong> of the effect size</li>
+<li>the <strong>sample size</strong> it is based on</li>
+<li>the <strong><em>p</em>-value</strong> for each effect size</li>
+<li>data on any <strong>moderators / filters</strong> you want to
+include</li>
+</ul>
+<p>Note that some of the fields can be calculated based on others. If
+you have effect sizes and their variance, for instance, you can
+calculate the standard error (by taking the square root of the
+variance), or if you have effect sizes, sample sizes and <em>p</em>
+values, you can calculate their standard error using the
+<code>se.from.p</code> function included in this package.</p>
+<p>As a first step towards your metaUI app, <strong>load the
+data.</strong></p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"barroso2021.csv"</span>, package <span class="op">=</span> <span class="st">"metaUI"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">df</span> <span class="op">&lt;-</span> <span class="va">df</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">app_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"barroso2021.csv"</span>, package <span class="op">=</span> <span class="st">"metaUI"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Now <strong>create or change any of the fields</strong> that need to
+be calculated or adjusted. In the example dataset, taken from the <a href="https://doi.org/10.31234/osf.io/myxsj" class="external-link">psymetadata</a>-package, we
+will create clear study labels, calculate the standard errors and
+<em>p</em>-values, and finally relabel potential moderators with
+self-explanatory values.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">app_data</span> <span class="op">&lt;-</span> <span class="va">app_data</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
 <span>  study_label <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">author</span>, <span class="st">" ("</span>, <span class="va">pub_year</span>, <span class="st">")"</span>, <span class="st">": "</span>, <span class="va">study_id</span><span class="op">)</span>,</span>
 <span>  se <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="va">vi</span><span class="op">)</span>, p.value <span class="op">=</span> <span class="fl">2</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">pnorm</a></span><span class="op">(</span><span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">yi</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  continent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">continent</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
@@ -99,27 +136,85 @@ then pass it to <code>import_data()</code>.</p>
 <span>                        <span class="st">"Asia"</span> <span class="op">=</span> <span class="st">"4"</span>, <span class="st">"Africa"</span> <span class="op">=</span> <span class="st">"5"</span>, <span class="st">"Oceania"</span> <span class="op">=</span> <span class="st">"6"</span>, <span class="st">"NA"</span> <span class="op">=</span> <span class="st">"-999"</span><span class="op">)</span>,</span>
 <span>  teachers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">teachers</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
 <span>    <span class="fu">forcats</span><span class="fu">::</span><span class="fu"><a href="https://forcats.tidyverse.org/reference/fct_recode.html" class="external-link">fct_recode</a></span><span class="op">(</span>yes <span class="op">=</span> <span class="st">"1"</span>, no <span class="op">=</span> <span class="st">"2"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/prepare_data.html">prepare_data</a></span><span class="op">(</span><span class="va">df</span>,</span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Next, we use the <code><a href="../reference/prepare_data.html">prepare_data()</a></code> function to format the
+dataset for use by the metaUI package. This is mostly about identifying
+the fields in the dataset that contain specific pieces of information.
+Filters here can be used both to subset the dataset and to test for
+moderation. As they will be displayed in the Shiny app, it can often be
+a good idea to rename them as shown below. Note that the
+<code>es_type</code> must be recognised by metafor::escalc() - here, we
+deal with standardised mean differences, i.e. <code>"SMD"</code>.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">app_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/prepare_data.html">prepare_data</a></span><span class="op">(</span><span class="va">app_data</span>,</span>
 <span>  study_label <span class="op">=</span> <span class="st">"study_label"</span>, es_field <span class="op">=</span> <span class="st">"yi"</span>, se <span class="op">=</span> <span class="st">"se"</span>, pvalue <span class="op">=</span> <span class="st">"p.value"</span>,</span>
 <span>  sample_size <span class="op">=</span> <span class="st">"ni"</span>,</span>
 <span>  variance <span class="op">=</span> <span class="st">"vi"</span>, </span>
-<span>  filters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Publication Year"</span> <span class="op">=</span> <span class="st">"pub_year"</span>, Continent <span class="op">=</span> <span class="st">"continent"</span>, <span class="st">"Teacher Sample"</span> <span class="op">=</span> <span class="st">"teachers"</span><span class="op">)</span>, </span>
+<span>  filters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Publication Year"</span> <span class="op">=</span> <span class="st">"pub_year"</span>, <span class="st">"Continent"</span> <span class="op">=</span> <span class="st">"continent"</span>, <span class="st">"Teacher Sample"</span> <span class="op">=</span> <span class="st">"teachers"</span><span class="op">)</span>, </span>
 <span>  es_type <span class="op">=</span> <span class="st">"SMD"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="running-the-app">Running the app<a class="anchor" aria-label="anchor" href="#running-the-app"></a>
+<h2 id="run-the-app">Run the app<a class="anchor" aria-label="anchor" href="#run-the-app"></a>
 </h2>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/generate_shiny.html">generate_shiny</a></span><span class="op">(</span><span class="va">df</span>, <span class="st">"Barroso et al 2021 - Maths Anxiety"</span>, <span class="st">"Fisher's Z scores"</span><span class="op">)</span></span></code></pre></div>
+<p>Now you are ready to launch a first version of the app. This is
+useful to see whether the data is read correctly, and to identify what
+customization you want to make … or if you just want to explore your
+dataset locally. After you run the line below, the app should open your
+web browser.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/generate_shiny.html">generate_shiny</a></span><span class="op">(</span><span class="va">app_data</span>, </span>
+<span>               dataset_name <span class="op">=</span> <span class="st">"Barroso et al 2021 - Maths Anxiety"</span>, </span>
+<span>               eff_size_type_label <span class="op">=</span> <span class="st">"Fisher's Z scores"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="saving-the-app">Saving the app<a class="anchor" aria-label="anchor" href="#saving-the-app"></a>
+<h2 id="save-the-app">Save the app<a class="anchor" aria-label="anchor" href="#save-the-app"></a>
 </h2>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/generate_shiny.html">generate_shiny</a></span><span class="op">(</span><span class="va">df</span>, <span class="st">"Barroso et al 2021 - Maths Anxiety"</span>, <span class="st">"Fisher's Z scores"</span>, save_to_folder <span class="op">=</span> <span class="st">"my_app"</span><span class="op">)</span></span></code></pre></div>
+<p>To then create the Shiny app in a format that can be customized and
+deployed to shinyapps.io, you need to provide some more details
+regarding the information that should be displayed and <strong>the path
+that the app should be saved to</strong>.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/generate_shiny.html">generate_shiny</a></span><span class="op">(</span><span class="va">app_data</span>, </span>
+<span>               dataset_name <span class="op">=</span> <span class="st">"Barroso et al 2021 - Maths Anxiety"</span>, </span>
+<span>               eff_size_type_label <span class="op">=</span> <span class="st">"Fisher's Z scores"</span>, </span>
+<span>               save_to_folder <span class="op">=</span> <span class="st">"my_app_folder"</span>,</span>
+<span>               citation <span class="op">=</span> <span class="st">"Barroso, C., Ganley, C. M., McGraw, A. L., Geer, E. A., Hart, S. A., &amp; Daucourt, M. C. (2021). A meta-analysis of the relation between math anxiety and math achievement. Psychological Bulletin, 147(2), 134."</span>,</span>
+<span>               contact <span class="op">=</span> <span class="st">"l.wallrich@bbk.ac.uk"</span><span class="op">)</span></span></code></pre></div>
+<p>When you run this, the app will be saved to a new folder, in this
+case <code>my_app_folder</code>. You can open <code>app.R</code> in that
+folder to run the Shiny app.</p>
+<p>To further customize the app, consider editing:</p>
+<ul>
+<li><p><code>models.R</code> to adjust the meta-analytic models that are
+compared on the main page. See vignette(“customise_models”) for
+instructions on how to do that.</p></li>
+<li><p><code>ui.R</code> to edit the user interface (e.g., labels or the
+About section) or to drop certain parts of the output apart from the
+main models (e.g., to display only a <em>z</em>-curve or only a
+<em>p</em>-curve),</p></li>
+<li><p><code>server.R</code> to modify other other parts of the output
+(for instance, to use a different theme for the graphs),</p></li>
+<li><p><code>labels_and_options.R</code> to change the dynamically
+displayed text (e.g., the welcome message) and some fundamental options
+(e.g., for aggregating dependent effect sizes).</p></li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="deploy-to-shinyapps-io">Deploy to shinyapps.io<a class="anchor" aria-label="anchor" href="#deploy-to-shinyapps-io"></a>
+</h2>
+<p>If you want to share the app with the wider world, shinyapps.io is a
+good platform, with a free plan that is sufficient to start with. If you
+have not used it before, follow the instructions provided by
+Posit/RStudio to get started <a href="https://shiny.rstudio.com/articles/shinyapps.html" class="external-link">here</a>. In
+essence, you need to create an account, install the
+<code>rsconnect</code> package and authenticate within that package.
+Then you can run the following to deploy your app:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">rsconnect</span><span class="fu">::</span><span class="fu">deployApp</span><span class="op">(</span>appDir <span class="op">=</span> <span class="st">"my_app_folder"</span><span class="op">)</span></span></code></pre></div>
+<p>Once that is done, the app should open in your browser, and you can
+copy the link from the address bar. That’s it - you now have your own
+meta-analysis Shiny app online.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside>
