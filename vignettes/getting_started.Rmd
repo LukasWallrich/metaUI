@@ -111,7 +111,7 @@ To further customize the app, consider editing:
 If you want to share the app with the wider world, shinyapps.io is a good platform, with a free plan that is sufficient to start with. If you have not used it before, follow the instructions provided by Posit/RStudio to get started [here](https://shiny.rstudio.com/articles/shinyapps.html). In essence, you need to create an account, install the `rsconnect` package and authenticate within that package. Then you can run the following to deploy your app:
 
 
-```{r}
+```{r eval = FALSE}
 rsconnect::deployApp(appDir = "my_app_folder")
 ```
 
