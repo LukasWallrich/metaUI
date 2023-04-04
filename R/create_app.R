@@ -128,7 +128,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 }
 
 if (launch_app) {
-  eval(parse(text = labels_and_options()))
+  eval(parse(text = labels_and_options(dataset_name)))
   ui <- eval(parse(text = ui))
   server <- eval(parse(text = server))
   shinyApp(ui = ui, server = server, options = c(launch.browser = interactive()))
