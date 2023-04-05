@@ -65,7 +65,7 @@ generate_ui_filters <- function(data) {
       # Round slider ends to (same) appropriate number of significant digits
       l <- log10(max(abs(max(data[[filter_col]], na.rm = TRUE)), abs(min(data[[filter_col]], na.rm = TRUE))))
       sig_dig <- dplyr::case_when(
-        l < 2 ~ max(abs(l), 2),
+        l < 2 ~ min(max(abs(l), 2), 4),
         l >= 4 ~ 4,
         TRUE ~ l
       )

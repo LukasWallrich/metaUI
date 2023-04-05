@@ -278,7 +278,8 @@ generate_models.R <- function(models_to_run) {
              models_code <- {models_code_chr}
 
             # KEEP THIS AS THE **LAST** LINE! Helper functions etc must be added above
-            models_to_run %>% dplyr::left_join(models_code, by = "name")
+            models_code <- models_to_run %>% dplyr::left_join(models_code, by = "name")
+            models_code
              ')
 
 }
