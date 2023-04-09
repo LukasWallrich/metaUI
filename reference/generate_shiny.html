@@ -69,6 +69,7 @@ app.R file in the folder, or modified by editing server.R, ui.R and models.R the
 <span>  <span class="va">dataset_name</span>,</span>
 <span>  eff_size_type_label <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  models <span class="op">=</span> <span class="va">get_model_tibble</span>,</span>
+<span>  filter_popups <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  save_to_folder <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  launch_app <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">save_to_folder</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
@@ -93,6 +94,10 @@ app.R file in the folder, or modified by editing server.R, ui.R and models.R the
 <dd><p>The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. If you want to change the default models, have a look at the vignette and/or the <code><a href="get_model_tibble.html">get_model_tibble()</a></code> documentation.
 Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 this must assign the tibble to a global variable called models_to_run (i.e. using &lt;&lt;-).</p></dd>
+
+
+<dt>filter_popups</dt>
+<dd><p>Named list with content for popup windows that provide further details on filter variables. They can contain HTML formatting, but should then be wrapped into <code>HTML()</code>, for instance: <code>list(Year = HTML("&lt;i&gt;Note:&lt;/i&gt;&lt;br&gt;This refers to data collection if reported, otherwise the publication year.</code>)</p></dd>
 
 
 <dt>save_to_folder</dt>
