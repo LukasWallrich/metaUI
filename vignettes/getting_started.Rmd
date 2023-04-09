@@ -53,7 +53,8 @@ app_data <- app_data %>% mutate(
   se = sqrt(vi), p.value = 2 * pnorm(-abs(yi)),
   continent = factor(continent) %>% 
     forcats::fct_recode("North America" = "1", "South America" = "2", "Europe" = "3",
-                        "Asia" = "4", "Africa" = "5", "Oceania" = "6", "NA" = "-999"),
+                        "Asia" = "4", "Africa" = "5", "Oceania" = "6", "NA" = "-999") %>% 
+    forcats::fct_na_level_to_value("NA"),
   teachers = factor(teachers) %>% 
     forcats::fct_recode(yes = "1", no = "2")
 )

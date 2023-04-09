@@ -54,8 +54,9 @@ summarise_numeric <- function(x, name) {
     return(NULL)
   }
   tibble::tribble(
-    ~Var, ~`Mean (SD)`, ~`Min`, ~`Max`,
-    name, paste0(round(mean(x), 2), " (", round(sd(x), 2), ")"), round(min(x), 2), round(max(x), 2)
+    ~Var, ~`Mean (SD)`, ~`Min`, ~`Max`, ~`Share missing`,
+    name, paste0(round(mean(x, na.rm = TRUE), 2), " (", round(sd(x, na.rm = TRUE), 2), ")"),
+    round(min(x, na.rm = TRUE), 2), round(max(x, na.rm = TRUE), 2), paste0(round(mean(is.na(x))*100, 2), " %")
   )  %>% dplyr::mutate(dplyr::across(dplyr::everything(), as.character))  %>%
     tidyr::pivot_longer(dplyr::everything(), names_to = "Statistic", values_to = "Value")
 }
@@ -64,7 +65,7 @@ summarise_categorical <- function(x, name) {
   if (length(x) == 0) {
     return(NULL)
   }
-  counts <- tibble::tibble(x = x)  %>% dplyr::count(x, sort = TRUE, name = "Count")
+  counts <- tibble::tibble(x = x)  %>% dplyr::count(x, sort = TRUE, name = "Count", .drop = FALSE)
 
   out <- dplyr::bind_rows(
     counts  %>% dplyr::slice(1:10),

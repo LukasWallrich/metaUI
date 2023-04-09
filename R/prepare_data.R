@@ -42,6 +42,13 @@ prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, v
     filter_names <- filters %>% setNames(filters)
   }
 
+  # Set NA level for categorical filters
+  for (i in seq_along(filters)) {
+    if(is.factor(data[[filters[i]]])) {
+      data[[filters[i]]] <- data[[filters[i]]] %>%
+       forcats::fct_na_value_to_level("(Missing)")
+    }
+  }
 
   # Rename the fields
   data <- data %>%

@@ -7,6 +7,8 @@ labels_and_options <- function(dataset_name, for_saving = FALSE) {
       aggregation_method <- c("aggregate", "first")
       correlation_dependent <- .6
 
+      ci_width <- "95 %"
+
       # Fixed texts
       welcome_title <- HTML("Welcome to our dynamic meta-analysis app!")
       welcome_text <- HTML("<br /><p style=\'color:blue;\'>To get started, choose a set of studies and click on <b>Analyze data</b>.</p><br/>")
@@ -16,14 +18,15 @@ labels_and_options <- function(dataset_name, for_saving = FALSE) {
 
       summary_overview_main <- HTML("<br/><br/><h3>Sample Overview</h3>") # <b></b>
       summary_table_main <- HTML("<br/><br/><h3>Effect Size Estimates</h3>") # <b></b>
-      summary_table_notes <- HTML("<i>Notes:</i> LCL = Lower Confidence Limit, UCL = Upper Confidence Limit, k = number of effects.")
+       # Confidence level needs to be changed in all entries in model.R if you want to adjust it
+      summary_table_notes <- HTML(glue::glue("<i>Notes:</i> LCL = Lower <<ci_width>> Confidence Limit, UCL = Upper <<ci_width>> Confidence Limit, k = number of effects.", .open = "<<", .close = ">>"))
 
       sample_overview_main <- HTML("<br/><br/><h3>Sample Breakdown</h3>") # <b></b>
-      sample_table <- HTML("<br/><br/><h3>List of Studies</h3>") # <b></b>
+      sample_table <- HTML("<br/><br/><h3>List of Effect Sizes</h3>") # <b></b>
       sample_moderation_main <- HTML("<br/><br/><h3>Simple tests of moderation</h3>") # <b></b>
       sample_moderation_notes <- HTML("<br /><i>Notes:</i> This does <i>not</i> consider correlations between moderators, and is thus only intended for exploration, k = number of effects.")
 
-      firstvalues <- HTML("<br/><br/><i>Notes:</i> First reported values are selected for p- and z-curve analyses.")
+      firstvalues <- HTML("<br/><br/><i>Notes:</i> First reported <i>p</i>-values are selected for p- and z-curve analyses.")
 
       qrppb_main <- HTML("<h3>Publication Bias and Questionable Research Practices</h3>")
       funnel_main <- HTML("<h3>Funnel Plot of Effects</h3>")
@@ -32,16 +35,10 @@ labels_and_options <- function(dataset_name, for_saving = FALSE) {
 
       pcurve_main <- HTML("<h3>P-Curve of Effects")
 
-      pcurve_notes <- HTML(paste(
-        "<h5><br/><br/><i>Notes:</i> P-curve can only be plotted if there are 2 or more significant effects. Only the first <i>p</i>-value",
-        "coded from each study is considered here, since the <i>p</i>-values need to be statistically independent.</h5>"
-      ))
-
       zcurve_main <- HTML("<h3>Z-Curve of Effects (EM via EM, no bootstrapping)")
 
       diagnostics_main <- HTML("<h3>Distribution of Effect Sizes")
       diagnostics_het <- HTML("<h3>Heterogeneity (REML)<h5>")
-      diagnostics_notes <- HTML("<h5><br/><br/><i>Notes:</i> More tools for outlier diagnostics will be added soon.</h5>")
 
       scroll <- HTML("Scroll down to see forest plot.")
 
@@ -70,18 +67,29 @@ generate_ui_filters <- function(data) {
         TRUE ~ l
       )
       sig_dig <- log10(max(abs(max(data[[filter_col]], na.rm = TRUE)), abs(min(data[[filter_col]], na.rm = TRUE)))) + 1
-      glue::glue('
+      out <- glue::glue('
       sliderInput("{filter_col %>% stringr::str_replace_all(" ", "_")}", "{stringr::str_remove(filter_col, "metaUI__filter_")}",
                          min = {signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
                          max = {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)},
                          value = c({signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
                             {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)}),
                         sep = ""
-      )')
+      )
+                 ')
+      # Add option to exclude/include NA values if there are any
+      if (any(is.na(data[[filter_col]]))) {
+        out <- glue::glue('
+          {out},
+          checkboxInput("{filter_col %>% stringr::str_replace_all(" ", "_")}_include_NA",
+          "Include missing values", value = TRUE)
+        ')
+      }
+      out
+
     } else {
       glue::glue('checkboxGroupInput("{filter_col %>% stringr::str_replace_all(" ", "_")}", "{stringr::str_remove(filter_col, "metaUI__filter_")}",
-        choices = c("{glue::glue_collapse(unique(data[[filter_col]]), sep = \'", "\')}"),
-        selected = c("{glue::glue_collapse(unique(data[[filter_col]]), sep = \'", "\')}")
+        choices = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}"),
+        selected = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}")
         )')
     }
   }) %>% glue::glue_collapse(sep = ",\n")
@@ -175,6 +183,7 @@ generate_ui <- function(data, dataset_name, about, for_saving) {
             tableOutput("sample") %>% shinycssloaders::withSpinner(),
             summary_table_main,
             plotOutput("model_comparison", width = "100%") %>% shinycssloaders::withSpinner(),
+            div(),
             tableOutput("effectestimate"),
             summary_table_notes
           ),
@@ -182,7 +191,7 @@ generate_ui <- function(data, dataset_name, about, for_saving) {
             "Sample",
             sample_overview_main,
             {generate_sample_description_ui(data)},
-            h3("Sample table"),
+            h3(sample_table),
             DT::dataTableOutput("sample_table"),
           ),
           tabPanel(
@@ -200,7 +209,7 @@ generate_ui <- function(data, dataset_name, about, for_saving) {
             "QRP/PB", go, qrppb_main, funnel_main, plotOutput("funnel", width = "100%") %>% shinycssloaders::withSpinner(),
             eggers_main, DT::dataTableOutput("eggers") %>% shinycssloaders::withSpinner(),
             firstvalues,
-            pcurve_main, plotOutput("pcurve") %>% shinycssloaders::withSpinner(), pcurve_notes,
+            pcurve_main, plotOutput("pcurve") %>% shinycssloaders::withSpinner(),
             zcurve_main, plotOutput("zcurve") %>% shinycssloaders::withSpinner()
           ),
           tabPanel(
@@ -208,8 +217,7 @@ generate_ui <- function(data, dataset_name, about, for_saving) {
             diagnostics_main,
             plotly::plotlyOutput("violin", height = 500) %>% shinycssloaders::withSpinner(),
             diagnostics_het,
-            tableOutput("heterogeneity") %>% shinycssloaders::withSpinner(),
-            diagnostics_notes
+            tableOutput("heterogeneity") %>% shinycssloaders::withSpinner()
           ),
           tabPanel("About", HTML("{about}"))
         )
@@ -300,7 +308,9 @@ glue::glue(.open = '<<', .close = '>>', '
     # Filter by specified metadata filters
     <<purrr::map_chr(filters, \\(f) {
       if (f$type == "numeric") {
-        glue::glue("df <- df[df[[\'{f$col}\']] >= input[[\'{f$id}\']][1] & df[[\'{f$col}\']] <= input[[\'{f$id}\']][2], ]")
+        #Using isTRUE because isTRUE(NULL) == TRUE and input$nonexistent == NULL
+        glue::glue("df <- df[(df[[\'{f$col}\']] >= input[[\'{f$id}\']][1] & df[[\'{f$col}\']] <= input[[\'{f$id}\']][2]) |
+        (is.na(df[[\'{f$col}\']]) & isTRUE(input[[\'{f$id}_include_NA\']])), ]")
       } else {
         glue::glue("df <- df[df[[\'{f$col}\']] %in% input[[\'{f$id}\']], ]")
       }
@@ -426,7 +436,7 @@ glue::glue(.open = '<<', .close = '>>', '
       overview$Sources <- "not specified"
     }
 
-    print(paste("The current dataset contains", overview$Sources, "sources,", overview$Studies,
+    message(paste("The current dataset contains", overview$Sources, "sources,", overview$Studies,
       "independent studies and", overview$Effects, "effects.",
       sep = " "
     ))
@@ -495,6 +505,7 @@ glue::glue(.open = '<<', .close = '>>', '
     df <- df_filtered()
 
     counts <- summarise_categorical(df[[\'{f$col}\']], \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\')
+browser()
 
     counts$Count %>%
       setNames(counts[[\'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\']]) %>%
