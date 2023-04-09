@@ -176,9 +176,11 @@ generate_ui <- function(data, dataset_name, about, filter_popups, for_saving) {
     sidebarLayout(
       sidebarPanel(
         width = 3,
+        div(id = "filters",
         {generate_ui_filters(data, filter_popups)},
-        uiOutput("z_score_filter"),
+        uiOutput("z_score_filter")),
         actionButton("go", "Analyze data"),
+        actionButton("resetFilters", "Reset filters"),
         tags$hr(),
         shinyjs::useShinyjs(),
         actionButton("downloadData", "Download dataset", icon = icon("download")),
@@ -309,6 +311,12 @@ glue::glue(.open = '<<', .close = '>>', '
     df_reactive()
   })
 
+  # Reset filters
+       observeEvent(input$resetFilters, {
+        shinyjs::reset("filters")
+      })
+
+
   df_reactive <- reactive({
     if (!is.null(file_input())) {
       df <- readxl::read_xlsx(input$uploadData$datapath, "dataset")
@@ -326,6 +334,8 @@ glue::glue(.open = '<<', .close = '>>', '
     } else {
       df <- metaUI__df
     }
+
+
 
     # Filter by specified metadata filters
     <<purrr::map_chr(filters, \\(f) {
