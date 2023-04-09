@@ -27,7 +27,7 @@ The best way to get started in RStudio is with the metaUI template - so in RStud
 
 Outside R Studio, you can run `file.edit(system.file("rmarkdown/templates/create-a-metaui-shiny-app/skeleton/skeleton.Rmd", package = "metaUI"))` to open the template file and then take it from there. 
 
-The [`Getting started` vignette](https://lukaswallrich.github.io/metaUI/articles/getting_started.html) provides a step-by-step example.
+The [`Getting started` vignette](https://lukaswallrich.github.io/metaUI/articles/getting_started.html) provides a step-by-step example ... or you may want to watch this [video tutorial](https://www.youtube.com/watch?v=iaTMFzWfCe0&ab_channel=ESMARConf) for a step-by-step walk-through.
 
 # Sources 
 
