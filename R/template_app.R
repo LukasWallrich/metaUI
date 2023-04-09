@@ -54,10 +54,13 @@ labels_and_options <- function(dataset_name, for_saving = FALSE) {
 # Wrapped in function so that it is only created once custom variables are set
 
 
-generate_ui_filters <- function(data) {
+generate_ui_filters <- function(data, filter_popups) {
   filter_cols <- colnames(data) %>% stringr::str_subset("metaUI__filter_")
 
   purrr::map_chr(filter_cols, function(filter_col) {
+    add_popup <- stringr::str_remove(filter_col, "metaUI__filter_") %in% names(filter_popups)
+    if (add_popup) id <- paste0("i", sample(1:10e6, 1))
+
     if (is.numeric(data[[filter_col]])) {
       # Round slider ends to (same) appropriate number of significant digits
       l <- log10(max(abs(max(data[[filter_col]], na.rm = TRUE)), abs(min(data[[filter_col]], na.rm = TRUE))))
@@ -68,7 +71,9 @@ generate_ui_filters <- function(data) {
       )
       sig_dig <- log10(max(abs(max(data[[filter_col]], na.rm = TRUE)), abs(min(data[[filter_col]], na.rm = TRUE)))) + 1
       out <- glue::glue('
-      sliderInput("{filter_col %>% stringr::str_replace_all(" ", "_")}", "{stringr::str_remove(filter_col, "metaUI__filter_")}",
+      sliderInput("{filter_col %>% stringr::str_replace_all(" ", "_")}",
+      p("{stringr::str_remove(filter_col, "metaUI__filter_")}",
+      {if(add_popup)  glue::glue("bsButton(\'<<id>>\', label = \'\', icon = icon(\'info\'), style = \'color: #fff; background-color: #337ab7; border-color: #2e6da4\', size = \'extra-small\')", .open = "<<", .close = ">>") else ""}),
                          min = {signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
                          max = {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)},
                          value = c({signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
@@ -76,22 +81,39 @@ generate_ui_filters <- function(data) {
                         sep = ""
       )
                  ')
-      # Add option to exclude/include NA values if there are any
-      if (any(is.na(data[[filter_col]]))) {
-        out <- glue::glue('
+
+    } else {
+      out <- glue::glue('checkboxGroupInput("{filter_col %>% stringr::str_replace_all(" ", "_")}",
+      p("{stringr::str_remove(filter_col, "metaUI__filter_")}",
+      {if(add_popup)  glue::glue("bsButton(\'<<id>>\', label = \'\', icon = icon(\'info\'), style = \'color: #fff; background-color: #337ab7; border-color: #2e6da4\', size = \'extra-small\')", .open = "<<", .close = ">>") else ""}),
+      choices = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}"),
+        selected = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}")
+        )')
+    }
+
+    if (add_popup) {
+      out <- glue::glue('{out},
+      shinyBS::bsPopover(id = "{id}",
+                         title = "{stringr::str_remove(filter_col, "metaUI__filter_")}",
+                         content = HTML("{escape_quotes(filter_popups[stringr::str_remove(filter_col, "metaUI__filter_")])}"),
+                         placement = "right",
+                         trigger = "focus",
+                         options = list(container = "body"))
+                         ')
+
+    }
+
+    if (is.numeric(data[[filter_col]])) {
+    # Add option to exclude/include NA values if there are any
+    if (any(is.na(data[[filter_col]]))) {
+      out <- glue::glue('
           {out},
           checkboxInput("{filter_col %>% stringr::str_replace_all(" ", "_")}_include_NA",
           "Include missing values", value = TRUE)
         ')
-      }
-      out
-
-    } else {
-      glue::glue('checkboxGroupInput("{filter_col %>% stringr::str_replace_all(" ", "_")}", "{stringr::str_remove(filter_col, "metaUI__filter_")}",
-        choices = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}"),
-        selected = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}")
-        )')
     }
+    }
+    out
   }) %>% glue::glue_collapse(sep = ",\n")
 }
 
@@ -141,7 +163,7 @@ glue::glue('tagList(
 }
 
 
-generate_ui <- function(data, dataset_name, about, for_saving) {
+generate_ui <- function(data, dataset_name, about, filter_popups, for_saving) {
   out <- glue::glue('
 
   fluidPage(
@@ -154,7 +176,7 @@ generate_ui <- function(data, dataset_name, about, for_saving) {
     sidebarLayout(
       sidebarPanel(
         width = 3,
-        {generate_ui_filters(data)},
+        {generate_ui_filters(data, filter_popups)},
         uiOutput("z_score_filter"),
         actionButton("go", "Analyze data"),
         tags$hr(),
@@ -505,7 +527,6 @@ glue::glue(.open = '<<', .close = '>>', '
     df <- df_filtered()
 
     counts <- summarise_categorical(df[[\'{f$col}\']], \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\')
-browser()
 
     counts$Count %>%
       setNames(counts[[\'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\']]) %>%

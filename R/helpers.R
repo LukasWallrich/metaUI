@@ -125,3 +125,9 @@ allglobal <- function() {
     my_assign(i, get(i, envir = parent.frame()))
   }
 }
+
+escape_quotes <- function(input_str) {
+  output_str <- gsub("'", "&apos;", input_str)
+  output_str <- gsub("\"", "&quot;", output_str)
+  return(output_str)
+}

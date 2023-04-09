@@ -36,6 +36,7 @@ Imports:
     rlang,
     robumeta,
     shiny,
+    shinyBS,
     shinycssloaders,
     shinyjs,
     shinythemes,
