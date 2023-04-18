@@ -4,13 +4,13 @@
 
 #' Pipe operator
 #'
-#' See \code{magrittr::\link[magrittr:pipe]{\%>\%}} for details.
+#' See \code{dplyr::\link[dplyr:pipe]{\%>\%}} for details.
 #'
 #' @name %>%
 #' @rdname pipe
 #' @keywords internal
 #' @export
-#' @importFrom magrittr %>%
+#' @importFrom dplyr %>%
 #' @usage lhs \%>\% rhs
 #' @param lhs A value or the magrittr placeholder.
 #' @param rhs A function call using the magrittr semantics.
@@ -32,7 +32,7 @@ my_assign <- function(name, value, envir = 1L) assign(name, value, pos = envir)
 
 # Dummy function to remove CMD CHECK warning for packages only used in code saved as character
 # Since most of the code for the Shiny app is not actually saved as code in this package
-# but as text to be customised, these packages are not recognised otherwise
+# but as text to be customized, these packages are not recognized otherwise
 
 no_check_warnings <- function() {
   return(TRUE)
@@ -40,6 +40,7 @@ no_check_warnings <- function() {
   # Shiny app
   plotly::ggplotly()
   shinycssloaders::withSpinner()
+  shinyBS::popify()
   shinythemes::themeSelector()
   waffle::waffle()
   DT::datatable()

@@ -24,7 +24,6 @@ Imports:
     DT,
     ggplot2,
     glue,
-    magrittr,
     meta,
     metafor,
     pacman,
