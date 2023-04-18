@@ -105,8 +105,6 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
             file.path(save_to_folder, "helpers.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "favicon.ico", package="metaUI"),
             file.path(save_to_folder, "www", "favicon.ico"), overwrite = TRUE)
-  file.copy(system.file("template_code", "app.R", package="metaUI"),
-            file.path(save_to_folder, "app.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "dmetar_contributions.R", package="metaUI"),
             file.path(save_to_folder, "dmetar_contributions.R"), overwrite = TRUE)
   if (is.character(models)) {
@@ -138,10 +136,10 @@ if (launch_app) {
 
 }
 
-#' Generate file to launch Shiny app
+#' Generate global.R to prepare for launch of Shiny app
 #'
-#' This function creates the global.R file that will be used if the app is saved. It brings together all code files and data
-#' and loads them into the workspace, ready for the app to be launched.
+#' This function creates the global.R file that will be used if the app is saved. It complements ui.R and server.R
+#' to prepare the workspace before the app is launched
 #'
 #' @noRd
 
@@ -151,7 +149,7 @@ generate_global.R <- function() {
 
   glue::glue("
 
-  # To launch the app, source this file and then run launch_app()
+  # To launch the app manually, use shiny::shinyAppDir(YOURPATH) or the Run App button in RStudio
 
   library(dplyr)
 
@@ -194,10 +192,10 @@ generate_global.R <- function() {
   source(file.path(f, 'models.R'))
   source(file.path(f, 'labels_and_options.R'))
   source(file.path(f, 'dmetar_contributions.R'))
-  server <<- source(file.path(f, 'server.R')) %>% purrr::pluck('value')
-  ui <<- source(file.path(f, 'ui.R'))  %>% purrr::pluck('value')
-  metaUI_eff_size_type_label <<- '{metaUI_eff_size_type_label}'
-  metaUI__df <<- readRDS(file.path(f, 'dataset.rds'))
+  server <- source(file.path(f, 'server.R')) %>% purrr::pluck('value')
+  ui <- source(file.path(f, 'ui.R'))  %>% purrr::pluck('value')
+  metaUI_eff_size_type_label <- '{metaUI_eff_size_type_label}'
+  metaUI__df <- readRDS(file.path(f, 'dataset.rds'))
 ")
 }
 
