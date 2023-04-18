@@ -60,6 +60,7 @@ generate_ui_filters <- function(data, filter_popups) {
   purrr::map_chr(filter_cols, function(filter_col) {
     add_popup <- stringr::str_remove(filter_col, "metaUI__filter_") %in% names(filter_popups)
     if (add_popup) id <- paste0("i", sample(1:10e6, 1))
+    rm_prefix <- "metaUI__filter_"
 
     if (is.numeric(data[[filter_col]])) {
       # Round slider ends to (same) appropriate number of significant digits
@@ -73,34 +74,34 @@ generate_ui_filters <- function(data, filter_popups) {
       out <- glue::glue('
       sliderInput("{filter_col %>% stringr::str_replace_all(" ", "_")}",
       p("{stringr::str_remove(filter_col, "metaUI__filter_")}",
-      {if(add_popup)  glue::glue("bsButton(\'<<id>>\', label = \'\', icon = icon(\'info\'), style = \'color: #fff; background-color: #337ab7; border-color: #2e6da4\', size = \'extra-small\')", .open = "<<", .close = ">>") else ""}),
-                         min = {signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
-                         max = {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)},
-                         value = c({signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
-                            {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)}),
-                        sep = ""
+      {if(add_popup)  {{
+          glue::glue("
+          shinyBS::popify(shinyBS::bsButton(\'{id}\', label = \'\', icon = icon(\'info\'), style = \'color: #fff; background-color: #337ab7; border-color: #2e6da4\', size = \'extra-small\'),
+                        \'{stringr::str_remove(filter_col, rm_prefix)}\',
+                        \'{escape_quotes(filter_popups[stringr::str_remove(filter_col, rm_prefix)])}\')
+                    ")
+          }} else  ""}),
+          min = {signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
+          max = {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)},
+          value = c({signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
+          {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)}),
+          sep = ""
       )
                  ')
 
     } else {
       out <- glue::glue('checkboxGroupInput("{filter_col %>% stringr::str_replace_all(" ", "_")}",
-      p("{stringr::str_remove(filter_col, "metaUI__filter_")}",
-      {if(add_popup)  glue::glue("bsButton(\'<<id>>\', label = \'\', icon = icon(\'info\'), style = \'color: #fff; background-color: #337ab7; border-color: #2e6da4\', size = \'extra-small\')", .open = "<<", .close = ">>") else ""}),
-      choices = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}"),
+      p("{stringr::str_remove(filter_col, rm_prefix)}",
+      {if(add_popup)  {{
+          glue::glue("
+          shinyBS::popify(shinyBS::bsButton(\'{id}\', label = \'\', icon = icon(\'info\'), style = \'color: #fff; background-color: #337ab7; border-color: #2e6da4\', size = \'extra-small\'),
+                        \'{stringr::str_remove(filter_col, rm_prefix)}\',
+                        \'{escape_quotes(filter_popups[stringr::str_remove(filter_col, rm_prefix)])}\')
+                    ")
+          }} else  ""}),
+          choices = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}"),
         selected = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}")
         )')
-    }
-
-    if (add_popup) {
-      out <- glue::glue('{out},
-      shinyBS::bsPopover(id = "{id}",
-                         title = "{stringr::str_remove(filter_col, "metaUI__filter_")}",
-                         content = HTML("{escape_quotes(filter_popups[stringr::str_remove(filter_col, "metaUI__filter_")])}"),
-                         placement = "right",
-                         trigger = "focus",
-                         options = list(container = "body"))
-                         ')
-
     }
 
     if (is.numeric(data[[filter_col]])) {
