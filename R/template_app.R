@@ -690,7 +690,8 @@ glue::glue(.open = '<<', .close = '>>', '
 
     } else {
       modtable <- data.frame(
-        "Moderator Levels" = rownames(model$b) %>% stringr::str_remove(input$moderator),
+        "Moderator Levels" = rownames(model$b) %>% stringr::str_remove(input$moderator) %>%
+        stringr::str_remove_all("`"), #Needed to support spaces in moderator names
         "Effect size" = round(model$b, digits = 3),
         "95% CI" = fmt_ci(model$ci.lb, model$ci.ub, digits = 3), check.names = FALSE
       )

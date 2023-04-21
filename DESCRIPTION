@@ -1,7 +1,7 @@
 Type: Package
 Package: metaUI
-Title: Create Shiny apps for dynamic meta-analyes
-Version: 0.1.0.9004
+Title: Create Shiny Apps for the Exploration of Meta-Analytic Datasets
+Version: 0.1.0.9005
 Authors@R: c(
     person("Lukas", "Wallrich", , "lukas.wallrich@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-2121-5177")),
@@ -13,8 +13,8 @@ Authors@R: c(
 Description: Readers of meta-analyses are often interested in how
     analytical choices influence results, or what the effects are for
     subsets of the data.  'metaUI' makes it easy for authors to create
-    Shiny apps that answer such questions, and that allow to rerun
-    analyses with updated/edited datasets.
+    Shiny apps that answer such questions, and that allow anyone to rerun
+    analyses with updated/modified datasets.
 License: GPL (>= 3)
 URL: https://lukaswallrich.github.io/metaUI/,
     https://github.com/LukasWallrich/metaUI
