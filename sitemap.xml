@@ -28,12 +28,6 @@
     <loc>https://lukaswallrich.github.io/metaUI/reference/create_about.html</loc>
   </url>
   <url>
-    <loc>https://lukaswallrich.github.io/metaUI/reference/fmt_ci.html</loc>
-  </url>
-  <url>
-    <loc>https://lukaswallrich.github.io/metaUI/reference/fmt_p.html</loc>
-  </url>
-  <url>
     <loc>https://lukaswallrich.github.io/metaUI/reference/generate_shiny.html</loc>
   </url>
   <url>
@@ -50,9 +44,6 @@
   </url>
   <url>
     <loc>https://lukaswallrich.github.io/metaUI/reference/prepare_data.html</loc>
-  </url>
-  <url>
-    <loc>https://lukaswallrich.github.io/metaUI/reference/round_.html</loc>
   </url>
   <url>
     <loc>https://lukaswallrich.github.io/metaUI/reference/se.from.p.html</loc>

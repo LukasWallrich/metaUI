@@ -71,6 +71,10 @@ a tibble and returns code that can recreate it. Note that this function converts
     </div>
 
     <div class="section level2">
+    <h2 id="source">Source<a class="anchor" aria-label="anchor" href="#source"></a></h2>
+    <p>Taken from timesaveR package, copyright also by Lukas Wallrich (2023)</p>
+    </div>
+    <div class="section level2">
     <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
     <dl><dt>x</dt>
 <dd><p>The tibble/dataframe to be converted into tribble code</p></dd>
@@ -85,13 +89,15 @@ a tibble and returns code that can recreate it. Note that this function converts
 
 </dl></div>
     <div class="section level2">
-    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Taken from timesaveR package, copyright also by Lukas Wallrich, 2023</p>
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    
+
+<p>Code to create a tibble using the <code>tribble()</code>-function</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">to_tribble</span><span class="op">(</span><span class="va">mtcars</span>, show <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">metaUI</span><span class="fu">:::</span><span class="fu">to_tribble</span><span class="op">(</span><span class="va">mtcars</span>, show <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> tibble::tribble(</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ~mpg,  ~cyl, ~disp,  ~hp,  ~drat, ~wt,    ~qsec,  ~vs, ~am, ~gear, ~carb, </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    21,    6,    160,    110,  3.9,   2.62,   16.46,  0,   1,   4,     4,    </span>
