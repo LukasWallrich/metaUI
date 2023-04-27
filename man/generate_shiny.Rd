@@ -24,7 +24,7 @@ generate_shiny(
 
 \item{models}{The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. If you want to change the default models, have a look at the vignette and/or the \code{\link[=get_model_tibble]{get_model_tibble()}} documentation.
 Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
-this must assign the tibble to a global variable called models_to_run (i.e. using <<-).}
+this must assign the tibble to a variable called models_to_run (i.e. using <-).}
 
 \item{filter_popups}{Named list with content for popup windows that provide further details on filter variables. They can contain HTML formatting, but should then be wrapped into \code{HTML()}, for instance: \verb{list(Year = HTML("<i>Note:</i><br>This refers to data collection if reported, otherwise the publication year.})}
 
@@ -40,12 +40,24 @@ be asked to confirm overwriting it - unless the script is run in non-interactive
     \item{\code{citation}}{Citation requested by the author. Defaults to an empty string.}
     \item{\code{osf_link}}{Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.}
     \item{\code{contact}}{Contact information, typically email. Defaults to an empty string.}
-    \item{\code{list_packages}}{Should all packages used by the app be listed on the About page? Please note that this is based on the default
-configuration, so it needs to be tailored if you adjust the models.}
+    \item{\code{list_packages}}{Should all packages used by the app be listed on the About page? If TRUE, it list the packages
+used in the default configuration. To display different packages (e.g., because you added/removed models), pass
+a character vector with all packages to display.}
   }}
+}
+\value{
+This function does not have a meaningful return value - it rather launches the Shiny app and/or saves it to disk.
 }
 \description{
 This function generates the Shiny app. It is the main function of the package. The app can either be launched directly, or saved to
 a folder. If saved, that folder will contain all the code and data needed to run the app. The app can then be launched from the
-app.R file in the folder, or modified by editing server.R, ui.R and models.R there.
+app.R file in the folder, or modified by editing server.R, ui.R, global.R and models.R there.
+}
+\examples{
+# First, use prepare_data() to create your dataset.
+if (exists("app_data")) {
+  generate_shiny(app_data,
+    dataset_name = "Barroso et al 2021 - Maths Anxiety",
+    eff_size_type_label = "Fisher's Z scores")
+}
 }

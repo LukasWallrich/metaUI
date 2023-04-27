@@ -16,3 +16,15 @@ If you want to maintain the default, just call \code{\link[=generate_shiny]{gene
 If you want to change the default models, have a look at the vignette and/or the source code of this function
 (by running \code{get_model_tibble} in the console) and modify it accordingly.
 }
+\examples{
+# Run the function to get the models
+mod <- get_model_tibble()
+# Modify them as desired
+mod$name[1] <- "RE 2-level model"
+# Then use when generating the app
+if (exists("app_data")) {
+  generate_shiny(app_data,
+    dataset_name = "Barroso et al 2021 - Maths Anxiety",
+    eff_size_type_label = "Fisher's Z scores")
+}
+}
