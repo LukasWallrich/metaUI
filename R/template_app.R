@@ -1,6 +1,6 @@
 # Wrap in function so that it can be saved more easily
 
-labels_and_options <- function(dataset_name, for_saving = FALSE) {
+labels_and_options <- function(dataset_name) {
   glue::glue('
 
       # TK - defaults? Advanced options?
@@ -42,9 +42,8 @@ labels_and_options <- function(dataset_name, for_saving = FALSE) {
 
       scroll <- HTML("Scroll down to see forest plot.")
 
-      favicon <- "{if (!for_saving) readLines(system.file("template_code", "favicon.base64", package = "metaUI")) else ""}"
-
-      {if (!for_saving) "allglobal()" else ""}
+     # Favicon is included as base64 code
+      favicon <- "{readLines(system.file("template_code", "favicon.base64", package = "metaUI"))}"
 
   ')
 }
@@ -164,7 +163,7 @@ glue::glue('tagList(
 }
 
 
-generate_ui <- function(data, dataset_name, about, filter_popups, for_saving) {
+generate_ui <- function(data, dataset_name, about, filter_popups) {
   out <- glue::glue('
 
   fluidPage(
@@ -172,7 +171,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, for_saving) {
     # Application title
     titlePanel(
     windowTitle = glue::glue("Dynamic Meta-Analysis of {dataset_name}"),
-    title = {if (!for_saving) get_favicon_tag() else glue::glue(\'\"Dynamic Meta-Analysis of {dataset_name}\"\')}),
+    title = {get_favicon_tag()}),
     # Sidebar with a slider input for number of bins
     sidebarLayout(
       sidebarPanel(

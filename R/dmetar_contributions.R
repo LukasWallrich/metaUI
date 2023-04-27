@@ -6,7 +6,7 @@
 #'
 #' This function calculates the standard error of an effect size provided the exact
 #' \eqn{p}-value and (continuous) effect size according to the formula
-#' by \href{https://www.ncbi.nlm.nih.gov/pubmed/21824904}{Altman and Bland (2011)}.
+#' by \href{https://pubmed.ncbi.nlm.nih.gov/21824904/}{Altman and Bland (2011)}.
 #' See the [dmetar documentation](https://dmetar.protectlab.org/) for examples.
 #'
 #' @usage se.from.p(effect.size, p, N, effect.size.type = 'difference',

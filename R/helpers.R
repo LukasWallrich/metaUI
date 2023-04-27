@@ -22,11 +22,11 @@ signif_floor <- function(x, digits = 2) {
 #' Formats p-value in line with APA standard, returning it without leading 0 and
 #' as < .001 and > .99 when it is extremely small or large.
 #'
-#' Taken from timesaveR package, copyright also Lukas Wallrich, 2022
-#'
 #' @param p_value Numeric, or a vector of numbers
 #' @param digits Number of significant digits, defaults to 3
 #' @param include_equal Should precise p-values by prefixed with =? Useful for in-text reporting, less so in tables
+#' @source Taken from timesaveR package, copyright also Lukas Wallrich (2023)
+#' @noRd
 
 fmt_p <- function(p_value, digits = 3, include_equal = TRUE) {
   fmt <- paste0("%.", digits, "f")
@@ -82,11 +82,11 @@ summarise_categorical <- function(x, name) {
 #' Constructs a confidence intervals from upper and lower bounds,
 #' placing them in between square brackets
 #'
-#' Taken from timesaveR package, copyright also Lukas Wallrich, 2022
-#'
 #' @param lower Lower bound(s) of confidence interval(s). Numeric, or a vector of numbers
 #' @param upper Lower bound(s) of confidence interval(s). Numeric, or a vector of numbers
 #' @param digits Number of significant digits, defaults to 2
+#' @source Taken from timesaveR package, copyright also Lukas Wallrich (2023)
+#' @noRd
 
 fmt_ci <- function(lower, upper, digits = 2) {
   if (!(length(lower) == length(upper))) stop("lower and upper must have the same length.")
@@ -102,11 +102,11 @@ fmt_ci <- function(lower, upper, digits = 2) {
 #' trailing zeros - this version keeps them and thus rounds 1.201 to 1.20
 #' rather than 1.2 when 2 digits are requested.
 #'
-#' Taken from timesaveR package, copyright also Lukas Wallrich, 2022
-#'
 #' @param x Numeric vector to be rounded
 #' @param digits Number of significant digits
 #' @return Character vector of rounded values, with trailing zeroes as needed to show `digits` figures after the decimal point
+#' @source Taken from timesaveR package, copyright also Lukas Wallrich (2023)
+#' @noRd
 
 round_ <- function(x, digits = 2) {
   fmt <- paste0("%.", digits, "f")

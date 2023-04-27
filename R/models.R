@@ -8,6 +8,17 @@
 #' @return A tibble with the models to be included in the app - including details on how to estimate them
 #'   and how to extract the relevant information from the model output.
 #' @export
+#' @examples
+#' # Run the function to get the models
+#' mod <- get_model_tibble()
+#' # Modify them as desired
+#' mod$name[1] <- "RE 2-level model"
+#' # Then use when generating the app
+#' if (exists("app_data")) {
+#'   generate_shiny(app_data,
+#'     dataset_name = "Barroso et al 2021 - Maths Anxiety",
+#'     eff_size_type_label = "Fisher's Z scores")
+#' }
 
 get_model_tibble <- function() {
 

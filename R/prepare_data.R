@@ -32,6 +32,10 @@ prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, v
     data <- read.csv(data, stringsAsFactors = FALSE)
   }
 
+  if (es_type != "SMD") warning("metaUI is currently optimised for datasets that contain mean differences (e.g., Cohen's d). ",
+                                "Other effect size types may work, but internal conversions (e.g., r-to-z) are not yet supported. ",
+                                "If you need such an extension, please open an issue: https://github.com/LukasWallrich/metaUI/issues")
+
   if (!is.null(names(filters))) {
     filter_names <- names(filters) %>%
       dplyr::na_if("") %>%

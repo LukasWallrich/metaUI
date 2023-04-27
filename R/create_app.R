@@ -1,35 +1,55 @@
 #' Create the about text for the app
 #'
+#' This function is generally only called internally by [generate_shiny()].
+#'
 #' @param dataset_name Name of the dataset
 #' @param date Date of the last update. Defaults to the current date.
 #' @param citation Citation requested by the author. Defaults to an empty string.
 #' @param osf_link Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.
 #' @param contact Contact information, typically email. Defaults to an empty string.
-#' @param list_packages Should all packages used by the app be listed on the About page? Please note that this is based on the default
-#' configuration, so it needs to be tailored if you adjust the models.
-#' @export
+#' @param list_packages Should all packages used by the app be listed on the About page? If TRUE, it list the packages
+#' used in the default configuration. To display different packages (e.g., because you added/removed models), pass
+#' a character vector with all packages to display.
+#'
+#' @returns HTML code for the `About` panel of the Shiny app
+#'
+#' @keywords internal
 
 
 create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE) {
-
   out <- glue::glue("<h3>Interactive multiverse meta-analysis of {dataset_name} </h3>
           <br/><br/><b>Last Update:</b> {date}
           {if (citation != '') glue::glue('<br/><br/><b>Citation:</b> {citation}') else ''}
           {if (osf_link != '') glue::glue('<br/><br/><b>Data and materials:</b> <a href={osf_link}>{osf_link}</a>') else ''}
           {if (contact != '') glue::glue('<br/><br/><b><b>Contact:</b> Contact us with suggestions or bug reports:</b> {contact}') else ''}
-          <br/><br/><br/><br/> <b>Created with <a href='https://github.com/LukasWallrich/metaUI'> metaUI </a> </b>
+          <br/><br/><br/><br/> <b>Created with <a href='https://github.com/LukasWallrich/metaUI'> metaUI </a> </b> v{utils::packageVersion('metaUI')}
           ")
-  if (list_packages == TRUE) {
-  req_packages <- pacman::p_depends("metaUI", local = TRUE) %>% purrr::pluck("Imports")
-  package_versions <- purrr::map_chr(req_packages, \(p) utils::packageVersion(p) %>% as.character())
 
-  HTML(glue::glue(out, "<br /> &nbsp;<br /> &nbsp;<br /> &nbsp; <h4>R packages used</h4>",
-                  purrr::map(1:3, \(i) {
-                    start <- (i-1) * ceiling(length(req_packages)/3) + 1
-                    end <- min(i * ceiling(length(req_packages)/3), length(req_packages))
-                    glue::glue("<table style='display: inline-block;vertical-align:top;'><tr><th tyle='text-align: left;'>Package&nbsp;&nbsp;&nbsp;</th><th tyle='text-align: left;'>Version&nbsp;</th></tr>\n",
-             purrr::map2(req_packages[start:end], package_versions[start:end], \(p, v) glue::glue("<tr><td>{p}</td><td>{v}</td></tr>")) %>% glue::glue_collapse("\n"),
-             "</table>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}) %>% glue::glue_collapse("\n")))
+  if (list_packages == TRUE) {
+    req_packages <- utils::packageDescription("metaUI") %>%
+      purrr::pluck("Imports") %>%
+      stringr::str_split(",\n") %>%
+      unlist()
+  } else if (is.character(list_packages)) {
+    req_packages <- list_packages
+    list_packages <- TRUE
+  }
+
+  if (list_packages == TRUE) {
+    package_versions <- purrr::map_chr(req_packages, \(p) utils::packageVersion(p) %>% as.character())
+
+    HTML(glue::glue(
+      out, "<br /> &nbsp;<br /> &nbsp;<br /> &nbsp; <h4>R packages used</h4>",
+      purrr::map(1:3, \(i) {
+        start <- (i - 1) * ceiling(length(req_packages) / 3) + 1
+        end <- min(i * ceiling(length(req_packages) / 3), length(req_packages))
+        glue::glue(
+          "<table style='display: inline-block;vertical-align:top;'><tr><th tyle='text-align: left;'>Package&nbsp;&nbsp;&nbsp;</th><th tyle='text-align: left;'>Version&nbsp;</th></tr>\n",
+          purrr::map2(req_packages[start:end], package_versions[start:end], \(p, v) glue::glue("<tr><td>{p}</td><td>{v}</td></tr>")) %>% glue::glue_collapse("\n"),
+          "</table>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
+        )
+      }) %>% glue::glue_collapse("\n")
+    ))
   } else {
     out
   }
@@ -39,53 +59,64 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'
 #' This function generates the Shiny app. It is the main function of the package. The app can either be launched directly, or saved to
 #' a folder. If saved, that folder will contain all the code and data needed to run the app. The app can then be launched from the
-#' app.R file in the folder, or modified by editing server.R, ui.R and models.R there.
+#' app.R file in the folder, or modified by editing server.R, ui.R, global.R and models.R there.
 #'
 #' @param dataset Dataframe as returned from [prepare_data()]
 #' @param eff_size_type_label The label to be used to describe the effect size. If NA, effect type code from dataset is used.
 #' @param models The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. If you want to change the default models, have a look at the vignette and/or the [get_model_tibble()] documentation.
 #' Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
-#' this must assign the tibble to a global variable called models_to_run (i.e. using <<-).
+#' this must assign the tibble to a variable called models_to_run (i.e. using <-).
 #' @param filter_popups Named list with content for popup windows that provide further details on filter variables. They can contain HTML formatting, but should then be wrapped into `HTML()`, for instance: `list(Year = HTML("<i>Note:</i><br>This refers to data collection if reported, otherwise the publication year.`)
 #' @param save_to_folder If specified, the code and data for the app will be saved to this folder. Defaults to NA, which means that nothing will be saved. If the folder exists, the user will
 #' be asked to confirm overwriting it - unless the script is run in non-interactive mode, in which case the folder will be overwritten without asking.
 #' @param launch_app Should the app be launched? Defaults to TRUE if it is not saved (i.e. save_to_folder is NA), FALSE otherwise.
 #' @inheritParams create_about
 #' @inheritDotParams create_about
+#'
+#' @returns This function does not have a meaningful return value - it rather launches the Shiny app and/or saves it to disk.
+#' @examples
+#' # First, use prepare_data() to create your dataset.
+#' if (exists("app_data")) {
+#'   generate_shiny(app_data,
+#'     dataset_name = "Barroso et al 2021 - Maths Anxiety",
+#'     eff_size_type_label = "Fisher's Z scores")
+#' }
 #' @export
 
 generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         models = get_model_tibble, filter_popups = list(),
         save_to_folder = NA, launch_app = is.na(save_to_folder), ...) {
-  about <- create_about(dataset_name, ...)
+
+   # Evaluate so that it is TRUE when save_to_folder is NA initially
+   launch_app <- launch_app
+   about <- create_about(dataset_name, ...)
+
+  if (is.na(save_to_folder)) {
+    save_to_folder <- tempfile()
+  }
 
   if (!is.data.frame(dataset)) stop("Dataset must be a data.frame or tibble")
-
-  my_assign("metaUI__df", dataset)
 
   if (is.na(eff_size_type_label)) {
     eff_size_type_label <- dataset$metaUI__es_type[1]
   }
 
-  my_assign("metaUI_eff_size_type_label", eff_size_type_label)
-
   models_from_function <- models
 
   if (is.character(models)) {
     source(models)
+    if (!exists("models_to_run")) stop("R script passed to models argument does not create a `models_to_run` variable.")
   } else if (is.function(models)) {
-    my_assign("models_to_run", models())
+    models_to_run <- models()
   } else if (is.data.frame(models)) {
-    my_assign("models_to_run", models)
+    models_to_run <- models
   } else {
     stop("Invalid argument type. models must be a function, a tibble, or a path to a file.")
   }
 
-  eval(parse(text = labels_and_options(dataset_name)))
-  ui <- generate_ui(dataset, dataset_name, about, filter_popups, for_saving = !is.na(save_to_folder))
+  ui <- generate_ui(dataset, dataset_name, about, filter_popups)
   server <- generate_server()
 
-  if (!is.na(save_to_folder)) {
   if (dir.exists(save_to_folder)) {
     if (interactive()) {
       if (length(list.files(save_to_folder)) > 0) {
@@ -113,27 +144,21 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     writeLines(generate_models.R(models_to_run), file.path(save_to_folder, "models.R"))
     if (is.function(models_from_function)) {
       if (!(identical(models_from_function, get_model_tibble))) {
-      warning("Models tibble was created from a function. Note that any side effects (e.g., helper functions)",
+      message("Models tibble was created from a function. Note that any side effects (e.g., helper functions)",
         " of that function were not saved. If you need them, edit the models.R file manually.",
         call. = FALSE, immediate. = TRUE)
       }
     }
   }
   # Could consider keeping all labels in this file - but then ui.R needs less readable glue::glue syntax
-  writeLines(labels_and_options(dataset_name, for_saving = TRUE), file.path(save_to_folder, "labels_and_options.R"))
+  writeLines(labels_and_options(dataset_name), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
   writeLines(generate_global.R(), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
-}
 
-if (launch_app) {
-  eval(parse(text = labels_and_options(dataset_name)))
-  ui <- eval(parse(text = ui))
-  server <- eval(parse(text = server))
-  shinyApp(ui = ui, server = server, options = c(launch.browser = interactive()))
-}
-
+  if (!launch_app) return(invisible(TRUE))
+  shinyAppDir(save_to_folder)
 }
 
 #' Generate global.R to prepare for launch of Shiny app
@@ -144,7 +169,10 @@ if (launch_app) {
 #' @noRd
 
 generate_global.R <- function() {
-  req_packages <- pacman::p_depends("metaUI", local = TRUE) %>% purrr::pluck("Imports")
+  req_packages <- utils::packageDescription("metaUI") %>%
+    purrr::pluck("Imports") %>%
+    stringr::str_split(",\n") %>%
+    unlist()
   metaUI_eff_size_type_label <- metaUI_eff_size_type_label  %>% stringr::str_replace("'", stringr::fixed("\\\\'"))
 
   glue::glue("
@@ -207,15 +235,14 @@ generate_global.R <- function() {
 #' a tibble and returns code that can recreate it. Note that this function converts
 #' "NA" to NA and converts factors to characters to retain the levels.
 #'
-#' Taken from timesaveR package, copyright also by Lukas Wallrich, 2023
-#'
 #' @param x The tibble/dataframe to be converted into tribble code
 #' @param show Logical. Print code (otherwise, returned - print with `cat()` to get linebreaks etc)
 #' @param digits Number of digits to round numeric columns to.
-#' @export
+#' @return Code to create a tibble using the `tribble()`-function
+#' @source Taken from timesaveR package, copyright also by Lukas Wallrich (2023)
 #' @keywords internal
 #' @examples
-#' to_tribble(mtcars, show = TRUE)
+#' metaUI:::to_tribble(mtcars, show = TRUE)
 
 to_tribble <- function(x, show = FALSE, digits = 5) {
 
