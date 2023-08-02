@@ -53,7 +53,8 @@ labels_and_options <- function(dataset_name) {
 # Wrapped in function so that it is only created once custom variables are set
 
 
-generate_ui_filters <- function(data, filter_popups) {
+generate_ui_filters <- function(data, filter_popups, any_filters) {
+  if (!any_filters) return("")
   filter_cols <- colnames(data) %>% stringr::str_subset("metaUI__filter_")
 
   purrr::map_chr(filter_cols, function(filter_col) {
@@ -114,11 +115,13 @@ generate_ui_filters <- function(data, filter_popups) {
     }
     }
     out
-  }) %>% glue::glue_collapse(sep = ",\n")
+  }) %>% glue::glue_collapse(sep = ",\n") %>% paste0(",\n")
 }
 
 
-generate_sample_description_ui <- function(data) {
+generate_sample_description_ui <- function(data, any_filters) {
+  if (!any_filters) return("")
+
   filter_ids <- colnames(data) %>%
     stringr::str_subset("metaUI__filter_") %>% stringr::str_replace_all(" ", "_")
   filter_names <- stringr::str_remove(filter_ids, "metaUI__filter_")
@@ -131,7 +134,7 @@ generate_sample_description_ui <- function(data) {
               )
             )
                 ')
-  }) %>% glue::glue_collapse(sep = ",\n")
+  }) %>% glue::glue_collapse(sep = ",\n") %>% paste0(",\n")
 
 
 }
@@ -163,9 +166,28 @@ get_favicon_tag <- function(dataset_name) {
       ')
 }
 
-
+generate_mod_tab <- function(data, any_filters) {
+  if (!any_filters) return("")
+  glue::glue('
+    tabPanel(
+      "Moderation",
+      sample_moderation_main,
+      {generate_moderator_selection(data)},
+      fluidRow(
+        div(column(4, DT::dataTableOutput("moderation_table"), shiny::htmlOutput("moderation_text")),
+            column(7, shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot"))))
+      ),
+      sample_moderation_notes
+    ),
+    ')
+}
 
 generate_ui <- function(data, dataset_name, about, filter_popups) {
+
+  # Check whether data contains any filters
+  filter_cols <- colnames(data) %>% stringr::str_subset("metaUI__filter_")
+  if (length(filter_cols) == 0) any_filters <- FALSE else any_filters <- TRUE
+
   out <- glue::glue('
 
   fluidPage(
@@ -179,7 +201,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups) {
       sidebarPanel(
         width = 3,
         div(id = "filters",
-        {generate_ui_filters(data, filter_popups)},
+        {generate_ui_filters(data, filter_popups, any_filters)}
         uiOutput("z_score_filter")),
         actionButton("go", "Analyze data"),
         actionButton("resetFilters", "Reset filters"),
@@ -215,21 +237,12 @@ generate_ui <- function(data, dataset_name, about, filter_popups) {
           ),
           tabPanel(
             "Sample",
-            sample_overview_main,
-            {generate_sample_description_ui(data)},
+            {if (any_filters) "sample_overview_main," else ""}
+            {generate_sample_description_ui(data, any_filters)}
             h3(sample_table),
             DT::dataTableOutput("sample_table"),
           ),
-          tabPanel(
-            "Moderation",
-            sample_moderation_main,
-            {generate_moderator_selection(data)},
-            fluidRow(
-            div(column(4, DT::dataTableOutput("moderation_table"), shiny::htmlOutput("moderation_text")),
-              column(7, shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot"))))
-            ),
-            sample_moderation_notes
-          ),
+          {generate_mod_tab(data, any_filters)}
           tabPanel("Forest Plot", go, scroll, plotOutput("foreststudies") %>% shinycssloaders::withSpinner(), cellArgs = list(style = "vertical-align: top")),
           tabPanel(
             "QRP/PB", go, qrppb_main, funnel_main, plotOutput("funnel", width = "100%") %>% shinycssloaders::withSpinner(),
@@ -251,14 +264,18 @@ generate_ui <- function(data, dataset_name, about, filter_popups) {
     )
   )
   ')
-
   out
 }
 
 
-generate_server <- function() {
+generate_server <- function(metaUI__df) {
 
-glue::glue(.open = '<<', .close = '>>', '
+  # Check whether data contains any filters
+  filter_cols <- colnames(metaUI__df) %>% stringr::str_subset("metaUI__filter_")
+  if (length(filter_cols) == 0) any_filters <- FALSE else any_filters <- TRUE
+
+
+glue_string <- ('
     function(input, output) {
 
     showModal(modalDialog(
@@ -287,7 +304,7 @@ glue::glue(.open = '<<', .close = '>>', '
       ), sep = ""
     )
   )
-
+ <FILTER>
   filters <- list(<<
     filter_cols <- colnames(metaUI__df) %>% stringr::str_subset("metaUI__filter_")
     filter_ids <- colnames(metaUI__df) %>% stringr::str_subset("metaUI__filter_") %>% stringr::str_replace_all(" ", "_")
@@ -298,7 +315,7 @@ glue::glue(.open = '<<', .close = '>>', '
        purrr::pmap(list(filter_cols, filter_ids, filters_types), ~ paste0("list(col = \'", ..1, "\', id = \'", ..2, "\', type = \'", ..3, "\')"))  %>%
         glue::glue_collapse(sep = ",\n")
       >>)
-
+ </FILTER>
 
   file_input <- reactive({
     if (state_values$to_upload == TRUE) {
@@ -323,6 +340,7 @@ glue::glue(.open = '<<', .close = '>>', '
     if (!is.null(file_input())) {
       df <- readxl::read_xlsx(input$uploadData$datapath, "dataset")
       filter_values <- readxl::read_xlsx(input$uploadData$datapath, "filters") %>% split(.$id)
+      <FILTER>
       for (i in filters) {
         if (i$type == "numeric") {
           updateSliderInput(inputId = i$id, value = c(as.numeric(filter_values[[i$id]]$selection[1]), as.numeric(filter_values[[i$id]]$selection[2])))
@@ -330,6 +348,8 @@ glue::glue(.open = '<<', .close = '>>', '
           updateCheckboxGroupInput(inputId = i$id, selected = filter_values[[i$id]]$selection)
         }
       }
+       </FILTER>
+
           updateSliderInput(inputId = "outliers_z_scores", value = c(as.numeric(filter_values[["outliers_z_scores"]]$selection[1]), as.numeric(filter_values[["outliers_z_scores"]]$selection[2])))
 
       state_values$to_upload <- FALSE
@@ -338,7 +358,7 @@ glue::glue(.open = '<<', .close = '>>', '
     }
 
 
-
+    <FILTER>
     # Filter by specified metadata filters
     <<purrr::map_chr(filters, \\(f) {
       if (f$type == "numeric") {
@@ -349,6 +369,8 @@ glue::glue(.open = '<<', .close = '>>', '
         glue::glue("df <- df[df[[\'{f$col}\']] %in% input[[\'{f$id}\']], ]")
       }
     }) %>% paste(collapse = "\n")>>
+    </FILTER>
+
 
     # Filter by zscore
     df <- df[df$metaUI__es_z >= input$outliers_z_scores[1] & df$metaUI__es_z <= input$outliers_z_scores[2], ]
@@ -508,9 +530,10 @@ glue::glue(.open = '<<', .close = '>>', '
   )
 
 
+  <FILTER>
+  # Sample overview per filter/moderator -----------------------------------------------------------
 
-  # Sample overview -----------------------------------------------------------
-
+       <FILTER>
     <<purrr::map_chr(filters, \\(f) {
       if (f$type == "numeric") {
         glue::glue("
@@ -548,6 +571,7 @@ glue::glue(.open = '<<', .close = '>>', '
       }
     }) %>% paste(collapse = "\n")>>
 
+  </FILTER>
 
   # Sample table -----------------------------------------------------------
 
@@ -585,6 +609,7 @@ glue::glue(.open = '<<', .close = '>>', '
     )
   })
 
+ <FILTER>
 
   # Moderators  -----------------------------------------------------------
 
@@ -709,6 +734,8 @@ glue::glue(.open = '<<', .close = '>>', '
     model <- moderator_model()
     model$moderation_text
   })
+
+  </FILTER>
 
   # Heterogeneity -----------------------------------------------------------
 
@@ -908,12 +935,12 @@ glue::glue(.open = '<<', .close = '>>', '
   # DOWNLOAD ----------------------------------------------------------------
 
   data_list <- reactive({
-    filter_selections <- tibble::tibble()
+    filter_selections <- tibble::tibble(id = "outliers_z_scores", selection = input[["outliers_z_scores"]])
+    <FILTER>
     for (i in filters) {
       filter_selections <- rbind(filter_selections, tibble::tibble(id = i$id, selection = input[[i$id]]))
     }
-
-    filter_selections <- rbind(filter_selections, tibble::tibble(id = "outliers_z_scores", selection = input[["outliers_z_scores"]]))
+    </FILTER>
 
     list(
       dataset = df_filtered(),
@@ -963,4 +990,17 @@ glue::glue(.open = '<<', .close = '>>', '
 }
 
 ')
+
+if (!any_filters) {
+  glue_string <- glue_string %>%
+    stringr::str_remove_all(regex("\\<FILTER\\>.*?\\</FILTER\\>", dotall = TRUE))
+} else {
+  glue_string <- glue_string %>%
+    stringr::str_remove_all("\\<FILTER\\>") %>%
+    stringr::str_remove_all("\\</FILTER\\>")
+}
+
+glue::glue(.open = "<<", .close = ">>",
+           glue_string)
+
 }

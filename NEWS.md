@@ -6,4 +6,4 @@
 * Added explicit option to include or exclude NAs on filters and report NA share in Sample descriptives
 * Added `Reset` button to reset all filters
 * Added option to add popups to filter, by specifying `filter_popups` in `generate_shiny()`
-* 
+* Added the ability to create an app without any filters/moderators
