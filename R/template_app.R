@@ -153,14 +153,16 @@ generate_moderator_selection <- function(data) {
     )')
 }
 
-get_favicon_tag <- function() {
-glue::glue('tagList(
-               tags$head(tags$link(rel=\"icon\",
-                              href=\"data:image/x-icon;base64,{favicon}\",
-                              type=\"image/x-icon\")),
-                tags$span(\"Dynamic Meta-Analysis of {dataset_name}\"))
-    ')
+get_favicon_tag <- function(dataset_name) {
+  favicon <- readLines(system.file("template_code", "favicon.base64", package = "metaUI"))
+  glue::glue('tagList(
+                 tags$head(tags$link(rel=\"icon\",
+                                href=\"data:image/x-icon;base64,{favicon}\",
+                                type=\"image/x-icon\")),
+                  tags$span(\"Dynamic Meta-Analysis of {dataset_name}\"))
+      ')
 }
+
 
 
 generate_ui <- function(data, dataset_name, about, filter_popups) {
@@ -171,7 +173,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups) {
     # Application title
     titlePanel(
     windowTitle = glue::glue("Dynamic Meta-Analysis of {dataset_name}"),
-    title = {get_favicon_tag()}),
+    title = {get_favicon_tag(dataset_name)}),
     # Sidebar with a slider input for number of bins
     sidebarLayout(
       sidebarPanel(
