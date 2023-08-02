@@ -24,9 +24,14 @@ create_about(
 
 \item{contact}{Contact information, typically email. Defaults to an empty string.}
 
-\item{list_packages}{Should all packages used by the app be listed on the About page? Please note that this is based on the default
-configuration, so it needs to be tailored if you adjust the models.}
+\item{list_packages}{Should all packages used by the app be listed on the About page? If TRUE, it list the packages
+used in the default configuration. To display different packages (e.g., because you added/removed models), pass
+a character vector with all packages to display.}
+}
+\value{
+HTML code for the \code{About} panel of the Shiny app
 }
 \description{
-Create the about text for the app
+This function is generally only called internally by \code{\link[=generate_shiny]{generate_shiny()}}.
 }
+\keyword{internal}
