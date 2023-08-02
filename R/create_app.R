@@ -28,8 +28,10 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
   if (list_packages == TRUE) {
     req_packages <- utils::packageDescription("metaUI") %>%
       purrr::pluck("Imports") %>%
-      stringr::str_split(",\n") %>%
-      unlist()
+      stringr::str_remove_all(stringr::regex("\\(.*?\\)", dotall = TRUE)) %>%
+      stringr::str_split_1(",|\n") %>%
+      stringr::str_trim() %>%
+      stringr::str_subset(".+")
   } else if (is.character(list_packages)) {
     req_packages <- list_packages
     list_packages <- TRUE
@@ -115,7 +117,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   }
 
   ui <- generate_ui(dataset, dataset_name, about, filter_popups)
-  server <- generate_server()
+  server <- generate_server(dataset)
 
   if (dir.exists(save_to_folder)) {
     if (interactive()) {
@@ -154,7 +156,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   writeLines(labels_and_options(dataset_name), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
-  writeLines(generate_global.R(), file.path(save_to_folder, "global.R"))
+  writeLines(generate_global.R(eff_size_type_label), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
 
   if (!launch_app) return(invisible(TRUE))
@@ -168,7 +170,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 #'
 #' @noRd
 
-generate_global.R <- function() {
+generate_global.R <- function(metaUI_eff_size_type_label) {
   req_packages <- utils::packageDescription("metaUI") %>%
     purrr::pluck("Imports") %>%
     stringr::str_split(",\n") %>%
