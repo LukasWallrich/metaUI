@@ -753,7 +753,7 @@ glue_string <- ('
       random = ~ 1 | metaUI__study_id/metaUI__effect_size,
       tdist = TRUE, # knapp-hartung adjustment
       data = df,
-      method = "ML" # REML failed to converge in tests,
+      method = "ML", # REML failed to converge in tests
       sparse = TRUE
     )
 
