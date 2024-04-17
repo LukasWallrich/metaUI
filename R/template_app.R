@@ -92,7 +92,7 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
 
       choices <- levels(data[[filter_col]]) %>% na.omit()
 
-      out <- glue::glue('{if (length(choices) < opts$selection_list_threshold) "checkboxGroupInput(" else "selectInput(selectize = FALSE, multiple = TRUE, "} "{filter_col %>% stringr::str_replace_all(" ", "_")}",
+      out <- glue::glue('{if (length(choices) < opts$selection_list_threshold) "checkboxGroupInput(" else "shinyWidgets::pickerInput(multiple = TRUE, options = list(`actions-box` = TRUE), "} "{filter_col %>% stringr::str_replace_all(" ", "_")}",
       p("{stringr::str_remove(filter_col, rm_prefix)}",
       {if(add_popup)  {{
           glue::glue("
