@@ -61,21 +61,42 @@ summarise_numeric <- function(x, name) {
     tidyr::pivot_longer(dplyr::everything(), names_to = "Statistic", values_to = "Value")
 }
 
+# Count categories in x, return top 10 and return everything else as Other (merging with existing Other if it exists)
 summarise_categorical <- function(x, name) {
   if (length(x) == 0) {
     return(NULL)
   }
-  counts <- tibble::tibble(x = x)  %>% dplyr::count(x, sort = TRUE, name = "Count", .drop = FALSE)
 
-  out <- dplyr::bind_rows(
-    counts  %>% dplyr::slice(1:10),
-    tibble::tibble(x = "Other", Count = sum(counts$Count) - sum(counts$Count[1:10])) %>% tidyr::drop_na())  %>%
-    dplyr::mutate(Percentage = paste0(round(.data$Count / sum(.data$Count) * 100, 1), "%"))
+  counts <- tibble::tibble(!!rlang::sym(name) := x) %>%
+    dplyr::count(!!rlang::sym(name), sort = TRUE, .drop = FALSE) %>%
+    dplyr::rename(Count = n)
 
-  names(out)[1] <- name
+  if (nrow(counts) > 10) {
 
-  out
+  top_categories <- counts %>%
+    dplyr::filter(!!rlang::sym(name) != "Other") %>%
+    dplyr::slice_max(order_by = Count, n = 9, with_ties = FALSE)
+
+  other_count <- sum(counts$Count) - sum(top_categories$Count)
+
+  if ("Other" %in% counts[[name]]) {
+    other_count <- other_count + counts %>% dplyr::filter(!!rlang::sym(name) == "Other") %>% dplyr::pull(Count)
+  }
+
+  final_counts <- if (other_count > 0) {
+    dplyr::bind_rows(top_categories, tibble::tibble(!!rlang::sym(name) := "Other", Count = other_count))
+  } else {
+    top_categories
+  }
+
+  } else {
+    final_counts <- counts
+  }
+
+  final_counts %>%
+    dplyr::mutate(Percentage = paste0(round(Count / sum(Count) * 100, 1), "%"))
 }
+
 
 #' Format confidence interval based on the bounds
 #'

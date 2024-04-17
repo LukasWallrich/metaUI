@@ -89,7 +89,7 @@ generate_ui_filters <- function(data, filter_popups, any_filters) {
       )
                  ')
 
-    } else {
+    } else if (is.factor(data[[filter_col]])) {
       out <- glue::glue('checkboxGroupInput("{filter_col %>% stringr::str_replace_all(" ", "_")}",
       p("{stringr::str_remove(filter_col, rm_prefix)}",
       {if(add_popup)  {{
@@ -102,6 +102,8 @@ generate_ui_filters <- function(data, filter_popups, any_filters) {
           choices = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}"),
         selected = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}")
         )')
+    } else {
+      stop("Filter/moderator variables must be numeric or factors. This check failed first for ", filter_col)
     }
 
     if (is.numeric(data[[filter_col]])) {
@@ -651,11 +653,12 @@ glue_string <- ('
       model <- metafor::rma.mv(
         yi = metaUI__effect_size,
         V = metaUI__variance,
-        random = ~ 1 | metaUI__study_id,
+        random = ~ 1 | metaUI__study_id/metaUI__effect_size,
         tdist = TRUE,
         data = df,
         mods = as.formula(glue::glue("~`{input$moderator}`")),
-        method = "ML"
+        method = "ML",
+        sparse = TRUE
       )
      moderation_text <-     HTML(glue::glue(
       \'<br><br>The {ifelse(is.numeric(df[[input$moderator]]), "linear ", "")}relationship between  <b> {input$moderator  %>% stringr::str_remove("metaUI__filter_")} </b>\',
@@ -668,20 +671,22 @@ glue_string <- ('
      model_sig <- metafor::rma.mv(
         yi = metaUI__effect_size,
         V = metaUI__variance,
-        random = ~ 1 | metaUI__study_id,
+        random = ~ 1 | metaUI__study_id/metaUI__effect_size,
         tdist = TRUE,
         data = df,
         mods = as.formula(glue::glue("~`{input$moderator}`")),
-        method = "ML"
+        method = "ML",
+        sparse = TRUE
       )
      model <- metafor::rma.mv(
         yi = metaUI__effect_size,
         V = metaUI__variance,
-        random = ~ 1 | metaUI__study_id,
+        random = ~ 1 | metaUI__study_id/metaUI__effect_size,
         tdist = TRUE,
         data = df,
         mods = as.formula(glue::glue("~`{input$moderator}` - 1")),
-        method = "ML"
+        method = "ML",
+        sparse = TRUE
       )
 
      moderation_text <-     HTML(glue::glue(
@@ -745,10 +750,11 @@ glue_string <- ('
     metapp_total <- metafor::rma.mv(
       yi = metaUI__effect_size,
       V = metaUI__variance,
-      random = ~ 1 | metaUI__study_id ,
+      random = ~ 1 | metaUI__study_id/metaUI__effect_size,
       tdist = TRUE, # knapp-hartung adjustment
       data = df,
-      method = "ML" # REML failed to converge in tests
+      method = "ML" # REML failed to converge in tests,
+      sparse = TRUE
     )
 
     het <- data.frame(

@@ -36,6 +36,12 @@ prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, v
                                 "Other effect size types may work, but internal conversions (e.g., r-to-z) are not yet supported. ",
                                 "If you need such an extension, please open an issue: https://github.com/LukasWallrich/metaUI/issues")
 
+  for (i in seq_along(filters)) {
+    if(!is.factor(data[[filters[i]]]) && !is.numeric(data[[filters[i]]])) {
+      stop("All filters/moderators must be factors or numeric. This check failed first for ", filters[i])
+    }
+  }
+
   if (!is.null(names(filters))) {
     filter_names <- names(filters) %>%
       dplyr::na_if("") %>%
@@ -53,6 +59,8 @@ prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, v
        forcats::fct_na_value_to_level("(Missing)")
     }
   }
+
+
 
   # Rename the fields
   data <- data %>%

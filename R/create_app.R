@@ -173,7 +173,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 generate_global.R <- function(metaUI_eff_size_type_label) {
   req_packages <- utils::packageDescription("metaUI") %>%
     purrr::pluck("Imports") %>%
-    stringr::str_split(",\n") %>%
+    stringr::str_split(",", simplify = TRUE) %>%
+    purrr::map_chr(stringr::str_trim) %>%
     unlist()
   metaUI_eff_size_type_label <- metaUI_eff_size_type_label  %>% stringr::str_replace("'", stringr::fixed("\\\\'"))
 

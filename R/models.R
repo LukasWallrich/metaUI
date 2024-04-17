@@ -40,10 +40,11 @@ get_model_tibble <- function() {
             "Random-Effects Multilevel Model", ('metafor::rma.mv(
                                 yi = metaUI__effect_size,
                                 V = metaUI__variance,
-                                random = ~ 1 | metaUI__study_id,
+                                random = ~ 1 | metaUI__study_id/metaUI__effect_size,
                                 tdist = TRUE, # knapp-hartung adjustment
                                 data = df,
-                                method = "REML"
+                                method = "REML",
+                                sparse = TRUE
                             )'),
             "Robust Variance Estimation", ('robumeta::robu(
                         metaUI__effect_size ~ 1, data = df,
