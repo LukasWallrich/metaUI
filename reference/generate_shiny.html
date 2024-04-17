@@ -72,7 +72,8 @@ app.R file in the folder, or modified by editing server.R, ui.R, global.R and mo
 <span>  filter_popups <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  save_to_folder <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  launch_app <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">save_to_folder</span><span class="op">)</span>,</span>
-<span>  <span class="va">...</span></span>
+<span>  <span class="va">...</span>,</span>
+<span>  options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -129,6 +130,12 @@ a character vector with all packages to display.</p></dd>
 
   
 </dl></dd>
+
+
+<dt>options</dt>
+<dd><p>List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.</p><ul><li><p><code>max_forest_plot_rows</code> Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 100. If more effect sizes are selected, a message is shown instead.</p></li>
+<li><p><code>shiny_theme</code> Character. One of the shinythemes that style the app. Defaults to "yeti", see <code><a href="https://rdrr.io/pkg/shinythemes/man/shinythemes.html" class="external-link">?shinythemes::shinythemes</a></code> for all options.</p></li>
+</ul></dd>
 
 </dl></div>
     <div class="section level2">
