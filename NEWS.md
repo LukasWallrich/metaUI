@@ -1,6 +1,9 @@
 # metaUI 0.1.2 (under development)
 * Added the ability to create an app without any filters/moderators
 
+## Minor changes
+* generate_shiny() has gained an options argument to allow for more customization of the app. Currently it allows setting a Shiny theme, and a limit for the number of rows in a forest plot, with sensible defaults.
+
 ## Bug fixes
 * Corrected random intercept specification in rma.mv (and added sparse = TRUE to speed up model fitting)
 * Fixed bug in describing moderators where "Other"-category already existed

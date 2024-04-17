@@ -72,6 +72,9 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @param save_to_folder If specified, the code and data for the app will be saved to this folder. Defaults to NA, which means that nothing will be saved. If the folder exists, the user will
 #' be asked to confirm overwriting it - unless the script is run in non-interactive mode, in which case the folder will be overwritten without asking.
 #' @param launch_app Should the app be launched? Defaults to TRUE if it is not saved (i.e. save_to_folder is NA), FALSE otherwise.
+#' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
+#'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 100. If more effect sizes are selected, a message is shown instead.
+#'   - `shiny_theme` Character. One of the shinythemes that style the app. Defaults to "yeti", see `?shinythemes::shinythemes` for all options.
 #' @inheritParams create_about
 #' @inheritDotParams create_about
 #'
@@ -87,7 +90,11 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 
 generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         models = get_model_tibble, filter_popups = list(),
-        save_to_folder = NA, launch_app = is.na(save_to_folder), ...) {
+        save_to_folder = NA, launch_app = is.na(save_to_folder), ...,
+        options = list()) {
+
+  defaults <- list(max_forest_plot_rows = 200, shiny_theme = "yeti")
+  opts <- modifyList(defaults, options)
 
    # Evaluate so that it is TRUE when save_to_folder is NA initially
    launch_app <- launch_app
@@ -116,8 +123,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     stop("Invalid argument type. models must be a function, a tibble, or a path to a file.")
   }
 
-  ui <- generate_ui(dataset, dataset_name, about, filter_popups)
-  server <- generate_server(dataset)
+  ui <- generate_ui(dataset, dataset_name, about, filter_popups, opts = opts)
+  server <- generate_server(dataset, opts = opts)
 
   if (dir.exists(save_to_folder)) {
     if (interactive()) {

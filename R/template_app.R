@@ -184,7 +184,7 @@ generate_mod_tab <- function(data, any_filters) {
     ')
 }
 
-generate_ui <- function(data, dataset_name, about, filter_popups) {
+generate_ui <- function(data, dataset_name, about, filter_popups, opts = list()) {
 
   # Check whether data contains any filters
   filter_cols <- colnames(data) %>% stringr::str_subset("metaUI__filter_")
@@ -193,7 +193,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups) {
   out <- glue::glue('
 
   fluidPage(
-    theme = shinythemes::shinytheme("yeti"),
+    theme = shinythemes::shinytheme("{opts$shiny_theme}"),
     # Application title
     titlePanel(
     windowTitle = glue::glue("Dynamic Meta-Analysis of {dataset_name}"),
@@ -270,7 +270,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups) {
 }
 
 
-generate_server <- function(metaUI__df) {
+generate_server <- function(metaUI__df, opts = list()) {
 
   # Check whether data contains any filters
   filter_cols <- colnames(metaUI__df) %>% stringr::str_subset("metaUI__filter_")
@@ -775,7 +775,7 @@ glue_string <- ('
       df <- df_filtered()
 
       validate(
-         need(nrow(df) <= 100, "Forest plots can only be displayed with 100 effect sizes or fewer. Use the filters to narrow the selection if possible. If you really want a forest plot with more effect sizes, you will need to download the data and create it in a different tool where you have customization options that keep it legible.")
+         need(nrow(df) <= <<opts$max_forest_plot_rows>>, "Forest plots can only be displayed with 100 effect sizes or fewer. Use the filters to narrow the selection if possible. If you really want a forest plot with more effect sizes, you will need to download the data and create it in a different tool where you have customization options that keep it legible.")
       )
 
       rve <- robumeta::robu(metaUI__effect_size ~ 1, data = df, studynum = metaUI__study_id, var.eff.size = metaUI__variance, small = FALSE)
@@ -786,9 +786,9 @@ glue_string <- ('
       )
     },
     # TK - create a function that adjusts the height of the plot based on the number of studies
-    height = 7500,
-    width = 900 # , height = 7500, width = 900
-  )
+    height = function () 400 + 25 * nrow(df_filtered()),
+    width = 900
+    )
 
   # FUNNEL PLOT -------------------------------------------------------------
 
