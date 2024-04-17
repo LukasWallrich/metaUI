@@ -38,6 +38,7 @@ Imports:
     shinycssloaders,
     shinyjs,
     shinythemes,
+    shinyWidgets,
     stringr,
     tibble,
     tidyr,
