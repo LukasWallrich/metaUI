@@ -55,7 +55,7 @@
 <h2 class="pkg-version" data-toc-text="0.1.2" id="metaui-012-under-development">metaUI 0.1.2 (under development)<a class="anchor" aria-label="anchor" href="#metaui-012-under-development"></a></h2>
 <div class="section level3">
 <h3 id="minor-enhancements-0-1-2">Minor enhancements<a class="anchor" aria-label="anchor" href="#minor-enhancements-0-1-2"></a></h3>
-<ul><li>generate_shiny() has gained an <code>options</code> argument to allow for more customization of the app. Currently it allows setting a Shiny theme, and a limit for the number of rows in a forest plot, with sensible defaults.</li>
+<ul><li>generate_shiny() has gained an <code>options</code> argument to allow for more customization of the app. Currently it allows setting a Shiny theme, a limit for the number of rows in a forest plot, and a threshold for switching from checkboxes to selection lists based on the number of moderator levels, with sensible defaults.</li>
 <li>prepare_data gained an argument <code>arrange_filters</code> to allow for the ordering of filters in the app. It now defaults to ordering them in the order they are passed into the function, but this can be changed to alphabetical or no ordering (in which case the order of columns determines their position)</li>
 <li>Added the ability to create an app without any filters/moderators</li>
 <li>Now shows “(Missing)” level only where there are any missing values in that filter/moderator - unless</li>

@@ -71,7 +71,9 @@
 <span>  es_type <span class="op">=</span> <span class="st">"SMD"</span>,</span>
 <span>  article_label <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  es_label <span class="op">=</span> <span class="cn">NA</span>,</span>
-<span>  na.rm <span class="op">=</span> <span class="st">"es_related"</span></span>
+<span>  na.rm <span class="op">=</span> <span class="st">"es_related"</span>,</span>
+<span>  arrange_filters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"given"</span>, <span class="st">"alphabetical"</span>, <span class="st">"leave"</span><span class="op">)</span>,</span>
+<span>  keep_missing_level <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -131,6 +133,14 @@ the last is the default and drops rows with missing values for any of the variab
 <code>es_field</code>, <code>sample_size</code>, <code>variance</code>, <code>se</code> and <code>pvalue</code>. Setting this to TRUE also drops rows with missing values on any of the filters
 etc, which might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
 or change the models and analyses to be included in the app.</p></dd>
+
+
+<dt>arrange_filters</dt>
+<dd><p>Character. How should the filters be arranged in the app? Options are "given" by the <code>filters</code> argument, "alphabetical" or "leave" (as they are in the dataset). Defaults to "given".</p></dd>
+
+
+<dt>keep_missing_level</dt>
+<dd><p>Logical. Should a <code>(Missing)</code>-level be kept even for filters that do not have missing values? Might be advisable when you expect users to upload new data with missing values. Defaults to FALSE.</p></dd>
 
 </dl></div>
     <div class="section level2">
