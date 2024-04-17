@@ -634,7 +634,7 @@ glue_string <- ('
         ggplot2::geom_violin(fill = NA) +
         ggplot2::theme_bw() +
         ggplot2::geom_jitter(width = .1, alpha = .25) +
-        ggplot2::xlab(input$moderator) +
+        ggplot2::xlab(input$moderator %>% stringr::str_remove("metaUI__filter_")) +
         ggplot2::ylab(metaUI_eff_size_type_label) +
         ggplot2::geom_hline(yintercept = 0, linetype = "dashed") +
         ggplot2::coord_flip()
@@ -773,6 +773,10 @@ glue_string <- ('
     {
       # TK - reconsider which package to use for forest plots
       df <- df_filtered()
+
+      validate(
+         need(nrow(df) <= 100, "Forest plots can only be displayed with 100 effect sizes or fewer. Use the filters to narrow the selection if possible. If you really want a forest plot with more effect sizes, you will need to download the data and create it in a different tool where you have customization options that keep it legible.")
+      )
 
       rve <- robumeta::robu(metaUI__effect_size ~ 1, data = df, studynum = metaUI__study_id, var.eff.size = metaUI__variance, small = FALSE)
 
