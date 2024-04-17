@@ -569,11 +569,15 @@ glue_string <- ('
 
     counts <- summarise_categorical(df[[\'{f$col}\']], \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\')
 
-    counts$Count %>%
-      setNames(counts[[\'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\']]) %>%
+    waffle_counts <- counts$Count %>%
+      setNames(counts[[\'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\']])
+
+    waffle_cols <- c(\'#66C2A5\', \'#FC8D62\', \'#8DA0CB\', \'#E78AC3\', \'#A6D854\', \'#FFD92F\', \'#E5C494\', \'#B3B3B3\', \'#E41A1C\', \'#377EB8\', \'#4DAF4A\')[1:length(waffle_counts)]
+
+    waffle_counts %>%
       waffle::waffle(rows = ceiling(sqrt(sum(.) / 2)), size = max(2, 2 / (sum(.) / 100)),
       # RColorBrewer Set2 extended to allow for up to 10 + Other categories
-      colors = c(\'#66C2A5\', \'#FC8D62\', \'#8DA0CB\', \'#E78AC3\', \'#A6D854\', \'#FFD92F\', \'#E5C494\', \'#B3B3B3\', \'#E41A1C\', \'#377EB8\', \'#4DAF4A\'))
+      colors = waffle_cols)
   }})
         ")
       }
