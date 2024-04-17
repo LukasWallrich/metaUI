@@ -52,7 +52,7 @@ labels_and_options <- function(dataset_name) {
 
 # Wrapped in function so that it is only created once custom variables are set
 
-generate_ui_filters <- function(data, filter_popups, any_filters) {
+generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
   if (!any_filters) return("")
   filter_cols <- colnames(data) %>% stringr::str_subset("metaUI__filter_")
 
@@ -89,7 +89,10 @@ generate_ui_filters <- function(data, filter_popups, any_filters) {
                  ')
 
     } else if (is.factor(data[[filter_col]])) {
-      out <- glue::glue('checkboxGroupInput("{filter_col %>% stringr::str_replace_all(" ", "_")}",
+
+      choices <- levels(data[[filter_col]]) %>% na.omit()
+
+      out <- glue::glue('{if (length(choices) < opts$selection_list_threshold) "checkboxGroupInput(" else "selectInput(selectize = FALSE, multiple = TRUE, "} "{filter_col %>% stringr::str_replace_all(" ", "_")}",
       p("{stringr::str_remove(filter_col, rm_prefix)}",
       {if(add_popup)  {{
           glue::glue("
@@ -98,8 +101,8 @@ generate_ui_filters <- function(data, filter_popups, any_filters) {
                         \'{escape_quotes(filter_popups[stringr::str_remove(filter_col, rm_prefix)])}\')
                     ")
           }} else  ""}),
-          choices = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}"),
-        selected = c("{glue::glue_collapse(levels(data[[filter_col]]) %>% na.omit(), sep = \'", "\')}")
+          choices = c("{glue::glue_collapse(choices, sep = \'", "\')}"),
+        selected = c("{glue::glue_collapse(choices, sep = \'", "\')}")
         )')
     } else {
       stop("Filter/moderator variables must be numeric or factors. This check failed first for ", filter_col)
@@ -202,7 +205,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
       sidebarPanel(
         width = 3,
         div(id = "filters",
-        {generate_ui_filters(data, filter_popups, any_filters)}
+        {generate_ui_filters(data, filter_popups, any_filters, opts = opts)}
         uiOutput("z_score_filter")),
         actionButton("go", "Analyze data"),
         actionButton("resetFilters", "Reset filters"),

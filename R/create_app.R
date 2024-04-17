@@ -75,6 +75,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
 #'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 100. If more effect sizes are selected, a message is shown instead.
 #'   - `shiny_theme` Character. One of the shinythemes that style the app. Defaults to "yeti", see `?shinythemes::shinythemes` for all options.
+#'   - `selection_list_threshold` Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 11.
 #' @inheritParams create_about
 #' @inheritDotParams create_about
 #'
@@ -93,7 +94,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         save_to_folder = NA, launch_app = is.na(save_to_folder), ...,
         options = list()) {
 
-  defaults <- list(max_forest_plot_rows = 200, shiny_theme = "yeti")
+  defaults <- list(max_forest_plot_rows = 200, shiny_theme = "yeti", selection_list_threshold = 11)
   opts <- modifyList(defaults, options)
 
    # Evaluate so that it is TRUE when save_to_folder is NA initially
