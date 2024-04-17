@@ -17,7 +17,9 @@ prepare_data(
   es_type = "SMD",
   article_label = NA,
   es_label = NA,
-  na.rm = "es_related"
+  na.rm = "es_related",
+  arrange_filters = c("given", "alphabetical", "leave"),
+  keep_missing_level = FALSE
 )
 }
 \arguments{
@@ -50,6 +52,10 @@ the last is the default and drops rows with missing values for any of the variab
 \code{es_field}, \code{sample_size}, \code{variance}, \code{se} and \code{pvalue}. Setting this to TRUE also drops rows with missing values on any of the filters
 etc, which might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
 or change the models and analyses to be included in the app.}
+
+\item{arrange_filters}{Character. How should the filters be arranged in the app? Options are "given" by the \code{filters} argument, "alphabetical" or "leave" (as they are in the dataset). Defaults to "given".}
+
+\item{keep_missing_level}{Logical. Should a \code{(Missing)}-level be kept even for filters that do not have missing values? Might be advisable when you expect users to upload new data with missing values. Defaults to FALSE.}
 }
 \value{
 tibble with the data from the file/input reformatted for metaUI
