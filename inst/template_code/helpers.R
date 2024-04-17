@@ -1,3 +1,5 @@
+# Ensure this is aligned in /R and /inst as it is used by both this package and the Shiny apps. Locally ensured with git pre-commit hook
+
 # Function to round numbers up and down to a given number of significant digits
 signif_ceiling <- function(x, digits = 2) {
   if (x == 0) {
@@ -22,11 +24,11 @@ signif_floor <- function(x, digits = 2) {
 #' Formats p-value in line with APA standard, returning it without leading 0 and
 #' as < .001 and > .99 when it is extremely small or large.
 #'
-#' Taken from timesaveR package, copyright also Lukas Wallrich, 2022
-#'
 #' @param p_value Numeric, or a vector of numbers
 #' @param digits Number of significant digits, defaults to 3
 #' @param include_equal Should precise p-values by prefixed with =? Useful for in-text reporting, less so in tables
+#' @source Taken from timesaveR package, copyright also Lukas Wallrich (2023)
+#' @noRd
 
 fmt_p <- function(p_value, digits = 3, include_equal = TRUE) {
   fmt <- paste0("%.", digits, "f")
@@ -54,38 +56,60 @@ summarise_numeric <- function(x, name) {
     return(NULL)
   }
   tibble::tribble(
-    ~Var, ~`Mean (SD)`, ~`Min`, ~`Max`,
-    name, paste0(round(mean(x), 2), " (", round(sd(x), 2), ")"), round(min(x), 2), round(max(x), 2)
+    ~Var, ~`Mean (SD)`, ~`Min`, ~`Max`, ~`Share missing`,
+    name, paste0(round(mean(x, na.rm = TRUE), 2), " (", round(sd(x, na.rm = TRUE), 2), ")"),
+    round(min(x, na.rm = TRUE), 2), round(max(x, na.rm = TRUE), 2), paste0(round(mean(is.na(x))*100, 2), " %")
   )  %>% dplyr::mutate(dplyr::across(dplyr::everything(), as.character))  %>%
     tidyr::pivot_longer(dplyr::everything(), names_to = "Statistic", values_to = "Value")
 }
 
+# Count categories in x, return top 10 and return everything else as Other (merging with existing Other if it exists)
 summarise_categorical <- function(x, name) {
   if (length(x) == 0) {
     return(NULL)
   }
-  counts <- tibble::tibble(x = x)  %>% dplyr::count(x, sort = TRUE, name = "Count")
 
-  out <- dplyr::bind_rows(
-    counts  %>% dplyr::slice(1:10),
-    tibble::tibble(x = "Other", Count = sum(counts$Count) - sum(counts$Count[1:10])) %>% tidyr::drop_na())  %>%
+  counts <- tibble::tibble(!!rlang::sym(name) := x) %>%
+    dplyr::count(!!rlang::sym(name), sort = TRUE, .drop = FALSE) %>%
+    dplyr::rename(Count = n)
+
+  if (nrow(counts) > 10) {
+
+  top_categories <- counts %>%
+    dplyr::filter(!!rlang::sym(name) != "Other") %>%
+    dplyr::slice_max(order_by = Count, n = 9, with_ties = FALSE)
+
+  other_count <- sum(counts$Count) - sum(top_categories$Count)
+
+  if ("Other" %in% counts[[name]]) {
+    other_count <- other_count + counts %>% dplyr::filter(!!rlang::sym(name) == "Other") %>% dplyr::pull(Count)
+  }
+
+  final_counts <- if (other_count > 0) {
+    dplyr::bind_rows(top_categories, tibble::tibble(!!rlang::sym(name) := "Other", Count = other_count))
+  } else {
+    top_categories
+  }
+
+  } else {
+    final_counts <- counts
+  }
+
+  final_counts %>%
     dplyr::mutate(Percentage = paste0(round(Count / sum(Count) * 100, 1), "%"))
-
-  names(out)[1] <- name
-
-  out
 }
+
 
 #' Format confidence interval based on the bounds
 #'
 #' Constructs a confidence intervals from upper and lower bounds,
 #' placing them in between square brackets
-#' 
-#' Taken from timesaveR package, copyright also Lukas Wallrich, 2022
 #'
 #' @param lower Lower bound(s) of confidence interval(s). Numeric, or a vector of numbers
 #' @param upper Lower bound(s) of confidence interval(s). Numeric, or a vector of numbers
 #' @param digits Number of significant digits, defaults to 2
+#' @source Taken from timesaveR package, copyright also Lukas Wallrich (2023)
+#' @noRd
 
 fmt_ci <- function(lower, upper, digits = 2) {
   if (!(length(lower) == length(upper))) stop("lower and upper must have the same length.")
@@ -101,11 +125,11 @@ fmt_ci <- function(lower, upper, digits = 2) {
 #' trailing zeros - this version keeps them and thus rounds 1.201 to 1.20
 #' rather than 1.2 when 2 digits are requested.
 #'
-#' Taken from timesaveR package, copyright also Lukas Wallrich, 2022
-#'
 #' @param x Numeric vector to be rounded
 #' @param digits Number of significant digits
 #' @return Character vector of rounded values, with trailing zeroes as needed to show `digits` figures after the decimal point
+#' @source Taken from timesaveR package, copyright also Lukas Wallrich (2023)
+#' @noRd
 
 round_ <- function(x, digits = 2) {
   fmt <- paste0("%.", digits, "f")
@@ -113,4 +137,20 @@ round_ <- function(x, digits = 2) {
   attributes(out) <- attributes(x)
   out[is.na(x)] <- NA
   out
+}
+
+# Thanks to https://stackoverflow.com/a/41194093/10581449
+allglobal <- function() {
+  if (identical(parent.frame(), globalenv())) return(FALSE)
+  lss <- ls(envir = parent.frame())
+  my_assign <- function(name, value, envir = 1L) assign(name, value, pos = envir)
+  for (i in lss) {
+    my_assign(i, get(i, envir = parent.frame()))
+  }
+}
+
+escape_quotes <- function(input_str) {
+  output_str <- gsub("'", "&apos;", input_str)
+  output_str <- gsub("\"", "&quot;", output_str)
+  return(output_str)
 }
