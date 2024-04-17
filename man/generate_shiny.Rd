@@ -12,7 +12,8 @@ generate_shiny(
   filter_popups = list(),
   save_to_folder = NA,
   launch_app = is.na(save_to_folder),
-  ...
+  ...,
+  options = list()
 )
 }
 \arguments{
@@ -44,6 +45,12 @@ be asked to confirm overwriting it - unless the script is run in non-interactive
 used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 a character vector with all packages to display.}
   }}
+
+\item{options}{List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
+\itemize{
+\item \code{max_forest_plot_rows} Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 100. If more effect sizes are selected, a message is shown instead.
+\item \code{shiny_theme} Character. One of the shinythemes that style the app. Defaults to "yeti", see \code{?shinythemes::shinythemes} for all options.
+}}
 }
 \value{
 This function does not have a meaningful return value - it rather launches the Shiny app and/or saves it to disk.
