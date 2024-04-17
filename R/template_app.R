@@ -127,8 +127,10 @@ generate_sample_description_ui <- function(data, any_filters) {
   if (!any_filters) return("")
 
   filter_ids <- colnames(data) %>%
-    stringr::str_subset("metaUI__filter_") %>% stringr::str_replace_all(" ", "_")
+    stringr::str_subset("metaUI__filter_")
   filter_names <- stringr::str_remove(filter_ids, "metaUI__filter_")
+
+  filter_ids <-  filter_ids %>% stringr::str_replace_all(" ", "_")
 
   purrr::map2_chr(filter_ids, filter_names, \(fid, fn) {
     glue::glue('
