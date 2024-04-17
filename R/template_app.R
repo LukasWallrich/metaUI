@@ -52,7 +52,6 @@ labels_and_options <- function(dataset_name) {
 
 # Wrapped in function so that it is only created once custom variables are set
 
-
 generate_ui_filters <- function(data, filter_popups, any_filters) {
   if (!any_filters) return("")
   filter_cols <- colnames(data) %>% stringr::str_subset("metaUI__filter_")
@@ -567,7 +566,9 @@ glue_string <- ('
 
     counts$Count %>%
       setNames(counts[[\'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\']]) %>%
-      waffle::waffle(rows = ceiling(sqrt(sum(.) / 2)), size = max(2, 2 / (sum(.) / 100)))
+      waffle::waffle(rows = ceiling(sqrt(sum(.) / 2)), size = max(2, 2 / (sum(.) / 100)),
+      # RColorBrewer Set2 extended to allow for up to 10 + Other categories
+      colors = c(\'#66C2A5\', \'#FC8D62\', \'#8DA0CB\', \'#E78AC3\', \'#A6D854\', \'#FFD92F\', \'#E5C494\', \'#B3B3B3\', \'#E41A1C\', \'#377EB8\', \'#4DAF4A\'))
   }})
         ")
       }
@@ -775,7 +776,7 @@ glue_string <- ('
       df <- df_filtered()
 
       validate(
-         need(nrow(df) <= <<opts$max_forest_plot_rows>>, "Forest plots can only be displayed with 100 effect sizes or fewer. Use the filters to narrow the selection if possible. If you really want a forest plot with more effect sizes, you will need to download the data and create it in a different tool where you have customization options that keep it legible.")
+         need(nrow(df) <= <<opts$max_forest_plot_rows>>, "Forest plots can only be displayed with <<opts$max_forest_plot_rows>> effect sizes or fewer. Use the filters to narrow the selection if possible. If you really want a forest plot with more effect sizes, you will need to download the data and create it in a different tool where you have customization options that keep it legible.")
       )
 
       rve <- robumeta::robu(metaUI__effect_size ~ 1, data = df, studynum = metaUI__study_id, var.eff.size = metaUI__variance, small = FALSE)

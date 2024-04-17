@@ -19,6 +19,8 @@
 #' `es_field`, `sample_size`, `variance`, `se` and `pvalue`. Setting this to TRUE also drops rows with missing values on any of the filters
 #' etc, which might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
 #' or change the models and analyses to be included in the app.
+#' @param arrange_filters Character. How should the filters be arranged in the app? Options are "given" by the `filters` argument, "alphabetical" or "leave" (as they are in the dataset). Defaults to "given".
+#' @param keep_missing_level Logical. Should a `(Missing)`-level be kept even for filters that do not have missing values? Might be advisable when you expect users to upload new data with missing values. Defaults to FALSE.
 #'
 #' @return tibble with the data from the file/input reformatted for metaUI
 #' @export
@@ -26,7 +28,9 @@
 #' \dontrun{
 #' import_data("my_meta.csv", "study_id", "cohens_d", c("Country" = "country", "Year" = "year"))
 #' }
-prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, variance, filters, url = NA, es_type = "SMD", article_label = NA, es_label = NA, na.rm = "es_related") {
+prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, variance, filters,
+                         url = NA, es_type = "SMD", article_label = NA, es_label = NA, na.rm = "es_related",
+                         arrange_filters = c("given", "alphabetical", "leave"), keep_missing_level = FALSE) {
   if (is.character(data)) {
     # Read the file
     data <- read.csv(data, stringsAsFactors = FALSE)
@@ -52,15 +56,27 @@ prepare_data <- function(data, study_label, es_field, se, pvalue, sample_size, v
     filter_names <- filters %>% setNames(filters)
   }
 
-  # Set NA level for categorical filters
+  # Set NA level for categorical filters ...
   for (i in seq_along(filters)) {
     if(is.factor(data[[filters[i]]])) {
       data[[filters[i]]] <- data[[filters[i]]] %>%
        forcats::fct_na_value_to_level("(Missing)")
+      # ... if there are any NA
+      if (!keep_missing_level) {
+        data[[filters[i]]] <- data[[filters[i]]] %>%
+          forcats::fct_drop()
+      }
     }
   }
 
-
+  # Arrange the filters
+  arrange_filters <- match.arg(arrange_filters)
+  if (!arrange_filters == "leave") {
+    if (arrange_filters == "alphabetical") {
+      filters <- sort(filters)
+    }
+    data <- data %>% dplyr::select(dplyr::all_of(filters), dplyr::everything())
+  }
 
   # Rename the fields
   data <- data %>%
