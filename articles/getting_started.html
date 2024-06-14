@@ -155,7 +155,9 @@ deal with standardised mean differences, i.e. <code>"SMD"</code>.</p>
 <span>  sample_size <span class="op">=</span> <span class="st">"ni"</span>,</span>
 <span>  variance <span class="op">=</span> <span class="st">"vi"</span>, </span>
 <span>  filters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Publication Year"</span> <span class="op">=</span> <span class="st">"pub_year"</span>, <span class="st">"Continent"</span> <span class="op">=</span> <span class="st">"continent"</span>, <span class="st">"Teacher Sample"</span> <span class="op">=</span> <span class="st">"teachers"</span><span class="op">)</span>, </span>
-<span>  es_type <span class="op">=</span> <span class="st">"SMD"</span></span>
+<span>  es_type <span class="op">=</span> <span class="st">"SMD"</span>,</span>
+<span>  arrange_filters <span class="op">=</span> <span class="st">"leave"</span>,</span>
+<span>  keep_missing_level <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -169,7 +171,8 @@ web browser.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/generate_shiny.html">generate_shiny</a></span><span class="op">(</span><span class="va">app_data</span>, </span>
 <span>               dataset_name <span class="op">=</span> <span class="st">"Barroso et al 2021 - Maths Anxiety"</span>, </span>
-<span>               eff_size_type_label <span class="op">=</span> <span class="st">"Fisher's Z scores"</span><span class="op">)</span></span></code></pre></div>
+<span>               eff_size_type_label <span class="op">=</span> <span class="st">"Fisher's Z scores"</span>,</span>
+<span>               options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>shiny_theme <span class="op">=</span> <span class="st">"sandstone"</span>, selection_list_threshold <span class="op">=</span> <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="save-the-app">Save the app<a class="anchor" aria-label="anchor" href="#save-the-app"></a>
@@ -188,8 +191,9 @@ that the app should be saved to</strong>.</p>
 <span>               citation <span class="op">=</span> <span class="st">"Barroso, C., Ganley, C. M., McGraw, A. L., Geer, E. A., Hart, S. A., &amp; Daucourt, M. C. (2021). A meta-analysis of the relation between math anxiety and math achievement. Psychological Bulletin, 147(2), 134."</span>,</span>
 <span>               contact <span class="op">=</span> <span class="st">"l.wallrich@bbk.ac.uk"</span><span class="op">)</span></span></code></pre></div>
 <p>When you run this, the app will be saved to a new folder, in this
-case <code>my_app_folder</code>. You can open <code>app.R</code> in that
-folder to run the Shiny app.</p>
+case <code>my_app_folder</code>. You can run
+<code>shiny::shinyAppDir(my_app_folder)</code> (specifying your folder)
+to run the Shiny app.</p>
 <p>To further customize the app, consider editing:</p>
 <ul>
 <li><p><code>models.R</code> to adjust the meta-analytic models that are
