@@ -60,8 +60,8 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' Generate Shiny app
 #'
 #' This function generates the Shiny app. It is the main function of the package. The app can either be launched directly, or saved to
-#' a folder. If saved, that folder will contain all the code and data needed to run the app. The app can then be launched from the
-#' app.R file in the folder, or modified by editing server.R, ui.R, global.R and models.R there.
+#' a folder. If saved, that folder will contain all the code and data needed to run the app. The app can then be launched using `shiny::shinyAppDir()`
+#' on that folder, or modified by editing server.R, ui.R, global.R and models.R in the folder.
 #'
 #' @param dataset Dataframe as returned from [prepare_data()]
 #' @param eff_size_type_label The label to be used to describe the effect size. If NA, effect type code from dataset is used.
