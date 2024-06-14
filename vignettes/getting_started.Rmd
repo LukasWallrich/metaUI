@@ -68,7 +68,9 @@ app_data <- prepare_data(app_data,
   sample_size = "ni",
   variance = "vi", 
   filters = c("Publication Year" = "pub_year", "Continent" = "continent", "Teacher Sample" = "teachers"), 
-  es_type = "SMD"
+  es_type = "SMD",
+  arrange_filters = "leave",
+  keep_missing_level = TRUE
 )
 ```
 
@@ -79,7 +81,8 @@ Now you are ready to launch a first version of the app. This is useful to see wh
 ```{r eval = FALSE}
 generate_shiny(app_data, 
                dataset_name = "Barroso et al 2021 - Maths Anxiety", 
-               eff_size_type_label = "Fisher's Z scores")
+               eff_size_type_label = "Fisher's Z scores",
+               options = list(shiny_theme = "sandstone", selection_list_threshold = 3))
 ```
 
 ## Save the app
@@ -97,7 +100,7 @@ generate_shiny(app_data,
                contact = "l.wallrich@bbk.ac.uk")
 ```
 
-When you run this, the app will be saved to a new folder, in this case `my_app_folder`. You can open `app.R` in that folder to run the Shiny app.
+When you run this, the app will be saved to a new folder, in this case `my_app_folder`. You can run `shiny::shinyAppDir(my_app_folder)` (specifying your folder) to run the Shiny app.
 
 To further customize the app, consider editing:
 
