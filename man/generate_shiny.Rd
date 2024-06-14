@@ -50,7 +50,7 @@ a character vector with all packages to display.}
 \itemize{
 \item \code{max_forest_plot_rows} Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 100. If more effect sizes are selected, a message is shown instead.
 \item \code{shiny_theme} Character. One of the shinythemes that style the app. Defaults to "yeti", see \code{?shinythemes::shinythemes} for all options.
-\item \code{selection_list_threshold} Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 11.
+\item \code{selection_list_threshold} Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
 }}
 }
 \value{
