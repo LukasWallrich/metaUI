@@ -42,7 +42,7 @@ The sample data was taken from the [psymetadata](https://github.com/josue-rodrig
 
 ## Related projects
 
-- Albritton et al. created a Shiny app to run and update meta-analyses online, that covers similar functionalities. Currently, it seems more feature-rich than metaUI, but more focused on meta-analysts rather than end users of insights - and less customisable. The app is accessible [here](https://dallbrit.shinyapps.io/Meta_regression_app/), more details are in the accompanying paper:
+- Albritton et al. created a [A General Tool for Living Meta-Analysis] to run and update meta-analyses online, which contains similar functionalities. Currently, it seems more feature-rich than metaUI, but more focused on meta-analysts rather than end users of insights - and less customisable. The app is accessible [here](https://dallbrit.shinyapps.io/Meta_regression_app/), more details are in the accompanying paper:
 
 Allbritton, D., Gómez, P., Angele, B., Vasilev, M., & Perea, M. (2024). Breathing Life Into Meta-Analytic Methods. *Journal of Cognition*, 7(1).
 
