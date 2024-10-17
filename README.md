@@ -29,7 +29,7 @@ Outside R Studio, you can run `file.edit(system.file("rmarkdown/templates/create
 
 The [`Getting started` vignette](https://lukaswallrich.github.io/metaUI/articles/getting_started.html) provides a step-by-step example ... or you may want to watch this [video tutorial](https://www.youtube.com/watch?v=iaTMFzWfCe0&ab_channel=ESMARConf) for a step-by-step walk-through.
 
-# Sources 
+## Sources 
 
 Much of the package code was based on two previous interactive meta-analyses apps:
 
@@ -39,3 +39,10 @@ Much of the package code was based on two previous interactive meta-analyses app
 The sample data was taken from the [psymetadata](https://github.com/josue-rodriguez/psymetadata)-package, and initially extracted from the following article:
 
 - Barroso C, Ganley CM, McGraw AL, Geer EA, Hart SA, Daucourt MC (2021). “A meta-analysis of the relation between math anxiety and math achievement.” *Psychological Bulletin*, 147(2), 134. Data and details also available on [https://osf.io/5admx/](https://osf.io/5admx/).
+
+## Related projects
+
+- Albritton et al. created a Shiny app to run and update meta-analyses online, that covers similar functionalities. Currently, it seems more feature-rich than metaUI, but more focused on meta-analysts rather than end users of insights - and less customisable. The app is accessible [here](https://dallbrit.shinyapps.io/Meta_regression_app/), more details are in the accompanying paper:
+
+Allbritton, D., Gómez, P., Angele, B., Vasilev, M., & Perea, M. (2024). Breathing Life Into Meta-Analytic Methods. *Journal of Cognition*, 7(1).
+
