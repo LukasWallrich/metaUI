@@ -58,7 +58,6 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
 
   purrr::map_chr(filter_cols, function(filter_col) {
     add_popup <- stringr::str_remove(filter_col, "metaUI__filter_") %in% names(filter_popups)
-    if (add_popup) id <- paste0("i", sample(1:10e6, 1))
     rm_prefix <- "metaUI__filter_"
 
     if (is.numeric(data[[filter_col]])) {
@@ -70,40 +69,44 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
         TRUE ~ l
       )
       sig_dig <- log10(max(abs(max(data[[filter_col]], na.rm = TRUE)), abs(min(data[[filter_col]], na.rm = TRUE)))) + 1
-      out <- glue::glue('
-      sliderInput("{filter_col %>% stringr::str_replace_all(" ", "_")}",
-      p("{stringr::str_remove(filter_col, "metaUI__filter_")}",
-      {if(add_popup)  {{
-          glue::glue("
-          shinyBS::popify(shinyBS::bsButton(\'{id}\', label = \'\', icon = icon(\'info\'), style = \'color: #fff; background-color: #337ab7; border-color: #2e6da4\', size = \'extra-small\'),
-                        \'{stringr::str_remove(filter_col, rm_prefix)}\',
-                        \'{escape_quotes(filter_popups[stringr::str_remove(filter_col, rm_prefix)])}\')
-                    ")
-          }} else  ""}),
-          min = {signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
-          max = {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)},
-          value = c({signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
-          {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)}),
-          sep = ""
-      )
-                 ')
+       out <- glue::glue('
+       sliderInput("{filter_col %>% stringr::str_replace_all(" ", "_")}",
+       p("{stringr::str_remove(filter_col, "metaUI__filter_")}",
+       {if(add_popup)  {{
+           glue::glue("
+           span(
+             `data-toggle` = \"tooltip\", `data-placement` = \"right\", `data-html` = \"true\",
+             title = \'{escape_quotes(filter_popups[stringr::str_remove(filter_col, rm_prefix)])}\',
+             icon(\"info-circle\")
+           )
+                     ")
+           }} else  ""}),
+           min = {signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
+           max = {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)},
+           value = c({signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
+           {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)}),
+           sep = ""
+       )
+                  ')
 
     } else if (is.factor(data[[filter_col]])) {
 
       choices <- levels(data[[filter_col]]) %>% na.omit()
 
-      out <- glue::glue('{if (length(choices) < opts$selection_list_threshold) "checkboxGroupInput(" else "shinyWidgets::pickerInput(multiple = TRUE, options = list(`actions-box` = TRUE), "} "{filter_col %>% stringr::str_replace_all(" ", "_")}",
-      p("{stringr::str_remove(filter_col, rm_prefix)}",
-      {if(add_popup)  {{
-          glue::glue("
-          shinyBS::popify(shinyBS::bsButton(\'{id}\', label = \'\', icon = icon(\'info\'), style = \'color: #fff; background-color: #337ab7; border-color: #2e6da4\', size = \'extra-small\'),
-                        \'{stringr::str_remove(filter_col, rm_prefix)}\',
-                        \'{escape_quotes(filter_popups[stringr::str_remove(filter_col, rm_prefix)])}\')
-                    ")
-          }} else  ""}),
-          choices = c("{glue::glue_collapse(choices, sep = \'", "\')}"),
-        selected = c("{glue::glue_collapse(choices, sep = \'", "\')}")
-        )')
+       out <- glue::glue('{if (length(choices) < opts$selection_list_threshold) "checkboxGroupInput(" else "shinyWidgets::pickerInput(multiple = TRUE, options = list(`actions-box` = TRUE), "} "{filter_col %>% stringr::str_replace_all(" ", "_")}",
+       p("{stringr::str_remove(filter_col, rm_prefix)}",
+       {if(add_popup)  {{
+           glue::glue("
+           span(
+             `data-toggle` = \"tooltip\", `data-placement` = \"right\", `data-html` = \"true\",
+             title = \'{escape_quotes(filter_popups[stringr::str_remove(filter_col, rm_prefix)])}\',
+             icon(\"info-circle\")
+           )
+                     ")
+           }} else  ""}),
+           choices = c("{glue::glue_collapse(choices, sep = \'", "\')}"),
+         selected = c("{glue::glue_collapse(choices, sep = \'", "\')}")
+         )')
     } else {
       stop("Filter/moderator variables must be numeric or factors. This check failed first for ", filter_col)
     }
@@ -198,6 +201,36 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
 
   fluidPage(
     theme = shinythemes::shinytheme("{opts$shiny_theme}"),
+    # Source - https://stackoverflow.com/a/73325271
+    # Posted by Stéphane Laurent
+    # Retrieved 2026-02-01, License - CC BY-SA 4.0
+    tags$head(
+      tags$style(HTML("
+        .tooltip {
+          pointer-events: none;
+        }
+        .tooltip > .tooltip-inner {
+          pointer-events: none;
+          background-color: #73AD21;
+          color: #FFFFFF;
+          border: 1px solid green;
+          padding: 10px;
+          font-size: 25px;
+          font-style: italic;
+          text-align: justify;
+          margin-left: 0;
+          max-width: 1000px;
+        }
+        .tooltip > .arrow::before {
+          border-right-color: #73AD21;
+        }
+      ")),
+      tags$script(HTML("
+        $(function () {
+          $('[data-toggle=tooltip]').tooltip()
+        })
+      "))
+    ),
     # Application title
     titlePanel(
     windowTitle = glue::glue("Dynamic Meta-Analysis of {dataset_name}"),

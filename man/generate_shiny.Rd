@@ -27,7 +27,7 @@ generate_shiny(
 Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 this must assign the tibble to a variable called models_to_run (i.e. using <-).}
 
-\item{filter_popups}{Named list with content for popup windows that provide further details on filter variables. They can contain HTML formatting, but should then be wrapped into \code{HTML()}, for instance: \verb{list(Year = HTML("<i>Note:</i><br>This refers to data collection if reported, otherwise the publication year.})}
+\item{filter_popups}{Named list with content for tooltips that provide further details on filter variables. They can contain HTML formatting, but should then be wrapped into \code{HTML()}, for instance: \verb{list(Year = HTML("<i>Note:</i><br>This refers to data collection if reported, otherwise the publication year.})}
 
 \item{save_to_folder}{If specified, the code and data for the app will be saved to this folder. Defaults to NA, which means that nothing will be saved. If the folder exists, the user will
 be asked to confirm overwriting it - unless the script is run in non-interactive mode, in which case the folder will be overwritten without asking.}
