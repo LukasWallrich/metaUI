@@ -227,7 +227,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
       ")),
       tags$script(HTML("
         $(function () {
-          $('[data-toggle=tooltip]').tooltip()
+          $(\"[data-toggle=tooltip]\").tooltip()
         })
       "))
     ),
