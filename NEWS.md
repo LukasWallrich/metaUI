@@ -11,6 +11,7 @@
 * Fixed bug in describing moderators where "Other"-category already existed
 * Fixed creation of code to install required packages and added check to ensure that filters are factors or numeric (#28)
 * Waffle plots in sample description no longer run out of colors in the presence of 11 categories.
+* Replaced shinyBS popups with Bootstrap tooltips in generated apps.
 
 # metaUI 0.1.1
 
@@ -19,4 +20,4 @@
 * Added a `NEWS.md` file to track changes to the package.
 * Added explicit option to include or exclude NAs on filters and report NA share in Sample descriptives
 * Added `Reset` button to reset all filters
-* Added option to add popups to filter, by specifying `filter_popups` in `generate_shiny()`
+* Added option to add tooltips to filters, by specifying `filter_popups` in `generate_shiny()`

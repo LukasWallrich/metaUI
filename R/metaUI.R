@@ -40,7 +40,6 @@ no_check_warnings <- function() {
   # Shiny app
   plotly::ggplotly()
   shinycssloaders::withSpinner()
-  shinyBS::popify()
   shinythemes::themeSelector()
   waffle::waffle()
   DT::datatable()
