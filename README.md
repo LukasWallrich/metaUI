@@ -46,3 +46,25 @@ The sample data was taken from the [psymetadata](https://github.com/josue-rodrig
 
 Allbritton, D., Gómez, P., Angele, B., Vasilev, M., & Perea, M. (2024). Breathing Life Into Meta-Analytic Methods. *Journal of Cognition*, 7(1).
 
+
+## Headless correctness candidate
+
+The development branch adds a versioned JSON build path while retaining editable
+R/Shiny apps. See [reproduction and scientific contract](validation/reproduction.md),
+[the tiny synthetic config](inst/examples/tiny.json), and its
+[JSON schema](inst/examples/config.schema.json). Build and launch are separate:
+
+```r
+metaUI::build_app("tiny.json")     # copy tiny.json and tiny.csv to a fresh folder
+shiny::runApp("tiny-app")         # separate, blocking launch action
+```
+
+Generation refuses a nonempty folder by default. p/N are optional for the primary
+models; directional models require explicit direction. COR/ZCOR require explicit
+variance scales. Read the generated validation report before interpreting results.
+The bundled Barroso data use Fisher z, not SMD. No public deployment is automatic.
+
+[PsychOpen CAMA](https://leibniz-psychology.org/en/practices-and-tools-of-open-science/psychopen-cama)
+is another platform for cumulative meta-analysis. metaUI's intended contribution is
+an author-owned app with editable R source. See the bounded
+[publication-readiness assessment](validation/publication-readiness.md).

@@ -13,7 +13,8 @@ generate_shiny(
   save_to_folder = NA,
   launch_app = is.na(save_to_folder),
   ...,
-  options = list()
+  options = list(),
+  overwrite = FALSE
 )
 }
 \arguments{
@@ -30,12 +31,12 @@ this must assign the tibble to a variable called models_to_run (i.e. using <-).}
 \item{filter_popups}{Named list with content for popup windows that provide further details on filter variables. They can contain HTML formatting, but should then be wrapped into \code{HTML()}, for instance: \verb{list(Year = HTML("<i>Note:</i><br>This refers to data collection if reported, otherwise the publication year.})}
 
 \item{save_to_folder}{If specified, the code and data for the app will be saved to this folder. Defaults to NA, which means that nothing will be saved. If the folder exists, the user will
-be asked to confirm overwriting it - unless the script is run in non-interactive mode, in which case the folder will be overwritten without asking.}
+refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.}
 
 \item{launch_app}{Should the app be launched? Defaults to TRUE if it is not saved (i.e. save_to_folder is NA), FALSE otherwise.}
 
 \item{...}{
-  Arguments passed on to \code{\link[=create_about]{create_about}}
+  Arguments passed on to \code{\link{create_about}}
   \describe{
     \item{\code{date}}{Date of the last update. Defaults to the current date.}
     \item{\code{citation}}{Citation requested by the author. Defaults to an empty string.}
@@ -52,6 +53,8 @@ a character vector with all packages to display.}
 \item \code{shiny_theme} Character. One of the shinythemes that style the app. Defaults to "yeti", see \code{?shinythemes::shinythemes} for all options.
 \item \code{selection_list_threshold} Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
 }}
+
+\item{overwrite}{Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.}
 }
 \value{
 This function does not have a meaningful return value - it rather launches the Shiny app and/or saves it to disk.

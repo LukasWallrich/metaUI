@@ -32,9 +32,9 @@ In a first step, you will need to load and import data. For metaUI, your datafil
 -   a **study label** to identify individual samples (You can include multiple effect sizes with the same study label to indicate that they are dependent.),
 -   an **effect size** measure,
 -   the **variance** of the effect size
--   the **standard error** of the effect size
--   the **sample size** it is based on
--   the ***p*****-value** for each effect size
+-   optionally, the **standard error** (otherwise derived as sqrt(variance))
+-   optionally, the **sample size** it is based on (needed by p-curve, not the primary fits)
+-   optionally, source **p-values**, retained with their provenance
 -   data on any **moderators / filters** you want to include
 
 Note that some of the fields can be calculated based on others. If you have effect sizes and their variance, for instance, you can calculate the standard error (by taking the square root of the variance), or if you have effect sizes, sample sizes and *p* values, you can calculate their standard error using the `se.from.p` function included in this package.
@@ -50,25 +50,25 @@ Now **create or change any of the fields** that need to be calculated or adjuste
 ```{r}
 app_data <- app_data %>% mutate(
   study_label = paste0(author, " (", pub_year, ")", ": ", study_id),
-  se = sqrt(vi), p.value = 2 * pnorm(-abs(yi)),
-  continent = factor(continent) %>% 
+  se = sqrt(vi), p.value = 2 * pnorm(-abs(yi / sqrt(vi))),
+  continent = factor(continent) %>%
     forcats::fct_recode("North America" = "1", "South America" = "2", "Europe" = "3",
-                        "Asia" = "4", "Africa" = "5", "Oceania" = "6", "NA" = "-999") %>% 
+                        "Asia" = "4", "Africa" = "5", "Oceania" = "6", "NA" = "-999") %>%
     forcats::fct_na_level_to_value("NA"),
-  teachers = factor(teachers) %>% 
+  teachers = factor(teachers) %>%
     forcats::fct_recode(yes = "1", no = "2")
 )
 ```
 
-Next, we use the `prepare_data()` function to format the dataset for use by the metaUI package. This is mostly about identifying the fields in the dataset that contain specific pieces of information. Filters here can be used both to subset the dataset and to test for moderation. As they will be displayed in the Shiny app, it can often be a good idea to rename them as shown below. Note that the `es_type` must be recognised by metafor::escalc() - here, we deal with standardised mean differences, i.e. `"SMD"`.
+Next, we use the `prepare_data()` function to format the dataset for use by the metaUI package. This is mostly about identifying the fields in the dataset that contain specific pieces of information. Filters here can be used both to subset the dataset and to test for moderation. As they will be displayed in the Shiny app, it can often be a good idea to rename them as shown below. Note that the `es_type` must be recognised by metafor::escalc() - these data contain Fisher-z effects and z-scale variances, i.e. `"ZCOR"`. The displayed model summaries are back-transformed to r; diagnostic and moderator plots retain the fitting scale. The illustrative p-values are two-sided normal Wald approximations, not source study p-values.
 
 ```{r}
 app_data <- prepare_data(app_data,
   study_label = "study_label", es_field = "yi", se = "se", pvalue = "p.value",
   sample_size = "ni",
-  variance = "vi", 
-  filters = c("Publication Year" = "pub_year", "Continent" = "continent", "Teacher Sample" = "teachers"), 
-  es_type = "SMD",
+  variance = "vi",
+  filters = c("Publication Year" = "pub_year", "Continent" = "continent", "Teacher Sample" = "teachers"),
+  es_type = "ZCOR", variance_scale = "z", direction = "negative", es_id = "es_id",
   arrange_filters = "leave",
   keep_missing_level = TRUE
 )
@@ -79,9 +79,9 @@ app_data <- prepare_data(app_data,
 Now you are ready to launch a first version of the app. This is useful to see whether the data is read correctly, and to identify what customization you want to make ... or if you just want to explore your dataset locally. After you run the line below, the app should open your web browser.
 
 ```{r eval = FALSE}
-generate_shiny(app_data, 
-               dataset_name = "Barroso et al 2021 - Maths Anxiety", 
-               eff_size_type_label = "Fisher's Z scores",
+generate_shiny(app_data,
+               dataset_name = "Barroso et al 2021 - Maths Anxiety",
+               eff_size_type_label = "Fisher z (summary table/plot: r)",
                options = list(shiny_theme = "sandstone", selection_list_threshold = 3))
 ```
 
@@ -90,10 +90,10 @@ generate_shiny(app_data,
 To then create the Shiny app in a format that can be customized and deployed to shinyapps.io, you need to provide some more details regarding the information that should be displayed and **the path that the app should be saved to**.
 
 ```{r eval=FALSE}
-generate_shiny(app_data, 
-               dataset_name = "Barroso et al 2021 - Maths Anxiety", 
-               eff_size_type_label = "Fisher's Z scores", 
-               filter_popups = list("Teacher Sample" = 
+generate_shiny(app_data,
+               dataset_name = "Barroso et al 2021 - Maths Anxiety",
+               eff_size_type_label = "Fisher z (summary table/plot: r)",
+               filter_popups = list("Teacher Sample" =
                                       "'Yes' includes both <i>pre-service</i> and <i>practicing</i> teachers."),
                save_to_folder = "my_app_folder",
                citation = "Barroso, C., Ganley, C. M., McGraw, A. L., Geer, E. A., Hart, S. A., & Daucourt, M. C. (2021). A meta-analysis of the relation between math anxiety and math achievement. Psychological Bulletin, 147(2), 134.",

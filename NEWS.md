@@ -1,3 +1,24 @@
+# metaUI 0.1.2.9000 (correctness candidate)
+
+* Use genuine per-effect IDs for all multilevel nesting; display labels may repeat.
+* Keep optional p/N rows under default preparation, validate required inputs, and
+  report excluded rows and derivations. Summed N is no longer inferred.
+* Require explicit correlation variance scales and directional bias assumptions.
+  Fit COR via Fisher z with delta-method variance; preserve ZCOR without a second
+  transform; back-transform model summaries once. Other panels retain fitting scale.
+* Report model applicability, failures, warnings, aggregation, and fitting values.
+  Correct REML heterogeneity output and remove meaningless multilevel tau2.
+* Add JSON `build_app()` and versioned schema. Nonempty output is refused by
+  default; preserve hand edits by building a fresh destination.
+* Generated apps check dependencies without installing packages. Record build
+  versions and bundled attribution; replace archived waffle dependency with a
+  categorical count bar chart and use an original SVG favicon.
+* Correct the tutorial's Wald p calculation and Fisher-z labels.
+* Add independent statistical references, headless server tests, and read-only CI.
+* Correct slider rounding so default bounds retain all eligible rows.
+* Existing launch_app=FALSE remains supported. No estimator rewrite, benchmark
+  apps, agent skill, public deployment, or paper draft is included.
+
 # metaUI 0.1.2 (under development)
 
 ## Minor enhancements

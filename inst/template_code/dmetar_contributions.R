@@ -209,7 +209,7 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
 #' To generate the \eqn{p}-curve and conduct the analysis, this function reuses parts of the \emph{R} code underlying
 #' the \href{http://p-curve.com/app4/pcurve_app4.052.r}{P-curve App 4.052} (Simonsohn, 2017). The effect sizes
 #' included in the \code{meta} object or \code{data.frame} provided for \code{x} are transformed
-#' into \eqn{z}-values internally, which are then used to calculate {p}-values and conduct the
+#' into \eqn{z}-values internally, which are then used to calculate \eqn{p}-values and conduct the
 #' Stouffer and Binomial test used for the \eqn{p}-curve analysis. Interpretations of the function
 #' concerning the presence or absence/inadequateness of evidential value are made according to the
 #' guidelines described by Simonsohn, Simmons and Nelson (2015):

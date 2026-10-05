@@ -1,7 +1,7 @@
 Type: Package
 Package: metaUI
 Title: Create 'Shiny' Apps for the Exploration of Meta-Analytic Datasets
-Version: 0.1.2
+Version: 0.1.2.9000
 Authors@R: c(
     person("Lukas", "Wallrich", , "lukas.wallrich@gmail.com", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0003-2121-5177")),
@@ -19,11 +19,16 @@ License: GPL (>= 3)
 URL: https://lukaswallrich.github.io/metaUI/,
     https://github.com/LukasWallrich/metaUI
 BugReports: https://github.com/LukasWallrich/metaUI/issues
+Depends: R (>= 4.1.0)
 Imports: 
     dplyr,
     DT,
     ggplot2,
     glue,
+    htmltools,
+    jsonlite,
+    forcats,
+    psych,
     meta,
     metafor,
     plotly,
@@ -42,12 +47,11 @@ Imports:
     stringr,
     tibble,
     tidyr,
-    waffle,
     weightr,
     writexl,
     zcurve
 Suggests: 
-    forcats,
+    testthat,
     knitr,
     rmarkdown
 VignetteBuilder: 
@@ -56,4 +60,4 @@ Config/testthat/edition: 3
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.3
+Config/roxygen2/version: 8.1.0

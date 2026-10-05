@@ -1,32 +1,32 @@
 # Wrap in function so that it can be saved more easily
 
-labels_and_options <- function(dataset_name) {
+labels_and_options <- function(dataset_name, correlation = .6) {
   glue::glue('
 
       # TK - defaults? Advanced options?
       aggregation_method <- c("aggregate", "first")
-      correlation_dependent <- .6
+      correlation_dependent <- {correlation}
 
       ci_width <- "95 %"
 
       # Fixed texts
       welcome_title <- HTML("Welcome to our dynamic meta-analysis app!")
       welcome_text <- HTML("<br /><p style=\'color:blue;\'>To get started, choose a set of studies and click on <b>Analyze data</b>.</p><br/>")
-      dataset_name <- "{dataset_name}"
+      dataset_name <- {paste(deparse(as.character(dataset_name)), collapse = "\n")}
       go <- ""
       #HTML("<br /><p style=\'color:blue;\'>Choose your set of studies and click on <b>Analyze data</b> to see the results.</p><br/>")
 
       summary_overview_main <- HTML("<br/><br/><h3>Sample Overview</h3>") # <b></b>
       summary_table_main <- HTML("<br/><br/><h3>Effect Size Estimates</h3>") # <b></b>
        # Confidence level needs to be changed in all entries in model.R if you want to adjust it
-      summary_table_notes <- HTML(glue::glue("<i>Notes:</i> LCL = Lower <<ci_width>> Confidence Limit, UCL = Upper <<ci_width>> Confidence Limit, k = number of effects.", .open = "<<", .close = ">>"))
+      summary_table_notes <- HTML(glue::glue("<i>Notes:</i> Correlation summaries are back-transformed to r. Other diagnostics, moderators, and raw forest plots use the fitting scale; variance components remain on that scale. Study-level GLS aggregation assumes within-study correlation {correlation}.  LCL = Lower <<ci_width>> Confidence Limit, UCL = Upper <<ci_width>> Confidence Limit, k = model-specific count (effects for multilevel; studies for RVE/aggregated fits; trim-and-fill includes imputed effects).", .open = "<<", .close = ">>"))
 
       sample_overview_main <- HTML("<br/><br/><h3>Sample Breakdown</h3>") # <b></b>
       sample_table <- HTML("<br/><br/><h3>List of Effect Sizes</h3>") # <b></b>
-      sample_moderation_main <- HTML("<br/><br/><h3>Simple tests of moderation</h3>") # <b></b>
-      sample_moderation_notes <- HTML("<br /><i>Notes:</i> This does <i>not</i> consider correlations between moderators, and is thus only intended for exploration, k = number of effects.")
+      sample_moderation_main <- HTML("<br/><br/><h3>Simple tests of moderation (ML)</h3>") # <b></b>
+      sample_moderation_notes <- HTML("<br /><i>Notes:</i> This does <i>not</i> consider correlations between moderators, and is thus only intended for exploration, k = model-specific count (effects for multilevel; studies for RVE/aggregated fits; trim-and-fill includes imputed effects).")
 
-      firstvalues <- HTML("<br/><br/><i>Notes:</i> First reported <i>p</i>-values are selected for p- and z-curve analyses.")
+      firstvalues <- HTML("<br/><br/><i>Notes:</i> First effects per study are selected before direction screening for p-curve; opposite/zero effects are excluded with counts. P- and z-curve use normal Wald statistics, not supplied source p-values. Authors must justify this exploratory selection rule.")
 
       qrppb_main <- HTML("<h3>Publication Bias and Questionable Research Practices</h3>")
       funnel_main <- HTML("<h3>Funnel Plot of Effects</h3>")
@@ -42,8 +42,6 @@ labels_and_options <- function(dataset_name) {
 
       scroll <- HTML("Scroll down to see forest plot.")
 
-     # Favicon is included as base64 code
-      favicon <- "{readLines(system.file("template_code", "favicon.base64", package = "metaUI"))}"
 
   ')
 }
@@ -58,7 +56,7 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
 
   purrr::map_chr(filter_cols, function(filter_col) {
     add_popup <- stringr::str_remove(filter_col, "metaUI__filter_") %in% names(filter_popups)
-    if (add_popup) id <- paste0("i", sample(1:10e6, 1))
+    if (add_popup) id <- paste0("i", which(colnames(data) == filter_col))
     rm_prefix <- "metaUI__filter_"
 
     if (is.numeric(data[[filter_col]])) {
@@ -163,13 +161,11 @@ generate_moderator_selection <- function(data) {
 }
 
 get_favicon_tag <- function(dataset_name) {
-  favicon <- readLines(system.file("template_code", "favicon.base64", package = "metaUI"))
+  favicon <- paste(readLines(system.file("template_code", "favicon.svg", package = "metaUI")), collapse = "")
   glue::glue('tagList(
-                 tags$head(tags$link(rel=\"icon\",
-                                href=\"data:image/x-icon;base64,{favicon}\",
-                                type=\"image/x-icon\")),
-                  tags$span(\"Dynamic Meta-Analysis of {dataset_name}\"))
-      ')
+    tags$head(tags$link(rel="icon", href="data:image/svg+xml,{utils::URLencode(favicon, reserved = TRUE)}", type="image/svg+xml")),
+    tags$span({paste(deparse(paste0("Dynamic Meta-Analysis of ", dataset_name)), collapse = "\n")}))')
+
 }
 
 generate_mod_tab <- function(data, any_filters) {
@@ -200,7 +196,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
     theme = shinythemes::shinytheme("{opts$shiny_theme}"),
     # Application title
     titlePanel(
-    windowTitle = glue::glue("Dynamic Meta-Analysis of {dataset_name}"),
+    windowTitle = {paste(deparse(paste0("Dynamic Meta-Analysis of ", dataset_name)), collapse = "\n")},
     title = {get_favicon_tag(dataset_name)}),
     # Sidebar with a slider input for number of bins
     sidebarLayout(
@@ -264,7 +260,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             diagnostics_het,
             tableOutput("heterogeneity") %>% shinycssloaders::withSpinner()
           ),
-          tabPanel("About", HTML("{about}"))
+          tabPanel("About", HTML({paste(deparse(as.character(about)), collapse = "\n")}))
         )
       )
     )
@@ -282,7 +278,7 @@ generate_server <- function(metaUI__df, opts = list()) {
 
 
 glue_string <- ('
-    function(input, output) {
+    function(input, output, session) {
 
     showModal(modalDialog(
         title = welcome_title,
@@ -345,6 +341,10 @@ glue_string <- ('
   df_reactive <- reactive({
     if (!is.null(file_input())) {
       df <- readxl::read_xlsx(input$uploadData$datapath, "dataset")
+      metaUI_validate_prepared(df)
+      for (field in c("metaUI__es_type", "metaUI__display_scale", "metaUI__direction"))
+        validate(need(identical(as.character(df[[field]][1]), as.character(metaUI__df[[field]][1])), "Uploaded scale/direction differs from the built app; build a fresh app for a new contract."))
+      attr(df, "metaUI_runtime_rows") <- nrow(df)
       filter_values <- readxl::read_xlsx(input$uploadData$datapath, "filters") %>% split(.$id)
       <FILTER>
       for (i in filters) {
@@ -378,6 +378,7 @@ glue_string <- ('
     </FILTER>
 
 
+    metaUI_validate_prepared(df)
     # Filter by zscore
     df <- df[df$metaUI__es_z >= input$outliers_z_scores[1] & df$metaUI__es_z <= input$outliers_z_scores[2], ]
     df
@@ -400,77 +401,7 @@ glue_string <- ('
 
    state_values$ever_analyzed <- TRUE
 
-    if (aggregation_method[1] == "aggregate") {
-      # TK - do we want this, or actually just average, despite the problems with that?
-      # Aggregate dependent effects based on https://www.jepusto.com/sometimes-aggregating-effect-sizes-is-fine/
-      # note that this requires an assumption regarding the degree of correlation
-      agg_effects <- function(yi, vi, r = correlation_dependent) {
-        corr_mat <- r + diag(1 - r, nrow = length(vi))
-        sd_mat <- tcrossprod(sqrt(vi))
-        V_inv_mat <- chol2inv(chol(sd_mat * corr_mat))
-        V <- 1 / sum(V_inv_mat)
-        data.frame(es = V * sum(yi * V_inv_mat), var = V)
-      }
-
-      df_agg <-
-        df %>%
-        dplyr::group_by(metaUI__study_id) %>%
-        dplyr::summarise(
-          es = list(agg_effects(yi = metaUI__effect_size, vi = metaUI__variance)),
-          metaUI__N = max(metaUI__N),
-          metaUI__es_type = dplyr::first(metaUI__es_type), # Could also aggregate filters - if length(unique(FILTER)) == 1
-          .groups = "drop"
-        ) %>%
-        tidyr::unnest(cols = "es") %>%
-        dplyr::rename(metaUI__effect_size = es, metaUI__variance = var) %>%
-        dplyr::mutate(metaUI__se = sqrt(metaUI__variance))
-    } else if (aggregation_method[1] == "first") {
-      df_agg <-
-        df %>%
-        dplyr::group_by(metaUI__study_id) %>%
-        dplyr::slice_head(n = 1) %>%
-        dplyr::ungroup()
-    } else {
-      stop("Aggregation method not recognized")
-    }
-
-    # Run all specified models
-    models <- purrr::pmap(models_to_run, \\(...){
-      mod_spec <- tibble::tibble(...)
-      if (mod_spec$aggregated == TRUE) {
-        df <- df_agg
-      }
-      mod <- try(eval(parse(text = mod_spec$code)))
-      if ("try-error" %in% class(mod)) {{
-        warning("Model ", mod_spec$name, " could not be estimated. Error was ", mod)
-        mod <- NULL
-        mod_res <- tibble::tibble(
-            Model = mod_spec$name,
-            es = NA_real_,
-            LCL = NA_real_,
-            UCL = NA_real_,
-            k = NA_real_
-          )
-      }} else {{
-        mod_res <- tibble::tibble(
-          Model = mod_spec$name,
-          es = eval(parse(text = mod_spec$es)) %>% as.numeric(),
-          LCL = eval(parse(text = mod_spec$LCL)) %>% as.numeric(),
-          UCL = eval(parse(text = mod_spec$UCL)) %>% as.numeric(),
-          k = eval(parse(text = mod_spec$k)) %>% as.numeric()
-        )
-      }}
-      list(mod = mod, mod_res = mod_res)
-    }) %>% purrr::transpose()
-
-    # Generate table
-
-    estimates_explo_agg <- models$mod_res %>% dplyr::bind_rows() %>%
-      dplyr::mutate(Model = factor(Model, levels = Model))
-
-    print(estimates_explo_agg)
-
-    list(df_agg = df_agg, table = estimates_explo_agg)
+    metaUI_fit_models(df, models_to_run, correlation_dependent, aggregation_method[1])
   })
 
   estimatesfiltered <- eventReactive(input$go, {
@@ -490,8 +421,8 @@ glue_string <- ('
     overview <- tibble::tribble(
       ~Sources, ~Studies,
       ~Effects, ~`Sample size`,
-      length(unique(df$metaUI__article_label)), length(unique(df$metaUI__study_id)),
-      length(df$metaUI__study_id), sum(aggregate(metaUI__N ~ metaUI__study_id, data = df, FUN = "min")$metaUI__N) %>% round()
+      if ("metaUI__article_label" %in% names(df)) length(unique(df$metaUI__article_label)) else 0L, length(unique(df$metaUI__study_id)),
+      length(df$metaUI__study_id), NA_real_ # N totals require a documented independent-sample rule
     )
 
     if (overview$Sources == 0) {
@@ -499,7 +430,7 @@ glue_string <- ('
     }
 
     message(paste("The current dataset contains", overview$Sources, "sources,", overview$Studies,
-      "independent studies and", overview$Effects, "effects.",
+      "study clusters and", overview$Effects, "effects.",
       sep = " "
     ))
 
@@ -512,7 +443,7 @@ glue_string <- ('
 
   # MODEL COMPARISON -----------------------------------------------------
   output$model_comparison <- renderPlot({
-    estimates_explo_agg <- estimatesfiltered()
+    estimates_explo_agg <- estimatesfiltered() %>% dplyr::filter(status == "ok")
 
     ggplot2::ggplot() +
       ggplot2::geom_point(data = estimates_explo_agg, ggplot2::aes(x = es, y = Model), stat = "identity") +
@@ -530,7 +461,7 @@ glue_string <- ('
   output$effectestimate <- renderTable(
     {
       estimatesfiltered()  %>%
-        dplyr::mutate(k = as.integer(k)) # Remove decimal points from k
+        dplyr::select(Model, es, LCL, UCL, k, status, reason, warnings, aggregated)
     },
     digits = 2
   )
@@ -569,15 +500,10 @@ glue_string <- ('
 
     counts <- summarise_categorical(df[[\'{f$col}\']], \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\')
 
-    waffle_counts <- counts$Count %>%
-      setNames(counts[[\'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\']])
+    ggplot2::ggplot(counts, ggplot2::aes(x = reorder(.data[[\'{f$col %>% stringr::str_remove(\'metaUI__filter_\')}\']], Count), y = Count)) +
+      ggplot2::geom_col(fill = \'#337ab7\') + ggplot2::coord_flip() +
+      ggplot2::labs(x = NULL, y = \'Effects\') + ggplot2::theme_minimal()
 
-    waffle_cols <- c(\'#66C2A5\', \'#FC8D62\', \'#8DA0CB\', \'#E78AC3\', \'#A6D854\', \'#FFD92F\', \'#E5C494\', \'#B3B3B3\', \'#E41A1C\', \'#377EB8\', \'#4DAF4A\')[1:length(waffle_counts)]
-
-    waffle_counts %>%
-      waffle::waffle(rows = ceiling(sqrt(sum(.) / 2)), size = max(2, 2 / (sum(.) / 100)),
-      # RColorBrewer Set2 extended to allow for up to 10 + Other categories
-      colors = waffle_cols)
   }})
         ")
       }
@@ -663,7 +589,7 @@ glue_string <- ('
       model <- metafor::rma.mv(
         yi = metaUI__effect_size,
         V = metaUI__variance,
-        random = ~ 1 | metaUI__study_id/metaUI__effect_size,
+        random = ~ 1 | metaUI__study_id/metaUI__effect_id,
         tdist = TRUE,
         data = df,
         mods = as.formula(glue::glue("~`{input$moderator}`")),
@@ -681,7 +607,7 @@ glue_string <- ('
      model_sig <- metafor::rma.mv(
         yi = metaUI__effect_size,
         V = metaUI__variance,
-        random = ~ 1 | metaUI__study_id/metaUI__effect_size,
+        random = ~ 1 | metaUI__study_id/metaUI__effect_id,
         tdist = TRUE,
         data = df,
         mods = as.formula(glue::glue("~`{input$moderator}`")),
@@ -691,7 +617,7 @@ glue_string <- ('
      model <- metafor::rma.mv(
         yi = metaUI__effect_size,
         V = metaUI__variance,
-        random = ~ 1 | metaUI__study_id/metaUI__effect_size,
+        random = ~ 1 | metaUI__study_id/metaUI__effect_id,
         tdist = TRUE,
         data = df,
         mods = as.formula(glue::glue("~`{input$moderator}` - 1")),
@@ -760,17 +686,16 @@ glue_string <- ('
     metapp_total <- metafor::rma.mv(
       yi = metaUI__effect_size,
       V = metaUI__variance,
-      random = ~ 1 | metaUI__study_id/metaUI__effect_size,
-      tdist = TRUE, # knapp-hartung adjustment
+      random = ~ 1 | metaUI__study_id/metaUI__effect_id,
+      test = "t", # t inference; not Knapp-Hartung
       data = df,
-      method = "ML", # REML failed to converge in tests
+      method = "REML",
       sparse = TRUE
     )
 
     het <- data.frame(
-      "Sigma2_Level1" = metapp_total$sigma2[1],
-      "Sigma2_Level2" = metapp_total$sigma2[2],
-      "Tau" = metapp_total$tau2,
+      "Study variance" = metapp_total$sigma2[1],
+      "Within-study effect variance" = metapp_total$sigma2[2],
       "Q" = round(metapp_total$QE, digits = 2),
       "Q_p" = fmt_p(metapp_total$QEp, include_equal = FALSE)
       )
@@ -796,7 +721,7 @@ glue_string <- ('
       )
     },
     # TK - create a function that adjusts the height of the plot based on the number of studies
-    height = function () 400 + 25 * nrow(df_filtered()),
+    height = function () if (nrow(df_filtered()) > <<opts$max_forest_plot_rows>>) 200 else 400 + 25 * nrow(df_filtered()),
     width = 900
     )
 
@@ -810,10 +735,10 @@ glue_string <- ('
       seTE = metaUI__se,
       data = df_agg,
       studlab = df_agg$metaUI__study_id,
-      comb.fixed = FALSE,
-      comb.random = TRUE,
+      common = FALSE,
+      random = TRUE,
       method.tau = "ML", # as recommended by  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4950030/
-      hakn = TRUE,
+      method.random.ci = "HK",
       prediction = TRUE,
       sm = df_agg$metaUI__es_type[1]
     )
@@ -844,26 +769,15 @@ glue_string <- ('
   # PCURVE ------------------------------------------------------------------
 
   output$pcurve <- renderPlot({
-    # Plot is created as side-effect in pcurve function - so needs to be recalculated here
     df <- df_filtered()
-
-    pp_first <- df %>%
-      dplyr::group_by(metaUI__study_id) %>%
-      dplyr::slice_head(n = 1) %>%
-      dplyr::ungroup() %>%
-      dplyr::rename(
-        "studlab" = metaUI__study_id,
-        "TE" = metaUI__effect_size,
-        "seTE" = metaUI__se,
-        "n" = metaUI__N
-      )
-
-    pcurve_estimates1 <- try(pcurve(pp_first, effect.estimation = FALSE, N = pp_first$n, dmin = 0, dmax = 1), silent = FALSE)
-
-    pcurve_estimates1 <- ifelse(substr(pcurve_estimates1, 1, 5) == "Error", 0, pcurve_estimates1)
-
-    pcurve_estimates1
+    selected <- tryCatch(metaUI_pcurve_data(df), error = function(e) e)
+    validate(need(!inherits(selected, "error"), if (inherits(selected, "error")) conditionMessage(selected) else ""))
+    message("P-curve direction-contrary exclusions: ", attr(selected, "direction_exclusions"))
+    result <- tryCatch(pcurve(selected, effect.estimation = FALSE), error = function(e) e)
+    validate(need(!inherits(result, "error"), if (inherits(result, "error")) conditionMessage(result) else ""))
+    graphics::mtext(paste("Direction-contrary exclusions:", attr(selected, "direction_exclusions")), side = 3, line = 0)
   })
+
 
   # ZCURVE ------------------------------------------------------------------
 
@@ -887,6 +801,7 @@ glue_string <- ('
 
     zcurve_estimates1 <- try(zcurve::zcurve(df_first$z, bootstrap = FALSE), silent = TRUE)
 
+    validate(need(!inherits(zcurve_estimates1, "try-error"), "Z-curve fit failed for this selection."))
     zcurve::plot.zcurve(zcurve_estimates1, annotation = TRUE, main = "")
   })
 

@@ -45,8 +45,8 @@ And then code within "" that allows you to export the following from the model o
 
 - `es`: the effect size
 - `LCL` & `UCL`: the lower and upper bounds of the 95% confidence intervals for the effect size
--  `k`: the number of effects that the model was estimated on
+-  `k`: the model-specific count (state whether effects, studies, or imputed effects)
 
 For `models_code`, you need to provide code, again in "", that estimates the model based on fields available in the dataset produced by `prepare_data()` (for models where `aggregated = FALSE`) or produced as `df_agg` by `server.R` By default, this only includes `metaUI__study_id`, `metaUI__effect_size`, `metaUI__variance` and `metaUI__se`, so if you need any other fields here, you need to adjust server.R as well.
 
-If your model code is complicated, it might be worthwhile to create helper functions to call from within the `models_code` entry. You can add them to `models.R` but they need to be assigned to the global environment using `<<-`, e.g., `my_meta_fun <<- function(...)`
+If your model code is complicated, it might be worthwhile to create helper functions to call from within the `models_code` entry. Add them above the final `models_to_run` expression in `models.R`, e.g., `my_meta_fun <- function(...)`. The app sources model code in its own environment. Declare and install any extra dependencies yourself; the default manifest does not infer them. Custom models must return the declared fitting scale. `NA` intervals are allowed only when explicitly specified; failed fits are reported.

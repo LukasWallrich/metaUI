@@ -4,3 +4,7 @@
 .Ruserdata
 inst/doc
 docs
+
+# Local package build artifacts
+metaUI_*.tar.gz
+*.Rcheck/

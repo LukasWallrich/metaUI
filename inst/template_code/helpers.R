@@ -6,7 +6,8 @@ signif_ceiling <- function(x, digits = 2) {
     return(0)
   }
   else {
-    return(signif(ceiling(x * 10^digits) / 10^digits, digits))
+    scale <- 10^(digits - 1 - floor(log10(abs(x))))
+    return(ceiling(x * scale) / scale)
   }
 }
 
@@ -15,7 +16,8 @@ signif_floor <- function(x, digits = 2) {
     return(0)
   }
   else {
-    return(signif(floor(x * 10^digits) / 10^digits, digits))
+    scale <- 10^(digits - 1 - floor(log10(abs(x))))
+    return(floor(x * scale) / scale)
   }
 }
 

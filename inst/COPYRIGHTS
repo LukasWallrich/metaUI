@@ -1,0 +1,43 @@
+metaUI: GPL-3-or-later, Lukas Wallrich and Lukas Röseler.
+Bundled dmetar contributions: Mathias Harrer (2020), MIT.
+Source: https://github.com/MathiasHarrer/dmetar
+
+MIT License
+Copyright (c) 2020 Mathias Harrer
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+R/helpers.R and inst/template_code/helpers.R include code by Lukas Wallrich
+from timesaveR, retained under metaUI's GPL-compatible terms.
+The bundled Barroso et al. (2021) dataset was extracted by psymetadata:
+https://github.com/josue-rodriguez/psymetadata (GPL-3).
+Barroso et al., Psychological Bulletin 147(2), 134–168; DOI 10.1037/bul0000307.
+Dataset yi/vi are Fisher-z effects and z-scale sampling variances.
+The synthetic inst/examples/tiny.csv fixture is original GPL-3-or-later data;
+it is not an empirical benchmark and does not reproduce a paper.
+Favicon SVG: original metaUI forest-plot artwork, GPL-3-or-later.
+
+Bundled aksayli2019.csv: psymetadata, Hedges g/variance; Aksayli et al.
+(2019), Cogmed working-memory training meta-analysis; https://osf.io/jhavp/.
+Bundled coles2019.csv: psymetadata, Cohen d/variance; Coles et al. (2019),
+facial-feedback meta-analysis; https://osf.io/v8kxb/.
+Source metadata: https://github.com/josue-rodriguez/psymetadata/blob/master/R/data.R
+psymetadata GPL-3 package licensing does not itself establish the source authors'
+standalone data redistribution terms. Audit all three deposits before release.
+P-curve calculations originate with Uri Simonsohn, Leif D. Nelson, and Joseph
+P. Simmons (2014), through dmetar's implementation. https://www.p-curve.com/
+Upstream dmetar DESCRIPTION specifies MIT + file LICENSE; LICENSE identifies
+Mathias Harrer (2020). This notice preserves those terms and attribution.

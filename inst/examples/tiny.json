@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "data": "tiny.csv",
+  "mapping": {
+    "study_label": "study", "es_id": "effect", "es_field": "yi",
+    "variance": "vi", "es_type": "SMD", "direction": "unspecified"
+  },
+  "dataset_name": "Synthetic demonstration (not research evidence)",
+  "output": "tiny-app",
+  "options": {"correlation_dependent": 0.6},
+  "about": {"date": "2026-10-05", "citation": "Synthetic fixture authored for metaUI validation; GPL-3-or-later."}
+}
