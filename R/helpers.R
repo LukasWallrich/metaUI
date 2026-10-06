@@ -8,7 +8,7 @@ signif_ceiling <- function(x, digits = 2) {
   else {
     digits <- max(1L, as.integer(ceiling(digits)))
     scale <- 10^(digits - 1 - floor(log10(abs(x))))
-    if (!is.finite(scale)) return(x)
+    if (!is.finite(scale) || !is.finite(x * scale)) return(x)
     return(ceiling(x * scale) / scale)
   }
 }
@@ -20,7 +20,7 @@ signif_floor <- function(x, digits = 2) {
   else {
     digits <- max(1L, as.integer(ceiling(digits)))
     scale <- 10^(digits - 1 - floor(log10(abs(x))))
-    if (!is.finite(scale)) return(x)
+    if (!is.finite(scale) || !is.finite(x * scale)) return(x)
     return(floor(x * scale) / scale)
   }
 }

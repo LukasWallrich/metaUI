@@ -574,10 +574,13 @@ glue_string <- ('
   chosen_bound <- reactive({
     value <- input$sesoi
     if (is.null(value) || is.na(value)) return(NULL)
-    metaUI_interval_assessment(estimatesfiltered()[0, ], value, metaUI__df$metaUI__display_scale[1])
+    # Validate the bound alone; empty selections have no estimates table.
+    metaUI_interval_assessment(data.frame(Model = character(), status = character(), LCL = numeric(), UCL = numeric()),
+      value, metaUI__df$metaUI__display_scale[1])
     value
   })
   interval_assessment <- reactive({
+    if (is.null(estimatesfiltered())) return(data.frame(assessment = "Not assessed", reason = "No eligible rows selected"))
     tryCatch(metaUI_interval_assessment(estimatesfiltered(), chosen_bound(),
       metaUI__df$metaUI__display_scale[1], known_interval_models),
       error = function(e) data.frame(assessment = "Not assessed", reason = conditionMessage(e), bound = input$sesoi))
