@@ -26,6 +26,11 @@
       "type": "string",
       "minLength": 1
     },
+    "primary_model": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional name of the default or author model shown first as the authors' primary analysis; never substituted when unsupported."
+    },
     "mapping": {
       "type": "object",
       "additionalProperties": false,
@@ -136,6 +141,62 @@
           "required": [
             "se"
           ]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "es_type": {
+                "const": "COR"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "variance_scale"
+            ],
+            "properties": {
+              "variance_scale": {
+                "const": "r"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "es_type": {
+                "const": "ZCOR"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "variance_scale"
+            ],
+            "properties": {
+              "variance_scale": {
+                "const": "z"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "es_type": {
+                "const": "SMD"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "variance_scale": {
+                "const": "SMD"
+              }
+            }
+          }
         }
       ]
     },

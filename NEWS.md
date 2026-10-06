@@ -21,10 +21,20 @@
   their reasons. A collapsible note derives scale, declared direction and
   aggregation assumptions from the data contract. Model code, estimates and
   downloads are unchanged.
-* Fix slider bounds that used non-integer significant digits (e.g. 2000.992 for
-  2001); integer-valued filters now use whole-number bounds and steps.
-* Generated apps include an editable `www/metaui.css` (responsive tables and plots,
-  visible keyboard focus, compact empty/error states).
+* Authors can declare one `primary_model` (in `generate_shiny()` or the JSON
+  config). Apps show it first as the authors' primary analysis, label other rows as
+  explorations, and report why it is unavailable instead of substituting another
+  model. The Dannheim example declares its source-reference row.
+* Slider bounds round outward to a round tick interval with an explicit integer
+  grid, fixing overlapping end labels (Shiny's fractional tick counts) and
+  non-integer bounds such as 2000.992; a small script hides any remaining grid-label
+  collisions in narrow sidebars or after uploads.
+* Fix pre-existing bugs found in a cross-view QA pass: the outlier violin plot failed when no
+  outliers were drawn and moderation slopes were rounded to "-0.00". Correlation summary plots label the
+  back-transformed r scale.
+* Generated apps include editable `www/metaui.css` and `www/metaui.js` (responsive
+  tables and plots, WCAG AA text contrast, visible keyboard focus including sliders,
+  a skip link to results, compact empty/error states).
 * Replace shinyBS filter popups with expandable inline help, supporting keyboard,
   touch and Escape while preserving author-provided HTML and clickable links. Newly generated apps no longer require shinyBS.
 * Repeat the selected sample summary on the Sample tab with separate Shiny output

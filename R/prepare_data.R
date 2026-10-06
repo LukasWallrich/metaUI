@@ -206,14 +206,25 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   data$metaUI__pvalue[invalid_p] <- NA_real_
   data$metaUI__N[invalid_n] <- NA_real_
   attr(data, "metaUI_validation") <- list(
-    source = source, mapping = list(study = study_label, effect = es_field, variance = variance, SE = se,
+    source = source, mapping = list(study = study_label, effect = es_field,
+      variance = if (variance == "metaUI_input_variance") NULL else variance,
+      SE = if (se == "metaUI_input_se") NULL else se,
       effect_id = es_id, label = es_label, p = if (pvalue == "metaUI_input_p") NULL else pvalue,
       N = if (sample_size == "metaUI_input_N") NULL else sample_size, filters = filters),
     input_rows = length(original_rows), retained_rows = nrow(data), exclusions = exclusions,
     input_scale = es_type, fitting_scale = data$metaUI__es_type[1],
     display_scale = data$metaUI__display_scale[1], direction = direction, derivations = derived,
     optional_inputs = list(missing_p = sum(is.na(data$metaUI__pvalue)), missing_N = sum(is.na(data$metaUI__N)),
-                           invalid_p = sum(invalid_p), invalid_N = sum(invalid_n)))
+                           invalid_p = sum(invalid_p), invalid_N = sum(invalid_n)),
+    fingerprint = metaUI_data_fingerprint(data))
   if (nrow(exclusions)) warning(nrow(exclusions), " rows excluded; see attr(data, 'metaUI_validation')$exclusions.")
   data
+}
+
+# Content hash of the prepared columns, independent of row names and attributes.
+metaUI_data_fingerprint <- function(data) {
+  columns <- lapply(as.list(data)[sort(names(data))], function(x) as.vector(x))
+  path <- tempfile(); on.exit(unlink(path))
+  writeBin(serialize(columns, NULL, version = 2), path)
+  unname(tools::md5sum(path))
 }

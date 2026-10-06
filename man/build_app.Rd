@@ -15,5 +15,6 @@ Invisibly, the generated app directory.
 \description{
 Relative data and output paths resolve against the configuration file. Building
 never launches or deploys an app. The configuration is deliberately limited to
-data mapping, scientific scale/direction, metadata, and presentation options.
+data mapping, scientific scale/direction, an optional declared primary model,
+metadata, and presentation options.
 }

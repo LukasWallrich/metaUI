@@ -6,7 +6,9 @@ signif_ceiling <- function(x, digits = 2) {
     return(0)
   }
   else {
+    digits <- max(1L, as.integer(ceiling(digits)))
     scale <- 10^(digits - 1 - floor(log10(abs(x))))
+    if (!is.finite(scale)) return(x)
     return(ceiling(x * scale) / scale)
   }
 }
@@ -16,9 +18,54 @@ signif_floor <- function(x, digits = 2) {
     return(0)
   }
   else {
+    digits <- max(1L, as.integer(ceiling(digits)))
     scale <- 10^(digits - 1 - floor(log10(abs(x))))
+    if (!is.finite(scale)) return(x)
     return(floor(x * scale) / scale)
   }
+}
+
+# Slider bounds rounded outward to a round tick interval, so the default range keeps
+# every value. Shiny derives a fractional tick count from (max - min) / step, which
+# makes the last grid labels collide; `ticks` is the exact number of grid intervals.
+metaUI_slider_spec <- function(x, integer = NULL) {
+  x <- x[is.finite(x)]
+  if (!length(x)) stop("A slider needs at least one finite value.")
+  if (is.null(integer)) integer <- all(x == round(x))
+  lo <- min(x); hi <- max(x)
+  if (lo == hi) {
+    pad <- if (integer) 1 else max(abs(lo) * .1, .1)
+    lo <- lo - pad; hi <- hi + pad
+  }
+  magnitude <- 10^floor(log10(hi - lo))
+  candidates <- sort(unique(as.vector(c(1, 2, 2.5, 5) %o% (magnitude * 10^(-2:1)))))
+  if (integer) candidates <- candidates[candidates >= 1 & candidates == round(candidates)]
+  for (tick in candidates) {
+    digits <- max(0, 1 - floor(log10(tick)))
+    min_value <- round(floor(lo / tick) * tick, digits)
+    max_value <- round(ceiling(hi / tick) * tick, digits)
+    if (min_value > lo) min_value <- round(min_value - tick, digits)
+    if (max_value < hi) max_value <- round(max_value + tick, digits)
+    ticks <- round((max_value - min_value) / tick)
+    # Longer labels need fewer grid intervals to stay legible in a narrow sidebar.
+    labels <- format(round(min_value + tick * 0:ticks, digits), scientific = FALSE, trim = TRUE, drop0trailing = TRUE)
+    chars <- max(nchar(labels))
+    if (ticks <= if (chars <= 3) 10 else if (chars == 4) 8 else if (chars == 5) 6 else 4) break
+  }
+  # Fine steps (at least ~50 positions over the data) that divide the tick interval.
+  step <- if (integer) 1 else {
+    steps <- round(tick / c(10, 20, 50, 100), digits + 2)
+    steps[c(steps <= (hi - lo) / 50, TRUE)][1]
+  }
+  list(min = min_value, max = max_value, step = step, ticks = ticks)
+}
+
+# sliderInput() with the bounds, step and integer grid from metaUI_slider_spec()
+metaUI_slider_input <- function(inputId, label, spec, value = c(spec$min, spec$max)) {
+  slider <- shiny::sliderInput(inputId, label, min = spec$min, max = spec$max,
+    value = value, step = spec$step, sep = "")
+  htmltools::tagQuery(slider)$find("input")$removeAttrs("data-grid-num")$
+    addAttrs(`data-grid-num` = spec$ticks)$allTags()
 }
 
 #' Format p-value in line with APA standard (no leading 0)

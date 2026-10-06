@@ -1,6 +1,8 @@
 declared_imports <- function() {
-  imports <- gsub("\\([^)]*\\)", "", utils::packageDescription("metaUI")$Imports)
-  trimws(strsplit(imports, ",")[[1]])
+  imports <- utils::packageDescription("metaUI")$Imports
+  if (is.null(imports) || !nzchar(imports)) stop("Cannot read metaUI's declared Imports; install metaUI before generating apps.")
+  imports <- trimws(strsplit(gsub("\\([^)]*\\)", "", imports), ",")[[1]])
+  imports[nzchar(imports)]
 }
 
 #' Create the about text for the app
@@ -22,12 +24,12 @@ declared_imports <- function() {
 
 
 create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE) {
-  out <- glue::glue("<h3>Interactive multiverse meta-analysis of {dataset_name} </h3>
-          <br/><br/><b>Last Update:</b> {date}
-          {if (citation != '') glue::glue('<br/><br/><b>Citation:</b> {citation}') else ''}
-          {if (osf_link != '') glue::glue('<br/><br/><b>Data and materials:</b> <a href={osf_link}>{osf_link}</a>') else ''}
-          {if (contact != '') glue::glue('<br/><br/><b><b>Contact:</b> Contact us with suggestions or bug reports:</b> {contact}') else ''}
-          <br/><br/><br/><br/> <b>Created with <a href='https://github.com/LukasWallrich/metaUI'> metaUI </a> </b> v{utils::packageVersion('metaUI')}
+  out <- glue::glue("<h3>Interactive multiverse meta-analysis of {dataset_name}</h3>
+          <p><b>Last update:</b> {date}</p>
+          {if (citation != '') glue::glue('<p><b>Citation:</b> {citation}</p>') else ''}
+          {if (osf_link != '') glue::glue('<p><b>Data and materials:</b> <a href=\"{osf_link}\">{osf_link}</a></p>') else ''}
+          {if (contact != '') glue::glue('<p><b>Contact</b> (suggestions or bug reports): {contact}</p>') else ''}
+          <p>Created with <a href='https://github.com/LukasWallrich/metaUI'>metaUI</a> v{utils::packageVersion('metaUI')}</p>
           ")
 
   if (list_packages == TRUE) {
@@ -46,16 +48,16 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
     package_versions <- purrr::map_chr(req_packages, \(p) utils::packageVersion(p) %>% as.character())
 
     HTML(paste0(
-      out, "<br /> &nbsp;<br /> &nbsp;<br /> &nbsp; <h4>R packages used</h4>",
+      out, "<h4>R packages used</h4><div class='metaui-packages'>",
       purrr::map(1:3, \(i) {
         start <- (i - 1) * ceiling(length(req_packages) / 3) + 1
         end <- min(i * ceiling(length(req_packages) / 3), length(req_packages))
         glue::glue(
-          "<table style='display: inline-block;vertical-align:top;'><tr><th tyle='text-align: left;'>Package&nbsp;&nbsp;&nbsp;</th><th tyle='text-align: left;'>Version&nbsp;</th></tr>\n",
+          "<table><tr><th>Package</th><th>Version</th></tr>\n",
           purrr::map2(req_packages[start:end], package_versions[start:end], \(p, v) glue::glue("<tr><td>{p}</td><td>{v}</td></tr>")) %>% glue::glue_collapse("\n"),
-          "</table>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
+          "</table>"
         )
-      }) %>% glue::glue_collapse("\n")
+      }) %>% glue::glue_collapse("\n"), "</div>"
     ))
   } else {
     out
@@ -73,6 +75,10 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @param models The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. If you want to change the default models, have a look at the vignette and/or the [get_model_tibble()] documentation.
 #' Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 #' this must assign the tibble to a variable called models_to_run (i.e. using <-).
+#' @param primary_model Optional name of the one model (a `name` in `models`) that the authors treat as their
+#' primary analysis. Generated apps show it first and label the other rows as explorations. If it cannot be
+#' estimated for a reader's selection, the app reports why and does not substitute another model. The default,
+#' `NULL`, declares no primary model, and the app then says that it does not choose between estimators.
 #' @param filter_popups Named list of expandable filter-help content. Plain text is escaped; wrap trusted HTML in [htmltools::HTML()], for example `list(Year = HTML("<i>Note:</i> Data collection year."))`.
 #' @param save_to_folder Folder for the generated code and data. Defaults to NA, which uses a temporary folder. A nonempty destination is refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
@@ -96,7 +102,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @export
 
 generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
-        models = get_model_tibble, filter_popups = list(),
+        models = get_model_tibble, primary_model = NULL, filter_popups = list(),
         save_to_folder = NA, launch_app = is.na(save_to_folder), ...,
         options = list(), overwrite = FALSE) {
 
@@ -125,7 +131,9 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   models_from_function <- models
 
   if (is.character(models)) {
-    model_environment <- new.env(parent = asNamespace("metaUI"))
+    # Mirror the generated app: caller's attached packages are visible and global.R attaches dplyr.
+    model_environment <- new.env(parent = globalenv())
+    model_environment$`%>%` <- dplyr::`%>%`
     sys.source(models, envir = model_environment)
     if (!exists("models_to_run", envir = model_environment, inherits = FALSE)) stop("R script passed to models argument does not create a `models_to_run` variable.")
     models_to_run <- model_environment$models_to_run
@@ -137,18 +145,24 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     stop("Invalid argument type. models must be a function, a tibble, or a path to a file.")
   }
 
+  if (!is.null(primary_model) && (!is.character(primary_model) || length(primary_model) != 1L ||
+      sum(models_to_run$name == primary_model) != 1L))
+    stop("primary_model must name exactly one model in models_to_run: ", paste(models_to_run$name, collapse = "; "))
+
   # Custom code can depend on external state or randomness: cache only by opt-in.
   if (is.null(options$fit_cache_entries)) opts$fit_cache_entries <- if (identical(models_to_run, get_model_tibble())) 3L else 0L
   metaUI_fit_cache(opts$fit_cache_entries) # validate before writing
   report <- attr(dataset, "metaUI_validation")
   if (is.null(report)) stop("Dataset needs prepare_data() validation metadata. Re-prepare legacy datasets.")
-  if (report$retained_rows != nrow(dataset)) stop("Validation report is stale after subsetting. Re-run prepare_data() on the selected input rows.")
+  if (report$retained_rows != nrow(dataset) || (!is.null(report$fingerprint) && !identical(report$fingerprint, metaUI_data_fingerprint(dataset))))
+    stop("Validation report is stale: rows or values changed after prepare_data(). Re-run prepare_data() on the intended input.")
   correlation <- if (is.null(options$correlation_dependent)) .6 else options$correlation_dependent
   metaUI_aggregate(dataset, correlation) # check the aggregation contract before writing
   report$aggregation <- list(method = "GLS study-level average", correlation = correlation,
     assumptions = "Distinct studies are independent; multilevel V is diagonal (sampling covariance not supplied). RVE uses correlated-effects weights (rho=.8), small=FALSE. Neither N nor p is inferred by aggregation.")
   report$performance <- list(fit_cache_entries = opts$fit_cache_entries,
     note = "Session-local exact data/model/config keys; cached warnings/failures and original fit times retained. Custom models default to no cache. Hidden outputs remain suspended by Shiny.")
+  report$primary_model <- if (is.null(primary_model)) NA_character_ else primary_model
   report$model_source <- if (is.character(models)) list(type = "trusted_author_R_file",
     file = basename(models), md5 = unname(tools::md5sum(models))) else list(type = "model_specifications")
   report$models <- lapply(seq_len(nrow(models_to_run)), function(i) {
@@ -187,10 +201,9 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
             file.path(save_to_folder, "helpers.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "favicon.svg", package="metaUI"),
             file.path(save_to_folder, "www", "favicon.svg"), overwrite = TRUE)
-  file.copy(system.file("template_code", "metaui.js", package="metaUI"),
-            file.path(save_to_folder, "www", "metaui.js"), overwrite = TRUE)
-  file.copy(system.file("template_code", "metaui.css", package="metaUI"),
-            file.path(save_to_folder, "www", "metaui.css"), overwrite = TRUE)
+  for (asset in c("metaui.css", "metaui.js"))
+    file.copy(system.file("template_code", asset, package="metaUI"),
+              file.path(save_to_folder, "www", asset), overwrite = TRUE)
   file.copy(system.file("template_code", "dmetar_contributions.R", package="metaUI"),
             file.path(save_to_folder, "dmetar_contributions.R"), overwrite = TRUE)
   if (is.character(models)) {
@@ -214,7 +227,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
   file.copy(system.file("COPYRIGHTS", package = "metaUI"), file.path(save_to_folder, "COPYRIGHTS"), overwrite = TRUE)
   # Could consider keeping all labels in this file - but then ui.R needs less readable glue::glue syntax
-  writeLines(labels_and_options(dataset_name, correlation), file.path(save_to_folder, "labels_and_options.R"))
+  writeLines(labels_and_options(dataset_name, correlation, primary_model), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
   writeLines(generate_global.R(eff_size_type_label), file.path(save_to_folder, "global.R"))

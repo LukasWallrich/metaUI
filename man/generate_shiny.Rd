@@ -9,6 +9,7 @@ generate_shiny(
   dataset_name,
   eff_size_type_label = NA,
   models = get_model_tibble,
+  primary_model = NULL,
   filter_popups = list(),
   save_to_folder = NA,
   launch_app = is.na(save_to_folder),
@@ -27,6 +28,11 @@ generate_shiny(
 \item{models}{The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. If you want to change the default models, have a look at the vignette and/or the \code{\link[=get_model_tibble]{get_model_tibble()}} documentation.
 Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 this must assign the tibble to a variable called models_to_run (i.e. using <-).}
+
+\item{primary_model}{Optional name of the one model (a \code{name} in \code{models}) that the authors treat as their
+primary analysis. Generated apps show it first and label the other rows as explorations. If it cannot be
+estimated for a reader's selection, the app reports why and does not substitute another model. The default,
+\code{NULL}, declares no primary model, and the app then says that it does not choose between estimators.}
 
 \item{filter_popups}{Named list of expandable filter-help content. Plain text is escaped; wrap trusted HTML in \code{\link[htmltools:HTML]{htmltools::HTML()}}, for example \code{list(Year = HTML("<i>Note:</i> Data collection year."))}.}
 

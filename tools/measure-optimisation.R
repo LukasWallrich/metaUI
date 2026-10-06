@@ -1,7 +1,7 @@
 # Compare the same inputs/estimators in fresh processes, before and after changes.
 # Usage: Rscript --vanilla tools/measure-optimisation.R before|after output.csv [library]
 args <- commandArgs(TRUE)
-if (length(args) < 2L) stop("Need before|after and output.csv")
+if (length(args) < 2L || !args[1] %in% c("before", "after")) stop("Need before|after and output.csv")
 if (length(args) == 3L) .libPaths(c(args[3], .libPaths()))
 suppressPackageStartupMessages(library(metaUI))
 ns <- asNamespace("metaUI")
