@@ -63,3 +63,6 @@ derivation from the read-only ES Meta Benchmarks snapshot of 6 October 2026.
 That project's released compilation is CC0-1.0 (LICENSE-DATA); the article
 adaptation attribution/licence is retained here. No PDFs or source prose bundled.
 Example code is GPL-3-or-later. The example is a reanalysis, not author endorsement.
+
+inst/examples/correlations: original synthetic data and code by metaUI,
+GPL-3-or-later; no empirical article data or prose redistributed.

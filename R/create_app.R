@@ -73,11 +73,10 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @param models The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. If you want to change the default models, have a look at the vignette and/or the [get_model_tibble()] documentation.
 #' Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 #' this must assign the tibble to a variable called models_to_run (i.e. using <-).
-#' @param filter_popups Named list with content for popup windows that provide further details on filter variables. They can contain HTML formatting, but should then be wrapped into `HTML()`, for instance: `list(Year = HTML("<i>Note:</i><br>This refers to data collection if reported, otherwise the publication year.`)
-#' @param save_to_folder If specified, the code and data for the app will be saved to this folder. Defaults to NA, which means that nothing will be saved. If the folder exists, the user will
-#' refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.
+#' @param filter_popups Named list of expandable filter-help content. Plain text is escaped; wrap trusted HTML in [htmltools::HTML()], for example `list(Year = HTML("<i>Note:</i> Data collection year."))`.
+#' @param save_to_folder Folder for the generated code and data. Defaults to NA, which uses a temporary folder. A nonempty destination is refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
-#' @param launch_app Should the app be launched? Defaults to TRUE if it is not saved (i.e. save_to_folder is NA), FALSE otherwise.
+#' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.
 #' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
 #'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 200. If more effect sizes are selected, a message is shown instead.
 #'   - `shiny_theme` Character. One of the shinythemes that style the app. Defaults to "yeti", see `?shinythemes::shinythemes` for all options.
@@ -86,7 +85,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @inheritParams create_about
 #' @inheritDotParams create_about
 #'
-#' @returns This function does not have a meaningful return value - it rather launches the Shiny app and/or saves it to disk.
+#' @returns With launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
 #' @examples
 #' # First, use prepare_data() to create your dataset.
 #' if (exists("app_data")) {
@@ -103,6 +102,10 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 
   defaults <- list(max_forest_plot_rows = 200, shiny_theme = "yeti", selection_list_threshold = 6)
   opts <- utils::modifyList(defaults, options)
+  limit <- opts$max_forest_plot_rows
+  if (!is.numeric(limit) || length(limit) != 1L || is.na(limit) ||
+      !is.finite(limit) || limit < 1 || limit != floor(limit))
+    stop("max_forest_plot_rows must be a positive finite whole number.")
 
    # Evaluate so that it is TRUE when save_to_folder is NA initially
    launch_app <- launch_app
@@ -164,6 +167,12 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   report$zcurve <- "First effect per study; normal Wald |effect/SE|, not supplied source p-values. Independence across study IDs is an author assumption."
   about <- paste0(about, "<h4>Input and analysis contract</h4><pre>",
                   htmltools::htmlEscape(jsonlite::toJSON(report, auto_unbox = TRUE, pretty = TRUE, na = "null"), attribute = TRUE), "</pre>")
+  defaults_models <- get_model_tibble()
+  opts$known_interval_models <- models_to_run$name[vapply(seq_len(nrow(models_to_run)), function(i) {
+    idx <- match(models_to_run$name[i], defaults_models$name)
+    !is.na(idx) && identical(as.list(models_to_run[i, names(defaults_models), drop = FALSE]),
+      as.list(defaults_models[idx, , drop = FALSE]))
+  }, logical(1))]
   ui <- generate_ui(dataset, dataset_name, about, filter_popups, opts = opts)
   server <- generate_server(dataset, opts = opts)
 
@@ -178,6 +187,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
             file.path(save_to_folder, "helpers.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "favicon.svg", package="metaUI"),
             file.path(save_to_folder, "www", "favicon.svg"), overwrite = TRUE)
+  file.copy(system.file("template_code", "metaui.js", package="metaUI"),
+            file.path(save_to_folder, "www", "metaui.js"), overwrite = TRUE)
   file.copy(system.file("template_code", "metaui.css", package="metaUI"),
             file.path(save_to_folder, "www", "metaui.css"), overwrite = TRUE)
   file.copy(system.file("template_code", "dmetar_contributions.R", package="metaUI"),

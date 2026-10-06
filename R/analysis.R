@@ -234,3 +234,59 @@ metaUI_pcurve_fit <- function(df, selection = "first") {
   if (df$metaUI__direction[1] == "negative") mod$dEstimate <- -mod$dEstimate
   mod
 }
+
+# Forest rows retain fitting-scale values and add the reader-facing scale.
+# Effect intervals are normal sampling intervals, not shrunk predictions.
+metaUI_forest_rows <- function(df, estimates) {
+  df <- df[order(as.character(df$metaUI__study_id), as.character(df$metaUI__effect_id)), , drop = FALSE]
+  label <- if ("metaUI__es_label" %in% names(df)) df$metaUI__es_label else df$metaUI__effect_id
+  rows <- data.frame(label = paste(df$metaUI__study_id, label, sep = ": "),
+    kind = "Selected effect", study = as.character(df$metaUI__study_id),
+    effect_id = as.character(df$metaUI__effect_id), fit_es = df$metaUI__effect_size,
+    fit_LCL = df$metaUI__effect_size - stats::qnorm(.975) * df$metaUI__se,
+    fit_UCL = df$metaUI__effect_size + stats::qnorm(.975) * df$metaUI__se)
+  rows$es <- rows$fit_es; rows$LCL <- rows$fit_LCL; rows$UCL <- rows$fit_UCL
+  if (df$metaUI__display_scale[1] == "r")
+    rows[c("es", "LCL", "UCL")] <- lapply(rows[c("es", "LCL", "UCL")], tanh)
+  summaries <- estimates[estimates$Model %in% c("Random-Effects Multilevel Model", "Robust Variance Estimation") & estimates$status == "ok", ]
+  if (nrow(summaries)) rows <- rbind(rows, data.frame(label = summaries$Model,
+    kind = "Model summary", study = NA_character_, effect_id = NA_character_,
+    fit_es = summaries$fit_es, fit_LCL = summaries$fit_LCL, fit_UCL = summaries$fit_UCL,
+    es = summaries$es, LCL = summaries$LCL, UCL = summaries$UCL))
+  rows$row <- rev(seq_len(nrow(rows)))
+  rows
+}
+
+metaUI_forest_plot <- function(rows, scale) {
+  ggplot2::ggplot(rows, ggplot2::aes(x = .data$es, y = .data$row)) +
+    ggplot2::geom_vline(xintercept = 0, colour = "grey70", linetype = 2) +
+    ggplot2::geom_segment(ggplot2::aes(x = .data$LCL, xend = .data$UCL, yend = .data$row), colour = "#52616d") +
+    ggplot2::geom_point(ggplot2::aes(shape = .data$kind), size = 2.8, colour = "#1c5a85", fill = "#1c5a85") +
+    ggplot2::scale_shape_manual(values = c("Selected effect" = 16, "Model summary" = 23), guide = "none") +
+    ggplot2::scale_y_continuous(breaks = rows$row, labels = rows$label) +
+    ggplot2::labs(x = paste("Effect size (", scale, ")", sep = ""), y = NULL) +
+    ggplot2::theme_minimal(base_size = 12) +
+    ggplot2::theme(panel.grid.major.y = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank())
+}
+
+# Descriptive containment of existing intervals, without refitting or assuming
+# custom-model coverage. Equality at a bound is deliberately inconclusive.
+metaUI_interval_assessment <- function(estimates, bound = NULL, scale = "SMD", known_models = character()) {
+  if (!is.null(bound) && (length(bound) != 1L || !is.numeric(bound) || !is.finite(bound) ||
+      bound <= 0 || (scale == "r" && bound >= 1)))
+    stop(if (scale == "r") "Enter a bound strictly between 0 and 1 for r." else "Enter a positive finite bound.")
+  valid <- estimates$status == "ok" & is.finite(estimates$LCL) & is.finite(estimates$UCL) & estimates$LCL <= estimates$UCL
+  threshold <- rep(NA_real_, nrow(estimates))
+  threshold[valid] <- pmax(abs(estimates$LCL[valid]), abs(estimates$UCL[valid]))
+  assessment <- rep("Not assessed", nrow(estimates))
+  assessment[valid] <- "No bound chosen"
+  if (!is.null(bound)) {
+    assessment[valid] <- "Inconclusive"
+    assessment[valid & estimates$LCL > -bound & estimates$UCL < bound] <- "Interval within bounds"
+    assessment[valid & estimates$LCL > bound] <- "Exceeds positive bound"
+    assessment[valid & estimates$UCL < -bound] <- "Exceeds negative bound"
+  }
+  data.frame(Model = estimates$Model, bound = rep(if (is.null(bound)) NA_real_ else bound, nrow(estimates)),
+    scale = rep(scale, nrow(estimates)), assessment = assessment, threshold = threshold,
+    interval = ifelse(estimates$Model %in% known_models, "Reported 95% CI", "Author-defined interval; error rate unknown"))
+}

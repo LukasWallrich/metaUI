@@ -25,6 +25,19 @@
   2001); integer-valued filters now use whole-number bounds and steps.
 * Generated apps include an editable `www/metaui.css` (responsive tables and plots,
   visible keyboard focus, compact empty/error states).
+* Replace shinyBS filter popups with expandable inline help, supporting keyboard,
+  touch and Escape while preserving author-provided HTML and clickable links. Newly generated apps no longer require shinyBS.
+* Repeat the selected sample summary on the Sample tab with separate Shiny output
+  IDs backed by the same reactive summary, preserving the welcome dialog.
+* Show forest row-limit messages as HTML before creating the plot output;
+  validate the configured limit as a positive finite whole number.
+* Document console blocking on interactive launch and the build-only alternative.
+* Add a synthetic correlation example with an independent Fisher-z reference fit.
+* Forest plots show observed effects on the displayed scale, compare available
+  multilevel/RVE summary intervals, and export PDF, PNG and CSV with both scales.
+* Add practical-equivalence interval assessment with a reader-chosen symmetric
+  bound (no default), strict containment, threshold values and model limitations.
+  Bound changes do not refit models; downloads record the assessment and bound.
 * No public release or tag is created.
 
 # metaUI 0.1.2.9000 (correctness candidate)

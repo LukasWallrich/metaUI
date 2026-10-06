@@ -50,8 +50,8 @@ atanh(r), with delta-method var(z)=var(r)/(1-r^2)^2. This is an approximation,
 not the independent-Pearson rule 1/(N-3). No sampling design is guessed.
 Prefer externally validated z/vi as ZCOR with `variance_scale="z"` when available.
 ZCOR is never transformed again. Model summary estimates and limits are tanh
-back-transformed to r; raw data, diagnostics, moderators, and individual forest
-plots remain on the labelled fitting scale. Variance components remain z-squared.
+back-transformed to r. Forest plots now show r as well and export both scales;
+raw data, diagnostics and moderators remain on the labelled fitting scale. Variance components remain z-squared.
 Other metrics are explicitly unsupported in this candidate.
 
 The primary multilevel model retains REML with t inference and **diagonal V**;
