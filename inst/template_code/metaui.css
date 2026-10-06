@@ -1,0 +1,72 @@
+/* metaUI app styles. Edit freely: this file is copied into each generated app's www/ folder. */
+:root {
+  --metaui-ink: #22303c;
+  --metaui-slate: #52616d;
+  --metaui-rule: #d5dce2;
+  --metaui-surface: #f5f7f9;
+  --metaui-accent: #1c5a85;
+  --metaui-attention: #7a4f00;
+  --metaui-attention-bg: #fff4d6;
+}
+
+body { color: var(--metaui-ink); }
+h1, h2 { font-size: clamp(22px, 16px + 1.4vw, 30px); line-height: 1.2; margin: 18px 0 14px; }
+h3 { font-size: 22px; margin: 26px 0 10px; }
+h4 { font-size: 18px; margin: 22px 0 8px; }
+.tab-content h3:first-child, .tab-content .shiny-panel-conditional > h3:first-child { margin-top: 18px; }
+
+/* Sidebar */
+.well { background: var(--metaui-surface); border-color: var(--metaui-rule); box-shadow: none; }
+.metaui-panel-title { font-size: 16px; font-weight: 600; margin: 0 0 12px; color: var(--metaui-ink); }
+.metaui-help-text, .metaui-note { font-size: 13px; color: var(--metaui-slate); line-height: 1.45; max-width: 70ch; }
+.metaui-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.metaui-actions .btn { margin: 0; }
+.btn-primary { background-color: var(--metaui-accent); border-color: var(--metaui-accent); }
+.btn-primary.metaui-needs-run { background-color: var(--metaui-attention); border-color: var(--metaui-attention); }
+.metaui-apply-state { margin: 10px 0 0; padding: 7px 10px; font-size: 13px; border-left: 3px solid var(--metaui-rule); color: var(--metaui-slate); }
+.metaui-apply-state.metaui-stale, .metaui-basis.metaui-stale { border-left-color: var(--metaui-attention); background: var(--metaui-attention-bg); color: var(--metaui-attention); }
+#executeUpload { margin-bottom: 10px; }
+
+/* Results basis: which data and selection the visible results describe */
+.metaui-basis { margin: 0 0 14px; padding: 9px 12px; border-left: 3px solid var(--metaui-accent); background: var(--metaui-surface); font-size: 14px; line-height: 1.45; }
+.metaui-basis .shiny-text-output { display: block; }
+.metaui-basis .shiny-output-error-validation { color: var(--metaui-slate); }
+.metaui-basis.metaui-stale .shiny-text-output { opacity: .8; }
+
+/* Empty, gap and reason states */
+.metaui-empty { margin: 22px 0; padding: 18px 20px; border: 1px dashed var(--metaui-rule); border-radius: 4px; max-width: 70ch; }
+.metaui-empty p { margin: 0; }
+.metaui-gaps { margin: 6px 0 12px; padding: 8px 12px; border-left: 3px solid var(--metaui-slate); background: var(--metaui-surface); font-size: 14px; }
+.metaui-gaps ul { margin: 4px 0 0; padding-left: 20px; }
+.shiny-output-error-validation { color: var(--metaui-slate); font-size: 15px; padding: 8px 0; }
+.metaui-reason { font-size: 14px; color: var(--metaui-slate); }
+/* A plot replaced by a "not estimated" message should not keep its blank plot height */
+.shiny-plot-output.shiny-output-error { height: auto !important; min-height: 0; }
+.shiny-spinner-output-container:has(> .shiny-output-error) { min-height: 0 !important; height: auto !important; }
+
+/* Help disclosures */
+.metaui-help { margin: 12px 0; max-width: 80ch; font-size: 14px; }
+.metaui-help summary { cursor: pointer; font-weight: 600; color: var(--metaui-accent); }
+.metaui-help dt { margin-top: 8px; }
+.metaui-help dd { margin-left: 0; color: var(--metaui-slate); }
+.metaui-help p { margin: 6px 0; }
+
+/* Tables and wide content */
+.metaui-scroll { overflow-x: auto; max-width: 100%; }
+.table { font-variant-numeric: tabular-nums; }
+.table td { vertical-align: top; }
+#effectestimate td:nth-child(6) { min-width: 14em; color: var(--metaui-slate); }
+#effectestimate td:nth-child(3), #effectestimate td:nth-child(7), #effectestimate th { white-space: nowrap; }
+.metaui-help-text, .metaui-help-text b { font-size: 13px; }
+.metaui-about pre { white-space: pre-wrap; font-size: 12px; max-height: 32em; overflow: auto; }
+
+/* Keyboard focus */
+a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:focus-visible, input:focus-visible {
+  outline: 3px solid var(--metaui-accent); outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  #model_comparison { min-width: 560px; }
+  .nav-tabs > li > a { padding: 8px 10px; }
+  .metaui-about table { display: block; overflow-x: auto; }
+}

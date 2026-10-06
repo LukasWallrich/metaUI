@@ -17,9 +17,16 @@ test_that("headless app loads and runs the generated server", {
   env <- new.env(parent = globalenv())
   sys.source("global.R", env)
   expect_s3_class(env$ui, "shiny.tag.list")
+  expect_true(file.exists(file.path(path, "www", "metaui.css")))
   shiny::testServer(env$server, {
-    session$setInputs(outliers_z_scores = c(metaUI:::signif_floor(min(d$metaUI__es_z)), metaUI:::signif_ceiling(max(d$metaUI__es_z))), go = 1)
+    z_range <- c(metaUI:::signif_floor(min(d$metaUI__es_z)), metaUI:::signif_ceiling(max(d$metaUI__es_z)))
+    session$setInputs(outliers_z_scores = z_range)
+    expect_match(output$apply_state, "Not analysed yet")
+    expect_error(output$selection_status, "No analysis yet")
+    session$setInputs(go = 1)
     session$flushReact()
+    expect_false(filters_changed())
+    expect_match(output$apply_state, "Results match")
     table <- estimatesfiltered()
     expect_equal(table$status[1:2], c("ok","ok"))
     ref <- metafor::rma.mv(metaUI__effect_size, V=metaUI__variance, random=~1|metaUI__study_id/metaUI__effect_id,
@@ -29,9 +36,18 @@ test_that("headless app loads and runs the generated server", {
     expect_true(nzchar(output$heterogeneity))
     expect_true(is.list(output$foreststudies))
     expect_false(estimatesreactive()$cache_hit)
+    # Unapplied edits are flagged; displayed results keep the applied selection.
+    session$setInputs(outliers_z_scores = c(0, z_range[2]))
+    expect_true(filters_changed())
+    expect_match(output$apply_state, "Filters changed")
+    expect_equal(nrow(df_filtered()), 16)
+    session$setInputs(outliers_z_scores = z_range)
+    expect_false(filters_changed())
     session$setInputs(go = 2)
     expect_true(estimatesreactive()$cache_hit)
+    expect_match(output$calculation_status, "Reused")
     expect_identical(estimatesfiltered()$fit_es, table$fit_es)
+    expect_match(output$effectestimate, "95% CI")
   })
   # A separate reader starts with a separate cache.
   shiny::testServer(env$server, {
@@ -57,7 +73,11 @@ test_that("uploaded data persist and invalidate session results", {
     original <- estimatesfiltered()$fit_es
     session$setInputs(go = 2); expect_true(estimatesreactive()$cache_hit)
     session$setInputs(uploadData = list(datapath = upload_file, name = "upload.xlsx"), executeUpload = 1)
+    # Until the restored selection is analysed, the strip still describes the built results.
+    expect_null(state_values$pending_upload_filters)
+    expect_match(output$selection_status, "Built dataset")
     session$setInputs(go = 3)
+    expect_match(output$selection_status, "Uploaded data")
     expect_false(estimatesreactive()$cache_hit)
     expect_equal(df_filtered()$metaUI__effect_size[1], .93)
     expect_false(identical(estimatesfiltered()$fit_es, original))
@@ -84,7 +104,10 @@ test_that("uploads retain extreme/missing numeric inputs and restored picker sel
   writexl::write_xlsx(list(dataset = u, filters = selections), file)
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
-  expect_match(paste(readLines("ui.R"), collapse = "\n"), "metaUI__filter_Year_include_NA")
+  ui_code <- paste(readLines("ui.R"), collapse = "\n")
+  expect_match(ui_code, "metaUI__filter_Year_include_NA")
+  # Integer filters get exact integer bounds and steps rather than rounded fractions.
+  expect_match(ui_code, "min = 2001,\\s+max = 2016,\\s+value = c\\(2001,\\s+2016\\),\\s+sep = \"\", step = 1")
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Year = c(2001, 2016),
       metaUI__filter_Group = paste0("G", 1:8), metaUI__filter_Year_include_NA = TRUE)
@@ -125,8 +148,10 @@ test_that("restored filters disclose uploaded rows outside the saved selection",
     session$setInputs(uploadData = list(datapath = file, name = "new-year.xlsx"), executeUpload = 1, go = 2)
     expect_equal(nrow(df_filtered()), 15)
     expect_match(output$selection_status, "Excluded 1")
-    expect_match(output$selection_status, "metaUI__filter_Year: 1")
+    expect_match(output$selection_status, "Year: 1")
+    expect_false(grepl("metaUI__", output$selection_status))
     session$setInputs(metaUI__filter_Year = c(2000, 2030))
+    expect_true(filters_changed())
     saved <- data_list()$filters
     expect_equal(as.numeric(saved$selection[saved$id == "metaUI__filter_Year"]), c(2001, 2016))
   })

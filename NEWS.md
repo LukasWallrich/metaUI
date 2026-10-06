@@ -14,6 +14,17 @@
   This is an explicit data-path removal, not a silent replacement of that analysis.
 * Check Linux, macOS and Windows in CI, with a real generated-app Chromium
   smoke test; keep the hidden download handler active for programmatic downloads.
+* Generated apps explain their state: result tabs say "No results yet" before the
+  first analysis, a results strip names the data and selection behind the shown
+  results, and filter edits not yet analysed are flagged until Analyze data is
+  clicked. Models that were not estimated are listed beside the estimate plot with
+  their reasons. A collapsible note derives scale, declared direction and
+  aggregation assumptions from the data contract. Model code, estimates and
+  downloads are unchanged.
+* Fix slider bounds that used non-integer significant digits (e.g. 2000.992 for
+  2001); integer-valued filters now use whole-number bounds and steps.
+* Generated apps include an editable `www/metaui.css` (responsive tables and plots,
+  visible keyboard focus, compact empty/error states).
 * No public release or tag is created.
 
 # metaUI 0.1.2.9000 (correctness candidate)

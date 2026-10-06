@@ -178,6 +178,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
             file.path(save_to_folder, "helpers.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "favicon.svg", package="metaUI"),
             file.path(save_to_folder, "www", "favicon.svg"), overwrite = TRUE)
+  file.copy(system.file("template_code", "metaui.css", package="metaUI"),
+            file.path(save_to_folder, "www", "metaui.css"), overwrite = TRUE)
   file.copy(system.file("template_code", "dmetar_contributions.R", package="metaUI"),
             file.path(save_to_folder, "dmetar_contributions.R"), overwrite = TRUE)
   if (is.character(models)) {
