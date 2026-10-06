@@ -1,3 +1,55 @@
+# metaUI 0.1.2.9001 (development candidate)
+
+* Optimise p-curve without changing results and reuse compatible fitted objects.
+  Disclose session-local exact-selection caching and its opt-out for custom code.
+* Validate and persist uploads, restore picker/missing-value choices, widen slider
+  ranges, recompute descriptive z against the built reference, and disclose all
+  filter exclusions and uploaded provenance. Reject inconsistent scale inputs.
+* Report z-curve estimator refusals/warnings; correct Egger residual variance;
+  restore p-curve process options and show unidentified singleton variance splits.
+* Add a CC-BY empirical source-reference example and generated-app/reference tests.
+* Record measured before/after performance and clean hosted Linux checks.
+* Remove `inst/extdata/barroso2021.csv` because its source redistribution terms
+  could not be verified; tutorials now use the attributed CC-BY Dannheim example.
+  This is an explicit data-path removal, not a silent replacement of that analysis.
+* Check Linux, macOS and Windows in CI, with a real generated-app Chromium
+  smoke test; keep the hidden download handler active for programmatic downloads.
+* No public release or tag is created.
+
+# metaUI 0.1.2.9000 (correctness candidate)
+
+* Use genuine per-effect IDs for all multilevel nesting; display labels may repeat.
+* Keep optional p/N rows under default preparation, validate required inputs, and
+  report excluded rows and derivations. Summed N is no longer inferred.
+* Require explicit correlation variance scales and directional bias assumptions.
+  Fit COR via Fisher z with delta-method variance; preserve ZCOR without a second
+  transform; back-transform model summaries once. Other panels retain fitting scale.
+* Report model applicability, failures, warnings, aggregation, and fitting values.
+  Correct REML heterogeneity output and remove meaningless multilevel tau2.
+* Add JSON `build_app()` and versioned schema. Nonempty output is refused by
+  default; preserve hand edits by building a fresh destination.
+* Generated apps check dependencies without installing packages. Record build
+  versions and bundled attribution; replace archived waffle dependency with a
+  categorical count bar chart and use an original SVG favicon.
+* Correct the tutorial's Wald p calculation and Fisher-z labels.
+* Add independent statistical references, headless server tests, and read-only CI.
+* Correct slider rounding so default bounds retain all eligible rows.
+* Reuse exact compatible multilevel/RVE fits in diagnostics. Session-local,
+  three-entry exact-input caching speeds repeated selections; `cache_hit` and
+  original fit timings are retained. Custom models default to no caching;
+  `options$fit_cache_entries = 0` disables it. No cross-reader cache.
+* Deduplicate identical p-curve noncentrality solves without changing numerical
+  results or selection rules; restore process options after p-curve calls.
+* Keep uploaded data in session state, validate their contract, clear cached
+  results on upload, and reject stale globals when loading author model files.
+* Report singleton-study variance splits as unidentified, and fix model plot
+  ordering and Plotly tooltip warnings.
+* Add a tiny CC-BY Dannheim mental-health pool with exact member provenance,
+  a source-reference REML/Hartung–Knapp fit, and labelled explorations.
+* Verify Linux CI, including fresh dependencies; add current/previous R matrix.
+* Existing launch_app=FALSE remains supported. Agent skill, public deployment,
+  paper draft, and runtime rewrite remain deferred.
+
 # metaUI 0.1.2 (under development)
 
 ## Minor enhancements

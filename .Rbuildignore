@@ -8,3 +8,8 @@
 ^pkgdown$
 .lintr
 ^cran-comments\.md$
+
+^metaUI_.*\.tar\.gz$
+^tools$
+^validation$
+^work$

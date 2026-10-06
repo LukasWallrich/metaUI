@@ -1,0 +1,122 @@
+{
+  "snapshot_date": "2026-10-06",
+  "benchmark_commit": null,
+  "snapshot_note": "Working snapshot without .git; selected input checksums identify provenance, not a release.",
+  "pool": {
+    "pool_id": "pool_1621",
+    "ma_doi": "10.5271/sjweh.4219",
+    "sub_analysis_id": "mental_health",
+    "matched_group": "mental health",
+    "is_overall": "FALSE",
+    "is_subgroup": "FALSE",
+    "validation_band": "verified",
+    "reported_r": "-0.38",
+    "replicated_r": "-0.3836",
+    "k_studies": "12",
+    "k_rows": "12",
+    "es_family": "standardized mean difference"
+  },
+  "gate": {
+    "ma_doi": "10.5271/sjweh.4219",
+    "sub_analysis_id": "mental_health",
+    "matched_group": "mental health",
+    "match_type": "predictor",
+    "reported_k": "12",
+    "replicated_k": "12",
+    "replicated_krows": "12",
+    "k_eff_ratio": "1",
+    "reported_total_n": "NA",
+    "replicated_total_n": "1537",
+    "n_ratio": "NA",
+    "n_coverage": "1",
+    "pool_method": "reml_g",
+    "reported_r": "-0.38",
+    "replicated_r": "-0.3836",
+    "replication_diff": "0.0036",
+    "rounding_tol": "0.0068",
+    "reported_es_dp": "2",
+    "input_dp": "2",
+    "precise_k": "TRUE",
+    "exact_k": "TRUE",
+    "k_match_level": "study",
+    "n_checksum": "NA",
+    "reproduced": "TRUE",
+    "review_reason": "reproduced"
+  },
+  "member_ids": [
+    "10_5271_sjweh_4219__r1",
+    "10_5271_sjweh_4219__r2",
+    "10_5271_sjweh_4219__r3",
+    "10_5271_sjweh_4219__r4",
+    "10_5271_sjweh_4219__r5",
+    "10_5271_sjweh_4219__r6",
+    "10_5271_sjweh_4219__r7",
+    "10_5271_sjweh_4219__r8",
+    "10_5271_sjweh_4219__r9",
+    "10_5271_sjweh_4219__r10",
+    "10_5271_sjweh_4219__r11",
+    "10_5271_sjweh_4219__r12"
+  ],
+  "input_file_sha256": "98204ed234daa030c971701cdaf65384b5d152b48ea43ef3e693a7f00718a90a",
+  "source_files": {
+    "data/processed/ma_reproduced_pools.csv": "35dc396c24a77f3798eb52816eec7669e29e99d8083d8dd764a67044efea3bb0",
+    "data/processed/ma_reproduced_pool_members.csv": "41594e15ead903fef826ce279038ab8e0595ee0cf4e91fe395ce58bbb918e779",
+    "data/processed/ma_validation_scores.csv": "04f91f4c27552dcabbf375568a0b79103427316aff7ea2784d1dd736788391d2",
+    "data/processed/ma_harmonised_es.csv.d/part-001.csv": "a55cba6fd8238a1029cd8025685872631764b17b05a01bd71a735a856bf021f5"
+  },
+  "licence": "Article and numeric forest-plot adaptation: CC-BY-4.0; attribution retained. Benchmark released compilation CC0-1.0. Our code GPL-3-or-later.",
+  "publisher_url": "https://www.sjweh.fi/article/4219",
+  "input_rule": "Use original signed Hedges g es_value, not d_converted or r/z. se_g is snapshot d_se=(upper-lower)/(2*qnorm(.975)), rounded by CSV serialisation; vi=se_g^2. No N/p imputation or g debiasing.",
+  "dependence": "One author-composited mental-health effect per distinct study; source selects arms and combines outcomes/followups (Methods). No additional aggregation. Distinct studies assumed independent as in source pool; no reconstruction of missing within-study covariances.",
+  "limitations": "Source forest values rounded, some CIs asymmetric by rounding. Exact membership and snapshot fit, approximate reproduction of published rounded estimate/interval, not access to unrounded source data. Other models and filters are explorations; no source-defect claim or endorsement.",
+  "ci_rounding": [
+    {
+      "row_uid": "10_5271_sjweh_4219__r1",
+      "midpoint_minus_g": 0.0
+    },
+    {
+      "row_uid": "10_5271_sjweh_4219__r2",
+      "midpoint_minus_g": 0.0050000000000001155
+    },
+    {
+      "row_uid": "10_5271_sjweh_4219__r3",
+      "midpoint_minus_g": 1.1102230246251565e-16
+    },
+    {
+      "row_uid": "10_5271_sjweh_4219__r4",
+      "midpoint_minus_g": 0.0
+    },
+    {
+      "row_uid": "10_5271_sjweh_4219__r5",
+      "midpoint_minus_g": 0.005000000000000032
+    },
+    {
+      "row_uid": "10_5271_sjweh_4219__r6",
+      "midpoint_minus_g": 0.0
+    },
+    {
+      "row_uid": "10_5271_sjweh_4219__r7",
+      "midpoint_minus_g": 0.004999999999999977
+    },
+    {
+      "row_uid": "10_5271_sjweh_4219__r8",
+      "midpoint_minus_g": -0.0050000000000000044
+    },
+    {
+      "row_uid": "10_5271_sjweh_4219__r9",
+      "midpoint_minus_g": -0.004999999999999977
+    },
+    {
+      "row_uid": "10_5271_sjweh_4219__r10",
+      "midpoint_minus_g": -0.005000000000000032
+    },
+    {
+      "row_uid": "10_5271_sjweh_4219__r11",
+      "midpoint_minus_g": -0.004999999999999987
+    },
+    {
+      "row_uid": "10_5271_sjweh_4219__r12",
+      "midpoint_minus_g": 0.0049999999999999906
+    }
+  ]
+}

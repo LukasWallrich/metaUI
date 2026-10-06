@@ -1,0 +1,37 @@
+"k","phase","operation","status","reason","warnings","seconds"
+50,"cold_panel","heterogeneity","ok","","",1.965
+50,"cold_panel","numeric_moderation","ok","","",1.138
+50,"cold_panel","funnel","ok","","",0.917
+50,"cold_panel","egger","ok","","",0.0640000000000001
+50,"cold_panel","pcurve","ok","","",0.588
+50,"cold_panel","zcurve","ok","","The z-curve method is meant for large samples of test statistics. It might produce undercoverage and biased estimates of EDR in small sample sizes.; The z-curve method placed > 90% of weight into a single component. The high weight concentration might be indicative of unreliable EDR estimates (e.g., the model is unable to estimate components of low power).",0.0819999999999999
+50,"warm_panel","heterogeneity","ok","","",1.2
+50,"warm_panel","numeric_moderation","ok","","",1.08
+50,"warm_panel","funnel","ok","","",0.0680000000000005
+50,"warm_panel","egger","ok","","",0.048
+50,"warm_panel","pcurve","ok","","",0.487
+50,"warm_panel","zcurve","ok","","The z-curve method is meant for large samples of test statistics. It might produce undercoverage and biased estimates of EDR in small sample sizes.; The z-curve method placed > 90% of weight into a single component. The high weight concentration might be indicative of unreliable EDR estimates (e.g., the model is unable to estimate components of low power).",0.0599999999999987
+200,"cold_panel","heterogeneity","ok","","",1.304
+200,"cold_panel","numeric_moderation","ok","","",1.238
+200,"cold_panel","funnel","ok","","",0.302999999999999
+200,"cold_panel","egger","ok","","",0.167
+200,"cold_panel","pcurve","ok","","",1.859
+200,"cold_panel","zcurve","ok","","The z-curve method is meant for large samples of test statistics. It might produce undercoverage and biased estimates of EDR in small sample sizes.",0.138999999999999
+200,"warm_panel","heterogeneity","ok","","",1.292
+200,"warm_panel","numeric_moderation","ok","","",1.211
+200,"warm_panel","funnel","ok","","",0.578000000000003
+200,"warm_panel","egger","ok","","",0.486999999999998
+200,"warm_panel","pcurve","ok","","",1.571
+200,"warm_panel","zcurve","ok","","The z-curve method is meant for large samples of test statistics. It might produce undercoverage and biased estimates of EDR in small sample sizes.",0.114999999999998
+1000,"cold_panel","heterogeneity","ok","","",3.302
+1000,"cold_panel","numeric_moderation","ok","","",1.492
+1000,"cold_panel","funnel","ok","","",0.763000000000002
+1000,"cold_panel","egger","ok","","",0.805999999999997
+1000,"cold_panel","pcurve","ok","","",8.097
+1000,"cold_panel","zcurve","ok","","The z-curve method is meant for large samples of test statistics. It might produce undercoverage and biased estimates of EDR in small sample sizes.",0.378999999999998
+1000,"warm_panel","heterogeneity","ok","","",1.516
+1000,"warm_panel","numeric_moderation","ok","","",1.488
+1000,"warm_panel","funnel","ok","","",0.749000000000002
+1000,"warm_panel","egger","ok","","",0.745000000000005
+1000,"warm_panel","pcurve","ok","","",8.292
+1000,"warm_panel","zcurve","ok","","The z-curve method is meant for large samples of test statistics. It might produce undercoverage and biased estimates of EDR in small sample sizes.",0.363

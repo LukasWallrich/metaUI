@@ -1,43 +1,67 @@
+name: R-CMD-check
 on:
   push:
-    branches:
-      - main
-      - master
-
-name: R-CMD-check
-
+    branches: [main, master]
+  pull_request:
+permissions:
+  contents: read
 jobs:
-  document-and-dispatch:
-    name: document
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, r: 'release'}
+          - {os: ubuntu-latest, r: 'oldrel-1'}
+          - {os: macos-latest, r: 'release'}
+          - {os: windows-latest, r: 'release'}
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} (R ${{ matrix.r }})
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: r-lib/actions/setup-r@v2
         with:
+          r-version: ${{ matrix.r }}
           use-public-rspm: true
-          r-version: 'release'
-      - name: Delete-Namespace
-        run: Rscript -e 'file.remove("NAMESPACE")'
       - uses: r-lib/actions/setup-pandoc@v2
-      - name: system dependencies
-        run: sudo apt-get install libcurl4-openssl-dev libnode-dev
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck, any::roxygen2
+          extra-packages: any::rcmdcheck
           needs: check
-
-      - name: Document
-        run: Rscript -e 'roxygen2::roxygenise()'
-
-      - name: commit
-        run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
-          git add -f man/\* NAMESPACE
-          git commit -m 'Documentation' || echo "No changes to commit"
-          git push origin || echo "No changes to commit"
-
-
       - uses: r-lib/actions/check-r-package@v2
+        with:
+          args: 'c("--no-manual", "--as-cran")'
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: check
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install package and generate smoke fixture
+        run: |
+          R CMD INSTALL .
+          Rscript --vanilla tools/browser-fixture.R "$RUNNER_TEMP/metaui-smoke"
+      - name: Install browser in runner scratch directory
+        run: |
+          npm install --prefix "$RUNNER_TEMP/metaui-browser" --no-save playwright@1.63.0
+          "$RUNNER_TEMP/metaui-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Exercise generated standalone app in Chromium
+        env:
+          NODE_PATH: ${{ runner.temp }}/metaui-browser/node_modules
+          METAUI_SMOKE_DIR: ${{ runner.temp }}/metaui-smoke
+        run: node tools/browser-smoke.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: generated-app-browser-evidence
+          path: ${{ runner.temp }}/metaui-smoke/evidence

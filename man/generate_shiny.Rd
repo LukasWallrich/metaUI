@@ -13,7 +13,8 @@ generate_shiny(
   save_to_folder = NA,
   launch_app = is.na(save_to_folder),
   ...,
-  options = list()
+  options = list(),
+  overwrite = FALSE
 )
 }
 \arguments{
@@ -30,12 +31,12 @@ this must assign the tibble to a variable called models_to_run (i.e. using <-).}
 \item{filter_popups}{Named list with content for popup windows that provide further details on filter variables. They can contain HTML formatting, but should then be wrapped into \code{HTML()}, for instance: \verb{list(Year = HTML("<i>Note:</i><br>This refers to data collection if reported, otherwise the publication year.})}
 
 \item{save_to_folder}{If specified, the code and data for the app will be saved to this folder. Defaults to NA, which means that nothing will be saved. If the folder exists, the user will
-be asked to confirm overwriting it - unless the script is run in non-interactive mode, in which case the folder will be overwritten without asking.}
+refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.}
 
 \item{launch_app}{Should the app be launched? Defaults to TRUE if it is not saved (i.e. save_to_folder is NA), FALSE otherwise.}
 
 \item{...}{
-  Arguments passed on to \code{\link[=create_about]{create_about}}
+  Arguments passed on to \code{\link{create_about}}
   \describe{
     \item{\code{date}}{Date of the last update. Defaults to the current date.}
     \item{\code{citation}}{Citation requested by the author. Defaults to an empty string.}
@@ -48,13 +49,16 @@ a character vector with all packages to display.}
 
 \item{options}{List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
 \itemize{
-\item \code{max_forest_plot_rows} Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 100. If more effect sizes are selected, a message is shown instead.
+\item \code{max_forest_plot_rows} Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 200. If more effect sizes are selected, a message is shown instead.
 \item \code{shiny_theme} Character. One of the shinythemes that style the app. Defaults to "yeti", see \code{?shinythemes::shinythemes} for all options.
+\item \code{fit_cache_entries} Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.
 \item \code{selection_list_threshold} Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
 }}
+
+\item{overwrite}{Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.}
 }
 \value{
-This function does not have a meaningful return value - it rather launches the Shiny app and/or saves it to disk.
+If \code{launch_app = FALSE}, invisibly the normalised path of the generated app folder. Otherwise a Shiny app object for the saved folder, which launches when printed.
 }
 \description{
 This function generates the Shiny app. It is the main function of the package. The app can either be launched directly, or saved to
@@ -65,7 +69,7 @@ on that folder, or modified by editing server.R, ui.R, global.R and models.R in 
 # First, use prepare_data() to create your dataset.
 if (exists("app_data")) {
   generate_shiny(app_data,
-    dataset_name = "Barroso et al 2021 - Maths Anxiety",
-    eff_size_type_label = "Fisher's Z scores")
+    dataset_name = "Your meta-analysis",
+    eff_size_type_label = "Declared effect scale")
 }
 }

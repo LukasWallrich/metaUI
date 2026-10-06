@@ -19,14 +19,14 @@ NULL
 
 #' @import shiny
 #' @importFrom rlang := .data
-#' @importFrom stats sd lm confint aggregate
+#' @importFrom stats sd lm confint aggregate na.omit
 #' @importFrom utils read.csv
 NULL
 
 # Declare . as global variable to remove warnings
 utils::globalVariables(".")
 # Declare models_to_run as global variable, since it can be created as such by user
-utils::globalVariables("models_to_run")
+utils::globalVariables(c("models_to_run", "n", "Count"))
 
 my_assign <- function(name, value, envir = 1L) assign(name, value, pos = envir)
 
@@ -41,8 +41,13 @@ no_check_warnings <- function() {
   plotly::ggplotly()
   shinycssloaders::withSpinner()
   shinyBS::popify()
+  shinyWidgets::pickerInput()
   shinythemes::themeSelector()
-  waffle::waffle()
+  psych::describe()
+  htmltools::htmlEscape()
+  jsonlite::write_json()
+  tools::md5sum()
+  forcats::fct_drop()
   DT::datatable()
   shinyjs::useShinyjs()
   ggplot2::ggplot()

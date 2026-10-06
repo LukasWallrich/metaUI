@@ -1,0 +1,65 @@
+metaUI: GPL-3-or-later, Lukas Wallrich and Lukas Röseler.
+Bundled dmetar contributions: Mathias Harrer (2020), MIT.
+Source: https://github.com/MathiasHarrer/dmetar
+
+MIT License
+Copyright (c) 2020 Mathias Harrer
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+R/helpers.R and inst/template_code/helpers.R include code by Lukas Wallrich
+from timesaveR, retained under metaUI's GPL-compatible terms.
+The synthetic inst/examples/tiny.csv fixture is original GPL-3-or-later data;
+it is not an empirical benchmark and does not reproduce a paper.
+Favicon SVG: original metaUI forest-plot artwork, GPL-3-or-later.
+
+Bundled aksayli2019.csv: psymetadata, Hedges g/variance; Aksayli et al.
+(2019), Cogmed working-memory training meta-analysis; https://osf.io/jhavp/.
+Bundled coles2019.csv: psymetadata, Cohen d/variance; Coles et al. (2019),
+facial-feedback meta-analysis; https://osf.io/v8kxb/.
+Source metadata: https://github.com/josue-rodriguez/psymetadata/blob/master/R/data.R
+Source-deposit audit on 6 October 2026 via public OSF API:
+aksayli2019 source https://osf.io/jhavp/ is CC-BY-4.0 (node year 2018).
+Aksayli NM, Sala G, Gobet F (2019), The cognitive and academic benefits of
+Cogmed: A meta-analysis. DOI https://doi.org/10.1016/j.edurev.2019.04.003 .
+Changes: numeric effects/variances and coded covariates exported through psymetadata.
+coles2019 source https://osf.io/v8kxb/ is MIT; node copyright Nicholas A. Coles (2018).
+Copyright (c) 2018 Nicholas A. Coles. The complete MIT terms above also apply
+with this copyright holder to the Coles source adaptation.
+Coles NA, Larsen JT, Lench HC (2019), A meta-analysis of the facial feedback
+literature. DOI https://doi.org/10.1037/bul0000194 .
+Changes: numeric effects/variances, bibliographic and coded covariates exported
+through psymetadata; no article prose or PDFs redistributed.
+P-curve calculations originate with Uri Simonsohn, Leif D. Nelson, and Joseph
+P. Simmons (2014), through dmetar's implementation. https://www.p-curve.com/
+Upstream dmetar DESCRIPTION specifies MIT + file LICENSE; LICENSE identifies
+Mathias Harrer (2020). This notice preserves those terms and attribution.
+
+Modified by metaUI on 6 October 2026: dmetar p-curve deduplicates identical
+noncentrality solves and restores process options; original MIT notice above retained.
+
+inst/examples/dannheim/mental-health.csv adapts the mental-health forest plot from:
+Dannheim I, Ludwig-Walz H, Kirsch H, Bujard M, Buyken AE, Richardson KM, Kroke A
+(2025). Effectiveness of leader-targeted stress management interventions: A
+systematic review and meta-analysis. Scand J Work Environ Health 51(4):265–281.
+DOI https://doi.org/10.5271/sjweh.4219 ; https://www.sjweh.fi/article/4219
+Creative Commons Attribution 4.0: https://creativecommons.org/licenses/by/4.0/
+Changes: subset to the 12-effect mental-health pool; original signed Hedges g
+and rounded CIs retained; SE derived from normal 95% CI widths; membership and
+derivation from the read-only ES Meta Benchmarks snapshot of 6 October 2026.
+That project's released compilation is CC0-1.0 (LICENSE-DATA); the article
+adaptation attribution/licence is retained here. No PDFs or source prose bundled.
+Example code is GPL-3-or-later. The example is a reanalysis, not author endorsement.

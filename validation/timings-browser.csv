@@ -1,0 +1,7 @@
+version,operation,iteration,seconds
+before,summary_click_to_idle,1,3.1055
+before,summary_click_to_idle,2,2.678399999976158
+before,summary_click_to_idle,3,2.4433000000715257
+after,summary_click_to_idle,1,2.9752000000476837
+after,summary_click_to_idle,2,0.3205
+after,summary_click_to_idle,3,0.26839999997615815

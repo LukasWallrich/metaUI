@@ -1,3 +1,10 @@
+declared_imports <- function() {
+  imports <- utils::packageDescription("metaUI")$Imports
+  if (is.null(imports) || !nzchar(imports)) stop("Cannot read metaUI's declared Imports; install metaUI before generating apps.")
+  imports <- trimws(strsplit(gsub("\\([^)]*\\)", "", imports), ",")[[1]])
+  imports[nzchar(imports)]
+}
+
 #' Create the about text for the app
 #'
 #' This function is generally only called internally by [generate_shiny()].
@@ -40,7 +47,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
   if (list_packages == TRUE) {
     package_versions <- purrr::map_chr(req_packages, \(p) utils::packageVersion(p) %>% as.character())
 
-    HTML(glue::glue(
+    HTML(paste0(
       out, "<br /> &nbsp;<br /> &nbsp;<br /> &nbsp; <h4>R packages used</h4>",
       purrr::map(1:3, \(i) {
         start <- (i - 1) * ceiling(length(req_packages) / 3) + 1
@@ -70,32 +77,34 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' this must assign the tibble to a variable called models_to_run (i.e. using <-).
 #' @param filter_popups Named list with content for popup windows that provide further details on filter variables. They can contain HTML formatting, but should then be wrapped into `HTML()`, for instance: `list(Year = HTML("<i>Note:</i><br>This refers to data collection if reported, otherwise the publication year.`)
 #' @param save_to_folder If specified, the code and data for the app will be saved to this folder. Defaults to NA, which means that nothing will be saved. If the folder exists, the user will
-#' be asked to confirm overwriting it - unless the script is run in non-interactive mode, in which case the folder will be overwritten without asking.
+#' refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.
+#' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
 #' @param launch_app Should the app be launched? Defaults to TRUE if it is not saved (i.e. save_to_folder is NA), FALSE otherwise.
 #' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
-#'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 100. If more effect sizes are selected, a message is shown instead.
+#'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 200. If more effect sizes are selected, a message is shown instead.
 #'   - `shiny_theme` Character. One of the shinythemes that style the app. Defaults to "yeti", see `?shinythemes::shinythemes` for all options.
+#'   - `fit_cache_entries` Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.
 #'   - `selection_list_threshold` Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
 #' @inheritParams create_about
 #' @inheritDotParams create_about
 #'
-#' @returns This function does not have a meaningful return value - it rather launches the Shiny app and/or saves it to disk.
+#' @returns If `launch_app = FALSE`, invisibly the normalised path of the generated app folder. Otherwise a Shiny app object for the saved folder, which launches when printed.
 #' @examples
 #' # First, use prepare_data() to create your dataset.
 #' if (exists("app_data")) {
 #'   generate_shiny(app_data,
-#'     dataset_name = "Barroso et al 2021 - Maths Anxiety",
-#'     eff_size_type_label = "Fisher's Z scores")
+#'     dataset_name = "Your meta-analysis",
+#'     eff_size_type_label = "Declared effect scale")
 #' }
 #' @export
 
 generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         models = get_model_tibble, filter_popups = list(),
         save_to_folder = NA, launch_app = is.na(save_to_folder), ...,
-        options = list()) {
+        options = list(), overwrite = FALSE) {
 
   defaults <- list(max_forest_plot_rows = 200, shiny_theme = "yeti", selection_list_threshold = 6)
-  opts <- modifyList(defaults, options)
+  opts <- utils::modifyList(defaults, options)
 
    # Evaluate so that it is TRUE when save_to_folder is NA initially
    launch_app <- launch_app
@@ -106,16 +115,21 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   }
 
   if (!is.data.frame(dataset)) stop("Dataset must be a data.frame or tibble")
+  metaUI_validate_prepared(dataset)
 
   if (is.na(eff_size_type_label)) {
-    eff_size_type_label <- dataset$metaUI__es_type[1]
+    eff_size_type_label <- if (dataset$metaUI__es_type[1] == "ZCOR") "Fisher z (model summaries: r)" else dataset$metaUI__es_type[1]
   }
 
   models_from_function <- models
 
   if (is.character(models)) {
-    source(models)
-    if (!exists("models_to_run")) stop("R script passed to models argument does not create a `models_to_run` variable.")
+    # Mirror the generated app: caller's attached packages are visible and global.R attaches dplyr.
+    model_environment <- new.env(parent = globalenv())
+    model_environment$`%>%` <- dplyr::`%>%`
+    sys.source(models, envir = model_environment)
+    if (!exists("models_to_run", envir = model_environment, inherits = FALSE)) stop("R script passed to models argument does not create a `models_to_run` variable.")
+    models_to_run <- model_environment$models_to_run
   } else if (is.function(models)) {
     models_to_run <- models()
   } else if (is.data.frame(models)) {
@@ -124,32 +138,55 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     stop("Invalid argument type. models must be a function, a tibble, or a path to a file.")
   }
 
+  # Custom code can depend on external state or randomness: cache only by opt-in.
+  if (is.null(options$fit_cache_entries)) opts$fit_cache_entries <- if (identical(models_to_run, get_model_tibble())) 3L else 0L
+  metaUI_fit_cache(opts$fit_cache_entries) # validate before writing
+  report <- attr(dataset, "metaUI_validation")
+  if (is.null(report)) stop("Dataset needs prepare_data() validation metadata. Re-prepare legacy datasets.")
+  if (report$retained_rows != nrow(dataset) || (!is.null(report$fingerprint) && !identical(report$fingerprint, metaUI_data_fingerprint(dataset))))
+    stop("Validation report is stale: rows or values changed after prepare_data(). Re-run prepare_data() on the intended input.")
+  correlation <- if (is.null(options$correlation_dependent)) .6 else options$correlation_dependent
+  metaUI_aggregate(dataset, correlation) # check the aggregation contract before writing
+  report$aggregation <- list(method = "GLS study-level average", correlation = correlation,
+    assumptions = "Distinct studies are independent; multilevel V is diagonal (sampling covariance not supplied). RVE uses correlated-effects weights (rho=.8), small=FALSE. Neither N nor p is inferred by aggregation.")
+  report$performance <- list(fit_cache_entries = opts$fit_cache_entries,
+    note = "Session-local exact data/model/config keys; cached warnings/failures and original fit times retained. Custom models default to no cache. Hidden outputs remain suspended by Shiny.")
+  report$model_source <- if (is.character(models)) list(type = "trusted_author_R_file",
+    file = basename(models), md5 = unname(tools::md5sum(models))) else list(type = "model_specifications")
+  report$models <- lapply(seq_len(nrow(models_to_run)), function(i) {
+    spec <- models_to_run[i, , drop = FALSE]
+    x <- if (spec$aggregated) metaUI_aggregate(dataset, correlation) else dataset
+    reason <- metaUI_model_reason(spec, x)
+    list(name = spec$name, aggregated = spec$aggregated, code = spec$code,
+         status = if (is.null(reason)) "eligible_not_fitted" else "unsupported", reason = reason)
+  })
+  report$pcurve <- tryCatch({
+    selected <- metaUI_pcurve_data(dataset)
+    list(status = "eligible_not_fitted", selection = "first per study before direction screening",
+         direction_exclusions = attr(selected, "direction_exclusions"),
+         note = "Normal Wald p-values; N not required for evidential-value plot. Author must justify selection against hypotheses/designs.")
+  }, error = function(e) list(status = "unsupported", reason = conditionMessage(e)))
+  report$zcurve <- "First effect per study; normal Wald |effect/SE|, not supplied source p-values. Independence across study IDs is an author assumption."
+  about <- paste0(about, "<h4>Input and analysis contract</h4><pre>",
+                  htmltools::htmlEscape(jsonlite::toJSON(report, auto_unbox = TRUE, pretty = TRUE, na = "null"), attribute = TRUE), "</pre>")
   ui <- generate_ui(dataset, dataset_name, about, filter_popups, opts = opts)
   server <- generate_server(dataset, opts = opts)
 
-  if (dir.exists(save_to_folder)) {
-    if (interactive()) {
-      if (length(list.files(save_to_folder)) > 0) {
-      if (!utils::askYesNo(glue::glue("Folder {save_to_folder} already exists. Overwrite?"))) {
-        stop("Folder already exists. Aborting.")
-      }
-      }
-    }
-  } else {
-    dir.create(save_to_folder)
-  }
+  if (dir.exists(save_to_folder) && length(list.files(save_to_folder, all.files = TRUE, no.. = TRUE)) && !overwrite)
+    stop("Destination is not empty. Use a fresh folder to preserve author edits, or explicitly set overwrite = TRUE.")
+  if (!dir.exists(save_to_folder)) dir.create(save_to_folder, recursive = TRUE)
   if (!dir.exists(file.path(save_to_folder, "www"))) {
     dir.create(file.path(save_to_folder, "www"))
   }
 
   file.copy(system.file("template_code", "helpers.R", package="metaUI"),
             file.path(save_to_folder, "helpers.R"), overwrite = TRUE)
-  file.copy(system.file("template_code", "favicon.ico", package="metaUI"),
-            file.path(save_to_folder, "www", "favicon.ico"), overwrite = TRUE)
+  file.copy(system.file("template_code", "favicon.svg", package="metaUI"),
+            file.path(save_to_folder, "www", "favicon.svg"), overwrite = TRUE)
   file.copy(system.file("template_code", "dmetar_contributions.R", package="metaUI"),
             file.path(save_to_folder, "dmetar_contributions.R"), overwrite = TRUE)
   if (is.character(models)) {
-    file.copy(models, file.path(save_to_folder, "models.R"))
+    file.copy(models, file.path(save_to_folder, "models.R"), overwrite = overwrite)
   } else {
     writeLines(generate_models.R(models_to_run), file.path(save_to_folder, "models.R"))
     if (is.function(models_from_function)) {
@@ -160,14 +197,22 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
       }
     }
   }
+  file.copy(system.file("template_code", "analysis.R", package = "metaUI"),
+            file.path(save_to_folder, "analysis.R"), overwrite = TRUE)
+  jsonlite::write_json(report, file.path(save_to_folder, "validation.json"), auto_unbox = TRUE, pretty = TRUE, na = "null")
+  dependencies <- sort(unique(c(declared_imports(), "psych")))
+  versions <- data.frame(package = dependencies,
+    version = vapply(dependencies, function(x) as.character(utils::packageVersion(x)), character(1)))
+  utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
+  file.copy(system.file("COPYRIGHTS", package = "metaUI"), file.path(save_to_folder, "COPYRIGHTS"), overwrite = TRUE)
   # Could consider keeping all labels in this file - but then ui.R needs less readable glue::glue syntax
-  writeLines(labels_and_options(dataset_name), file.path(save_to_folder, "labels_and_options.R"))
+  writeLines(labels_and_options(dataset_name, correlation), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
   writeLines(generate_global.R(eff_size_type_label), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
 
-  if (!launch_app) return(invisible(TRUE))
+  if (!launch_app) return(invisible(normalizePath(save_to_folder)))
   shinyAppDir(save_to_folder)
 }
 
@@ -179,13 +224,10 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 #' @noRd
 
 generate_global.R <- function(metaUI_eff_size_type_label) {
-  req_packages <- utils::packageDescription("metaUI") %>%
-    purrr::pluck("Imports") %>%
-    stringr::str_split(",", simplify = TRUE) %>%
-    purrr::map_chr(stringr::str_trim) %>%
-    unlist()
-  metaUI_eff_size_type_label <- metaUI_eff_size_type_label  %>% stringr::str_replace("'", stringr::fixed("\\\\'"))
+  req_packages <- declared_imports()
 
+
+  label_code <- paste(deparse(as.character(metaUI_eff_size_type_label)), collapse = "\n")
   glue::glue("
 
   # To launch the app manually, use shiny::shinyAppDir(YOURPATH) or the Run App button in RStudio
@@ -195,8 +237,9 @@ generate_global.R <- function(metaUI_eff_size_type_label) {
   # Ensure required packages are installed
   {purrr::map_chr(req_packages, ~ glue::glue('
       if (!requireNamespace(\"{.x}\", quietly = TRUE)) {{
-        install.packages(\"{.x}\")
+        stop(\"Missing dependency: {.x}. Install dependencies before launching; see dependencies.csv.\")
         }}'))  %>% glue::glue_collapse(sep = '\n')}
+  if (utils::packageVersion('meta') < '7.0.0') stop('meta >= 7.0-0 is required; install dependencies before launch.')
 
   # Ensure component files can be found
    f <- '.'
@@ -217,7 +260,7 @@ generate_global.R <- function(metaUI_eff_size_type_label) {
         dplyr::pull(value)
       if (length(this_file)==0)
       {{
-        this_file <- rstudioapi::getSourceEditorContext()$path
+        stop('Cannot locate app folder. Set the working directory or launch with shiny::runApp(app_folder).')
       }}
       return(dirname(this_file))
     }}
@@ -227,13 +270,14 @@ generate_global.R <- function(metaUI_eff_size_type_label) {
 
   # Source and set elements of app
   library(shiny)
-  source(file.path(f, 'helpers.R'))
-  source(file.path(f, 'models.R'))
-  source(file.path(f, 'labels_and_options.R'))
-  source(file.path(f, 'dmetar_contributions.R'))
-  server <- source(file.path(f, 'server.R')) %>% purrr::pluck('value')
-  ui <- source(file.path(f, 'ui.R'))  %>% purrr::pluck('value')
-  metaUI_eff_size_type_label <- '{metaUI_eff_size_type_label}'
+  source(file.path(f, 'helpers.R'), local = TRUE)
+  source(file.path(f, 'analysis.R'), local = TRUE)
+  source(file.path(f, 'models.R'), local = TRUE)
+  source(file.path(f, 'labels_and_options.R'), local = TRUE)
+  source(file.path(f, 'dmetar_contributions.R'), local = TRUE)
+  server <- source(file.path(f, 'server.R'), local = TRUE) %>% purrr::pluck('value')
+  ui <- source(file.path(f, 'ui.R'), local = TRUE)  %>% purrr::pluck('value')
+  metaUI_eff_size_type_label <- {label_code}
   metaUI__df <- readRDS(file.path(f, 'dataset.rds'))
 ")
 }

@@ -16,8 +16,8 @@
 #' # Then use when generating the app
 #' if (exists("app_data")) {
 #'   generate_shiny(app_data,
-#'     dataset_name = "Barroso et al 2021 - Maths Anxiety",
-#'     eff_size_type_label = "Fisher's Z scores")
+#'     dataset_name = "Your meta-analysis",
+#'     eff_size_type_label = "Declared effect scale")
 #' }
 
 get_model_tibble <- function() {
@@ -37,73 +37,20 @@ get_model_tibble <- function() {
 
         models_code <- tibble::tribble(
         ~name, ~code,
-            "Random-Effects Multilevel Model", ('metafor::rma.mv(
-                                yi = metaUI__effect_size,
-                                V = metaUI__variance,
-                                random = ~ 1 | metaUI__study_id/metaUI__effect_size,
-                                tdist = TRUE, # knapp-hartung adjustment
-                                data = df,
-                                method = "REML",
-                                sparse = TRUE
-                            )'),
-            "Robust Variance Estimation", ('robumeta::robu(
-                        metaUI__effect_size ~ 1, data = df,
-                        studynum = metaUI__study_id, var.eff.size = metaUI__variance, small = FALSE)'),
-            "Trim-and-fill", ('metafor::trimfill(meta::metagen(
-                                            TE = metaUI__effect_size,
-                                            seTE = metaUI__se,
-                                            data = df,
-                                            studlab = df$metaUI__study_id,
-                                            comb.fixed = FALSE,
-                                            comb.random = TRUE,
-                                            method.tau = "ML", # as recommended by  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4950030/
-                                            hakn = TRUE,
-                                            prediction = TRUE,
-                                            sm = df$metaUI__es_type[1]
-                                        ))'),
-            "P-uniform star", ('puniform::puni_star(
-                    yi = df$metaUI__effect_size, vi = df$metaUI__variance,
-                    alpha = .05,
-                    side = "right", method = "ML", boot = FALSE
-                    )'),
-            "Hedges-Vevea Selection Model", ('weightr::weightfunct(df$metaUI__effect_size,
-                df$metaUI__variance, steps = c(0.025, 1), fe = FALSE)'),
-            "P-Curve (first value)", ('p_curve(df, "first")'),
-            "P-Curve (last value)", ('p_curve(df, "last")'),
-            "Precision Effect Test", ('lm(metaUI__effect_size ~ sqrt(metaUI__variance), data = df, weights = 1 / metaUI__variance)'),
-            "Precision Effect Estimate using Standard Error", ('lm(metaUI__effect_size ~ metaUI__variance, data = df, weights = 1 / metaUI__variance)')
+            "Random-Effects Multilevel Model", metaUI_code_multilevel,
+            "Robust Variance Estimation", metaUI_code_rve,
+            "Trim-and-fill", metaUI_default_code[["Trim-and-fill"]],
+            "P-uniform star", metaUI_default_code[["P-uniform star"]],
+            "Hedges-Vevea Selection Model", metaUI_default_code[["Hedges-Vevea Selection Model"]],
+            "P-Curve (first value)", metaUI_default_code[["P-Curve (first value)"]],
+            "P-Curve (last value)", metaUI_default_code[["P-Curve (last value)"]],
+            "Precision Effect Test", metaUI_default_code[["Precision Effect Test"]],
+            "Precision Effect Estimate using Standard Error", metaUI_default_code[["Precision Effect Estimate using Standard Error"]]
         )
 
         # Can set up any helper functions for use in models_code (or to extract data in models_to_run)
-        # However, they need to be assigned to the global environment, so users should use <<- instead of <-
-        # (Inside the package, a different workaround is needed)
-
-        p_curve <- function(data, p_selection = c("first", "last")) {
-        if (p_selection == "first") {
-            p_vals <- data %>%
-            dplyr::group_by(.data$metaUI__study_id) %>%
-            dplyr::slice_head(n = 1) %>%
-            dplyr::ungroup()
-        } else {
-            p_vals <- data %>%
-            dplyr::group_by(.data$metaUI__study_id) %>%
-            dplyr::slice_tail(n = 1) %>%
-            dplyr::ungroup()
-        }
-            p_vals <- p_vals  %>%
-            dplyr::rename(
-                "studlab" = .data$metaUI__study_id,
-                "TE" = .data$metaUI__effect_size,
-                "seTE" = .data$metaUI__se,
-                "n" = .data$metaUI__N
-            )  %>%
-            dplyr::mutate(TE = abs(.data$TE))
-
-            pcurve(p_vals, effect.estimation = TRUE,
-                            N = p_vals$n, dmin = 0, dmax = max(abs(p_vals$TE)))
-        }
-
-        my_assign("p_curve", p_curve)
+        # Put helpers in the author model file; generated apps source it locally.
+        # The two default fit helpers are in the editable analysis.R file.
 
         # Keep this at the end of the file!
         models_to_run %>% dplyr::left_join(models_code, by = "name")

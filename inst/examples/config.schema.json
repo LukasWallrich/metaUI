@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "metaUI app configuration version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "data",
+    "mapping",
+    "dataset_name",
+    "output"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "data": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dataset_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "output": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "study_label",
+        "es_field",
+        "es_type"
+      ],
+      "properties": {
+        "study_label": {
+          "type": "string"
+        },
+        "es_field": {
+          "type": "string"
+        },
+        "variance": {
+          "type": "string"
+        },
+        "se": {
+          "type": "string"
+        },
+        "es_id": {
+          "type": "string"
+        },
+        "es_label": {
+          "type": "string"
+        },
+        "pvalue": {
+          "type": "string"
+        },
+        "sample_size": {
+          "type": "string"
+        },
+        "article_label": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "es_type": {
+          "enum": [
+            "SMD",
+            "COR",
+            "ZCOR"
+          ]
+        },
+        "variance_scale": {
+          "enum": [
+            "SMD",
+            "r",
+            "z"
+          ]
+        },
+        "direction": {
+          "enum": [
+            "unspecified",
+            "positive",
+            "negative"
+          ]
+        },
+        "filters": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "na.rm": {
+          "enum": [
+            true,
+            false,
+            "es_related"
+          ]
+        },
+        "arrange_filters": {
+          "enum": [
+            "given",
+            "alphabetical",
+            "leave"
+          ]
+        },
+        "keep_missing_level": {
+          "type": "boolean"
+        },
+        "categorical_filters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "variance"
+          ]
+        },
+        {
+          "required": [
+            "se"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "es_type": {
+                "const": "COR"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "variance_scale"
+            ],
+            "properties": {
+              "variance_scale": {
+                "const": "r"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "es_type": {
+                "const": "ZCOR"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "variance_scale"
+            ],
+            "properties": {
+              "variance_scale": {
+                "const": "z"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "es_type": {
+                "const": "SMD"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "variance_scale": {
+                "const": "SMD"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "correlation_dependent": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "max_forest_plot_rows": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "selection_list_threshold": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "shiny_theme": {
+          "type": "string"
+        },
+        "fit_cache_entries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        }
+      }
+    },
+    "about": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "type": "string"
+        },
+        "citation": {
+          "type": "string"
+        },
+        "osf_link": {
+          "type": "string"
+        },
+        "contact": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

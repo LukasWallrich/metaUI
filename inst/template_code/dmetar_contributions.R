@@ -1,3 +1,5 @@
+# Modified by metaUI, 2026-10-06: deduplicate identical noncentrality solves;
+# restore process options after each call. Original dmetar MIT attribution in COPYRIGHTS.
 # These functions are taken from the dmetar package since that is not on CRAN -
 # Copyright 2020 Mathias Harrer
 # MIT License
@@ -6,7 +8,7 @@
 #'
 #' This function calculates the standard error of an effect size provided the exact
 #' \eqn{p}-value and (continuous) effect size according to the formula
-#' by \href{https://www.ncbi.nlm.nih.gov/pubmed/21824904}{Altman and Bland (2011)}.
+#' by \href{https://pubmed.ncbi.nlm.nih.gov/21824904/}{Altman and Bland (2011)}.
 #' See the [dmetar documentation](https://dmetar.protectlab.org/) for examples.
 #'
 #' @usage se.from.p(effect.size, p, N, effect.size.type = 'difference',
@@ -209,7 +211,7 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
 #' To generate the \eqn{p}-curve and conduct the analysis, this function reuses parts of the \emph{R} code underlying
 #' the \href{http://p-curve.com/app4/pcurve_app4.052.r}{P-curve App 4.052} (Simonsohn, 2017). The effect sizes
 #' included in the \code{meta} object or \code{data.frame} provided for \code{x} are transformed
-#' into \eqn{z}-values internally, which are then used to calculate {p}-values and conduct the
+#' into \eqn{z}-values internally, which are then used to calculate \eqn{p}-values and conduct the
 #' Stouffer and Binomial test used for the \eqn{p}-curve analysis. Interpretations of the function
 #' concerning the presence or absence/inadequateness of evidential value are made according to the
 #' guidelines described by Simonsohn, Simmons and Nelson (2015):
@@ -342,7 +344,8 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
 
 
   # Disable scientific notation
-  options(scipen = 999)
+  old_options <- options(scipen = 999)
+  on.exit(options(old_options), add = TRUE)
 
   # Calculate Z
   zvalues.input <- abs(metaobject$TE / metaobject$seTE)
@@ -368,6 +371,16 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
     if (family == "f") ncp <- getncp.f(df1 = df1, df2 = df2, power = power)
     if (family == "c") ncp <- getncp.c(df = df1, power = power)
     return(ncp)
+  }
+
+  # Exact hexadecimal keys preserve every bit of the distribution parameters.
+  # Power is scalar in each call. Solve once per distinct row, then expand;
+  # the solver interval/tolerance and the original row order are unchanged.
+  getncps <- function(df1, df2, power, family) {
+    keys <- paste(family, sprintf("%a", df1), sprintf("%a", df2), sep = "|")
+    first <- which(!duplicated(keys))
+    values <- mapply(getncp, df1 = df1[first], df2 = df2[first], power = power, family = family[first])
+    unname(values[match(keys, keys[first])])
   }
 
   percent <- function(x, digits = 0, format = "f", ...) {
@@ -464,7 +477,7 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
   ppr.half <- pbound(ppr.half)
 
   # Power of 33%
-  ncp33 <- mapply(getncp, df1 = df1, df2 = df2, power = 1 / 3, family = family)
+  ncp33 <- getncps(df1 = df1, df2 = df2, power = 1 / 3, family = family)
 
   # Full-p-curve
   pp33 <- ifelse(family == "f" & p < .05, 3 * (pf(value, df1 = df1, df2 = df2, ncp = ncp33) - 2 / 3), NA)
@@ -554,7 +567,7 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
   ################################################
 
   powerfit <- function(power_est) {
-    ncp_est <- mapply(getncp, df1 = df1, df2 = df2, power = power_est, family = family)
+    ncp_est <- getncps(df1 = df1, df2 = df2, power = power_est, family = family)
     pp_est <- ifelse(family == "f" & p < .05, (pf(value, df1 = df1, df2 = df2, ncp = ncp_est) - (1 - power_est)) / power_est, NA)
     pp_est <- ifelse(family == "c" & p < .05, (pchisq(value, df = df1, ncp = ncp_est) - (1 - power_est)) / power_est, pp_est)
     pp_est <- pbound(pp_est)
@@ -890,10 +903,8 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
     {
       d <- dmin + i / 100 # effect size being considered
       di <- c(di, d) # add it to the vector (kind of silly, but kept for symmetry)
-      options(warn = -1) # turn off warning becuase R does not like its own pt() function!
-      loss.all <- c(loss.all, loss(df_obs = df_obs, t_obs = t_obs, d_est = d))
+      loss.all <- c(loss.all, suppressWarnings(loss(df_obs = df_obs, t_obs = t_obs, d_est = d)))
       # apply loss function so that effect size, store result
-      options(warn = 0) # turn warnings back on
     }
 
     # find the effect leading to smallest loss in that set, that becomes the starting point in the optimize command
@@ -902,7 +913,6 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
 
     # optimize around the global minimum
     dhat <- optimize(loss, c(dstart - .1, dstart + .1), df_obs = df_obs, t_obs = t_obs)
-    options(warn = -0)
 
     # Plot results
     plot(di, loss.all, xlab = "Effect size\nCohen-d", ylab = "Loss (D stat in KS test)", ylim = c(0, 1), main = "How well does each effect size fit? (lower is better)")

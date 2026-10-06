@@ -23,9 +23,9 @@ In a first step, you will need to load and import data. For metaUI, your datafil
 -   a **study label** to identify individual samples (You can include multiple effect sizes with the same study label to indicate that they are dependent.),
 -   an **effect size** measure,
 -   the **variance** of the effect size
--   the **standard error** of the effect size
--   the **sample size** it is based on
--   the ***p*****-value** for each effect size
+-   optionally, the **standard error** (otherwise derived from variance)
+-   optionally, the **sample size** (required only for applicable optional models)
+-   optionally, source **p-values**, with their provenance
 -   data on any **moderators / filters** you want to include
 
 Note that some of the fields can be calculated based on others. If you have effect sizes and their variance, for instance, you can calculate the standard error (by taking the square root of the variance), or if you have effect sizes, sample sizes and *p* values, you can calculate their standard error using the `se.from.p` function included in this package.
@@ -68,17 +68,18 @@ Next, use the `prepare_data()` function to format the dataset for use by the met
 my_data <- prepare_data(my_data,
   study_label = "____", 
   es_field = "____", 
-  se = "____", 
-  pvalue = "____",
-  sample_size = "____",
+  se = NULL, # optionally replace NULL with the SE column
+  pvalue = NULL, # optionally map source p-values
+  sample_size = NULL, # optionally map source N
   variance = "____", 
   # Filters/moderators can be named, with the "Display name" = "var_name" format
   # Add as many as you want to use
   filters = c("____" = "____", "___" = "____"), 
-  # Indicate the effect size type as used by the metafor::escalc package
-  # Typical options are OR (odds ratios), SMD (standardised mean differences, e.g., Cohen's d),
-  # COR (correlation coefficients) or ZCOR (Fisher's r-to-z transformed coefficient)
-  es_type = "____"
+  # Supported input scales: SMD, COR (raw r), or ZCOR (already Fisher z).
+  es_type = "____",
+  variance_scale = NULL, # use "r" for COR or "z" for ZCOR; do not guess
+  es_id = NULL, # optionally map genuine unique-within-study effect IDs
+  direction = "unspecified" # explicitly choose positive/negative for directional models
 )
 
 ```
@@ -94,20 +95,21 @@ generate_shiny(my_data, dataset_name = "____")
 To then create the Shiny app in a format that can be customized and deployed to shinyapps.io, you need to provide some more details regarding the information that should be displayed and **the path that the app should be saved to**.
 
 ```{r}
+# Choose a fresh destination once: existing author edits are protected.
+app_folder <- "my-app"
 generate_shiny(my_data, 
                dataset_name = "____",
                # A label for how the effect size should be described in charts
                eff_size_type_label = "____",
-               # The folder the app should be saved to 
-               # if you keep as is, you should get a popup to select it when running the code
-               save_to_folder = rstudioapi::selectDirectory(),
+               save_to_folder = app_folder,
+               launch_app = FALSE,
                # Details to show on the about page - see ?create_about for all options
                citation = "____",
                contact = "____"
                )
 ```
 
-After you have run the above, the app will be saved into the folder specified. You can open `app.R` in that folder to run the Shiny app.
+After you have run the above, the app will be saved into the folder specified. Inspect `validation.json` and `dependencies.csv`, install the recorded dependencies, then run `shiny::runApp(app_folder)` as a separate action. The generated app never installs packages on startup.
 
 To further customize the app, consider editing:
 
@@ -123,8 +125,9 @@ To further customize the app, consider editing:
 
 Follow the instructions provided by Posit/RStudio [here](https://shiny.rstudio.com/articles/shinyapps.html). In essence, you need to create an account, install the `rsconnect` package and authenticate within that package. Then you can run the following to deploy your app:
 
-```{r}
-rsconnect::deployApp(appDir = rstudioapi::selectDirectory())
+```{r eval=FALSE}
+# Public deployment is a separate, deliberate action after validation/review.
+rsconnect::deployApp(appDir = app_folder)
 ```
 
 Once that is done, the app should open in your browser, and you can copy the link from the address bar. That's it - you now have your own meta-analysis Shiny app.

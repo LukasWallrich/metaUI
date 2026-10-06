@@ -8,18 +8,22 @@ prepare_data(
   data,
   study_label,
   es_field,
-  se,
-  pvalue,
-  sample_size,
-  variance,
-  filters,
+  se = NULL,
+  pvalue = NULL,
+  sample_size = NULL,
+  variance = NULL,
+  filters = character(),
   url = NA,
   es_type = "SMD",
   article_label = NA,
   es_label = NA,
   na.rm = "es_related",
   arrange_filters = c("given", "alphabetical", "leave"),
-  keep_missing_level = FALSE
+  keep_missing_level = FALSE,
+  es_id = NULL,
+  variance_scale = NULL,
+  direction = c("unspecified", "positive", "negative"),
+  categorical_filters = character()
 )
 }
 \arguments{
@@ -41,7 +45,7 @@ prepare_data(
 
 \item{url}{Character. Field with URLs or DOIs to link to. DOIs can be in the format "10.1234/5678" or full links. Defaults to NA.}
 
-\item{es_type}{Character. Type of effect size. Defaults to "SMD" (standardized mean difference). Check the \code{\link[metafor:escalc]{metafor::escalc()}} function for other options.}
+\item{es_type}{Character. Input scale: SMD, COR (raw r), or ZCOR (Fisher z). COR needs r-scale variance and uses delta-method variance conversion; ZCOR needs z-scale variance.}
 
 \item{article_label}{Character. Field with article labels. Only used to report number of references in addition to number of independent samples.}
 
@@ -49,13 +53,21 @@ prepare_data(
 
 \item{na.rm}{Should rows with any missing values be removed? Can be TRUE, FALSE or "es_related" -
 the last is the default and drops rows with missing values for any of the variables used in the standard meta-analysis models, namely
-\code{es_field}, \code{sample_size}, \code{variance}, \code{se} and \code{pvalue}. Setting this to TRUE also drops rows with missing values on any of the filters
+\code{study_label}, \code{es_field}, \code{variance}, and \code{se}. Optional p/N never remove rows under this default. Setting this to TRUE also drops rows with missing values on any of the filters
 etc, which might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
-or change the models and analyses to be included in the app.}
+or change the models and analyses to be included in the app. Invalid required inputs with FALSE cause an error.}
 
 \item{arrange_filters}{Character. How should the filters be arranged in the app? Options are "given" by the \code{filters} argument, "alphabetical" or "leave" (as they are in the dataset). Defaults to "given".}
 
 \item{keep_missing_level}{Logical. Should a \code{(Missing)}-level be kept even for filters that do not have missing values? Might be advisable when you expect users to upload new data with missing values. Defaults to FALSE.}
+
+\item{es_id}{Optional column with unique effect IDs within each study. Defaults to input row IDs.}
+
+\item{variance_scale}{Required for COR (r) and ZCOR (z); optional SMD for SMD.}
+
+\item{direction}{Explicit direction for one-sided bias models: unspecified, positive, or negative.}
+
+\item{categorical_filters}{Explicitly convert named filter columns to factors with radix-sorted levels. Useful for CSV/JSON builds.}
 }
 \value{
 tibble with the data from the file/input reformatted for metaUI
@@ -65,6 +77,6 @@ You may want to use the \code{\link[metafor:escalc]{metafor::escalc()}} function
 }
 \examples{
 \dontrun{
-import_data("my_meta.csv", "study_id", "cohens_d", c("Country" = "country", "Year" = "year"))
+prepare_data("my_meta.csv", "study_id", "cohens_d", variance = "vi")
 }
 }
