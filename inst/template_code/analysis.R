@@ -44,10 +44,10 @@ metaUI_rve_fit <- function(df) {
 
 # One cache per server session. Exact keys include all data attributes and model
 # code/configuration; no hash collisions, cross-user state, or unbounded history.
-metaUI_fit_cache <- function(max_entries = 3L) {
+metaUI_fit_cache <- function(max_entries = 3L, limit = 3L) {
   if (length(max_entries) != 1L || !is.numeric(max_entries) || !is.finite(max_entries) ||
-      max_entries < 0 || max_entries > 3 || max_entries != as.integer(max_entries))
-    stop("fit_cache_entries must be an integer from 0 to 3.")
+      max_entries < 0 || max_entries > limit || max_entries != as.integer(max_entries))
+    stop("fit_cache_entries must be an integer from 0 to ", limit, ".")
   entries <- list()
   cached <- function(df, models, correlation = .6, aggregation = "aggregate") {
     started <- proc.time()[["elapsed"]]
@@ -111,11 +111,13 @@ metaUI_aggregate <- function(df, correlation = .6, method = "aggregate") {
 }
 
 # Identify default estimators by their complete code, so renaming a model keeps its
-# input checks and sign handling. Edited or unrecognised code keeps its display name.
-metaUI_model_role <- function(spec) {
+# input checks and sign handling. Edited or unrecognised code returns `fallback`.
+metaUI_model_role <- function(spec, fallback = spec$name) {
   normalise <- function(x) gsub("\\s+", "", x)
-  hit <- names(metaUI_default_code)[normalise(metaUI_default_code) == normalise(spec$code)]
-  if (length(hit)) hit[1] else spec$name
+  defaults <- c("Random-Effects Multilevel Model" = metaUI_code_multilevel,
+                "Robust Variance Estimation" = metaUI_code_rve, metaUI_default_code)
+  hit <- names(defaults)[normalise(defaults) == normalise(spec$code)]
+  if (length(hit)) hit[1] else fallback
 }
 
 metaUI_model_reason <- function(spec, df) {
@@ -152,6 +154,8 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
     spec <- models[i, , drop = FALSE]
     x <- if (isTRUE(spec$aggregated)) df_agg else df
     reason <- metaUI_model_reason(spec, x)
+    bayesian <- grepl("^metaUI_bayesian_fit\\(", spec$code)
+    if (bayesian && nrow(x) < 2L) reason <- "Bayesian analysis requires at least two studies"
     warnings <- character()
     elapsed <- 0
     result <- c(es = NA_real_, LCL = NA_real_, UCL = NA_real_, k = NA_real_)
@@ -178,7 +182,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
         result <- candidate
         if (reflected) result[c("es", "LCL", "UCL")] <- c(-result["es"], -result["UCL"], -result["LCL"])
         status <- "ok"
-        if (!spec$aggregated && !reflected && spec$code %in% c(metaUI_code_multilevel, metaUI_code_rve)) fits[[i]] <<- env$mod
+        if (bayesian || (!spec$aggregated && !reflected && spec$code %in% c(metaUI_code_multilevel, metaUI_code_rve))) fits[[i]] <<- env$mod
         ""
       }, error = function(e) { status <<- "failed"; conditionMessage(e) })
       elapsed <- proc.time()[["elapsed"]] - started
@@ -190,6 +194,9 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
                       input_rows = nrow(df), analysis_rows = nrow(x),
                       collapsed_rows = nrow(df) - nrow(x), aggregated = spec$aggregated,
                       fit_seconds = elapsed, reflected = reflected, row.names = NULL)
+    row$interval_type <- if (bayesian) "95% central credible interval (prior-dependent)" else
+      if (is.na(metaUI_model_role(spec, NA_character_))) "Author-defined interval (type and coverage unknown)" else
+      "Confidence interval (coverage model-dependent)"
     row$fit_es <- row$es; row$fit_LCL <- row$LCL; row$fit_UCL <- row$UCL
     if (df$metaUI__es_type[1] == "ZCOR") row[c("es", "LCL", "UCL")] <- lapply(row[c("es", "LCL", "UCL")], tanh)
     row
@@ -233,6 +240,14 @@ metaUI_validate_upload <- function(df, built) {
   if (any(abs(df$metaUI__effect_size - expected_y) > 1e-8 * pmax(1, abs(expected_y))) ||
       any(abs(df$metaUI__variance - expected_v) > 1e-6 * pmax(abs(expected_v), df$metaUI__variance)))
     stop("Uploaded source/fitting-scale fields disagree. Re-prepare original input with the declared transformation.")
+  specs <- metaUI_computation_specs(built)
+  metaUI_validate_alternatives(df, specs)
+  if (length(specs)) {
+    attr(df, "metaUI_alternatives") <- specs
+    attr(df, "metaUI_input_scale") <- input_scale
+    label <- attr(built, "metaUI_primary_label")
+    attr(df, "metaUI_primary_label") <- if (is.null(label)) attr(built, "metaUI_validation")$primary_label else label
+  }
   centre <- mean(built$metaUI__effect_size); spread <- stats::sd(built$metaUI__effect_size)
   degenerate <- !is.finite(spread) || spread == 0
   z <- if (degenerate) rep(0, nrow(df)) else (df$metaUI__effect_size - centre) / spread
@@ -329,7 +344,8 @@ metaUI_interval_assessment <- function(estimates, bound = NULL, scale = "SMD", k
     assessment[valid & estimates$LCL > bound] <- "Exceeds positive bound"
     assessment[valid & estimates$UCL < -bound] <- "Exceeds negative bound"
   }
+  bayesian <- if ("interval_type" %in% names(estimates)) grepl("credible", estimates$interval_type) else rep(FALSE, nrow(estimates))
   data.frame(Model = estimates$Model, bound = rep(if (is.null(bound)) NA_real_ else bound, nrow(estimates)),
     scale = rep(scale, nrow(estimates)), assessment = assessment, threshold = threshold,
-    interval = ifelse(estimates$Model %in% known_models, "Reported 95% CI", "Author-defined interval; error rate unknown"))
+    interval = ifelse(bayesian, "95% central credible interval (prior-dependent)", ifelse(estimates$Model %in% known_models, "Reported 95% CI", "Author-defined interval; error rate unknown")))
 }

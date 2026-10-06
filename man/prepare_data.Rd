@@ -23,7 +23,9 @@ prepare_data(
   es_id = NULL,
   variance_scale = NULL,
   direction = c("unspecified", "positive", "negative"),
-  categorical_filters = character()
+  categorical_filters = character(),
+  alternatives = list(),
+  primary_label = "As supplied"
 )
 }
 \arguments{
@@ -68,6 +70,10 @@ or change the models and analyses to be included in the app. Invalid required in
 \item{direction}{Explicit direction for one-sided bias models: unspecified, positive, or negative.}
 
 \item{categorical_filters}{Explicitly convert named filter columns to factors with radix-sorted levels. Useful for CSV/JSON builds.}
+
+\item{alternatives}{Named list of up to five author-defined effect computations. Each entry supplies es_field, variance or se, es_type, variance_scale when required, and a nonempty justification. Every computation must retain the same effects and converge on the same fitting scale.}
+
+\item{primary_label}{Label for the primary computation when alternatives are provided.}
 }
 \value{
 tibble with the data from the file/input reformatted for metaUI
@@ -76,7 +82,6 @@ tibble with the data from the file/input reformatted for metaUI
 You may want to use the \code{\link[metafor:escalc]{metafor::escalc()}} function in the metafor package to calculate effect sizes and their variances in preparation for this function.
 }
 \examples{
-\dontrun{
-prepare_data("my_meta.csv", "study_id", "cohens_d", variance = "vi")
-}
+raw <- data.frame(study = letters[1:4], d = c(.1, .3, -.1, .4), vi = rep(.02, 4))
+prepare_data(raw, "study", "d", variance = "vi")
 }

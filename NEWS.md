@@ -1,5 +1,13 @@
-# metaUI 0.1.2.9001 (development candidate)
+# metaUI 0.2.0
 
+* Add author-defined effect-size computations with explicit scale/variance contracts,
+  consistent row selection, comparisons, provenance and workbook restoration.
+* Add opt-in deterministic Bayesian normal-normal analysis, posterior median and
+  central credible intervals, disclosed priors and heterogeneity-prior sensitivity.
+* Share applied selections through build-specific validated URLs; uploaded datasets
+  remain workbook-only, and restoration waits for browser acknowledgement.
+* Extend declarative authoring to schema version 2, retaining version 1 behavior.
+* Make package examples runnable without launching an app and prepare release checks.
 * Optimise p-curve without changing results and reuse compatible fitted objects.
   Disclose session-local exact-selection caching and its opt-out for custom code.
 * Validate and persist uploads, restore picker/missing-value choices, widen slider

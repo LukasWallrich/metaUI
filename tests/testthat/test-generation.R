@@ -47,7 +47,7 @@ test_that("headless app loads and runs the generated server", {
     expect_true(estimatesreactive()$cache_hit)
     expect_match(output$calculation_status, "Reused")
     expect_identical(estimatesfiltered()$fit_es, table$fit_es)
-    expect_match(output$effectestimate, "95% CI")
+    expect_match(output$effectestimate, "95% interval")
   })
   # A separate reader starts with a separate cache.
   shiny::testServer(env$server, {

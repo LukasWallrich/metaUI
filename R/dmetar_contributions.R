@@ -8,7 +8,7 @@
 #'
 #' This function calculates the standard error of an effect size provided the exact
 #' \eqn{p}-value and (continuous) effect size according to the formula
-#' by \href{https://pubmed.ncbi.nlm.nih.gov/21824904/}{Altman and Bland (2011)}.
+#' by Altman and Bland (2011), \doi{10.1136/bmj.d2090}.
 #' See the [dmetar documentation](https://dmetar.protectlab.org/) for examples.
 #'
 #' @usage se.from.p(effect.size, p, N, effect.size.type = 'difference',
@@ -240,7 +240,7 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
 #'
 #' @references Harrer, M., Cuijpers, P., Furukawa, T.A, & Ebert, D. D. (2019).
 #' \emph{Doing Meta-Analysis in R: A Hands-on Guide}. DOI: 10.5281/zenodo.2551803.
-#' \href{https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/pcurve.html}{Chapter 9.2}.
+#' \href{https://doing-meta.guide/pcurve.html}{Chapter 9.2}.
 #'
 #' Simonsohn, U., Nelson, L. D., & Simmons, J. P. (2014a). P-curve: a Key to the File-drawer.
 #' \emph{Journal of Experimental Psychology, 143}(2), 534.

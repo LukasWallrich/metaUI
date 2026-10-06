@@ -49,8 +49,8 @@ verified source licences and attribution in `inst/COPYRIGHTS`.
 Allbritton, D., Gómez, P., Angele, B., Vasilev, M., & Perea, M. (2024). Breathing Life Into Meta-Analytic Methods. *Journal of Cognition*, 7(1).
 
 
-Other related tools include [Metapsy](https://metapsy.org/) (analysis workflow
-inspiration), the [Cooperation Databank](https://app.cooperationdatabank.org/)
+Other related tools include [Metapsy](https://www.metapsy.org/) (analysis workflow
+inspiration), the [Cooperation Databank](https://cooperationdatabank.org/)
 (dataset exploration), [PsychOpen CAMA](https://cama.psychopen.eu/)
 (cumulative meta-analysis), and the [taVNS HRV app](https://vinzentwolf.shinyapps.io/taVNSHRVmeta/)
 (a Bayesian living meta-analysis). These are references, not endorsements or
@@ -134,3 +134,36 @@ applies to exports.
 The [synthetic correlation example](inst/examples/correlations) demonstrates raw-r
 variance conversion and checks the fitted summary against an independent metafor
 reference.
+
+
+Authors can supply up to five alternative computations in `prepare_data(alternatives = ...)`.
+Each named entry declares `es_field`, `variance` or `se`, `es_type`,
+`variance_scale` for correlations, and a `justification`. `primary_label` names the
+original computation. All alternatives use the same effects and fitting scale.
+Readers apply a computation with Analyze data; the comparison tab fits the
+configured multilevel/RVE models for the same selection. The descriptive z filter
+and source p-values remain anchored to the primary computation.
+
+Enable study-level Bayesian analysis with
+`generate_shiny(..., bayesian = list(enabled = TRUE))`, after installing the
+optional `bayesmeta` package. The mean prior is flat; the heterogeneity prior is
+half-normal with scale 0.5 for SMD or 0.25 for Fisher z, configurable with
+`tau_scale`. Central 95% credible intervals and posterior medians are reported,
+and the sensitivity tab compares half and double that prior scale. This uses
+aggregated studies and the declared within-study correlation. Authors who edit
+`aggregation_method` in the generated `labels_and_options.R` to `"first"` switch it
+to the first-effect rule; the build records the priors and the default aggregation.
+The default cap of 20 studies protects interactive use: first-fit benchmarks took
+about 20 seconds at 20 studies and 97 seconds at 50 on the review machine.
+Authors can set `max_studies` from 2 to 50, with a build warning above 20. Each
+Analyze blocks the Shiny server process while fitting. Prior sensitivity runs
+when its tab or download is requested and can require two extra fits.
+See [Röver et al.](https://doi.org/10.1002/jrsm.1475) for the prior rationale.
+
+After analysis, the selection link and address bar describe the applied selection
+on this exact built dataset. Links validate filters, missing-value choices,
+computation and equivalence bound before restoring and analysing. Invalid links
+leave a notice and require manual analysis. Uploaded data require the workbook,
+which includes all computation inputs; their session-specific data are not encoded
+in URLs. Schema version 2 adds computation and Bayesian authoring; version 1
+continues to accept the original configuration fields.

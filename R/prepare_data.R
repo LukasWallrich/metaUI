@@ -26,17 +26,18 @@
 #' @param es_id Optional column with unique effect IDs within each study. Defaults to input row IDs.
 #' @param variance_scale Required for COR (r) and ZCOR (z); optional SMD for SMD.
 #' @param direction Explicit direction for one-sided bias models: unspecified, positive, or negative.
+#' @param primary_label Label for the primary computation when alternatives are provided.
+#' @param alternatives Named list of up to five author-defined effect computations. Each entry supplies es_field, variance or se, es_type, variance_scale when required, and a nonempty justification. Every computation must retain the same effects and converge on the same fitting scale.
 #' @return tibble with the data from the file/input reformatted for metaUI
 #' @export
 #' @examples
-#' \dontrun{
-#' prepare_data("my_meta.csv", "study_id", "cohens_d", variance = "vi")
-#' }
+#' raw <- data.frame(study = letters[1:4], d = c(.1, .3, -.1, .4), vi = rep(.02, 4))
+#' prepare_data(raw, "study", "d", variance = "vi")
 prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, sample_size = NULL, variance = NULL, filters = character(),
                          url = NA, es_type = "SMD", article_label = NA, es_label = NA, na.rm = "es_related",
                          arrange_filters = c("given", "alphabetical", "leave"), keep_missing_level = FALSE, es_id = NULL,
                          variance_scale = NULL, direction = c("unspecified", "positive", "negative"),
-                         categorical_filters = character()) {
+                         categorical_filters = character(), alternatives = list(), primary_label = "As supplied") {
   source <- list(kind = if (is.character(data)) "CSV" else "data.frame",
                  file = if (is.character(data)) basename(data) else NULL,
                  md5 = if (is.character(data)) unname(tools::md5sum(data)) else NULL)
@@ -45,6 +46,19 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
     data <- read.csv(data, stringsAsFactors = FALSE)
   }
 
+  raw_data <- data
+  alternative_base <- list(study_label = study_label, es_field = es_field, se = se,
+    pvalue = pvalue, sample_size = sample_size, variance = variance, filters = filters,
+    url = url, es_type = es_type, article_label = article_label, es_label = es_label,
+    na.rm = na.rm, arrange_filters = arrange_filters, keep_missing_level = keep_missing_level,
+    es_id = es_id, variance_scale = variance_scale, direction = direction,
+    categorical_filters = categorical_filters)
+  if (!is.list(alternatives) || length(alternatives) > 5L ||
+      (length(alternatives) && (is.null(names(alternatives)) || anyNA(names(alternatives)) || any(!nzchar(trimws(names(alternatives)))) ||
+        anyDuplicated(names(alternatives)) || "As supplied" %in% names(alternatives))))
+    stop("alternatives must be a uniquely named list of at most five computations.")
+
+  if (!is.character(primary_label) || length(primary_label) != 1L || is.na(primary_label) || !nzchar(trimws(primary_label)) || primary_label %in% names(alternatives)) stop("primary_label must be a unique nonempty string.")
   direction <- match.arg(direction)
   if (!es_type %in% c("SMD", "COR", "ZCOR"))
     stop("Supported metrics are SMD, COR and ZCOR; other metrics require custom analysis.")
@@ -215,8 +229,54 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
     input_scale = es_type, fitting_scale = data$metaUI__es_type[1],
     display_scale = data$metaUI__display_scale[1], direction = direction, derivations = derived,
     optional_inputs = list(missing_p = sum(is.na(data$metaUI__pvalue)), missing_N = sum(is.na(data$metaUI__N)),
-                           invalid_p = sum(invalid_p), invalid_N = sum(invalid_n)),
-    fingerprint = metaUI_data_fingerprint(data))
+                           invalid_p = sum(invalid_p), invalid_N = sum(invalid_n)))
+  specs <- lapply(seq_along(alternatives), function(i) {
+    spec <- alternatives[[i]]
+    required <- c("es_field", "es_type", "justification")
+    allowed <- c(required, "variance", "se", "variance_scale")
+    if (!is.list(spec) || !all(required %in% names(spec)) ||
+        length(setdiff(names(spec), allowed)) ||
+        !any(c("variance", "se") %in% names(spec)) ||
+        !is.character(spec$justification) || length(spec$justification) != 1L || is.na(spec$justification) || !nzchar(trimws(spec$justification)))
+      stop("Alternative must declare effect, variance/SE, scale and justification: ", names(alternatives)[i])
+    args <- alternative_base
+    args$se <- NULL; args$variance <- NULL; args$variance_scale <- NULL
+    for (key in setdiff(names(spec), "justification")) args[[key]] <- spec[[key]]
+    kept <- raw_data[original_rows[reason == ""], , drop = FALSE]
+    args$na.rm <- FALSE
+    if (is.null(es_id)) {
+      kept$metaUI_original_effect_id <- original_rows[reason == ""]
+      args$es_id <- "metaUI_original_effect_id"
+    }
+    alt <- tryCatch(do.call(prepare_data, c(list(data = kept), args)), error = function(e)
+      stop("Alternative ", names(alternatives)[i], " is invalid for retained effects (original rows ",
+        paste(original_rows[reason == ""], collapse = ", "), "): ", conditionMessage(e)))
+    if (!identical(as.character(alt$metaUI__study_id), as.character(data$metaUI__study_id)) ||
+        !identical(as.character(alt$metaUI__effect_id), as.character(data$metaUI__effect_id)))
+      stop("Alternative computations must retain exactly the same effects: ", names(alternatives)[i])
+    if (!identical(alt$metaUI__es_type[1], data$metaUI__es_type[1]))
+      stop("Alternative computations must use the same fitting scale: ", names(alternatives)[i])
+    prefix <- paste0("metaUI__alt_", i, "_")
+    columns <- setNames(paste0(prefix, c("input_effect", "input_variance", "fit_effect", "fit_variance")),
+      c("input_effect", "input_variance", "fit_effect", "fit_variance"))
+    data[[columns[["input_effect"]]]] <<- alt$metaUI__input_effect
+    data[[columns[["input_variance"]]]] <<- alt$metaUI__input_variance
+    data[[columns[["fit_effect"]]]] <<- alt$metaUI__effect_size
+    data[[columns[["fit_variance"]]]] <<- alt$metaUI__variance
+    c(list(id = paste0("alt", i), name = names(alternatives)[i],
+      justification = spec$justification, input_scale = spec$es_type,
+      mapping = spec[setdiff(names(spec), "justification")]), as.list(columns))
+  })
+  if (length(specs)) {
+    attr(data, "metaUI_validation")$primary_label <- primary_label
+    attr(data, "metaUI_primary_label") <- primary_label
+    attr(data, "metaUI_validation")$alternatives <- specs
+    attr(data, "metaUI_alternatives") <- specs
+    attr(data, "metaUI_input_scale") <- es_type
+    metaUI_validate_alternatives(data, specs)
+  }
+  # Fingerprint after alternative columns are added, so they are covered too.
+  attr(data, "metaUI_validation")$fingerprint <- metaUI_data_fingerprint(data)
   if (nrow(exclusions)) warning(nrow(exclusions), " rows excluded; see attr(data, 'metaUI_validation')$exclusions.")
   data
 }
