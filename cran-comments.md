@@ -21,3 +21,10 @@ with unverifiable redistribution terms was removed. Examples do not launch apps,
 install dependencies, access the network or write to user directories.
 
 This is preparation only; no CRAN submission has been made.
+
+## CRAN incoming note
+
+The manual cites original p-curve source URLs (p-curve.com/app4 and Supplement).
+Their host returns HTTP 406 to automated checks. These are retained as original
+source attribution; package examples/vignettes do not fetch them. Redirected links
+were updated, and the Altman/Bland reference uses the Rd DOI macro.

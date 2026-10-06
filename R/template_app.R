@@ -720,7 +720,7 @@ glue_string <- ('
       dplyr::rename_with(~ stringr::str_replace(.x, "metaUI__filter_", "") %>%
         stringr::str_replace("metaUI__article_label", "Source") %>%
         stringr::str_replace("metaUI__url", "URL")) %>%
-      dplyr::mutate(p = fmt_p(p, include_equal = FALSE)) %>%
+      dplyr::mutate(`Source p (primary)` = fmt_p(.data[["Source p (primary)"]], include_equal = FALSE)) %>%
       dplyr::arrange(.data$Study)
 
     if ("Source" %in% names(out)) {
