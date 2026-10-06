@@ -122,8 +122,7 @@ references and inspiration; no code was copied from restricted sources.
   finding and empty-selection improvements were applied. Unicode/HTML/plain-text
   escaping, strict boundaries and unchanged fit state are covered by regressions.
 
-Private review app: `http://100.121.34.85:7883/` (verified HTTP 200). Synthetic
-16-effect fixture, deliberately configured with an 8-row forest limit; narrow Year
-to 2001–2008 to view/export the boundary plot. The production default remains 200.
+A private review instance with the synthetic 16-effect fixture (8-row forest
+limit) was used for manual checks; the production default remains 200.
 No screenshots or user data are uploaded to GitHub. Hosted CI will repeat the
 package/platform and browser checks for the stacked PR.

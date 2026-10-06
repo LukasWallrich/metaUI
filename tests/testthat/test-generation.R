@@ -106,8 +106,8 @@ test_that("uploads retain extreme/missing numeric inputs and restored picker sel
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   ui_code <- paste(readLines("ui.R"), collapse = "\n")
   expect_match(ui_code, "metaUI__filter_Year_include_NA")
-  # Integer filters get exact integer bounds and steps rather than rounded fractions.
-  expect_match(ui_code, "min = 2001,\\s+max = 2016,\\s+value = c\\(2001,\\s+2016\\),\\s+sep = \"\", step = 1")
+  # Integer filters get whole-number bounds, steps and an integer grid.
+  expect_match(ui_code, "spec = list(min = 2000, max = 2016, step = 1, ticks = 8)", fixed = TRUE)
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Year = c(2001, 2016),
       metaUI__filter_Group = paste0("G", 1:8), metaUI__filter_Year_include_NA = TRUE)
@@ -233,5 +233,82 @@ test_that("downloaded empty category selections re-upload without losing their m
     expect_equal(nrow(df_filtered()), 0)
     expect_match(output$selection_status, "Selected 0 of 16")
     expect_match(output$selection_status, "Excluded 16")
+  })
+})
+
+
+test_that("authors can declare one primary model that is never substituted", {
+  d <- prepared()
+  path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
+  expect_error(generate_shiny(d, "x", primary_model = "Not a model", save_to_folder = path, launch_app = FALSE),
+    "primary_model must name exactly one model")
+  expect_false(dir.exists(path))
+  for (primary in c("Robust Variance Estimation", "P-uniform star")) {
+    root <- tempfile(); on.exit(unlink(root, recursive = TRUE), add = TRUE)
+    generate_shiny(d, "Primary fixture", primary_model = primary, save_to_folder = root, launch_app = FALSE)
+    expect_identical(jsonlite::read_json(file.path(root, "validation.json"))$primary_model, primary)
+    wd <- getwd(); setwd(root)
+    env <- new.env(parent = globalenv()); sys.source("global.R", env)
+    setwd(wd)
+    expect_identical(env$primary_model, primary)
+    shiny::testServer(env$server, {
+      session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
+      card <- as.character(output$primary_estimate$html)
+      table <- output$effectestimate
+      expect_match(card, "Primary analysis, declared by the authors")
+      expect_match(card, primary, fixed = TRUE)
+      # The declared model is listed first in the reader table.
+      expect_match(table, paste0("<tbody>\\s*<tr>\\s*<td> primary </td>\\s*<td> ", primary, " </td>"))
+      expect_true(is.list(output$model_comparison))
+      if (primary == "P-uniform star") {
+        expect_match(card, "Not estimated for this selection \\(unsupported\\)")
+        expect_match(card, "does not substitute another model")
+        expect_false(grepl("CI \\[", card))
+      } else {
+        rve <- estimatesfiltered()[estimatesfiltered()$Model == primary, ]
+        expect_match(card, formatC(rve$es, format = "f", digits = 2), fixed = TRUE)
+      }
+      provenance <- data_list()$provenance
+      expect_identical(provenance$value[provenance$field == "primary_model"], primary)
+    })
+  }
+  root <- tempfile(); on.exit(unlink(root, recursive = TRUE), add = TRUE)
+  generate_shiny(d, "No primary", save_to_folder = root, launch_app = FALSE)
+  expect_null(jsonlite::read_json(file.path(root, "validation.json"))$primary_model)
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
+    expect_match(as.character(output$primary_estimate$html), "have not marked a primary model")
+    expect_false(grepl("Role", output$effectestimate))
+  })
+})
+
+test_that("the JSON config passes and validates a declared primary model", {
+  root <- tempfile(); dir.create(root); on.exit(unlink(root, recursive = TRUE))
+  file.copy(system.file("examples", "tiny.csv", package = "metaUI"), root)
+  config <- jsonlite::read_json(system.file("examples", "tiny.json", package = "metaUI"))
+  config$output <- "app"; config$primary_model <- "Random-Effects Multilevel Model"
+  path <- file.path(root, "config.json"); jsonlite::write_json(config, path, auto_unbox = TRUE)
+  build_app(path)
+  expect_identical(jsonlite::read_json(file.path(root, "app", "validation.json"))$primary_model, config$primary_model)
+  config$output <- "other"; config$primary_model <- "Unknown"
+  jsonlite::write_json(config, path, auto_unbox = TRUE)
+  expect_error(build_app(path), "primary_model must name exactly one model")
+  expect_false(dir.exists(file.path(root, "other")))
+})
+
+test_that("status and summaries show filter labels with spaces, not input IDs", {
+  root <- tempfile(); on.exit(unlink(root, recursive = TRUE))
+  x <- fixture(); x$quality <- seq(0, 1, length.out = 16)
+  d <- prepare_data(x, "study", "yi", variance = "vi", es_id = "id", filters = c("Risk of bias" = "quality"))
+  generate_shiny(d, "Spaced labels", save_to_folder = root, launch_app = FALSE)
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), `metaUI__filter_Risk_of_bias` = c(0, 1),
+      `metaUI__filter_Risk_of_bias_include_NA` = TRUE, go = 1)
+    expect_match(output$selection_status, "Risk of bias: 0", fixed = TRUE)
+    expect_match(output$summary_metaUI__filter_Risk_of_bias_table, "Risk of bias", fixed = TRUE)
   })
 })

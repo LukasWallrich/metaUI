@@ -51,11 +51,12 @@ metaUI_reuse_fit <- function(results, models, code, df, fallback) {
 }
 
 metaUI_heterogeneity <- function(mod, df) {
-  identified <- anyDuplicated(df$metaUI__study_id) > 0L
+  # Needs replication both between and within studies.
+  identified <- length(unique(df$metaUI__study_id)) > 1L && anyDuplicated(df$metaUI__study_id) > 0L
   data.frame(study_variance = if (identified) mod$sigma2[1] else NA_real_,
     effect_variance = if (identified) mod$sigma2[2] else NA_real_,
     total_variance = sum(mod$sigma2), Q = mod$QE, Q_p = mod$QEp,
-    components = if (identified) "Study and within-study effects" else "Split not identified: one effect per study")
+    components = if (identified) "Study and within-study effects" else if (anyDuplicated(df$metaUI__study_id)) "Split not identified: only one study" else "Split not identified: one effect per study")
 }
 
 metaUI_aggregate <- function(df, correlation = .6, method = "aggregate") {
@@ -81,21 +82,36 @@ metaUI_aggregate <- function(df, correlation = .6, method = "aggregate") {
   }))
 }
 
+# Identify the default estimators by their code, so renaming a model keeps its
+# direction handling and input checks. Unrecognised code keeps its display name.
+metaUI_model_role <- function(spec) {
+  code <- gsub("\\s+", "", spec$code)
+  roles <- c("P-uniform star" = "puniform::puni_star(",
+             "Hedges-Vevea Selection Model" = "weightr::weightfunct(",
+             "P-Curve (first value)" = 'metaUI_pcurve_fit(df,"first")',
+             "P-Curve (last value)" = 'metaUI_pcurve_fit(df,"last")',
+             "Precision Effect Test" = "lm(metaUI__effect_size~sqrt(metaUI__variance),",
+             "Precision Effect Estimate using Standard Error" = "lm(metaUI__effect_size~metaUI__variance,")
+  hit <- names(roles)[vapply(roles, grepl, logical(1), x = code, fixed = TRUE)]
+  if (length(hit)) hit[1] else spec$name
+}
+
 metaUI_model_reason <- function(spec, df) {
   if (!nrow(df)) return("No eligible rows")
+  role <- metaUI_model_role(spec)
   if (any(!is.finite(df$metaUI__effect_size)) || any(!is.finite(df$metaUI__variance) | df$metaUI__variance <= 0))
     return("Invalid required effect/variance inputs")
-  if (spec$name %in% c("P-uniform star", "Hedges-Vevea Selection Model") &&
+  if (role %in% c("P-uniform star", "Hedges-Vevea Selection Model") &&
       !df$metaUI__direction[1] %in% c("positive", "negative"))
     return("Requires explicit positive or negative effect direction")
-  if (spec$name %in% c("P-Curve (first value)", "P-Curve (last value)")) {
+  if (role %in% c("P-Curve (first value)", "P-Curve (last value)")) {
     if (df$metaUI__es_type[1] != "SMD") return("P-curve effect estimation only supported for SMD")
-    selection <- if (spec$name == "P-Curve (last value)") "last" else "first"
+    selection <- if (role == "P-Curve (last value)") "last" else "first"
     issue <- tryCatch({metaUI_pcurve_data(df, selection, require_N = TRUE); NULL}, error = function(e) conditionMessage(e))
     if (!is.null(issue)) return(issue)
   }
-  if (spec$name %in% c("Precision Effect Test", "Precision Effect Estimate using Standard Error")) {
-    predictor <- if (spec$name == "Precision Effect Test") sqrt(df$metaUI__variance) else df$metaUI__variance
+  if (role %in% c("Precision Effect Test", "Precision Effect Estimate using Standard Error")) {
+    predictor <- if (role == "Precision Effect Test") sqrt(df$metaUI__variance) else df$metaUI__variance
     if (length(unique(predictor)) < 2 || nrow(df) <= 2) return("Regression requires variable precision and positive residual degrees of freedom")
   }
   NULL
@@ -127,7 +143,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
         env <- new.env(parent = environment(metaUI_fit_models))
         env$df <- x
         # Reflect the inputs only for explicitly directional, right-sided models.
-        reflected <- spec$name %in% c("P-uniform star", "Hedges-Vevea Selection Model") && x$metaUI__direction[1] == "negative"
+        reflected <- metaUI_model_role(spec) %in% c("P-uniform star", "Hedges-Vevea Selection Model") && x$metaUI__direction[1] == "negative"
         if (reflected) env$df$metaUI__effect_size <- -env$df$metaUI__effect_size
         env$mod <- withCallingHandlers(eval(parse(text = spec$code), env), warning = function(w) {
           warnings <<- c(warnings, conditionMessage(w)); invokeRestart("muffleWarning")
@@ -164,7 +180,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
 
 metaUI_validate_prepared <- function(df) {
   required <- c("metaUI__study_id", "metaUI__effect_id", "metaUI__effect_size", "metaUI__variance",
-                "metaUI__se", "metaUI__es_type", "metaUI__display_scale", "metaUI__direction")
+                "metaUI__se", "metaUI__es_z", "metaUI__es_type", "metaUI__display_scale", "metaUI__direction")
   if (!all(required %in% names(df))) stop("Prepared data columns are missing; run prepare_data() first.")
   if (!nrow(df)) return(invisible(TRUE))
   for (field in c("metaUI__effect_size", "metaUI__variance", "metaUI__se"))
@@ -246,7 +262,9 @@ metaUI_pcurve_fit <- function(df, selection = "first") {
 
 # Forest rows retain fitting-scale values and add the reader-facing scale.
 # Effect intervals are normal sampling intervals, not shrunk predictions.
-metaUI_forest_rows <- function(df, estimates) {
+# Summaries are the unaggregated default multilevel/RVE fits, found by their code
+# (`models` rows align with `estimates`) so renamed models are kept.
+metaUI_forest_rows <- function(df, estimates, models = NULL) {
   df <- df[order(as.character(df$metaUI__study_id), as.character(df$metaUI__effect_id)), , drop = FALSE]
   label <- if ("metaUI__es_label" %in% names(df)) df$metaUI__es_label else df$metaUI__effect_id
   rows <- data.frame(label = paste(df$metaUI__study_id, label, sep = ": "),
@@ -257,7 +275,10 @@ metaUI_forest_rows <- function(df, estimates) {
   rows$es <- rows$fit_es; rows$LCL <- rows$fit_LCL; rows$UCL <- rows$fit_UCL
   if (df$metaUI__display_scale[1] == "r")
     rows[c("es", "LCL", "UCL")] <- lapply(rows[c("es", "LCL", "UCL")], tanh)
-  summaries <- estimates[estimates$Model %in% c("Random-Effects Multilevel Model", "Robust Variance Estimation") & estimates$status == "ok", ]
+  summary_rows <- if (!is.null(models) && nrow(models) == nrow(estimates))
+    models$code %in% c(metaUI_code_multilevel, metaUI_code_rve) & !models$aggregated else
+    estimates$Model %in% c("Random-Effects Multilevel Model", "Robust Variance Estimation")
+  summaries <- estimates[summary_rows & estimates$status == "ok", ]
   if (nrow(summaries)) rows <- rbind(rows, data.frame(label = summaries$Model,
     kind = "Model summary", study = NA_character_, effect_id = NA_character_,
     fit_es = summaries$fit_es, fit_LCL = summaries$fit_LCL, fit_UCL = summaries$fit_UCL,

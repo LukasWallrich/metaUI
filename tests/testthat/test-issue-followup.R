@@ -87,6 +87,9 @@ test_that("forest rows retain independent intervals and both summary models", {
   expect_equal(rows$label[rows$kind == "Model summary"], estimates$Model)
   expect_equal(rows$LCL[rows$kind == "Model summary"], estimates$LCL)
   expect_equal(rows$fit_UCL[1], d$metaUI__effect_size[1] + qnorm(.975) * d$metaUI__se[1])
+  renamed <- get_model_tibble()[1:2, ]; renamed$name[1] <- "RE 2-level model"
+  renamed_rows <- metaUI:::metaUI_forest_rows(d, fit(d, renamed)$table, renamed)
+  expect_equal(renamed_rows$label[renamed_rows$kind == "Model summary"], c("RE 2-level model", "Robust Variance Estimation"))
   x <- fixture(); x$yi <- x$yi/2
   z <- prepared(x, es_type = "COR", variance_scale = "r")
   r <- metaUI:::metaUI_forest_rows(z, fit(z)$table)

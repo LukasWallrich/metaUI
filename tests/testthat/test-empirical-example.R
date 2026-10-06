@@ -34,9 +34,10 @@ test_that("model-file generation neither leaks state nor accepts stale globals",
   path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
   file <- tempfile(fileext = ".R"); on.exit(unlink(file), add = TRUE)
   writeLines("# deliberately no models_to_run", file)
+  had_old <- exists("models_to_run", envir = globalenv(), inherits = FALSE)
   old <- get0("models_to_run", envir = globalenv(), inherits = FALSE)
   assign("models_to_run", get_model_tibble(), envir = globalenv())
-  on.exit(if (is.null(old)) rm("models_to_run", envir = globalenv()) else assign("models_to_run", old, envir = globalenv()), add = TRUE)
+  on.exit(if (had_old) assign("models_to_run", old, envir = globalenv()) else rm("models_to_run", envir = globalenv()), add = TRUE)
   expect_error(generate_shiny(prepared(), "invalid", models = file, save_to_folder = path, launch_app = FALSE), "does not create")
   expect_identical(get("models_to_run", envir = globalenv()), get_model_tibble())
 })
@@ -59,6 +60,10 @@ test_that("shipped empirical example builds and runs its actual generated server
     expect_true(all(grepl("direction", table$reason[c(4, 5)])))
     expect_identical(table$status[8], "ok")
     expect_equal(table$fit_es[8], as.numeric(reference$b), tolerance = 1e-8)
+    # build.R declares the source-reference row as primary; it is shown first.
+    card <- as.character(output$primary_estimate$html)
+    expect_match(card, "Source-reference: REML / Hartung-Knapp (rounded inputs)", fixed = TRUE)
+    expect_match(card, "-0.38", fixed = TRUE); expect_match(card, "[-0.69, -0.08]", fixed = TRUE)
     expect_match(output$heterogeneity, "not identified")
     expect_error(output$pcurve, "requires explicit effect direction")
     # The estimator rejects this sparse significant-z subset; report its actual

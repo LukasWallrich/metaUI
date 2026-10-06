@@ -8,9 +8,10 @@ runner architectures, not a claim to test every OS/R/CPU combination.
 A separate Linux Chromium job installs the package, builds an editable standalone
 app in a fresh runner directory, then launches it in a separate R process. Its
 synthetic 16-effect fixture tests initial analysis, cache disclosure, forest image
-rendering, workbook download/re-upload, restored picker and missing-value choices,
-filtering and reset. Screenshots, Shiny logs and a machine-readable result are
-uploaded as `generated-app-browser-evidence` even when the job fails. There is no
+rendering, workbook download/re-upload, restored picker selections and missing-value filtering,
+filtering and reset. The workflow attempts to upload screenshots, Shiny logs and a
+machine-readable result as `generated-app-browser-evidence` on failure too, but the
+available evidence depends on how far the job gets. There is no
 public app deployment. The workflow token has read-only repository permissions.
 
 Reproduce after installing metaUI and its declared dependencies:
@@ -29,8 +30,8 @@ executable; no browser installation on the box is needed. `METAUI_SMOKE_PORT`
 (default 8765) can select a free local port. Evidence stays in the fixture's
 `evidence` directory and is not a production dataset.
 
-CI complements a short Safari/Firefox check and an independent author trying the
-creation workflow. It cannot establish the scientific appropriateness of arbitrary
+Further validation should include a short Safari/Firefox check and an independent
+author trying the creation workflow. It cannot establish the scientific appropriateness of arbitrary
 inputs or actual research adoption. Scientific model equivalence is checked against
 independent metafor/robumeta calculations in the package suite, rather than inferred
 from rendered plots. A separate literal container is not required for this matrix.
