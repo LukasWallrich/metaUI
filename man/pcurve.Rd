@@ -117,7 +117,7 @@ of the meta-analysis is substantial (i.e., \eqn{I^2} greater than 50 percent).
 \references{
 Harrer, M., Cuijpers, P., Furukawa, T.A, & Ebert, D. D. (2019).
 \emph{Doing Meta-Analysis in R: A Hands-on Guide}. DOI: 10.5281/zenodo.2551803.
-\href{https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/pcurve.html}{Chapter 9.2}.
+\href{https://doing-meta.guide/pcurve.html}{Chapter 9.2}.
 
 Simonsohn, U., Nelson, L. D., & Simmons, J. P. (2014a). P-curve: a Key to the File-drawer.
 \emph{Journal of Experimental Psychology, 143}(2), 534.

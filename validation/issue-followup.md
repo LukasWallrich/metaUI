@@ -61,38 +61,30 @@ or assigned the sign of another model. P-curve remains an exploratory diagnostic
 with explicitly declared direction. Closing the old sign issue does not imply
 reintroducing those estimates.
 
-#26: README development-install wording and the bundled licensing audit are covered
-by #35. This remains version 0.1.2.9001. Package checks, merging the stack, independent
-author use, optional-dependency review, external platform checks and a release
-checklist remain before a 0.2.0 release. There is no CRAN submission or outreach.
+#26: release preparation is completed by the next stack layer: version 0.2.0,
+runnable examples, dependency/licensing review, offline vignettes, announcement
+draft and local manual/as-CRAN checks. See [release preparation](release-0.2.0.md).
+Public submission and release publication remain author actions.
 
-## Agreed follow-up designs; issues remain open
+## Completed analysis features in the next stack layer
 
-**#9 Bayesian model:** prefer an opt-in `bayesmeta` study-level model, not default
-RoBMA/JAGS. Semi-analytic integration avoids MCMC. It must explicitly use aggregated
-study effects, record a justified heterogeneity prior on the fitting scale,
-report central 95% posterior intervals, and show prior sensitivity. Benchmark
-first-fit latency and choose a measured study-count cap before adding it to reader
-analysis. Candidate half-normal τ scales from the Opus consultation (0.5 SMD,
-0.25 Fisher z) require sensitivity validation, not blind adoption. Sources:
-[bayesmeta](https://cran.r-project.org/web/packages/bayesmeta/index.html),
-[Röver et al. on heterogeneity priors](https://doi.org/10.1002/jrsm.1475).
+**#9 Bayesian model:** implemented opt-in `bayesmeta` study-level normal-normal
+analysis with a flat mean prior, half-normal heterogeneity prior on the fitting
+scale, posterior median, central 95% credible intervals and half/double prior
+sensitivity. Generated apps record priors/dependency versions. Independent
+normal-mixture quadrature verifies quantiles. The study limit is benchmarked.
 
-**#1 effect-size calculations:** author-supplied alternatives should each have their
-own effect, variance/SE and input-scale contract, validated through preparation.
-They must converge on the same fitting scale and preserve genuine effect IDs.
-Do not represent alternative computations by duplicate rows: that double-counts
-effects. An applied computation selector must participate in stale-result detection,
-fit-cache keys, downloads and upload validation; cap exploratory comparisons at
-five alternatives. This requires a new versioned input/serialization contract.
+**#1 effect-size calculations:** implemented up to five author-supplied alternatives,
+each with its own effect/variance/scale/justification contract, preserved effect IDs,
+identical primary-kept rows, applied selector and configured multilevel/RVE comparison.
+Cache keys, stale-state detection, workbook input validation and restoration include
+the computation. A synthetic example compares two correlation-variance rules.
 
-**#19 URL filters:** use a versioned, validated query that describes the applied
-selection on the built dataset. Preserve categories containing punctuation and
-missing-value choices; reject malformed/unknown values with a visible notice and
-no automatic analysis. Reuse the existing pending-restoration acknowledgement
-before auto-analysis. Uploads use session-owned data that cannot be recreated by
-sharing a filter URL; disclose that distinction. This belongs in a dedicated PR
-because generalising upload restoration changes that tested state machine.
+**#19 URL filters:** implemented build-specific versioned, validated query state for
+applied selections, computation and equivalence bound. Categories retain punctuation
+and Unicode; invalid links display a notice and do not automatically analyse.
+Restoration awaits browser acknowledgement and times out safely. Workbook downloads
+retain the data behind the displayed analysis. Uploaded data remain workbook-only.
 
 **Inference correction:** independently check `dfs = "contain"` for multilevel
 fits and small-sample-corrected RVE, including low-df refusals, before changing
@@ -105,7 +97,7 @@ provides live-data refresh, model/moderator controls, optional Bayesian analyses
 and a code generator. metaUI already offers dataset upload/download, filtering,
 moderation and model comparison, with author-owned editable generated R code.
 The clearest useful transfers are exportable forest plots (implemented here),
-validated shareable selections, and opt-in Bayesian estimation (designs above).
+validated shareable selections, and opt-in Bayesian estimation (implemented in the next layer).
 Live remote refresh needs source authentication, provenance, validation and
 failure recovery; it should not silently alter the dataset behind published results.
 

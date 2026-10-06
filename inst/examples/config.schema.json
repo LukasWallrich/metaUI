@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "metaUI app configuration version 1",
+  "title": "metaUI app configuration versions 1 and 2",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,7 +12,10 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "enum": [
+        1,
+        2
+      ]
     },
     "data": {
       "type": "string",
@@ -124,6 +127,64 @@
           "items": {
             "type": "string"
           }
+        },
+        "primary_label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "alternatives": {
+          "type": "object",
+          "maxProperties": 5,
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "es_field",
+              "es_type",
+              "justification"
+            ],
+            "properties": {
+              "es_field": {
+                "type": "string"
+              },
+              "variance": {
+                "type": "string"
+              },
+              "se": {
+                "type": "string"
+              },
+              "es_type": {
+                "enum": [
+                  "SMD",
+                  "COR",
+                  "ZCOR"
+                ]
+              },
+              "variance_scale": {
+                "enum": [
+                  "SMD",
+                  "r",
+                  "z"
+                ]
+              },
+              "justification": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "anyOf": [
+              {
+                "required": [
+                  "variance"
+                ]
+              },
+              {
+                "required": [
+                  "se"
+                ]
+              }
+            ]
+          }
         }
       },
       "anyOf": [
@@ -183,6 +244,64 @@
           "type": "string"
         }
       }
+    },
+    "bayesian": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "tau_scale": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "max_studies": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 50
+        }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": 1
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "bayesian"
+              ]
+            },
+            {
+              "properties": {
+                "mapping": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "alternatives"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "primary_label"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
 }

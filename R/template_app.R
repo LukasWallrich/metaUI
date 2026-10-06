@@ -19,7 +19,7 @@ labels_and_options <- function(dataset_name, correlation = .6) {
       summary_overview_main <- HTML("<h3>Selected sample</h3>")
       summary_table_main <- HTML("<h3>Effect size estimates</h3>")
        # Confidence level needs to be changed in all entries in model.R if you want to adjust it
-      summary_table_notes <- HTML(glue::glue("<i>Notes:</i> CI = <<ci_width>> confidence interval. k = model-specific count (effects for multilevel; studies for RVE and study-level fits; trim-and-fill includes imputed effects). The downloaded summary sheet keeps every column, including fitting-scale values, fit times and cache reuse.", .open = "<<", .close = ">>"))
+      summary_table_notes <- HTML(glue::glue("<i>Notes:</i> CI = <<ci_width>> confidence interval for frequentist rows; Bayesian rows show central credible intervals. k = model-specific count (effects for multilevel; studies for RVE and study-level fits; trim-and-fill includes imputed effects). The downloaded summary sheet keeps every column, including fitting-scale values, fit times and cache reuse.", .open = "<<", .close = ">>"))
       model_help <- HTML("<details class=\'metaui-help\'><summary>What do the default models do?</summary><dl>
         <dt>Random-Effects Multilevel Model</dt><dd>metafor::rma.mv with REML, random effects for studies and for effects within studies, independent sampling errors and t-based intervals. Uses every selected effect.</dd>
         <dt>Robust Variance Estimation</dt><dd>robumeta::robu with correlated-effects weights (rho = .8) and no small-sample correction, so intervals can be too narrow with few studies.</dd>
@@ -53,7 +53,7 @@ labels_and_options <- function(dataset_name, correlation = .6) {
       results_panel <- function(...) tagList(
         conditionalPanel("!(input.go > 0)", div(class = "metaui-empty", role = "status", not_analysed)),
         conditionalPanel("input.go > 0", ...))
-      data_help <- HTML("<p class=\'metaui-help-text\'><b>Download</b> saves an .xlsx with the full current dataset (all rows, not only the selection), the filters last applied and the summary of the last analysis.<br/><b>Upload</b> accepts a file downloaded from this app, possibly with edited rows. It must keep the same columns and effect scale; its saved filters are restored and analysed automatically.</p>")
+      data_help <- HTML("<p class=\'metaui-help-text\'><b>Download</b> saves an .xlsx with the full current dataset (all rows, not only the selection), the filters last applied and the summary of the last analysis.<br/>Bayesian-enabled downloads may wait for two extra prior-sensitivity fits.<br/><b>Upload</b> accepts a file downloaded from this app, possibly with edited rows. It must keep the same columns and effect scale; its saved filters are restored and analysed automatically.</p>")
 
 
   ')
@@ -221,6 +221,9 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
       sidebarPanel(
         width = 3,
         tags$h2(class = "metaui-panel-title", "Select effects"),
+        {if (length(metaUI_computation_specs(data))) paste0(
+          \'selectInput("computation", "Effect-size computation", choices = \',
+          paste(deparse(metaUI_computations(data)), collapse = "\n"), \', selected = "primary"),\nuiOutput("computation_note"),\') else ""}
         div(id = "filters",
         {generate_ui_filters(data, filter_popups, any_filters, opts = opts)}
         uiOutput("z_score_filter"), zscore_help),
@@ -229,6 +232,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
           actionButton("resetFilters", "Reset filters")),
         div(id = "apply_state_box", class = "metaui-apply-state", role = "status", `aria-live` = "polite",
           textOutput("apply_state")),
+        uiOutput("share_selection"), textOutput("link_notice"),
         tags$hr(),
         tags$h2(class = "metaui-panel-title", "Data"),
         actionButton("downloadData", "Download data and results", icon = icon("download")),
@@ -282,6 +286,8 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             DT::dataTableOutput("sample_table")
             )
           ),
+          {if (!is.null(opts$bayesian)) \'tabPanel("Bayesian sensitivity", results_panel(p("Study-level normal-normal model, flat prior on the mean, half-normal prior on heterogeneity. Aggregation uses the declared within-study correlation or first effect per study. Compare half, baseline and double the heterogeneity prior scale; tau is on the fitting scale. Intervals are 95% central credible intervals and depend on the prior."), tableOutput("bayesian_sensitivity"))),\' else ""}
+          {if (length(metaUI_computation_specs(data))) \'tabPanel("Effect computations", results_panel(p("Compare the same selected effects using each author-defined computation. Only the multilevel and RVE models are fitted here. The z-score filter stays anchored to the primary computation."), div(class = "metaui-scroll", tableOutput("computation_comparison")))),\' else ""}
           {generate_mod_tab(data, any_filters)}
           tabPanel("Forest Plot", results_panel(go, scroll, uiOutput("forest_panel"))),
           tabPanel(
@@ -330,7 +336,9 @@ glue_string <- ('
     state_values <- reactiveValues(
       uploaded_data = NULL,
       upload_info = NULL,
-      ever_analyzed = FALSE
+      ever_analyzed = FALSE,
+      restore_source = "upload",
+      link_notice = NULL
     )
 
   # Create slider to filter by z-scores
@@ -347,6 +355,7 @@ glue_string <- ('
       ), sep = ""
     )
   )
+  filters <- list()
  <FILTER>
   filters <- list(<<
     filter_cols <- colnames(metaUI__df) %>% stringr::str_subset("metaUI__filter_")
@@ -368,6 +377,7 @@ glue_string <- ('
   # Reset filters
        observeEvent(input$resetFilters, {
         shinyjs::reset("filters")
+        if (length(metaUI_computation_specs(metaUI__df))) updateSelectInput(session, "computation", selected = "primary")
       })
 
 
@@ -381,6 +391,8 @@ glue_string <- ('
         tibble::tibble(id = paste0(i$id, "_include_NA"), selection = as.character(!identical(input[[paste0(i$id, "_include_NA")]], FALSE))))
     }
     </FILTER>
+    if (length(metaUI_computation_specs(metaUI__df))) filter_selections <- rbind(filter_selections,
+      tibble::tibble(id = "computation", selection = if (is.null(input$computation)) "primary" else input$computation))
     filter_selections
   }
 
@@ -389,6 +401,7 @@ glue_string <- ('
     df <- if (is.null(state_values$uploaded_data)) metaUI__df else state_values$uploaded_data
 
 
+    source_df <- df
     available_rows <- nrow(df)
     counts <- list()
     <FILTER>
@@ -411,6 +424,9 @@ glue_string <- ('
     before <- nrow(df)
     df <- df[df$metaUI__es_z >= input$outliers_z_scores[1] & df$metaUI__es_z <= input$outliers_z_scores[2], ]
     counts$outliers_z_scores <- before - nrow(df)
+    if (length(metaUI_computation_specs(metaUI__df))) df <- metaUI_select_computation(df,
+      if (is.null(input$computation)) "primary" else input$computation, contract = source_df)
+    attr(df, "metaUI_source_data") <- source_df
     attr(df, "metaUI_applied_filters") <- applied_filters
     attr(df, "metaUI_upload_info") <- state_values$upload_info # label results with the data they used
     attr(df, "metaUI_filter_report") <- list(available_rows = available_rows,
@@ -430,6 +446,8 @@ glue_string <- ('
     paste(if (is.null(upload)) "Built dataset (as published with this app)." else paste0("Uploaded data: ", upload$file,
       " (", upload$rows, " rows); results are not the authors\' dataset. ", upload$z_rule,
       "; supplied z disagreements: ", upload$z_disagreements, ". ", upload$checkbox_note),
+      if (length(metaUI_computation_specs(metaUI__df))) paste0("Computation: ",
+        names(metaUI_computations(metaUI__df))[match(attr(df, "metaUI_computation"), metaUI_computations(metaUI__df))], ".") else "",
       "Selected", counts$retained_rows, "of", counts$available_rows,
       "rows. Excluded", counts$total_excluded, paste0("by successive filters (", details, ")."))
   })
@@ -437,7 +455,8 @@ glue_string <- ('
   # Compare live inputs with the selections behind the displayed results
   filters_changed <- reactive({
     if (!isTruthy(input$go) || !is.null(state_values$pending_upload_filters)) return(FALSE)
-    !identical(capture_filters(), attr(df_filtered(), "metaUI_applied_filters"))
+    !identical(capture_filters(), attr(df_filtered(), "metaUI_applied_filters")) ||
+      !identical(state_values$upload_info, attr(df_filtered(), "metaUI_upload_info"))
   })
 
   observe({
@@ -448,7 +467,7 @@ glue_string <- ('
   })
 
   output$apply_state <- renderText({
-    if (!is.null(state_values$pending_upload_filters)) return("Restoring the uploaded file\'s filters; it will be analysed automatically.")
+    if (!is.null(state_values$pending_upload_filters)) return(paste("Restoring", state_values$restore_source, "filters; they will be analysed automatically."))
     if (!isTruthy(input$go)) return("Not analysed yet.")
     if (filters_changed()) "Filters changed since the last analysis. The results still show the previous selection; click Analyze data to update them."
     else "Results match these filters."
@@ -489,6 +508,38 @@ glue_string <- ('
 
   # Aggregated values meta-analysis ----------------------------------------------
 
+
+  comparison_cache <- metaUI_fit_cache(6L, limit = 6L)
+  comparison_models <- models_to_run[models_to_run$code %in% c(metaUI_code_multilevel, metaUI_code_rve), , drop = FALSE]
+  computations_comparison <- eventReactive(input$go, {
+    df <- df_filtered()
+    if (!nrow(comparison_models)) return(data.frame(computation = "All", Model = "Unavailable", es = NA_real_, LCL = NA_real_, UCL = NA_real_, status = "unsupported", reason = "No multilevel or RVE specification is present."))
+    choices <- metaUI_computations(metaUI__df)
+    do.call(rbind, lapply(seq_along(choices), function(i) {
+      result <- comparison_cache(metaUI_select_computation(df, unname(choices[i]), contract = attr(df, "metaUI_source_data")), comparison_models,
+        correlation_dependent, aggregation_method[1])$table
+      data.frame(computation = names(choices)[i], result, row.names = NULL)
+    }))
+  })
+  output$computation_comparison <- renderTable({
+    computations_comparison()[c("computation", "Model", "es", "LCL", "UCL", "status", "reason")]
+  }, digits = 4)
+  output$computation_note <- renderUI({
+    id <- if (is.null(input$computation)) "primary" else input$computation
+    specs <- metaUI_computation_specs(metaUI__df)
+    spec <- Filter(function(x) x$id == id, specs)
+    p(class = "metaui-note", if (length(spec)) spec[[1]]$justification else "Primary computation supplied by the authors.",
+      "Click Analyze data to apply a computation change. The z-score filter remains based on the primary computation.")
+  })
+
+  bayesian_options <- <<paste(deparse(opts$bayesian), collapse = "\n")>>
+  bayesian_sensitivity <- eventReactive(input$go, {
+    result <- estimatesreactive()
+    idx <- if (is.null(bayesian_options)) integer() else which(models_to_run$code == metaUI_bayesian_spec(bayesian_options)$code)
+    primary <- if (length(idx)) result$fits[[idx[1]]] else NULL
+    metaUI_bayesian_sensitivity(result$df_agg, bayesian_options, primary)
+  })
+  output$bayesian_sensitivity <- renderTable(bayesian_sensitivity(), digits = 4)
 
   df_agg <- reactive({
     estimatesreactive()$df_agg
@@ -540,7 +591,7 @@ glue_string <- ('
     table <- interval_assessment()
     tagList(
       if ("reason" %in% names(table)) p(class = "metaui-reason", table$reason),
-      p(class = "metaui-note", "For unchanged default models and fit helpers, strict containment of the reported 95% CI corresponds to two one-sided tests at nominal alpha = .025 each, given the model assumptions. This is stricter than conventional alpha = .05 TOST. Custom intervals have unknown coverage. The multilevel model uses residual degrees of freedom; RVE has no small-sample correction, so these intervals can be too narrow. Bias-adjusted models describe their own assumptions. This assesses the average effect: individual true effects can still exceed your bound."))
+      p(class = "metaui-note", "For unchanged default models and fit helpers, strict containment of the reported 95% CI corresponds to two one-sided tests at nominal alpha = .025 each, given the model assumptions. This is stricter than conventional alpha = .05 TOST. Custom intervals have unknown coverage. Bayesian credible intervals are prior-dependent: containment implies at least 95% posterior probability within the bounds, and is not a TOST. The multilevel model uses residual degrees of freedom; RVE has no small-sample correction, so these intervals can be too narrow. Bias-adjusted models describe their own assumptions. This assesses the average effect: individual true effects can still exceed your bound."))
   })
 
   # MODEL COMPARISON -----------------------------------------------------
@@ -598,14 +649,15 @@ glue_string <- ('
       table <- estimatesfiltered()
       fmt <- function(x) ifelse(is.na(x), "", formatC(x, format = "f", digits = 2))
       data.frame(Model = table$Model, Estimate = fmt(table$es),
-        `95% CI` = ifelse(is.na(table$LCL) & is.na(table$UCL), "", paste0("[", fmt(table$LCL), ", ", fmt(table$UCL), "]")),
+        `95% interval` = ifelse(is.na(table$LCL) & is.na(table$UCL), "", paste0("[", fmt(table$LCL), ", ", fmt(table$UCL), "]")),
+        `Interval type` = table$interval_type,
         k = ifelse(is.na(table$k), "", format(table$k, trim = TRUE)),
         Status = ifelse(table$status == "ok", "estimated", table$status), # keep validation.json vocabulary
         `Reason or warnings` = trimws(paste(table$reason, table$warnings)),
         Fit = ifelse(table$aggregated, "study-level", "effect-level"),
         check.names = FALSE)
     },
-    align = "lrrrlll"
+    align = "lrrlrlll"
   )
 
 
@@ -662,7 +714,7 @@ glue_string <- ('
       dplyr::select(dplyr::any_of("metaUI__article_label"),
         Study =
           "metaUI__study_id", N = "metaUI__N",
-        "Effect size" = "metaUI__effect_size", p = "metaUI__pvalue",
+        "Effect size" = "metaUI__effect_size", "Source p (primary)" = "metaUI__pvalue",
         dplyr::starts_with("metaUI__filter_"), dplyr::any_of("metaUI__url")
       ) %>%
       dplyr::rename_with(~ stringr::str_replace(.x, "metaUI__filter_", "") %>%
@@ -1020,17 +1072,20 @@ glue_string <- ('
 
   data_list <- reactive({
     req(is.null(state_values$pending_upload_filters))
+    upload_info <- attr(df_filtered(), "metaUI_upload_info")
     filter_selections <- attr(df_filtered(), "metaUI_applied_filters")
 
     list(
-      dataset = if (is.null(state_values$uploaded_data)) metaUI__df else state_values$uploaded_data,
+      dataset = attr(df_filtered(), "metaUI_source_data"),
       summary = if (nrow(df_filtered())) as.data.frame(estimatesfiltered()) else data.frame(status = "unsupported", reason = "No eligible rows selected"),
       filters = filter_selections,
+      computations = if (length(metaUI_computation_specs(metaUI__df)) && nrow(df_filtered())) computations_comparison() else data.frame(computation = "As supplied"),
+      bayesian_sensitivity = if (!is.null(bayesian_options) && nrow(df_filtered())) bayesian_sensitivity() else data.frame(status = "not enabled"),
       equivalence = if (nrow(df_filtered())) interval_assessment() else data.frame(assessment = "Not assessed", reason = "No eligible rows selected"),
       provenance = data.frame(field = c("uploaded", "file", "z_rule"),
-        value = c(as.character(!is.null(state_values$upload_info)),
-          if (is.null(state_values$upload_info)) "built dataset" else state_values$upload_info$file,
-          if (is.null(state_values$upload_info)) "prepare_data descriptive standardisation" else state_values$upload_info$z_rule))
+        value = c(as.character(!is.null(upload_info)),
+          if (is.null(upload_info)) "built dataset" else upload_info$file,
+          if (is.null(upload_info)) "prepare_data descriptive standardisation" else upload_info$z_rule))
     )
   })
 
@@ -1102,6 +1157,12 @@ glue_string <- ('
         values <- suppressWarnings(as.numeric(filter_values[[id]]$selection))
         if (length(values) != 2L || any(!is.finite(values)) || values[1] > values[2]) stop("Invalid saved numeric range: ", id)
       }
+      if (length(metaUI_computation_specs(metaUI__df))) {
+        value <- filter_values$computation$selection
+        if (is.null(value)) value <- "primary"
+        if (length(value) != 1L || is.na(value) || !value %in% metaUI_computations(metaUI__df)) stop("Unknown saved computation.")
+        filter_values$computation <- data.frame(selection = value)
+      }
       list(data = df, filters = filter_values)
     }, error = function(e) e)
     if (inherits(upload, "error")) {
@@ -1115,6 +1176,11 @@ glue_string <- ('
       z_rule = derivation$rule, z_disagreements = derivation$supplied_z_disagreements,
       checkbox_note = "Missing-value choices restored; older files without them default to including missing values.")
     filter_values <- upload$filters
+    restore_filters(upload$filters, upload$data, "upload")
+  })
+
+  restore_filters <- function(filter_values, restored_data, source) {
+    state_values$restore_source <- source
     <FILTER>
     for (i in filters) {
       if (i$type == "numeric") {
@@ -1122,7 +1188,7 @@ glue_string <- ('
         include <- if (is.null(flag)) TRUE else identical(toupper(as.character(flag[1])), "TRUE")
         updateCheckboxInput(inputId = paste0(i$id, "_include_NA"), value = include)
         selection <- as.numeric(filter_values[[i$id]]$selection[1:2])
-        limits <- range(c(upload$data[[i$col]], selection), na.rm = TRUE)
+        limits <- range(c(restored_data[[i$col]], selection), na.rm = TRUE)
         step <- if (diff(selection) > 0) diff(selection) / 1000 else 1e-8
         updateSliderInput(inputId = i$id,
           min = selection[1] - step * ceiling((selection[1] - min(limits)) / step),
@@ -1138,19 +1204,29 @@ glue_string <- ('
     }
     </FILTER>
     z_selection <- as.numeric(filter_values[["outliers_z_scores"]]$selection[1:2])
-    z_limits <- range(c(upload$data$metaUI__es_z, z_selection))
+    z_limits <- range(c(restored_data$metaUI__es_z, z_selection))
     z_step <- if (diff(z_selection) > 0) diff(z_selection) / 1000 else 1e-8
     updateSliderInput(inputId = "outliers_z_scores",
       min = z_selection[1] - z_step * ceiling((z_selection[1] - min(z_limits)) / z_step),
       max = z_selection[2] + z_step * ceiling((max(z_limits) - z_selection[2]) / z_step),
       step = z_step, value = z_selection)
+    if (length(metaUI_computation_specs(metaUI__df))) updateSelectInput(session, "computation",
+      selected = filter_values$computation$selection)
+    state_values$restore_started <- as.numeric(Sys.time())
     state_values$pending_upload_filters <- filter_values
-  })
+  }
+
 
   # Wait for browser input bindings to acknowledge every restored selection.
   observe({
     saved <- state_values$pending_upload_filters
     req(!is.null(saved))
+    invalidateLater(250, session)
+    if (as.numeric(Sys.time()) - state_values$restore_started > 5) {
+      state_values$pending_upload_filters <- NULL
+      state_values$link_notice <- if (state_values$restore_source == "upload") "Uploaded data not yet analysed; review filters and click Analyze. Downloads retain the previous analysed data." else "Could not restore; review the filters and click Analyze."
+      return()
+    }
     same_numbers <- function(x, y) {
       x <- as.numeric(x); y <- as.numeric(y)
       length(x) == length(y) && all(is.finite(x)) && all(abs(x - y) <= 1e-8 * pmax(1, abs(y)))
@@ -1168,11 +1244,52 @@ glue_string <- ('
       }
     }
     </FILTER>
+    if (length(metaUI_computation_specs(metaUI__df))) matches <- matches && identical(input$computation,
+      as.character(saved$computation$selection))
     req(matches)
     state_values$pending_upload_filters <- NULL
     shinyjs::runjs("$(\'#go\')[0].click();")
   })
 
+
+  output$link_notice <- renderText(state_values$link_notice)
+  session$onFlushed(function() {
+    isolate({
+    query <- session$clientData$url_search
+    if (is.null(query) || !nzchar(query)) return()
+    # URL changes after Analyze are publication of state, not a new restore.
+    if (state_values$ever_analyzed || !is.null(state_values$uploaded_data)) return()
+    restored <- tryCatch(metaUI_parse_selection(query, metaUI_dataset_key, metaUI__df, filters), error = function(e) e)
+    if (inherits(restored, "error")) {
+      state_values$link_notice <- paste("Link not applied:", conditionMessage(restored), "Review filters and click Analyze manually.")
+      return()
+    }
+    if (is.null(restored)) return()
+    updateNumericInput(session, "sesoi", value = if (is.null(restored$sesoi)) NA_real_ else restored$sesoi)
+    restore_filters(restored$filters, metaUI__df, "link")
+    state_values$link_notice <- "Selection restored from a link to the built dataset."
+    })
+  }, once = TRUE)
+  selection_query <- reactive({
+    req(isTruthy(input$go))
+    if (!is.null(attr(df_filtered(), "metaUI_upload_info"))) return(NULL)
+    bound <- tryCatch(chosen_bound(), error = function(e) NULL)
+    metaUI_selection_query(attr(df_filtered(), "metaUI_applied_filters"), metaUI_dataset_key, bound)
+  })
+  observeEvent(list(input$go, input$sesoi), {
+    req(isTruthy(input$go))
+    query <- tryCatch(selection_query(), error = function(e) NULL)
+    updateQueryString(if (is.null(query)) "?" else query, mode = "replace", session = session)
+  }, ignoreInit = TRUE)
+  output$share_selection <- renderUI({
+    req(isTruthy(input$go))
+    if (!is.null(attr(df_filtered(), "metaUI_upload_info"))) return(p(class = "metaui-note",
+      "Uploaded data are private to this session. Share the workbook; a filter URL cannot recreate those data."))
+    query <- tryCatch(selection_query(), error = function(e) e)
+    if (inherits(query, "error")) return(p(class = "metaui-note", conditionMessage(query)))
+    p(class = "metaui-note", tags$a(href = query, "Link to this applied selection"),
+      "Copy this link or the address bar to share results for the built dataset.")
+  })
 
 }
 

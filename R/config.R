@@ -13,10 +13,11 @@ build_app <- function(config) {
     config <- jsonlite::fromJSON(config, simplifyVector = FALSE)
   }
   if (!is.list(config) || is.null(names(config))) stop("Configuration must be a named list or JSON file.")
-  allowed <- c("schema_version", "data", "mapping", "dataset_name", "output", "options", "about")
+  allowed <- c("schema_version", "data", "mapping", "dataset_name", "output", "options", "about", "bayesian")
   unknown <- setdiff(names(config), allowed)
   if (length(unknown)) stop("Unknown configuration fields: ", paste(unknown, collapse = ", "))
-  if (!identical(config$schema_version, 1L) && !identical(config$schema_version, 1)) stop("schema_version must be 1")
+  if (length(config$schema_version) != 1L || !config$schema_version %in% c(1, 2)) stop("schema_version must be 1 or 2")
+  if (config$schema_version == 1 && (!is.null(config$bayesian) || !is.null(config$mapping$alternatives) || !is.null(config$mapping$primary_label))) stop("New computation/Bayesian fields require schema_version 2")
   for (key in c("data", "dataset_name", "output"))
     if (!is.character(config[[key]]) || length(config[[key]]) != 1L || !nzchar(config[[key]])) stop("Required scalar string: ", key)
   resolve <- function(path) if (grepl("^(/|[A-Za-z]:)", path)) path else file.path(base, path)
@@ -34,5 +35,5 @@ build_app <- function(config) {
   if (!is.null(about) && (!is.list(about) || length(setdiff(names(about), c("date", "citation", "osf_link", "contact"))))) stop("Invalid about fields")
   do.call(generate_shiny, c(list(dataset = dataset, dataset_name = config$dataset_name,
                                 save_to_folder = resolve(config$output), launch_app = FALSE,
-                                options = if (is.null(config$options)) list() else config$options), about))
+                                bayesian = config$bayesian, options = if (is.null(config$options)) list() else config$options), about))
 }

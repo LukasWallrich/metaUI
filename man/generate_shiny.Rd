@@ -14,7 +14,8 @@ generate_shiny(
   launch_app = is.na(save_to_folder),
   ...,
   options = list(),
-  overwrite = FALSE
+  overwrite = FALSE,
+  bayesian = NULL
 )
 }
 \arguments{
@@ -55,6 +56,8 @@ a character vector with all packages to display.}
 }}
 
 \item{overwrite}{Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.}
+
+\item{bayesian}{NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.}
 }
 \value{
 With launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
@@ -65,10 +68,11 @@ a folder. If saved, that folder will contain all the code and data needed to run
 on that folder, or modified by editing server.R, ui.R, global.R and models.R in the folder.
 }
 \examples{
-# First, use prepare_data() to create your dataset.
-if (exists("app_data")) {
-  generate_shiny(app_data,
-    dataset_name = "Your meta-analysis",
-    eff_size_type_label = "Declared effect scale")
-}
+raw <- data.frame(study = letters[1:6], d = c(.1, .3, -.1, .4, .2, .5),
+                  vi = c(.02, .03, .02, .04, .01, .05))
+app_data <- prepare_data(raw, "study", "d", variance = "vi")
+folder <- tempfile("metaui-example-")
+generate_shiny(app_data, dataset_name = "Example", save_to_folder = folder,
+               launch_app = FALSE)
+unlink(folder, recursive = TRUE)
 }

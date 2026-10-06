@@ -36,7 +36,7 @@ A dataframe containing the following columns:
 \description{
 This function calculates the standard error of an effect size provided the exact
 \eqn{p}-value and (continuous) effect size according to the formula
-by \href{https://pubmed.ncbi.nlm.nih.gov/21824904/}{Altman and Bland (2011)}.
+by \href{https://doi.org/10.1136/bmj.d2090}{Altman and Bland (2011)}.
 See the \href{https://dmetar.protectlab.org/}{dmetar documentation} for examples.
 }
 \details{

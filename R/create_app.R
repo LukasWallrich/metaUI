@@ -75,6 +75,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' this must assign the tibble to a variable called models_to_run (i.e. using <-).
 #' @param filter_popups Named list of expandable filter-help content. Plain text is escaped; wrap trusted HTML in [htmltools::HTML()], for example `list(Year = HTML("<i>Note:</i> Data collection year."))`.
 #' @param save_to_folder Folder for the generated code and data. Defaults to NA, which uses a temporary folder. A nonempty destination is refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.
+#' @param bayesian NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
 #' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.
 #' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
@@ -87,18 +88,19 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'
 #' @returns With launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
 #' @examples
-#' # First, use prepare_data() to create your dataset.
-#' if (exists("app_data")) {
-#'   generate_shiny(app_data,
-#'     dataset_name = "Your meta-analysis",
-#'     eff_size_type_label = "Declared effect scale")
-#' }
+#' raw <- data.frame(study = letters[1:6], d = c(.1, .3, -.1, .4, .2, .5),
+#'                   vi = c(.02, .03, .02, .04, .01, .05))
+#' app_data <- prepare_data(raw, "study", "d", variance = "vi")
+#' folder <- tempfile("metaui-example-")
+#' generate_shiny(app_data, dataset_name = "Example", save_to_folder = folder,
+#'                launch_app = FALSE)
+#' unlink(folder, recursive = TRUE)
 #' @export
 
 generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         models = get_model_tibble, filter_popups = list(),
         save_to_folder = NA, launch_app = is.na(save_to_folder), ...,
-        options = list(), overwrite = FALSE) {
+        options = list(), overwrite = FALSE, bayesian = NULL) {
 
   defaults <- list(max_forest_plot_rows = 200, shiny_theme = "yeti", selection_list_threshold = 6)
   opts <- utils::modifyList(defaults, options)
@@ -137,8 +139,16 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     stop("Invalid argument type. models must be a function, a tibble, or a path to a file.")
   }
 
+  bayesian <- metaUI_bayesian_options(bayesian, dataset$metaUI__es_type[1])
+  package_models <- identical(models_to_run, get_model_tibble())
+  if (!is.null(bayesian)) {
+    if (!requireNamespace("bayesmeta", quietly = TRUE)) stop("Install optional bayesmeta before building a Bayesian app.")
+    if (is.character(models)) stop("For Bayesian authoring, supply model specifications instead of a model file.")
+    models_to_run <- dplyr::bind_rows(models_to_run, metaUI_bayesian_spec(bayesian))
+  }
+  opts$bayesian <- bayesian
   # Custom code can depend on external state or randomness: cache only by opt-in.
-  if (is.null(options$fit_cache_entries)) opts$fit_cache_entries <- if (identical(models_to_run, get_model_tibble())) 3L else 0L
+  if (is.null(options$fit_cache_entries)) opts$fit_cache_entries <- if (package_models) 3L else 0L
   metaUI_fit_cache(opts$fit_cache_entries) # validate before writing
   report <- attr(dataset, "metaUI_validation")
   if (is.null(report)) stop("Dataset needs prepare_data() validation metadata. Re-prepare legacy datasets.")
@@ -147,6 +157,13 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   metaUI_aggregate(dataset, correlation) # check the aggregation contract before writing
   report$aggregation <- list(method = "GLS study-level average", correlation = correlation,
     assumptions = "Distinct studies are independent; multilevel V is diagonal (sampling covariance not supplied). RVE uses correlated-effects weights (rho=.8), small=FALSE. Neither N nor p is inferred by aggregation.")
+  if (!is.null(bayesian)) report$bayesian <- c(bayesian, list(
+    model = "Two-level normal-normal on aggregated studies", mean_prior = "Improper uniform on fitting scale",
+    latency = "Default cap 20 studies. Approximate benchmark: 20 seconds at 20 studies, 97 at 50. Each Analyze blocks the server process while fitting; sensitivity/downloads can need two extra fits. Hard author override limit 50.",
+    tau_prior = "Half-normal on fitting scale", interval = "95% central credible interval; posterior median",
+    sensitivity = "Half and double tau_scale", aggregation = paste("GLS study-level average, within-study correlation", correlation),
+    rationale = "Default scale is unit-information SD / 4: 0.5 for SMD, 0.25 for Fisher z. An author choice, examined with sensitivity analysis.",
+    reference = "https://doi.org/10.1002/jrsm.1475"))
   report$performance <- list(fit_cache_entries = opts$fit_cache_entries,
     note = "Session-local exact data/model/config keys; cached warnings/failures and original fit times retained. Custom models default to no cache. Hidden outputs remain suspended by Shiny.")
   report$model_source <- if (is.character(models)) list(type = "trusted_author_R_file",
@@ -205,10 +222,16 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
       }
     }
   }
+  file.copy(system.file("template_code", "bayesian.R", package = "metaUI"),
+            file.path(save_to_folder, "bayesian.R"), overwrite = TRUE)
+  file.copy(system.file("template_code", "selection_links.R", package = "metaUI"),
+            file.path(save_to_folder, "selection_links.R"), overwrite = TRUE)
+  file.copy(system.file("template_code", "computations.R", package = "metaUI"),
+            file.path(save_to_folder, "computations.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "analysis.R", package = "metaUI"),
             file.path(save_to_folder, "analysis.R"), overwrite = TRUE)
   jsonlite::write_json(report, file.path(save_to_folder, "validation.json"), auto_unbox = TRUE, pretty = TRUE, na = "null")
-  dependencies <- sort(unique(c(declared_imports(), "psych")))
+  dependencies <- sort(unique(c(declared_imports(), "psych", if (!is.null(bayesian)) "bayesmeta")))
   versions <- data.frame(package = dependencies,
     version = vapply(dependencies, function(x) as.character(utils::packageVersion(x)), character(1)))
   utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
@@ -217,7 +240,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   writeLines(labels_and_options(dataset_name, correlation), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
-  writeLines(generate_global.R(eff_size_type_label), file.path(save_to_folder, "global.R"))
+  writeLines(generate_global.R(eff_size_type_label, bayesian), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
 
   if (!launch_app) return(invisible(normalizePath(save_to_folder)))
@@ -231,8 +254,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 #'
 #' @noRd
 
-generate_global.R <- function(metaUI_eff_size_type_label) {
-  req_packages <- declared_imports()
+generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL) {
+  req_packages <- c(declared_imports(), if (!is.null(bayesian)) "bayesmeta")
 
 
   label_code <- paste(deparse(as.character(metaUI_eff_size_type_label)), collapse = "\n")
@@ -280,6 +303,9 @@ generate_global.R <- function(metaUI_eff_size_type_label) {
   library(shiny)
   source(file.path(f, 'helpers.R'), local = TRUE)
   source(file.path(f, 'analysis.R'), local = TRUE)
+  source(file.path(f, 'computations.R'), local = TRUE)
+  source(file.path(f, 'selection_links.R'), local = TRUE)
+  source(file.path(f, 'bayesian.R'), local = TRUE)
   source(file.path(f, 'models.R'), local = TRUE)
   source(file.path(f, 'labels_and_options.R'), local = TRUE)
   source(file.path(f, 'dmetar_contributions.R'), local = TRUE)
@@ -287,6 +313,7 @@ generate_global.R <- function(metaUI_eff_size_type_label) {
   ui <- source(file.path(f, 'ui.R'), local = TRUE)  %>% purrr::pluck('value')
   metaUI_eff_size_type_label <- {label_code}
   metaUI__df <- readRDS(file.path(f, 'dataset.rds'))
+  metaUI_dataset_key <- unname(tools::md5sum(file.path(f, 'dataset.rds')))
 ")
 }
 
