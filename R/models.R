@@ -16,8 +16,8 @@
 #' # Then use when generating the app
 #' if (exists("app_data")) {
 #'   generate_shiny(app_data,
-#'     dataset_name = "Barroso et al 2021 - Maths Anxiety",
-#'     eff_size_type_label = "Fisher's Z scores")
+#'     dataset_name = "Your meta-analysis",
+#'     eff_size_type_label = "Declared effect scale")
 #' }
 
 get_model_tibble <- function() {

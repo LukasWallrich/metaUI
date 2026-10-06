@@ -56,10 +56,9 @@ run installed dependencies in an empty R library on a fresh hosted Ubuntu Linux
 runner; this is not a literal container or source-only dependency build.
 
 Incremental metered API cost: US$0 (subscription tools only). No public app deployment,
-release, tag, CRAN submission, main merge or third-party contact. The unresolved
-Barroso source redistribution licence remains a release gate. Publication remains
+release, tag, CRAN submission, main merge or third-party contact. The Barroso CSV has been removed and its tutorial replaced with the verified
+CC-BY Dannheim example; the data-path removal is documented in NEWS. Publication remains
 conditional on independently created useful apps and documented research use;
 repository metrics are not adoption. Literal container, Windows/macOS and source-only
-builds are deferred. Resolve that licence (or replace the bundled dataset with a
-compatible licensed fixture) before a substantial release; then seek independent
-reuse without inventing an uptake claim.
+builds are deferred. Next, verify independent author reuse and complete a cross-platform release
+review without inventing an uptake claim.

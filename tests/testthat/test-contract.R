@@ -99,12 +99,12 @@ test_that("directional bias fits match explicitly oriented reference fits", {
   expect_equal(prepared(x,direction="positive")$metaUI__direction,rep("positive",16))
 })
 
-test_that("bundled Fisher-z data agree with direct reference fits", {
-  x <- read.csv(system.file("extdata","barroso2021.csv",package="metaUI"))
-  d <- prepare_data(x,"study_id","yi",variance="vi",es_id="es_id",es_type="ZCOR",variance_scale="z",direction="negative")
+test_that("synthetic Fisher-z data agree with direct reference fits", {
+  x <- fixture()
+  d <- prepare_data(x,"study","yi",variance="vi",es_id="id",es_type="ZCOR",variance_scale="z",direction="negative")
   r <- fit(d)$table
-  ref <- metafor::rma.mv(yi,V=vi,random=~1|study_id/es_id,data=x,method="REML",test="t",sparse=TRUE)
-  rve <- robumeta::robu(yi~1,data=x,studynum=study_id,var.eff.size=vi,small=FALSE)
+  ref <- metafor::rma.mv(yi,V=vi,random=~1|study/id,data=x,method="REML",test="t",sparse=TRUE)
+  rve <- robumeta::robu(yi~1,data=x,studynum=study,var.eff.size=vi,small=FALSE)
   expect_equal(r$fit_es,c(as.numeric(ref$b),rve$reg_table$b.r),tolerance=1e-6)
   expect_equal(r$es,tanh(r$fit_es),tolerance=1e-10)
 })

@@ -1,10 +1,10 @@
-# Publication readiness, 5 October 2026
+# Publication readiness, 6 October 2026 (sources checked 5 October)
 
 We recommend maintaining and testing the corrected R/Shiny authoring path before
 expanding metaUI. The distinctive contribution remains editable apps that authors
-create and own, with R modelling visible in the generated source. The local timings
-provide no evidence that a runtime rewrite is needed. They do not establish an
-improvement in performance over the baseline.
+create and own, with R modelling visible in the generated source. The follow-up timings establish improvements in p-curve calculation and repeated
+selection response (see performance-optimisation.md). New-selection fits remain
+bounded on the measured fixtures; there is no measured case for a runtime rewrite.
 
 JOSS is a conditional later candidate. Its [current submission requirements](https://joss.readthedocs.io/en/latest/submitting.html)
 require more than six months of public history with active development across that
@@ -34,10 +34,11 @@ that interactive meta-analysis itself is new.
 The next practical gate is an independently created useful app, with its scientific
 mapping, estimator assumptions, exclusions, and edit-preservation behaviour checked
 against the user's analysis, plus documented real research use. No recruitment or
-contact occurred in this thread. Additional release gates are an audit of bundled
-data redistribution terms, CI execution on supported R versions, clean installation
-from a fresh dependency library, and clear user documentation of all scale-specific
-panels and limitations. No publication draft, submission, DOI, public upload, or
+contact occurred in this thread. The bundled-data audit now verifies the retained Aksayli, Coles and Dannheim
+licences; the unresolved Barroso CSV has been removed with an explicit migration
+notice. Release/oldrel-1 CI and a fresh hosted Linux empty-library installation
+have passed. A broader cross-platform release review and independent author reuse
+remain useful next gates; scale-specific panels and limitations are documented. No publication draft, submission, DOI, public upload, or
 release is included. Agent assistance can be considered next over the tested config
 path, with authors choosing scientific mappings and models. If independent reuse
 reveals little demand, maintenance is a proportionate outcome.

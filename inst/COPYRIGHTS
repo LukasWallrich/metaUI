@@ -22,10 +22,6 @@ SOFTWARE.
 
 R/helpers.R and inst/template_code/helpers.R include code by Lukas Wallrich
 from timesaveR, retained under metaUI's GPL-compatible terms.
-The bundled Barroso et al. (2021) dataset was extracted by psymetadata:
-https://github.com/josue-rodriguez/psymetadata (GPL-3).
-Barroso et al., Psychological Bulletin 147(2), 134–168; DOI 10.1037/bul0000307.
-Dataset yi/vi are Fisher-z effects and z-scale sampling variances.
 The synthetic inst/examples/tiny.csv fixture is original GPL-3-or-later data;
 it is not an empirical benchmark and does not reproduce a paper.
 Favicon SVG: original metaUI forest-plot artwork, GPL-3-or-later.
@@ -47,10 +43,6 @@ Coles NA, Larsen JT, Lench HC (2019), A meta-analysis of the facial feedback
 literature. DOI https://doi.org/10.1037/bul0000194 .
 Changes: numeric effects/variances, bibliographic and coded covariates exported
 through psymetadata; no article prose or PDFs redistributed.
-Barroso's psymetadata source pointer https://osf.io/5admx/ returns 404 from the
-public API; its standalone redistribution terms remain unresolved. Its existing
-GPL-3 psymetadata attribution is retained; this unresolved source gate prevents
-claiming the complete package release-ready.
 P-curve calculations originate with Uri Simonsohn, Leif D. Nelson, and Joseph
 P. Simmons (2014), through dmetar's implementation. https://www.p-curve.com/
 Upstream dmetar DESCRIPTION specifies MIT + file LICENSE; LICENSE identifies

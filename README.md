@@ -36,9 +36,11 @@ Much of the package code was based on two previous interactive meta-analyses app
  - Röseler, L., Körner, R., & Schütz, A. (2021). Dynamic Meta-Analysis. Retrieved from https://osf.io/ns65r/, Shiny app accessible [here](https://metaanalyses.shinyapps.io/bodypositions/)
  - Röseler, L., Weber, L., Helgerth, K. A. C., Stich, E., Günther, M., Tegethoff, P., Wagner, F. S., Ambrus, E., Antunovic, M., Barrera, F., Halali, E., Ioannidis, K., McKay, R., Milstein, N., Molden, D. C., Papenmeier, F., Rinn, R., Schreiter, M. L., Zimdahl, M., Allen, E., Bahník, S., Baumeister, R. F., Bermeitinger, C., Bickenbach, S. L. C., Blank, P. A., Blower, F. B. N., Bögler, H. L., Boo, F. L., Boruchowicz, C., Bühler, R. L., Burgmer, P., Cheek, N., N., Dohle, S., Dorsch, L., Dück, M. S., Fels, S.-A., Fischer, A. L., Frech, M.-L., Freira, L., Friedinger, K., Genschow, O., Harris, A., Hartig, B., Häusser, J. A., Hedgebeth, M., Henkel, M., Horvath, D., Hügel, J. C., Igna, E. L. E., Imhoff, R., Intelmann, P., Karg, A. H., Klamar, A., Klein, C., Klusmann, B., Knappe, E., Köppel, L.-M., Koßmann, L., Kraft, P., Kroworsch, M. K., Krueger, S. M., Kühling, S., Lagator, S., Lammers, J., Loschelder, D. D., Navajas, J., Norem, J., K., Novak, J. Onuki, Y., Page, E., Panse, F., Pavlovic, Z., Pearton, J., Rebholz, T. R., Rodgers, S., Röseler, J. J., Rostekova, A., Roßmaier, K. V., Sartorio, M., Scheelje, L., Schindler, S., Schreiner, N. B., Seida, C., Shanks, D. R., Siems, M.-C., Stitz, M., Starkulla, M., Stäglich, M., Thies, K., Thum, E., Undorf, M., Unger, B. D., Urlichich, D., Vadillo, M. A., Wackershauser-Sablotny, V., Wessel, I., Wolf, H., Zhou, A., & Schütz, A. (2022). OpAQ: Open Anchoring Quest, Version 1.1.48.95. https://dx.doi.org/10.17605/OSF.IO/YGNVB, Shiny app accessible [here](https://metaanalyses.shinyapps.io/OpAQ/)
 
-The sample data was taken from the [psymetadata](https://github.com/josue-rodriguez/psymetadata)-package, and initially extracted from the following article:
-
-- Barroso C, Ganley CM, McGraw AL, Geer EA, Hart SA, Daucourt MC (2021). “A meta-analysis of the relation between math anxiety and math achievement.” *Psychological Bulletin*, 147(2), 134. Data and details also available on [https://osf.io/5admx/](https://osf.io/5admx/).
+The introductory sample is the CC-BY-4.0 mental-health pool from Dannheim et al.
+(2025), [doi:10.5271/sjweh.4219](https://doi.org/10.5271/sjweh.4219).
+Its 12 signed Hedges-g effects, CI-derived SEs, membership and changes are
+attributed in `inst/examples/dannheim`. Existing Aksayli/Coles data retain their
+verified source licences and attribution in `inst/COPYRIGHTS`.
 
 ## Related projects
 
@@ -62,7 +64,7 @@ shiny::runApp("tiny-app")         # separate, blocking launch action
 Generation refuses a nonempty folder by default. p/N are optional for the primary
 models; directional models require explicit direction. COR/ZCOR require explicit
 variance scales. Read the generated validation report before interpreting results.
-The bundled Barroso data use Fisher z, not SMD. No public deployment is automatic.
+The introductory Dannheim data use signed Hedges g, not correlations. No public deployment is automatic.
 
 [PsychOpen CAMA](https://leibniz-psychology.org/en/practices-and-tools-of-open-science/psychopen-cama)
 is another platform for cumulative meta-analysis. metaUI's intended contribution is
@@ -87,8 +89,8 @@ are validated, stored in session state, and clear prior cached results.
 
 [Performance measurements](validation/performance-optimisation.md) distinguish
 faster p-curve calculations/fit reuse from cache hits and first-time fitting costs.
-[Licence audit](validation/licensing-audit.md) records the unresolved Barroso
-source-deposit gate; this candidate is not a substantial public release.
+[Licence audit](validation/licensing-audit.md) records the licensed replacement of
+the former Barroso sample. This development candidate is not a public release.
 
 Downloads preserve the full current input dataset and saved filter selections; the
 summary sheet describes the selected rows. An empty selection stays empty on

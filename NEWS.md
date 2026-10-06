@@ -9,7 +9,10 @@
   restore p-curve process options and show unidentified singleton variance splits.
 * Add a CC-BY empirical source-reference example and generated-app/reference tests.
 * Record measured before/after performance and clean hosted Linux checks.
-* No public release: Barroso source redistribution terms remain unresolved.
+* Remove `inst/extdata/barroso2021.csv` because its source redistribution terms
+  could not be verified; tutorials now use the attributed CC-BY Dannheim example.
+  This is an explicit data-path removal, not a silent replacement of that analysis.
+* No public release or tag is created.
 
 # metaUI 0.1.2.9000 (correctness candidate)
 

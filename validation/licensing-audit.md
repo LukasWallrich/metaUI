@@ -22,8 +22,10 @@ The psymetadata upstream package is GPL-3. Its source documentation points to:
   Nicholas A. Coles, 2018. Full MIT terms and the holder notice retained.
 * Barroso: [OSF 5admx](https://osf.io/5admx/), the upstream pointer. Public node
   API returned 404. Original source redistribution terms are unresolved;
-  psymetadata attribution is retained without claiming it settles this question.
+  the CSV has now been removed from the distributed package and tutorials.
+  The existing public Git history is not rewritten.
 
 This is an evidence record, not a certification of third-party rights. The
-unresolved Barroso deposit is a remaining substantial-release gate. No permission
+former Barroso sample is replaced by the attributed CC-BY Dannheim example;
+its licence no longer blocks this candidate. No permission
 request, author contact, public app deployment, or release occurred.
