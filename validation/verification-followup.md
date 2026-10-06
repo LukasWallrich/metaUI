@@ -14,7 +14,8 @@ complete results with frozen pre-optimisation reference calculations.
 Uploads persist per session, validate the source/fitting-scale contract, recompute
 descriptive z against the built reference, restore missing/category choices and
 report every successive filter exclusion. Empty saved category selections remain
-empty on re-upload. Automatic analysis waits for browser acknowledgement of restored
+empty on re-upload. Downloads retain applied filters even after controls change;
+pending uploads block export. Automatic analysis waits for browser acknowledgement of restored
 inputs. Egger residual SD is squared for a variance label. Singleton multilevel
 variance splits are explicitly unidentified; estimator failures remain visible.
 
@@ -46,7 +47,7 @@ small-repetition measurements do not establish a universal latency guarantee.
 
 Opus 5.5 performed a full read-only code/scientific review and focused follow-ups
 through the Claude Max subscription, with no permission denials. Parent review and
-CLI JSON remain outside product files. The final source suite passes 204 assertions with no failures, warnings or skips.
+CLI JSON remain outside product files. The final source suite passes 206 assertions with no failures, warnings or skips.
 The real Chromium upload round trips pass, including missing numeric values,
 picker selections, automatic analysis and saved [-2,2] bounds despite an unrounded
 outside effect. Forest rendering is exercised by the server test. Final checks and browser evidence are listed

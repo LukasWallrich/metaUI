@@ -334,7 +334,21 @@ glue_string <- ('
       })
 
 
+  capture_filters <- function() {
+    filter_selections <- tibble::tibble(id = "outliers_z_scores", selection = input[["outliers_z_scores"]])
+    <FILTER>
+    for (i in filters) {
+      values <- input[[i$id]]
+      filter_selections <- rbind(filter_selections, tibble::tibble(id = i$id, selection = if (length(values)) as.character(values) else NA_character_))
+      if (i$type == "numeric") filter_selections <- rbind(filter_selections,
+        tibble::tibble(id = paste0(i$id, "_include_NA"), selection = as.character(!identical(input[[paste0(i$id, "_include_NA")]], FALSE))))
+    }
+    </FILTER>
+    filter_selections
+  }
+
   df_reactive <- reactive({
+    applied_filters <- capture_filters()
     df <- if (is.null(state_values$uploaded_data)) metaUI__df else state_values$uploaded_data
 
 
@@ -360,18 +374,19 @@ glue_string <- ('
     before <- nrow(df)
     df <- df[df$metaUI__es_z >= input$outliers_z_scores[1] & df$metaUI__es_z <= input$outliers_z_scores[2], ]
     counts$outliers_z_scores <- before - nrow(df)
+    attr(df, "metaUI_applied_filters") <- applied_filters
     attr(df, "metaUI_filter_report") <- list(available_rows = available_rows,
       retained_rows = nrow(df), total_excluded = available_rows - nrow(df), successive_filter_exclusions = counts)
     df
   })
 
   output$selection_status <- renderText({
+    if (!is.null(state_values$pending_upload_filters)) return("Restoring saved filters: waiting for matching browser inputs; review changed bounds before clicking Analyze manually.")
     df <- df_filtered()
     counts <- attr(df, "metaUI_filter_report")
     details <- paste(paste(names(counts$successive_filter_exclusions), unlist(counts$successive_filter_exclusions), sep = ": "), collapse = "; ")
     upload <- state_values$upload_info
-    paste(if (!is.null(state_values$pending_upload_filters)) "Restoring saved filters: waiting for matching browser inputs; review changed bounds before clicking Analyze manually." else "",
-      if (is.null(upload)) "Built dataset." else paste0("Uploaded data: ", upload$file,
+    paste(if (is.null(upload)) "Built dataset." else paste0("Uploaded data: ", upload$file,
       " (", upload$rows, " rows); results are not the authors\' dataset. ", upload$z_rule,
       "; supplied z disagreements: ", upload$z_disagreements, ". ", upload$checkbox_note),
       "Selected", counts$retained_rows, "of", counts$available_rows,
@@ -867,15 +882,8 @@ glue_string <- ('
   # DOWNLOAD ----------------------------------------------------------------
 
   data_list <- reactive({
-    filter_selections <- tibble::tibble(id = "outliers_z_scores", selection = input[["outliers_z_scores"]])
-    <FILTER>
-    for (i in filters) {
-      values <- input[[i$id]]
-      filter_selections <- rbind(filter_selections, tibble::tibble(id = i$id, selection = if (length(values)) as.character(values) else NA_character_))
-      if (i$type == "numeric") filter_selections <- rbind(filter_selections,
-        tibble::tibble(id = paste0(i$id, "_include_NA"), selection = as.character(!identical(input[[paste0(i$id, "_include_NA")]], FALSE))))
-    }
-    </FILTER>
+    req(is.null(state_values$pending_upload_filters))
+    filter_selections <- attr(df_filtered(), "metaUI_applied_filters")
 
     list(
       dataset = if (is.null(state_values$uploaded_data)) metaUI__df else state_values$uploaded_data,
@@ -899,6 +907,10 @@ glue_string <- ('
   )
 
   observeEvent(input$downloadData, {
+    if (!is.null(state_values$pending_upload_filters)) {
+      showModal(modalDialog(title = "Restoring filters", "Wait for the uploaded selection to finish before downloading."))
+      return()
+    }
     if (state_values$ever_analyzed == TRUE) {
       shinyjs::runjs("$(\'#executeDownload\')[0].click();")
     } else {

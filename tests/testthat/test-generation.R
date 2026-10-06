@@ -87,10 +87,11 @@ test_that("uploads retain extreme/missing numeric inputs and restored picker sel
   expect_match(paste(readLines("ui.R"), collapse = "\n"), "metaUI__filter_Year_include_NA")
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Year = c(2001, 2016),
-      metaUI__filter_Group = paste0("G", 1:8), metaUI__filter_Year_include_NA = TRUE, go = 1)
+      metaUI__filter_Group = paste0("G", 1:8), metaUI__filter_Year_include_NA = TRUE)
     session$setInputs(uploadData = list(datapath = file, name = "extremes.xlsx"), executeUpload = 1)
     expect_false(is.null(state_values$pending_upload_filters))
     expect_match(output$selection_status, "Restoring saved filters")
+    expect_error(data_list(), class = "shiny.silent.error")
     # Mock client applies the messages; real browser round trip verifies this too.
     session$setInputs(outliers_z_scores = c(-100, 100), metaUI__filter_Year = c(1800, 2100),
       metaUI__filter_Group = c("G1", "G2"), go = 2)
@@ -120,11 +121,14 @@ test_that("restored filters disclose uploaded rows outside the saved selection",
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   shiny::testServer(env$server, {
-    session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Year = c(2001, 2016), go = 1)
+    session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Year = c(2001, 2016), metaUI__filter_Year_include_NA = TRUE, go = 1)
     session$setInputs(uploadData = list(datapath = file, name = "new-year.xlsx"), executeUpload = 1, go = 2)
     expect_equal(nrow(df_filtered()), 15)
     expect_match(output$selection_status, "Excluded 1")
     expect_match(output$selection_status, "metaUI__filter_Year: 1")
+    session$setInputs(metaUI__filter_Year = c(2000, 2030))
+    saved <- data_list()$filters
+    expect_equal(as.numeric(saved$selection[saved$id == "metaUI__filter_Year"]), c(2001, 2016))
   })
 })
 
