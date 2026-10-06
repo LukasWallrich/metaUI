@@ -3,6 +3,34 @@
 metaUI_code_multilevel <- "metaUI_multilevel_fit(df)"
 metaUI_code_rve <- "metaUI_rve_fit(df)"
 
+# Default estimator code. Renamed models are recognised by this exact code
+# (ignoring whitespace), so their input checks and sign handling still apply.
+metaUI_default_code <- c(
+  "Trim-and-fill" = 'meta::trimfill(meta::metagen(
+                                            TE = metaUI__effect_size,
+                                            seTE = metaUI__se,
+                                            data = df,
+                                            studlab = df$metaUI__study_id,
+                                            common = FALSE,
+                                            random = TRUE,
+                                            method.tau = "ML", # as recommended by  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4950030/
+                                            method.random.ci = "HK",
+                                            prediction = TRUE,
+                                            sm = df$metaUI__es_type[1]
+                                        ))',
+  "P-uniform star" = 'puniform::puni_star(
+                    yi = df$metaUI__effect_size, vi = df$metaUI__variance,
+                    alpha = .05,
+                    side = "right", method = "ML", boot = FALSE
+                    )',
+  "Hedges-Vevea Selection Model" = 'weightr::weightfunct(df$metaUI__effect_size,
+                df$metaUI__variance, steps = c(0.025, 1), fe = FALSE)',
+  "P-Curve (first value)" = 'metaUI_pcurve_fit(df, "first")',
+  "P-Curve (last value)" = 'metaUI_pcurve_fit(df, "last")',
+  "Precision Effect Test" = 'lm(metaUI__effect_size ~ sqrt(metaUI__variance), data = df, weights = 1 / metaUI__variance)',
+  "Precision Effect Estimate using Standard Error" = 'lm(metaUI__effect_size ~ metaUI__variance, data = df, weights = 1 / metaUI__variance)'
+)
+
 metaUI_multilevel_fit <- function(df) {
   metafor::rma.mv(df$metaUI__effect_size, V = df$metaUI__variance,
     random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df,
@@ -82,17 +110,11 @@ metaUI_aggregate <- function(df, correlation = .6, method = "aggregate") {
   }))
 }
 
-# Identify the default estimators by their code, so renaming a model keeps its
-# direction handling and input checks. Unrecognised code keeps its display name.
+# Identify default estimators by their complete code, so renaming a model keeps its
+# input checks and sign handling. Edited or unrecognised code keeps its display name.
 metaUI_model_role <- function(spec) {
-  code <- gsub("\\s+", "", spec$code)
-  roles <- c("P-uniform star" = "puniform::puni_star(",
-             "Hedges-Vevea Selection Model" = "weightr::weightfunct(",
-             "P-Curve (first value)" = 'metaUI_pcurve_fit(df,"first")',
-             "P-Curve (last value)" = 'metaUI_pcurve_fit(df,"last")',
-             "Precision Effect Test" = "lm(metaUI__effect_size~sqrt(metaUI__variance),",
-             "Precision Effect Estimate using Standard Error" = "lm(metaUI__effect_size~metaUI__variance,")
-  hit <- names(roles)[vapply(roles, grepl, logical(1), x = code, fixed = TRUE)]
+  normalise <- function(x) gsub("\\s+", "", x)
+  hit <- names(metaUI_default_code)[normalise(metaUI_default_code) == normalise(spec$code)]
   if (length(hit)) hit[1] else spec$name
 }
 

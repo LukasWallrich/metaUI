@@ -108,8 +108,9 @@ measurement, not an end-to-end network benchmark. The baseline uses its original
 models; unspecified direction in the candidate intentionally excludes directional
 fits. Comparison of all-model totals is therefore not a speed-up claim.
 At k1000 the individual forest is explicitly limited to 200 effects by the app;
-no 1000-effect forest render is claimed. Forest timings include a fresh RVE fit,
-whereas the app reuses its cached fit, so they are conservative upper bounds. Synthetic data and known fitting-scale
+no 1000-effect forest render is claimed. Rendered forests at k <= 200 include a
+fresh RVE fit, whereas the app reuses its cached fit, so these timings are
+conservative upper bounds; the k1000 rows record only the cap message. Synthetic data and known fitting-scale
 assumptions allow timings, not estimator validation from performance alone.
 
 The explicit CSV categorical mapping is `filters = list(Region="region")` plus

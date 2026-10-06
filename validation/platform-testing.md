@@ -8,8 +8,8 @@ runner architectures, not a claim to test every OS/R/CPU combination.
 A separate Linux Chromium job installs the package, builds an editable standalone
 app in a fresh runner directory, then launches it in a separate R process. Its
 synthetic 16-effect fixture tests initial analysis, cache disclosure, forest image
-rendering, workbook download/re-upload, restored picker selections and missing-value filtering,
-filtering and reset. The workflow attempts to upload screenshots, Shiny logs and a
+rendering, workbook download/re-upload, restored picker selections, missing-value filtering,
+numeric filtering and reset. The workflow attempts to upload screenshots, Shiny logs and a
 machine-readable result as `generated-app-browser-evidence` on failure too, but the
 available evidence depends on how far the job gets. There is no
 public app deployment. The workflow token has read-only repository permissions.
