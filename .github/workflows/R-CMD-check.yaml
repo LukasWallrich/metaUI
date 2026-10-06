@@ -10,8 +10,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        r: ['release', 'oldrel-1']
-    runs-on: ubuntu-latest
+        include:
+          - {os: ubuntu-latest, r: 'release'}
+          - {os: ubuntu-latest, r: 'oldrel-1'}
+          - {os: macos-latest, r: 'release'}
+          - {os: windows-latest, r: 'release'}
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} (R ${{ matrix.r }})
     steps:
       - uses: actions/checkout@v4
       - uses: r-lib/actions/setup-r@v2
@@ -26,3 +31,37 @@ jobs:
       - uses: r-lib/actions/check-r-package@v2
         with:
           args: 'c("--no-manual", "--as-cran")'
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: check
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install package and generate smoke fixture
+        run: |
+          R CMD INSTALL .
+          Rscript --vanilla tools/browser-fixture.R "$RUNNER_TEMP/metaui-smoke"
+      - name: Install browser in runner scratch directory
+        run: |
+          npm install --prefix "$RUNNER_TEMP/metaui-browser" --no-save playwright@1.63.0
+          "$RUNNER_TEMP/metaui-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Exercise generated standalone app in Chromium
+        env:
+          NODE_PATH: ${{ runner.temp }}/metaui-browser/node_modules
+          METAUI_SMOKE_DIR: ${{ runner.temp }}/metaui-smoke
+        run: node tools/browser-smoke.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: generated-app-browser-evidence
+          path: ${{ runner.temp }}/metaui-smoke/evidence
