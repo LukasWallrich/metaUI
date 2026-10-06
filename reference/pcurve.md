@@ -167,8 +167,7 @@ and the between-study heterogeneity of the meta-analysis is substantial
 
 Harrer, M., Cuijpers, P., Furukawa, T.A, & Ebert, D. D. (2019). *Doing
 Meta-Analysis in R: A Hands-on Guide*. DOI: 10.5281/zenodo.2551803.
-[Chapter
-9.2](https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/pcurve.html).
+[Chapter 9.2](https://doing-meta.guide/pcurve.html).
 
 Simonsohn, U., Nelson, L. D., & Simmons, J. P. (2014a). P-curve: a Key
 to the File-drawer. *Journal of Experimental Psychology, 143*(2), 534.

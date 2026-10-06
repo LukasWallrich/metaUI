@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">metaUI</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2.9001</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,7 +62,9 @@
 <span>  es_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  variance_scale <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  direction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"unspecified"</span>, <span class="st">"positive"</span>, <span class="st">"negative"</span><span class="op">)</span>,</span>
-<span>  categorical_filters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  categorical_filters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  alternatives <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  primary_label <span class="op">=</span> <span class="st">"As supplied"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -149,6 +151,14 @@ or change the models and analyses to be included in the app. Invalid required in
 <dt id="arg-categorical-filters">categorical_filters<a class="anchor" aria-label="anchor" href="#arg-categorical-filters"></a></dt>
 <dd><p>Explicitly convert named filter columns to factors with radix-sorted levels. Useful for CSV/JSON builds.</p></dd>
 
+
+<dt id="arg-alternatives">alternatives<a class="anchor" aria-label="anchor" href="#arg-alternatives"></a></dt>
+<dd><p>Named list of up to five author-defined effect computations. Each entry supplies es_field, variance or se, es_type, variance_scale when required, and a nonempty justification. Every computation must retain the same effects and converge on the same fitting scale.</p></dd>
+
+
+<dt id="arg-primary-label">primary_label<a class="anchor" aria-label="anchor" href="#arg-primary-label"></a></dt>
+<dd><p>Label for the primary computation when alternatives are provided.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -157,9 +167,19 @@ or change the models and analyses to be included in the app. Invalid required in
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="fu">prepare_data</span><span class="op">(</span><span class="st">"my_meta.csv"</span>, <span class="st">"study_id"</span>, <span class="st">"cohens_d"</span>, variance <span class="op">=</span> <span class="st">"vi"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">raw</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>study <span class="op">=</span> <span class="va">letters</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span>, d <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">.1</span>, <span class="fl">.3</span>, <span class="op">-</span><span class="fl">.1</span>, <span class="fl">.4</span><span class="op">)</span>, vi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.02</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">prepare_data</span><span class="op">(</span><span class="va">raw</span>, <span class="st">"study"</span>, <span class="st">"d"</span>, variance <span class="op">=</span> <span class="st">"vi"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 4 × 14</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   metaUI__study_id metaUI__effect_size metaUI__variance metaUI__se</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> a                                0.1             0.02      0.141</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> b                                0.3             0.02      0.141</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> c                               -<span style="color: #BB0000;">0.1</span>             0.02      0.141</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span> d                                0.4             0.02      0.141</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 10 more variables: metaUI__pvalue &lt;dbl&gt;, metaUI__N &lt;dbl&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   metaUI__es_type &lt;chr&gt;, metaUI__es_label &lt;int&gt;, metaUI__effect_id &lt;int&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   metaUI__input_effect &lt;dbl&gt;, metaUI__input_variance &lt;dbl&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   metaUI__display_scale &lt;chr&gt;, metaUI__direction &lt;chr&gt;, metaUI__es_z &lt;dbl&gt;</span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

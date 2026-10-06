@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">metaUI</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2.9001</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -161,6 +161,16 @@ that the app should be saved to</strong>.</p>
 <span>               save_to_folder <span class="op">=</span> <span class="st">"my_app_folder"</span>,</span>
 <span>               citation <span class="op">=</span> <span class="st">"Dannheim et al. (2025). doi:10.5271/sjweh.4219. CC-BY-4.0. Reanalysis, not author endorsement."</span><span class="op">)</span></span>
 <span><span class="co"># add your own contact address via `contact = "..."` if you want readers to reach you</span></span></code></pre></div>
+<p>If one model is your primary analysis, name it with
+<code>primary_model</code>, using the model’s <code>name</code> exactly
+as it appears in the models tibble or <code>models.R</code> (for example
+<code>primary_model = "Random-Effects Multilevel Model"</code>). The app
+shows that model first and labels the other rows as explorations. If it
+cannot be estimated for a reader’s selection, the app says why and does
+not substitute another model. Without <code>primary_model</code>, the
+app states that it does not choose between estimators. The declaration
+is stored in the generated <code>labels_and_options.R</code> and in
+<code>validation.json</code>.</p>
 <p>When you run this, the app will be saved to a new folder, in this
 case <code>my_app_folder</code>. You can run
 <code>shiny::shinyAppDir(my_app_folder)</code> (specifying your folder)

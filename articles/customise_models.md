@@ -75,6 +75,12 @@ app. `generate_shiny(overwrite=TRUE)` replaces all generated files,
 including `analysis.R`; build into a fresh folder and compare changes to
 preserve hand edits. It never clears unrelated files from the folder.
 
+If you add an author model that is your primary analysis (such as the
+Dannheim example’s source-reference row), pass its name as
+`generate_shiny(primary_model = ...)`. Renaming that model later
+requires the same change in `labels_and_options.R`; the app reports a
+declared primary model it cannot find instead of picking another.
+
 Custom models default to `options=list(fit_cache_entries=0)`. Only
 explicitly opt deterministic code into a 1–3-entry session cache. Random
 models or code that reads external state must leave it disabled. A cache

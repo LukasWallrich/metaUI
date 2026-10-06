@@ -27,7 +27,9 @@ prepare_data(
   es_id = NULL,
   variance_scale = NULL,
   direction = c("unspecified", "positive", "negative"),
-  categorical_filters = character()
+  categorical_filters = character(),
+  alternatives = list(),
+  primary_label = "As supplied"
 )
 ```
 
@@ -134,6 +136,17 @@ prepare_data(
   Explicitly convert named filter columns to factors with radix-sorted
   levels. Useful for CSV/JSON builds.
 
+- alternatives:
+
+  Named list of up to five author-defined effect computations. Each
+  entry supplies es_field, variance or se, es_type, variance_scale when
+  required, and a nonempty justification. Every computation must retain
+  the same effects and converge on the same fitting scale.
+
+- primary_label:
+
+  Label for the primary computation when alternatives are provided.
+
 ## Value
 
 tibble with the data from the file/input reformatted for metaUI
@@ -141,7 +154,17 @@ tibble with the data from the file/input reformatted for metaUI
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-prepare_data("my_meta.csv", "study_id", "cohens_d", variance = "vi")
-} # }
+raw <- data.frame(study = letters[1:4], d = c(.1, .3, -.1, .4), vi = rep(.02, 4))
+prepare_data(raw, "study", "d", variance = "vi")
+#> # A tibble: 4 × 14
+#>   metaUI__study_id metaUI__effect_size metaUI__variance metaUI__se
+#>   <chr>                          <dbl>            <dbl>      <dbl>
+#> 1 a                                0.1             0.02      0.141
+#> 2 b                                0.3             0.02      0.141
+#> 3 c                               -0.1             0.02      0.141
+#> 4 d                                0.4             0.02      0.141
+#> # ℹ 10 more variables: metaUI__pvalue <dbl>, metaUI__N <dbl>,
+#> #   metaUI__es_type <chr>, metaUI__es_label <int>, metaUI__effect_id <int>,
+#> #   metaUI__input_effect <dbl>, metaUI__input_variance <dbl>,
+#> #   metaUI__display_scale <chr>, metaUI__direction <chr>, metaUI__es_z <dbl>
 ```

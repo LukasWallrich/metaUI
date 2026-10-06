@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">metaUI</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2.9001</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -144,6 +144,12 @@ helpers requires restarting the app.
 files, including <code>analysis.R</code>; build into a fresh folder and
 compare changes to preserve hand edits. It never clears unrelated files
 from the folder.</p>
+<p>If you add an author model that is your primary analysis (such as the
+Dannheim example’s source-reference row), pass its name as
+<code>generate_shiny(primary_model = ...)</code>. Renaming that model
+later requires the same change in <code>labels_and_options.R</code>; the
+app reports a declared primary model it cannot find instead of picking
+another.</p>
 <p>Custom models default to
 <code>options=list(fit_cache_entries=0)</code>. Only explicitly opt
 deterministic code into a 1–3-entry session cache. Random models or code

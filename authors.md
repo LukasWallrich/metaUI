@@ -19,13 +19,13 @@ Source:
 [`DESCRIPTION`](https://github.com/LukasWallrich/metaUI/blob/main/DESCRIPTION)
 
 Wallrich L, Röseler L (2026). *metaUI: Create 'Shiny' Apps for the
-Exploration of Meta-Analytic Datasets*. R package version 0.1.2.9001,
+Exploration of Meta-Analytic Datasets*. R package version 0.2.0,
 <https://lukaswallrich.github.io/metaUI/>.
 
     @Manual{,
       title = {metaUI: Create 'Shiny' Apps for the Exploration of Meta-Analytic Datasets},
       author = {Lukas Wallrich and Lukas Röseler},
       year = {2026},
-      note = {R package version 0.1.2.9001},
+      note = {R package version 0.2.0},
       url = {https://lukaswallrich.github.io/metaUI/},
     }

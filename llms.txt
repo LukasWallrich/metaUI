@@ -107,8 +107,9 @@ retain their verified source licences and attribution in
 
 ## Related projects
 
-- Albritton et al. created a \[A General Tool for Living Meta-Analysis\]
-  to run and update meta-analyses online, which contains similar
+- Allbritton et al. created [A General Tool for Living
+  Meta-Analysis](https://dallbrit.shinyapps.io/Meta_regression_app/) to
+  run and update meta-analyses online, which contains similar
   functionalities. Currently, it seems more feature-rich than metaUI,
   but more focused on meta-analysts rather than end users of insights -
   and less customisable. The app is accessible
@@ -117,6 +118,16 @@ retain their verified source licences and attribution in
 
 Allbritton, D., Gómez, P., Angele, B., Vasilev, M., & Perea, M. (2024).
 Breathing Life Into Meta-Analytic Methods. *Journal of Cognition*, 7(1).
+
+Other related tools include [Metapsy](https://www.metapsy.org/)
+(analysis workflow inspiration), the [Cooperation
+Databank](https://cooperationdatabank.org/) (dataset exploration),
+[PsychOpen CAMA](https://cama.psychopen.eu/) (cumulative meta-analysis),
+and the [taVNS HRV app](https://vinzentwolf.shinyapps.io/taVNSHRVmeta/)
+(a Bayesian living meta-analysis). These are references, not
+endorsements or sources of bundled code. See the [issue follow-up
+decisions](https://lukaswallrich.github.io/metaUI/validation/issue-followup.md)
+for the assessed feature overlap and remaining work.
 
 ## Headless correctness candidate
 
@@ -137,6 +148,22 @@ empty folder, then run:
 metaUI::build_app("tiny.json")
 shiny::runApp("tiny-app")         # separate, blocking launch action
 ```
+
+[`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
+also supports this workflow: supply `save_to_folder` and
+`launch_app = FALSE`, then launch separately with
+`shiny::runApp("<folder>")`, passing the folder you saved to (a bare
+[`shiny::runApp()`](https://rdrr.io/pkg/shiny/man/runApp.html) runs the
+current working directory). With `launch_app = TRUE` (the default when
+no folder is supplied), interactive printing of the returned app
+launches Shiny and blocks the console until you stop the app. Assigning
+the app object to a variable postpones launch until you print it.
+
+Authors may name one primary model (`primary_model` in
+[`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
+or the JSON config). Apps show it first and label the other rows as
+explorations; they never substitute another model when it is
+unsupported.
 
 Generation refuses a nonempty folder by default. p/N are optional for
 the primary models; directional models require explicit direction.
@@ -184,6 +211,62 @@ Downloads preserve the full current input dataset and saved filter
 selections; the summary sheet describes the selected rows. An empty
 selection stays empty on re-upload and reports no eligible rows, while
 the original inputs remain available.
+
+### Practical equivalence and forest exports
+
+Summary includes an interval assessment for a reader-chosen symmetric
+smallest effect size of interest, on the displayed SMD or r scale. No
+bound is assumed. The strict containment criterion uses the reported
+intervals without refitting; model assumptions and small-sample
+limitations are shown beside the assessment. Downloads record the bound
+and classification in an `equivalence` sheet.
+
+Forest plots compare observed-effect intervals and available
+multilevel/RVE summary intervals. PDF, PNG and CSV downloads use the
+same selected rows; the CSV retains both fitting and displayed scales.
+The configured row limit also applies to exports.
+
+The [synthetic correlation
+example](https://lukaswallrich.github.io/metaUI/inst/examples/correlations)
+demonstrates raw-r variance conversion and checks the fitted summary
+against an independent metafor reference.
+
+Authors can supply up to five alternative computations in
+`prepare_data(alternatives = ...)`. Each named entry declares
+`es_field`, `variance` or `se`, `es_type`, `variance_scale` for
+correlations, and a `justification`. `primary_label` names the original
+computation. All alternatives use the same effects and fitting scale.
+Readers apply a computation with Analyze data; the comparison tab fits
+the configured multilevel/RVE models for the same selection. The
+descriptive z filter and source p-values remain anchored to the primary
+computation.
+
+Enable study-level Bayesian analysis with
+`generate_shiny(..., bayesian = list(enabled = TRUE))`, after installing
+the optional `bayesmeta` package. The mean prior is flat; the
+heterogeneity prior is half-normal with scale 0.5 for SMD or 0.25 for
+Fisher z, configurable with `tau_scale`. Central 95% credible intervals
+and posterior medians are reported, and the sensitivity tab compares
+half and double that prior scale. This uses aggregated studies and the
+declared within-study correlation. Authors who edit `aggregation_method`
+in the generated `labels_and_options.R` to `"first"` switch it to the
+first-effect rule; the build records the priors and the default
+aggregation. The default cap of 20 studies protects interactive use:
+first-fit benchmarks took about 20 seconds at 20 studies and 97 seconds
+at 50 on the review machine. Authors can set `max_studies` from 2 to 50,
+with a build warning above 20. Each Analyze blocks the Shiny server
+process while fitting. Prior sensitivity runs when its tab or download
+is requested and can require two extra fits. See [Röver et
+al.](https://doi.org/10.1002/jrsm.1475) for the prior rationale.
+
+After analysis, the selection link and address bar describe the applied
+selection on this exact built dataset. Links validate filters,
+missing-value choices, computation and equivalence bound before
+restoring and analysing. Invalid links leave a notice and require manual
+analysis. Uploaded data require the workbook, which includes all
+computation inputs; their session-specific data are not encoded in URLs.
+Schema version 2 adds computation and Bayesian authoring; version 1
+continues to accept the original configuration fields.
 
 # Package index
 

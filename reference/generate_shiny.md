@@ -16,12 +16,14 @@ generate_shiny(
   dataset_name,
   eff_size_type_label = NA,
   models = get_model_tibble,
+  primary_model = NULL,
   filter_popups = list(),
   save_to_folder = NA,
   launch_app = is.na(save_to_folder),
   ...,
   options = list(),
-  overwrite = FALSE
+  overwrite = FALSE,
+  bayesian = NULL
 )
 ```
 
@@ -52,24 +54,36 @@ generate_shiny(
   must assign the tibble to a variable called models_to_run (i.e. using
   \<-).
 
+- primary_model:
+
+  Optional name of the one model (a `name` in `models`) that the authors
+  treat as their primary analysis. Generated apps show it first and
+  label the other rows as explorations. If it cannot be estimated for a
+  reader's selection, the app reports why and does not substitute
+  another model. The default, `NULL`, declares no primary model, and the
+  app then says that it does not choose between estimators.
+
 - filter_popups:
 
-  Named list with content for popup windows that provide further details
-  on filter variables. They can contain HTML formatting, but should then
-  be wrapped into `HTML()`, for instance:
-  `list(Year = HTML("<i>Note:</i><br>This refers to data collection if reported, otherwise the publication year.`)
+  Named list of expandable filter-help content. Plain text is escaped;
+  wrap trusted HTML in
+  [`htmltools::HTML()`](https://rstudio.github.io/htmltools/reference/HTML.html),
+  for example
+  `list(Year = htmltools::HTML("<i>Note:</i> Data collection year."))`.
 
 - save_to_folder:
 
-  If specified, the code and data for the app will be saved to this
-  folder. Defaults to NA, which means that nothing will be saved. If the
-  folder exists, the user will refused unless overwrite = TRUE. Prefer a
-  fresh destination to preserve manual edits.
+  Folder for the generated code and data. Defaults to NA, which uses a
+  temporary folder. A nonempty destination is refused unless overwrite =
+  TRUE. Prefer a fresh destination to preserve manual edits.
 
 - launch_app:
 
-  Should the app be launched? Defaults to TRUE if it is not saved (i.e.
-  save_to_folder is NA), FALSE otherwise.
+  Should the app be launched? Defaults to TRUE if save_to_folder is NA,
+  FALSE otherwise. Interactive auto-printing of the returned app
+  launches it and blocks the R console until the app stops. Use
+  launch_app = FALSE to build without launching, then run
+  shiny::runApp() separately when ready.
 
 - ...:
 
@@ -128,19 +142,28 @@ generate_shiny(
   Explicit opt-in to replace generated files in a nonempty destination.
   Unrelated files are retained.
 
+- bayesian:
+
+  NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies =
+  20). Adds a deterministic study-level normal-normal model with a flat
+  prior on the mean and a half-normal heterogeneity prior. Correlation
+  default tau_scale is .25 on Fisher z. Requires optional bayesmeta.
+  Sensitivity analyses use half and double the scale.
+
 ## Value
 
-If `launch_app = FALSE`, invisibly the normalised path of the generated
-app folder. Otherwise a Shiny app object for the saved folder, which
-launches when printed.
+With launch_app = FALSE, invisibly returns the generated app folder
+path. With launch_app = TRUE, returns a Shiny app object; printing it
+launches the app and blocks the console until it stops.
 
 ## Examples
 
 ``` r
-# First, use prepare_data() to create your dataset.
-if (exists("app_data")) {
-  generate_shiny(app_data,
-    dataset_name = "Your meta-analysis",
-    eff_size_type_label = "Declared effect scale")
-}
+raw <- data.frame(study = letters[1:6], d = c(.1, .3, -.1, .4, .2, .5),
+                  vi = c(.02, .03, .02, .04, .01, .05))
+app_data <- prepare_data(raw, "study", "d", variance = "vi")
+folder <- tempfile("metaui-example-")
+generate_shiny(app_data, dataset_name = "Example", save_to_folder = folder,
+               launch_app = FALSE)
+unlink(folder, recursive = TRUE)
 ```

@@ -2,9 +2,9 @@
 
 This function calculates the standard error of an effect size provided
 the exact \\p\\-value and (continuous) effect size according to the
-formula by [Altman and Bland
-(2011)](https://pubmed.ncbi.nlm.nih.gov/21824904/). See the [dmetar
-documentation](https://dmetar.protectlab.org/) for examples.
+formula by Altman and Bland (2011),
+[doi:10.1136/bmj.d2090](https://doi.org/10.1136/bmj.d2090) . See the
+[dmetar documentation](https://dmetar.protectlab.org/) for examples.
 
 ## Usage
 
