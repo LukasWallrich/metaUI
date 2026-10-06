@@ -1,0 +1,82 @@
+# Customising the models to compare
+
+``` r
+
+library(metaUI)
+#> Note re metaUI: This package is still under active development - so please report any issues and desired features on https://github.com/LukasWallrich/metaUI.
+```
+
+## Adding, editing and removing models
+
+You might wish to show different models. For now, the easiest way to do
+that is to save the app into a folder, as shown in the
+vignette(“getting_started”). Then open models.R to edit the models.
+
+## Removing models
+
+To remove models, you can add a comment (`#`) in front of the line where
+it is *first* defined in upper part of the file where `models_to_run`
+are defined … and ignore the longer part in the `models_code` below. So
+to remove the Trim-and-fill model, you simply need to add the `#` shown
+below - or alternatively to delete that line.
+
+``` r
+   "Robust Variance Estimation",                      FALSE,       "as.numeric(mod$reg_table$b.r)",      ... 
+#   "Trim-and-fill",                                   TRUE,        "mod$TE.random",                     ...
+   "P-uniform star",                                  TRUE,        "mod$est",                            ...  
+```
+
+## Add or edit models
+
+To add or edit models, you need to understand a bit more about the
+structure of the file. If contains two parts - firstly, the
+`models_to_run` which has the names of the models and the details on how
+to extract summary data, and then the `models_code` that contains the
+code to estimate them.
+
+For `models_to_run`, you need to provide the following details for each
+model:
+
+- `name` of the model to be displayed
+- `aggregated` TRUE/FALSE value whether it needs to be estimated with
+  the dataset aggregated by sample (i.e. without dependent effect sizes)
+
+And then code within “” that allows you to export the following from the
+model object, called `mod`:
+
+- `es`: the effect size
+- `LCL` & `UCL`: the lower and upper bounds of the 95% confidence
+  intervals for the effect size
+- `k`: the model-specific count (state whether effects, studies, or
+  imputed effects)
+
+For `models_code`, you need to provide code, again in ““, that estimates
+the model based on fields available in the dataset produced by
+[`prepare_data()`](https://lukaswallrich.github.io/metaUI/reference/prepare_data.md)
+(for models where `aggregated = FALSE`) or aggregated by
+`metaUI_aggregate()` in the generated `analysis.R`. Aggregation retains
+the first row’s metadata but does not infer aggregate p-values or N; do
+not interpret retained metadata as a new scientific aggregation rule.
+
+If your model code is complicated, it might be worthwhile to create
+helper functions to call from within the `models_code` entry. Add them
+above the final `models_to_run` expression in `models.R`, e.g.,
+`my_meta_fun <- function(...)`. The app sources model code in its own
+environment. Declare and install any extra dependencies yourself; the
+default manifest does not infer them. Custom models must return the
+declared fitting scale. `NA` intervals are allowed only when explicitly
+specified; failed fits are reported.
+
+The default multilevel and RVE specifications call helpers in the
+generated `analysis.R`. Study-level aggregation also happens there
+through `metaUI_aggregate`; `df_agg` is exposed by the server but does
+not infer N or p-values. Editing those helpers requires restarting the
+app. `generate_shiny(overwrite=TRUE)` replaces all generated files,
+including `analysis.R`; build into a fresh folder and compare changes to
+preserve hand edits. It never clears unrelated files from the folder.
+
+Custom models default to `options=list(fit_cache_entries=0)`. Only
+explicitly opt deterministic code into a 1–3-entry session cache. Random
+models or code that reads external state must leave it disabled. A cache
+hit preserves the original fit times, warnings, and status, and is
+disclosed as `cache_hit`.

@@ -7,9 +7,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Create Shiny Apps for the Exploration of Meta-Analytic Datasets • metaUI</title>
 <script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.4.2/css/all.min.css" rel="stylesheet">
-<link href="deps/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet">
+<link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Create Shiny Apps for the Exploration of Meta-Analytic Datasets">
 <meta name="description" content="Readers of meta-analyses are often interested in how analytical choices influence results, or what the effects are for subsets of the data. metaUI makes it easy for authors to create Shiny apps that answer such questions, and that allow anyone to rerun analyses with updated/modified datasets.">
 <meta property="og:description" content="Readers of meta-analyses are often interested in how analytical choices influence results, or what the effects are for subsets of the data. metaUI makes it easy for authors to create Shiny apps that answer such questions, and that allow anyone to rerun analyses with updated/modified datasets.">
@@ -23,7 +23,7 @@
 
     <a class="navbar-brand me-2" href="index.html">metaUI</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -63,7 +63,7 @@
 
 <p>The metaUI package allows users to quickly create powerful and customisable Shiny web apps that allow readers to explore a meta-analytic dataset in depth. They can explore the impact of different analytical choices, see results for subgroups of particular interest, and even modify and update the underlying dataset.</p>
 <p>The motivation for the package came from the fact that meta-analyses are based on rich datasets that can be analyzed in numerous ways, and it is unlikely that authors and readers will always agree on the “best ways” to analyze the data. Whether it comes to the choice of model (e.g., random versus fixed effects), the methods for assessing or adjusting for publication bias (e.g., z-curve, p-curve, PET/PEESE etc), or the moderators to be considered, disagreements are likely to arise. This can lead to the inclusion of lengthy robustness checks and alternative analyses that are time-consuming and difficult to digest. metaUI, as an R package that supports researchers in creating interactive Shiny web apps can help - these apps allow readers (and reviewers) to explore meta-analytic datasets in a variety of different ways. Apart from allowing readers (and reviewers) to assess the robustness and trustworthiness of results more comprehensively, metaUI apps allow users to assess the results that are most relevant to them, such as by filtering the dataset to focus on a specific group of participants, region, outcome variable, or research method. With the opportunity for users to download the dataset used and to upload alternatives, it will also facilitate the updating of meta-analyses.</p>
-<p>The idea came from researchers who have created similar web apps for their meta-analyses that have been well received, yet they require substantial time investment and advanced coding skills to create. With metaUI, researchers can get a working app very swiftly – while they still have the flexibility to tailor the display in line with their interests and requirements. The package is now in a stable beta-stage, yet feedback and contributions are very welcome!</p>
+<p>The idea came from researchers who have created similar web apps for their meta-analyses that have been well received, yet they require substantial time investment and advanced coding skills to create. With metaUI, researchers can get a working app very swiftly – while they still have the flexibility to tailor the display in line with their interests and requirements. This branch is a tested development candidate with scientific and licensing limits documented below; feedback and contributions are welcome.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -89,10 +89,7 @@
 <li>Röseler, L., Weber, L., Helgerth, K. A. C., Stich, E., Günther, M., Tegethoff, P., Wagner, F. S., Ambrus, E., Antunovic, M., Barrera, F., Halali, E., Ioannidis, K., McKay, R., Milstein, N., Molden, D. C., Papenmeier, F., Rinn, R., Schreiter, M. L., Zimdahl, M., Allen, E., Bahník, S., Baumeister, R. F., Bermeitinger, C., Bickenbach, S. L. C., Blank, P. A., Blower, F. B. N., Bögler, H. L., Boo, F. L., Boruchowicz, C., Bühler, R. L., Burgmer, P., Cheek, N., N., Dohle, S., Dorsch, L., Dück, M. S., Fels, S.-A., Fischer, A. L., Frech, M.-L., Freira, L., Friedinger, K., Genschow, O., Harris, A., Hartig, B., Häusser, J. A., Hedgebeth, M., Henkel, M., Horvath, D., Hügel, J. C., Igna, E. L. E., Imhoff, R., Intelmann, P., Karg, A. H., Klamar, A., Klein, C., Klusmann, B., Knappe, E., Köppel, L.-M., Koßmann, L., Kraft, P., Kroworsch, M. K., Krueger, S. M., Kühling, S., Lagator, S., Lammers, J., Loschelder, D. D., Navajas, J., Norem, J., K., Novak, J. Onuki, Y., Page, E., Panse, F., Pavlovic, Z., Pearton, J., Rebholz, T. R., Rodgers, S., Röseler, J. J., Rostekova, A., Roßmaier, K. V., Sartorio, M., Scheelje, L., Schindler, S., Schreiner, N. B., Seida, C., Shanks, D. R., Siems, M.-C., Stitz, M., Starkulla, M., Stäglich, M., Thies, K., Thum, E., Undorf, M., Unger, B. D., Urlichich, D., Vadillo, M. A., Wackershauser-Sablotny, V., Wessel, I., Wolf, H., Zhou, A., &amp; Schütz, A. (2022). OpAQ: Open Anchoring Quest, Version 1.1.48.95. <a href="https://dx.doi.org/10.17605/OSF.IO/YGNVB" class="external-link uri">https://dx.doi.org/10.17605/OSF.IO/YGNVB</a>, Shiny app accessible <a href="https://metaanalyses.shinyapps.io/OpAQ/" class="external-link">here</a>
 </li>
 </ul>
-<p>The sample data was taken from the <a href="https://github.com/josue-rodriguez/psymetadata" class="external-link">psymetadata</a>-package, and initially extracted from the following article:</p>
-<ul>
-<li>Barroso C, Ganley CM, McGraw AL, Geer EA, Hart SA, Daucourt MC (2021). “A meta-analysis of the relation between math anxiety and math achievement.” <em>Psychological Bulletin</em>, 147(2), 134. Data and details also available on <a href="https://osf.io/5admx/" class="external-link">https://osf.io/5admx/</a>.</li>
-</ul>
+<p>The introductory sample is the CC-BY-4.0 mental-health pool from Dannheim et al. (2025), <a href="https://doi.org/10.5271/sjweh.4219" class="external-link">doi:10.5271/sjweh.4219</a>. Its 12 signed Hedges-g effects, CI-derived SEs, membership and changes are attributed in <code>inst/examples/dannheim</code>. Existing Aksayli/Coles data retain their verified source licences and attribution in <code>inst/COPYRIGHTS</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="related-projects">Related projects<a class="anchor" aria-label="anchor" href="#related-projects"></a>
@@ -101,6 +98,25 @@
 <li>Albritton et al. created a [A General Tool for Living Meta-Analysis] to run and update meta-analyses online, which contains similar functionalities. Currently, it seems more feature-rich than metaUI, but more focused on meta-analysts rather than end users of insights - and less customisable. The app is accessible <a href="https://dallbrit.shinyapps.io/Meta_regression_app/" class="external-link">here</a>, more details are in the accompanying paper:</li>
 </ul>
 <p>Allbritton, D., Gómez, P., Angele, B., Vasilev, M., &amp; Perea, M. (2024). Breathing Life Into Meta-Analytic Methods. <em>Journal of Cognition</em>, 7(1).</p>
+</div>
+<div class="section level2">
+<h2 id="headless-correctness-candidate">Headless correctness candidate<a class="anchor" aria-label="anchor" href="#headless-correctness-candidate"></a>
+</h2>
+<p>The development branch adds a versioned JSON build path while retaining editable R/Shiny apps. See <a href="https://github.com/LukasWallrich/metaUI/blob/main/validation/reproduction.md" class="external-link">reproduction and scientific contract</a>, <a href="inst/examples/tiny.json">the tiny synthetic config</a>, and its <a href="inst/examples/config.schema.json">JSON schema</a>. Build and launch are separate:</p>
+<p>First copy <code>tiny.json</code> and <code>tiny.csv</code> from <code>inst/examples</code> into a fresh, empty folder, then run:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">metaUI</span><span class="fu">::</span><span class="fu"><a href="reference/build_app.html">build_app</a></span><span class="op">(</span><span class="st">"tiny.json"</span><span class="op">)</span></span>
+<span><span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">runApp</a></span><span class="op">(</span><span class="st">"tiny-app"</span><span class="op">)</span>         <span class="co"># separate, blocking launch action</span></span></code></pre></div>
+<p>Generation refuses a nonempty folder by default. p/N are optional for the primary models; directional models require explicit direction. COR/ZCOR require explicit variance scales. Read the generated validation report before interpreting results. The introductory Dannheim data use signed Hedges g, not correlations. No public deployment is automatic.</p>
+<p><a href="https://leibniz-psychology.org/en/practices-and-tools-of-open-science/psychopen-cama" class="external-link">PsychOpen CAMA</a> is another platform for cumulative meta-analysis. metaUI’s intended contribution is an author-owned app with editable R source. See the bounded <a href="https://github.com/LukasWallrich/metaUI/blob/main/validation/publication-readiness.md" class="external-link">publication-readiness assessment</a>.</p>
+<div class="section level3">
+<h3 id="empirical-example-and-performance">Empirical example and performance<a class="anchor" aria-label="anchor" href="#empirical-example-and-performance"></a>
+</h3>
+<p>Copy <code>inst/examples/dannheim</code> to a fresh working directory and run <code>Rscript --vanilla build.R</code>. Launch separately with <code>shiny::runApp("mental-health-app")</code>. The tiny CC-BY mental-health pool retains 12 exact benchmark member IDs and original signed Hedges g with CI-derived native SE. The source-reference REML/Hartung–Knapp model is checked against metafor; other models/diagnostics are explicitly exploratory. Read the example’s README/provenance before interpreting results. No benchmark corpus is deployed.</p>
+<p>Generated apps reuse compatible fitted objects and retain three recent exact fit selections per reader session; <code>cache_hit</code> discloses reuse. Custom models default to no cache. Pass <code>options = list(fit_cache_entries = 0)</code> to <code><a href="reference/generate_shiny.html">generate_shiny()</a></code> (or set <code>"options": {"fit_cache_entries": 0}</code> in the build JSON) to disable caching; keep it disabled for random models or code depending on external state. Uploads are validated, stored in session state, and clear prior cached results.</p>
+<p><a href="https://github.com/LukasWallrich/metaUI/blob/main/validation/performance-optimisation.md" class="external-link">Performance measurements</a> distinguish faster p-curve calculations/fit reuse from cache hits and first-time fitting costs. <a href="https://github.com/LukasWallrich/metaUI/blob/main/validation/licensing-audit.md" class="external-link">Licence audit</a> records the licensed replacement of the former Barroso sample. This development candidate is not a public release.</p>
+<p>Downloads preserve the full current input dataset and saved filter selections; the summary sheet describes the selected rows. An empty selection stays empty on re-upload and reports no eligible rows, while the original inputs remain available.</p>
+</div>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -130,8 +146,8 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Lukas Wallrich <br><small class="roles"> Author, maintainer, copyright holder </small> <a href="https://orcid.org/0000-0003-2121-5177" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a> </li>
-<li>Lukas Röseler <br><small class="roles"> Author, copyright holder </small> <a href="https://orcid.org/0000-0002-6446-1901" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a> </li>
+<li>Lukas Wallrich <br><small class="roles"> Author, maintainer, copyright holder </small> <a href="https://orcid.org/0000-0003-2121-5177" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li>Lukas Röseler <br><small class="roles"> Author, copyright holder </small> <a href="https://orcid.org/0000-0002-6446-1901" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
 <li><a href="authors.html">More about authors...</a></li>
 </ul>
 </div>
@@ -153,7 +169,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
