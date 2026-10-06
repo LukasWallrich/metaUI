@@ -14,6 +14,40 @@
   This is an explicit data-path removal, not a silent replacement of that analysis.
 * Check Linux, macOS and Windows in CI, with a real generated-app Chromium
   smoke test; keep the hidden download handler active for programmatic downloads.
+* Generated apps explain their state: result tabs say "No results yet" before the
+  first analysis, a results strip names the data and selection behind the shown
+  results, and filter edits not yet analysed are flagged until Analyze data is
+  clicked. Models that were not estimated are listed beside the estimate plot with
+  their reasons. A collapsible note derives scale, declared direction and
+  aggregation assumptions from the data contract. Model code, estimates and
+  downloads are unchanged.
+* Authors can declare one `primary_model` (in `generate_shiny()` or the JSON
+  config). Apps show it first as the authors' primary analysis, label other rows as
+  explorations, and report why it is unavailable instead of substituting another
+  model. The Dannheim example declares its source-reference row.
+* Slider bounds round outward to a round tick interval with an explicit integer
+  grid, fixing overlapping end labels (Shiny's fractional tick counts) and
+  non-integer bounds such as 2000.992; a small script hides any remaining grid-label
+  collisions in narrow sidebars or after uploads.
+* Fix pre-existing bugs found in a cross-view QA pass: the outlier violin plot failed when no
+  outliers were drawn and moderation slopes were rounded to "-0.00". Correlation summary plots label the
+  back-transformed r scale.
+* Generated apps include editable `www/metaui.css` and `www/metaui.js` (responsive
+  tables and plots, WCAG AA text contrast, visible keyboard focus including sliders,
+  a skip link to results, compact empty/error states).
+* Replace shinyBS filter popups with expandable inline help, supporting keyboard,
+  touch and Escape while preserving author-provided HTML and clickable links. Newly generated apps no longer require shinyBS.
+* Repeat the selected sample summary on the Sample tab with separate Shiny output
+  IDs backed by the same reactive summary, preserving the welcome dialog.
+* Show forest row-limit messages as HTML before creating the plot output;
+  validate the configured limit as a positive finite whole number.
+* Document console blocking on interactive launch and the build-only alternative.
+* Add a synthetic correlation example with an independent Fisher-z reference fit.
+* Forest plots show observed effects on the displayed scale, compare available
+  multilevel/RVE summary intervals, and export PDF, PNG and CSV (both scales in the CSV).
+* Add practical-equivalence interval assessment with a reader-chosen symmetric
+  bound (no default), strict containment, threshold values and model limitations.
+  Bound changes do not refit models; downloads record the assessment and bound.
 * No public release or tag is created.
 
 # metaUI 0.1.2.9000 (correctness candidate)

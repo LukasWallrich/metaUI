@@ -26,6 +26,11 @@
       "type": "string",
       "minLength": 1
     },
+    "primary_model": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional name of the default or author model shown first as the authors' primary analysis; never substituted when unsupported."
+    },
     "mapping": {
       "type": "object",
       "additionalProperties": false,

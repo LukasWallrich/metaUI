@@ -13,3 +13,5 @@
 ^tools$
 ^validation$
 ^work$
+
+^\.git$

@@ -10,7 +10,8 @@ x <- data.frame(study = rep(LETTERS[1:8], each = 2), id = rep(1:2, 8),
 d <- prepare_data(x, "study", "yi", variance = "vi", es_id = "id",
   filters = c(Year = "year", Group = "group"))
 generate_shiny(d, "Synthetic browser smoke fixture", launch_app = FALSE,
-  save_to_folder = file.path(args[1], "app"), date = "2026-10-06")
+  save_to_folder = file.path(args[1], "app"), date = "2026-10-06",
+  filter_popups = list(Year = shiny::HTML("<b>Year</b> help")))
 u <- as.data.frame(d); attr(u, "metaUI_validation") <- NULL
 u$metaUI__filter_Year[1] <- 1900; u$metaUI__filter_Year[2] <- NA_real_
 u$metaUI__effect_size[1] <- mean(d$metaUI__effect_size) + 20 * sd(d$metaUI__effect_size)

@@ -44,10 +44,18 @@ verified source licences and attribution in `inst/COPYRIGHTS`.
 
 ## Related projects
 
-- Albritton et al. created a [A General Tool for Living Meta-Analysis] to run and update meta-analyses online, which contains similar functionalities. Currently, it seems more feature-rich than metaUI, but more focused on meta-analysts rather than end users of insights - and less customisable. The app is accessible [here](https://dallbrit.shinyapps.io/Meta_regression_app/), more details are in the accompanying paper:
+- Allbritton et al. created [A General Tool for Living Meta-Analysis](https://dallbrit.shinyapps.io/Meta_regression_app/) to run and update meta-analyses online, which contains similar functionalities. Currently, it seems more feature-rich than metaUI, but more focused on meta-analysts rather than end users of insights - and less customisable. The app is accessible [here](https://dallbrit.shinyapps.io/Meta_regression_app/), more details are in the accompanying paper:
 
 Allbritton, D., Gómez, P., Angele, B., Vasilev, M., & Perea, M. (2024). Breathing Life Into Meta-Analytic Methods. *Journal of Cognition*, 7(1).
 
+
+Other related tools include [Metapsy](https://metapsy.org/) (analysis workflow
+inspiration), the [Cooperation Databank](https://app.cooperationdatabank.org/)
+(dataset exploration), [PsychOpen CAMA](https://cama.psychopen.eu/)
+(cumulative meta-analysis), and the [taVNS HRV app](https://vinzentwolf.shinyapps.io/taVNSHRVmeta/)
+(a Bayesian living meta-analysis). These are references, not endorsements or
+sources of bundled code. See the [issue follow-up decisions](validation/issue-followup.md)
+for the assessed feature overlap and remaining work.
 
 ## Headless correctness candidate
 
@@ -62,6 +70,17 @@ First copy `tiny.json` and `tiny.csv` from `inst/examples` into a fresh, empty f
 metaUI::build_app("tiny.json")
 shiny::runApp("tiny-app")         # separate, blocking launch action
 ```
+
+`generate_shiny()` also supports this workflow: supply `save_to_folder` and
+`launch_app = FALSE`, then launch separately with `shiny::runApp("<folder>")`, passing the folder you
+saved to (a bare `shiny::runApp()` runs the current working directory). With
+`launch_app = TRUE` (the default when no folder is supplied), interactive printing
+of the returned app launches Shiny and blocks the console until you stop the app.
+Assigning the app object to a variable postpones launch until you print it.
+
+Authors may name one primary model (`primary_model` in `generate_shiny()` or the
+JSON config). Apps show it first and label the other rows as explorations; they never
+substitute another model when it is unsupported.
 
 Generation refuses a nonempty folder by default. p/N are optional for the primary
 models; directional models require explicit direction. COR/ZCOR require explicit
@@ -98,3 +117,20 @@ the former Barroso sample. This development candidate is not a public release.
 Downloads preserve the full current input dataset and saved filter selections; the
 summary sheet describes the selected rows. An empty selection stays empty on
 re-upload and reports no eligible rows, while the original inputs remain available.
+
+### Practical equivalence and forest exports
+
+Summary includes an interval assessment for a reader-chosen symmetric smallest
+effect size of interest, on the displayed SMD or r scale. No bound is assumed.
+The strict containment criterion uses the reported intervals without refitting;
+model assumptions and small-sample limitations are shown beside the assessment.
+Downloads record the bound and classification in an `equivalence` sheet.
+
+Forest plots compare observed-effect intervals and available multilevel/RVE
+summary intervals. PDF, PNG and CSV downloads use the same selected rows; the
+CSV retains both fitting and displayed scales. The configured row limit also
+applies to exports.
+
+The [synthetic correlation example](inst/examples/correlations) demonstrates raw-r
+variance conversion and checks the fitted summary against an independent metafor
+reference.

@@ -194,3 +194,21 @@ test_that("study labels can also be effect display labels", {
   expect_identical(as.character(d$metaUI__es_label), x$study)
   expect_identical(as.character(d$metaUI__study_id), x$study)
 })
+
+
+test_that("slider specs enclose data with an integer, legible grid", {
+  set.seed(20261006)
+  ranges <- c(list(c(-2.17, .966), 2001:2016, c(.03, .97), c(20, 5000), c(3, 3), c(-.004, .0031), c(120000, 980000)),
+    replicate(200, sort(round(runif(2, -10^runif(1, -3, 5), 10^runif(1, -3, 5)), sample(0:4, 1))), simplify = FALSE))
+  for (x in ranges) {
+    s <- metaUI:::metaUI_slider_spec(x)
+    expect_true(s$min <= min(x) && s$max >= max(x))
+    expect_true(s$ticks >= 1 && s$ticks <= 10 && s$ticks == round(s$ticks))
+    interval <- (s$max - s$min) / s$ticks
+    expect_lt(abs(interval / s$step - round(interval / s$step)), 1e-6)
+    if (all(x == round(x))) expect_identical(s$step, 1)
+  }
+  slider <- as.character(metaUI:::metaUI_slider_input("z", "z", metaUI:::metaUI_slider_spec(c(-2.17, .966))))
+  expect_match(slider, 'data-min="-2.5"'); expect_match(slider, 'data-max="1"')
+  expect_match(slider, 'data-grid-num="7"'); expect_equal(lengths(regmatches(slider, gregexpr("data-grid-num", slider))), 1)
+})

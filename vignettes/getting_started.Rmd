@@ -97,6 +97,15 @@ generate_shiny(app_data,
 # add your own contact address via `contact = "..."` if you want readers to reach you
 ```
 
+If one model is your primary analysis, name it with `primary_model`, using the
+model's `name` exactly as it appears in the models tibble or `models.R` (for
+example `primary_model = "Random-Effects Multilevel Model"`). The app shows that
+model first and labels the other rows as explorations. If it cannot be estimated
+for a reader's selection, the app says why and does not substitute another model.
+Without `primary_model`, the app states that it does not choose between estimators.
+The declaration is stored in the generated `labels_and_options.R` and in
+`validation.json`.
+
 When you run this, the app will be saved to a new folder, in this case `my_app_folder`. You can run `shiny::shinyAppDir(my_app_folder)` (specifying your folder) to run the Shiny app.
 
 To further customize the app, consider editing:

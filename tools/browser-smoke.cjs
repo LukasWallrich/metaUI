@@ -53,13 +53,44 @@ async function settledSample(effects) {
   await page.waitForFunction(()=>window.Shiny?.shinyapp?.$socket?.readyState===1);
   await page.getByRole('button',{name:'Dismiss',exact:true}).click();
   await page.waitForFunction(()=>Array.isArray(window.Shiny.shinyapp.$inputValues.outliers_z_scores));
+  const helpButton = page.getByRole('button',{name:'Help for Year'});
+  const helpPanel = page.locator('#' + await helpButton.getAttribute('aria-controls'));
+  await helpButton.focus();
+  await page.keyboard.press('Enter');
+  await helpPanel.waitFor();
+  assert.equal(await helpPanel.innerHTML(), '<b>Year</b> help');
+  await page.keyboard.press('Escape');
+  await helpPanel.waitFor({state:'hidden'});
   await page.locator('#go').click(); await settledSample(16);
   assert((await page.locator('#effectestimate').innerText()).includes('unsupported'));
   await page.locator('#go').click();
   await page.waitForFunction(()=>document.querySelector('#calculation_status')?.textContent.includes('Reused'));
+  const overview = await page.locator('#sample').innerText();
+  await page.getByRole('tab',{name:'Sample',exact:true}).click();
+  await page.locator('#sample_overview table').waitFor();
+  assert.equal(await page.locator('#sample_overview').innerText(), overview);
   await page.getByRole('tab',{name:'Forest Plot',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#foreststudies img')?.naturalWidth>0);
+  for (const [id, extension] of [['forest_pdf','pdf'], ['forest_png','png'], ['forest_csv','csv']]) {
+    const pending = page.waitForEvent('download');
+    await page.locator('#' + id).click();
+    const exported = await pending;
+    const target = path.join(evidence, 'forest.' + extension);
+    await exported.saveAs(target);
+    const bytes = fs.readFileSync(target);
+    assert(bytes.length > 0, id + ' produced an empty file');
+    if (extension === 'pdf') assert.equal(bytes.subarray(0,5).toString(), '%PDF-', id + ' is not a PDF');
+    if (extension === 'png') assert.equal(bytes.subarray(0,8).toString('hex'), '89504e470d0a1a0a', id + ' is not a PNG');
+    if (extension === 'csv') assert(bytes.toString().includes('Selected effect'), id + ' is missing effect rows');
+  }
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('No bound chosen'));
+  await page.locator('#sesoi').fill('1');
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval within bounds'));
+  const equivalenceHeader = await page.locator('#equivalence thead').innerText();
+  for (const column of ['assessment','threshold','bound']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
+  assert(await page.locator('#equivalence tbody tr').count() >= 2, 'expected one assessment row per model');
+  assert((await page.locator('#apply_state').innerText()).includes('Results match'));
   const downloadEvent=page.waitForEvent('download');
   await page.locator('#downloadData').click();
   const download=await downloadEvent;
@@ -90,8 +121,8 @@ async function settledSample(effects) {
   await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:path.join(evidence,'mobile.png')});
   fs.writeFileSync(path.join(evidence,'result.json'),JSON.stringify({
-    ok:true,checks:['standalone startup','analysis','cache disclosure','forest render',
-      'download/upload round trip','picker and missing-value restoration','numeric filtering','reset'],
+    ok:true,checks:['standalone startup','analysis','cache disclosure','forest render and PDF/PNG/CSV exports','practical interval assessment',
+      'keyboard inline filter help','sample summary on both tabs','download/upload round trip','picker and missing-value restoration','numeric filtering','reset'],
     uploaded_selection:selected,js_errors:errors},null,2));
   console.log('Generated-app browser smoke checks passed.');
 })().catch(async error=>{

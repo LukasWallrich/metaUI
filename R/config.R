@@ -2,7 +2,8 @@
 #'
 #' Relative data and output paths resolve against the configuration file. Building
 #' never launches or deploys an app. The configuration is deliberately limited to
-#' data mapping, scientific scale/direction, metadata, and presentation options.
+#' data mapping, scientific scale/direction, an optional declared primary model,
+#' metadata, and presentation options.
 #' @param config Path to JSON, or a named list with the same schema.
 #' @return Invisibly, the generated app directory.
 #' @export
@@ -13,7 +14,7 @@ build_app <- function(config) {
     config <- jsonlite::fromJSON(config, simplifyVector = FALSE)
   }
   if (!is.list(config) || is.null(names(config))) stop("Configuration must be a named list or JSON file.")
-  allowed <- c("schema_version", "data", "mapping", "dataset_name", "output", "options", "about")
+  allowed <- c("schema_version", "data", "mapping", "dataset_name", "output", "primary_model", "options", "about")
   unknown <- setdiff(names(config), allowed)
   if (length(unknown)) stop("Unknown configuration fields: ", paste(unknown, collapse = ", "))
   if (!identical(config$schema_version, 1L) && !identical(config$schema_version, 1)) stop("schema_version must be 1")
@@ -30,9 +31,12 @@ build_app <- function(config) {
   dataset <- do.call(prepare_data, c(list(data = resolve(config$data)), mapping))
   opts <- config$options
   if (!is.null(opts) && (!is.list(opts) || (length(opts) && (is.null(names(opts)) || any(!nzchar(names(opts))))) || length(setdiff(names(opts), c("correlation_dependent", "max_forest_plot_rows", "selection_list_threshold", "shiny_theme", "fit_cache_entries"))))) stop("Invalid options fields")
+  if (!is.null(config$primary_model) && (!is.character(config$primary_model) || length(config$primary_model) != 1L))
+    stop("primary_model must be one model name")
   about <- config$about
   if (!is.null(about) && (!is.list(about) || (length(about) && (is.null(names(about)) || any(!nzchar(names(about))))) || length(setdiff(names(about), c("date", "citation", "osf_link", "contact"))))) stop("Invalid about fields")
   do.call(generate_shiny, c(list(dataset = dataset, dataset_name = config$dataset_name,
                                 save_to_folder = resolve(config$output), launch_app = FALSE,
+                                primary_model = config$primary_model,
                                 options = if (is.null(config$options)) list() else config$options), about))
 }

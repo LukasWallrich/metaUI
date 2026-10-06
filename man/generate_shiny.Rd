@@ -9,6 +9,7 @@ generate_shiny(
   dataset_name,
   eff_size_type_label = NA,
   models = get_model_tibble,
+  primary_model = NULL,
   filter_popups = list(),
   save_to_folder = NA,
   launch_app = is.na(save_to_folder),
@@ -28,12 +29,16 @@ generate_shiny(
 Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 this must assign the tibble to a variable called models_to_run (i.e. using <-).}
 
-\item{filter_popups}{Named list with content for popup windows that provide further details on filter variables. They can contain HTML formatting, but should then be wrapped into \code{HTML()}, for instance: \verb{list(Year = HTML("<i>Note:</i><br>This refers to data collection if reported, otherwise the publication year.})}
+\item{primary_model}{Optional name of the one model (a \code{name} in \code{models}) that the authors treat as their
+primary analysis. Generated apps show it first and label the other rows as explorations. If it cannot be
+estimated for a reader's selection, the app reports why and does not substitute another model. The default,
+\code{NULL}, declares no primary model, and the app then says that it does not choose between estimators.}
 
-\item{save_to_folder}{If specified, the code and data for the app will be saved to this folder. Defaults to NA, which means that nothing will be saved. If the folder exists, the user will
-refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.}
+\item{filter_popups}{Named list of expandable filter-help content. Plain text is escaped; wrap trusted HTML in \code{\link[htmltools:HTML]{htmltools::HTML()}}, for example \code{list(Year = htmltools::HTML("<i>Note:</i> Data collection year."))}.}
 
-\item{launch_app}{Should the app be launched? Defaults to TRUE if it is not saved (i.e. save_to_folder is NA), FALSE otherwise.}
+\item{save_to_folder}{Folder for the generated code and data. Defaults to NA, which uses a temporary folder. A nonempty destination is refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.}
+
+\item{launch_app}{Should the app be launched? Defaults to TRUE if save_to_folder is NA, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.}
 
 \item{...}{
   Arguments passed on to \code{\link{create_about}}
@@ -58,7 +63,7 @@ a character vector with all packages to display.}
 \item{overwrite}{Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.}
 }
 \value{
-If \code{launch_app = FALSE}, invisibly the normalised path of the generated app folder. Otherwise a Shiny app object for the saved folder, which launches when printed.
+With launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
 }
 \description{
 This function generates the Shiny app. It is the main function of the package. The app can either be launched directly, or saved to
