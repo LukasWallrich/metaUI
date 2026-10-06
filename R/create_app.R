@@ -1,6 +1,8 @@
 declared_imports <- function() {
-  imports <- gsub("\\([^)]*\\)", "", utils::packageDescription("metaUI")$Imports)
-  trimws(strsplit(imports, ",")[[1]])
+  imports <- utils::packageDescription("metaUI")$Imports
+  if (is.null(imports) || !nzchar(imports)) stop("Cannot read metaUI's declared Imports; install metaUI before generating apps.")
+  imports <- trimws(strsplit(gsub("\\([^)]*\\)", "", imports), ",")[[1]])
+  imports[nzchar(imports)]
 }
 
 #' Create the about text for the app
@@ -86,7 +88,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @inheritParams create_about
 #' @inheritDotParams create_about
 #'
-#' @returns This function does not have a meaningful return value - it rather launches the Shiny app and/or saves it to disk.
+#' @returns If `launch_app = FALSE`, invisibly the normalised path of the generated app folder. Otherwise a Shiny app object for the saved folder, which launches when printed.
 #' @examples
 #' # First, use prepare_data() to create your dataset.
 #' if (exists("app_data")) {
@@ -122,7 +124,9 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   models_from_function <- models
 
   if (is.character(models)) {
-    model_environment <- new.env(parent = asNamespace("metaUI"))
+    # Mirror the generated app: caller's attached packages are visible and global.R attaches dplyr.
+    model_environment <- new.env(parent = globalenv())
+    model_environment$`%>%` <- dplyr::`%>%`
     sys.source(models, envir = model_environment)
     if (!exists("models_to_run", envir = model_environment, inherits = FALSE)) stop("R script passed to models argument does not create a `models_to_run` variable.")
     models_to_run <- model_environment$models_to_run
@@ -139,7 +143,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   metaUI_fit_cache(opts$fit_cache_entries) # validate before writing
   report <- attr(dataset, "metaUI_validation")
   if (is.null(report)) stop("Dataset needs prepare_data() validation metadata. Re-prepare legacy datasets.")
-  if (report$retained_rows != nrow(dataset)) stop("Validation report is stale after subsetting. Re-run prepare_data() on the selected input rows.")
+  if (report$retained_rows != nrow(dataset) || (!is.null(report$fingerprint) && !identical(report$fingerprint, metaUI_data_fingerprint(dataset))))
+    stop("Validation report is stale: rows or values changed after prepare_data(). Re-run prepare_data() on the intended input.")
   correlation <- if (is.null(options$correlation_dependent)) .6 else options$correlation_dependent
   metaUI_aggregate(dataset, correlation) # check the aggregation contract before writing
   report$aggregation <- list(method = "GLS study-level average", correlation = correlation,

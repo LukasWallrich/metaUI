@@ -36,8 +36,11 @@ async function waitServer() {
 }
 async function settledSample(effects) {
   await page.waitForFunction(k=> {
-    const text=document.querySelector('#sample')?.innerText;
-    return text?.split('\n').some(row=>row.split('\t')[1]===String(k)) && !document.querySelector('.shiny-busy');
+    const table=document.querySelector('#sample table');
+    if (!table) return false;
+    const column=[...table.querySelectorAll('thead th')].findIndex(th=>th.innerText.trim()==='Effects');
+    const cell=table.querySelector('tbody tr')?.children[column];
+    return column >= 0 && cell?.innerText.trim()===String(k) && !document.querySelector('.shiny-busy');
   }, effects, {timeout:60000});
 }
 (async()=>{

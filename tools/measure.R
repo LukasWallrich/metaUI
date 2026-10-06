@@ -1,8 +1,11 @@
 # Run in a fresh process for each package version; see validation/reproduction.md.
 args <- commandArgs(TRUE)
-if (length(args) < 2) stop("Usage: measure.R baseline|candidate output.csv [package-library]")
+if (length(args) < 2) stop("Usage: measure.R baseline|candidate|candidate-directed output.csv [package-library]")
+if (!args[1] %in% c("baseline", "candidate", "candidate-directed")) stop("Unknown mode: ", args[1])
 if (length(args) == 3) .libPaths(c(args[3], .libPaths()))
 suppressPackageStartupMessages(library(metaUI))
+# Written first so interrupted runs keep their environment evidence.
+writeLines(capture.output(sessionInfo()), paste0(args[2], ".session.txt"))
 set.seed(20261005)
 rows <- list()
 for (k in c(50,200,1000)) {
@@ -32,6 +35,7 @@ for (k in c(50,200,1000)) {
   for (phase in c("cold_fit","warm_fit")) for(i in seq_len(nrow(models))) {
     cat(args[1],k,phase,models$name[i],"\n")
     r<-run(i); r$k<-k; r$phase<-phase; r$version<-args[1]; rows[[length(rows)+1]]<-r
+    write.csv(do.call(rbind,rows),args[2],row.names=FALSE)
   }
   for(phase in c("cold_render","warm_render")) {
     # The actual generated app caps the individual forest at 200 effects.
@@ -45,16 +49,14 @@ for (k in c(50,200,1000)) {
             robumeta::forest.robu(mod,es.lab="metaUI__es_label",study.lab="metaUI__study_id")
           }
         } else {
-          plot_df<-if(args[1]=="baseline") data.frame(Model=models$name,es=rep(.3,7),LCL=rep(.2,7),UCL=rep(.4,7)) else metaUI:::metaUI_fit_models(d,models)$table
+          plot_df<-if(args[1]=="baseline") data.frame(Model=models$name,es=rep(.3,nrow(models)),LCL=rep(.2,nrow(models)),UCL=rep(.4,nrow(models))) else metaUI:::metaUI_fit_models(d,models)$table
           # Fit costs are separately measured; render costs start after data are ready.
           started<-proc.time()[3]
           print(ggplot2::ggplot(plot_df,ggplot2::aes(x=es,y=Model))+ggplot2::geom_point()+ggplot2::geom_errorbarh(ggplot2::aes(xmin=LCL,xmax=UCL)))
         }
       },error=function(e){status<<-"failed";reason<<-conditionMessage(e)})
       dev.off(); rows[[length(rows)+1]]<-data.frame(operation=op,status=status,reason=reason,seconds=unname(proc.time()[3]-started),k=k,phase=phase,version=args[1])
+      write.csv(do.call(rbind,rows),args[2],row.names=FALSE)
     }
   }
 }
-write.csv(do.call(rbind,rows),args[2],row.names=FALSE)
-
-writeLines(capture.output(sessionInfo()), paste0(args[2], ".session.txt"))

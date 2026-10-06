@@ -52,12 +52,14 @@ Allbritton, D., Gómez, P., Angele, B., Vasilev, M., & Perea, M. (2024). Breathi
 ## Headless correctness candidate
 
 The development branch adds a versioned JSON build path while retaining editable
-R/Shiny apps. See [reproduction and scientific contract](validation/reproduction.md),
+R/Shiny apps. See [reproduction and scientific contract](https://github.com/LukasWallrich/metaUI/blob/main/validation/reproduction.md),
 [the tiny synthetic config](inst/examples/tiny.json), and its
 [JSON schema](inst/examples/config.schema.json). Build and launch are separate:
 
+First copy `tiny.json` and `tiny.csv` from `inst/examples` into a fresh, empty folder, then run:
+
 ```r
-metaUI::build_app("tiny.json")     # copy tiny.json and tiny.csv to a fresh folder
+metaUI::build_app("tiny.json")
 shiny::runApp("tiny-app")         # separate, blocking launch action
 ```
 
@@ -69,7 +71,7 @@ The introductory Dannheim data use signed Hedges g, not correlations. No public 
 [PsychOpen CAMA](https://leibniz-psychology.org/en/practices-and-tools-of-open-science/psychopen-cama)
 is another platform for cumulative meta-analysis. metaUI's intended contribution is
 an author-owned app with editable R source. See the bounded
-[publication-readiness assessment](validation/publication-readiness.md).
+[publication-readiness assessment](https://github.com/LukasWallrich/metaUI/blob/main/validation/publication-readiness.md).
 
 ### Empirical example and performance
 
@@ -83,13 +85,14 @@ README/provenance before interpreting results. No benchmark corpus is deployed.
 
 Generated apps reuse compatible fitted objects and retain three recent exact
 fit selections per reader session; `cache_hit` discloses reuse. Custom models
-default to no cache. `options=list(fit_cache_entries=0)` disables caching;
+default to no cache. Pass `options = list(fit_cache_entries = 0)` to `generate_shiny()` (or set
+`"options": {"fit_cache_entries": 0}` in the build JSON) to disable caching;
 keep it disabled for random models or code depending on external state. Uploads
 are validated, stored in session state, and clear prior cached results.
 
-[Performance measurements](validation/performance-optimisation.md) distinguish
+[Performance measurements](https://github.com/LukasWallrich/metaUI/blob/main/validation/performance-optimisation.md) distinguish
 faster p-curve calculations/fit reuse from cache hits and first-time fitting costs.
-[Licence audit](validation/licensing-audit.md) records the licensed replacement of
+[Licence audit](https://github.com/LukasWallrich/metaUI/blob/main/validation/licensing-audit.md) records the licensed replacement of
 the former Barroso sample. This development candidate is not a public release.
 
 Downloads preserve the full current input dataset and saved filter selections; the

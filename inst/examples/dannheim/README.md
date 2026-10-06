@@ -7,7 +7,7 @@ A systematic review and meta-analysis.* Scand J Work Environ Health 51:265–281
 DOI: 10.5271/sjweh.4219. Article adaptation: **CC-BY-4.0**;
 [licence](https://creativecommons.org/licenses/by/4.0/). Example R code: GPL-3-or-later.
 
-Copy this directory to a fresh working folder, then run:
+Install `metaUI` and its dependencies, copy this directory to a fresh working folder, then run:
 
 ```sh
 Rscript --vanilla build.R
