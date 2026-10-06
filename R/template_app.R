@@ -906,6 +906,9 @@ glue_string <- ('
     }
   )
 
+  # The visible action triggers this hidden link through JavaScript.
+  outputOptions(output, "executeDownload", suspendWhenHidden = FALSE)
+
   observeEvent(input$downloadData, {
     if (!is.null(state_values$pending_upload_filters)) {
       showModal(modalDialog(title = "Restoring filters", "Wait for the uploaded selection to finish before downloading."))

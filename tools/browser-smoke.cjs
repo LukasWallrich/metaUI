@@ -94,6 +94,7 @@ async function settledSample(effects) {
 })().catch(async error=>{
   console.error(error);
   if(page) {await page.screenshot({path:path.join(evidence,'failure.png')}).catch(()=>{});
-    fs.writeFileSync(path.join(evidence,'failure.txt'),await page.locator('body').innerText().catch(()=>''));}
+    fs.writeFileSync(path.join(evidence,'failure.txt'),await page.locator('body').innerText().catch(()=>''));
+    fs.writeFileSync(path.join(evidence,'failure-details.json'),JSON.stringify({errors,dom:await page.evaluate(()=>({download:document.querySelector('#executeDownload')?.outerHTML,go:window.Shiny?.shinyapp?.$inputValues?.go})).catch(()=>null)},null,2));}
   process.exitCode=1;
 }).finally(async()=>{if(browser) await browser.close(); server.kill('SIGTERM');log.end();});
