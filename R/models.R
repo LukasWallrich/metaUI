@@ -39,29 +39,13 @@ get_model_tibble <- function() {
         ~name, ~code,
             "Random-Effects Multilevel Model", metaUI_code_multilevel,
             "Robust Variance Estimation", metaUI_code_rve,
-            "Trim-and-fill", ('meta::trimfill(meta::metagen(
-                                            TE = metaUI__effect_size,
-                                            seTE = metaUI__se,
-                                            data = df,
-                                            studlab = df$metaUI__study_id,
-                                            common = FALSE,
-                                            random = TRUE,
-                                            method.tau = "ML", # as recommended by  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4950030/
-                                            method.random.ci = "HK",
-                                            prediction = TRUE,
-                                            sm = df$metaUI__es_type[1]
-                                        ))'),
-            "P-uniform star", ('puniform::puni_star(
-                    yi = df$metaUI__effect_size, vi = df$metaUI__variance,
-                    alpha = .05,
-                    side = "right", method = "ML", boot = FALSE
-                    )'),
-            "Hedges-Vevea Selection Model", ('weightr::weightfunct(df$metaUI__effect_size,
-                df$metaUI__variance, steps = c(0.025, 1), fe = FALSE)'),
-            "P-Curve (first value)", ('metaUI_pcurve_fit(df, "first")'),
-            "P-Curve (last value)", ('metaUI_pcurve_fit(df, "last")'),
-            "Precision Effect Test", ('lm(metaUI__effect_size ~ sqrt(metaUI__variance), data = df, weights = 1 / metaUI__variance)'),
-            "Precision Effect Estimate using Standard Error", ('lm(metaUI__effect_size ~ metaUI__variance, data = df, weights = 1 / metaUI__variance)')
+            "Trim-and-fill", metaUI_default_code[["Trim-and-fill"]],
+            "P-uniform star", metaUI_default_code[["P-uniform star"]],
+            "Hedges-Vevea Selection Model", metaUI_default_code[["Hedges-Vevea Selection Model"]],
+            "P-Curve (first value)", metaUI_default_code[["P-Curve (first value)"]],
+            "P-Curve (last value)", metaUI_default_code[["P-Curve (last value)"]],
+            "Precision Effect Test", metaUI_default_code[["Precision Effect Test"]],
+            "Precision Effect Estimate using Standard Error", metaUI_default_code[["Precision Effect Estimate using Standard Error"]]
         )
 
         # Can set up any helper functions for use in models_code (or to extract data in models_to_run)
