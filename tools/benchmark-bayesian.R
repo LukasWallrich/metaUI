@@ -2,6 +2,8 @@
 # Usage: Rscript --vanilla tools/benchmark-bayesian.R output.csv
 args <- commandArgs(TRUE)
 if (length(args) != 1L) stop("Usage: benchmark-bayesian.R output.csv")
+if (!requireNamespace("bayesmeta", quietly = TRUE))
+  stop("Install the optional bayesmeta package before running this benchmark.")
 fit_once <- function(k, limit = Inf) {
   s <- runif(k, .1, .3); y <- rnorm(k, .2, sqrt(.2^2 + s^2))
   started <- proc.time()[["elapsed"]]
