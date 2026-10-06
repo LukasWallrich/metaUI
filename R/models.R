@@ -65,8 +65,8 @@ get_model_tibble <- function() {
         )
 
         # Can set up any helper functions for use in models_code (or to extract data in models_to_run)
-        # However, they need to be assigned to the global environment, so users should use <<- instead of <-
-        # (Inside the package, a different workaround is needed)
+        # Put helpers in the author model file; generated apps source it locally.
+        # The two default fit helpers are in the editable analysis.R file.
 
         # Keep this at the end of the file!
         models_to_run %>% dplyr::left_join(models_code, by = "name")

@@ -4,14 +4,14 @@ metaUI_code_multilevel <- "metaUI_multilevel_fit(df)"
 metaUI_code_rve <- "metaUI_rve_fit(df)"
 
 metaUI_multilevel_fit <- function(df) {
-  metafor::rma.mv(metaUI__effect_size, V = metaUI__variance,
+  metafor::rma.mv(df$metaUI__effect_size, V = df$metaUI__variance,
     random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df,
     test = "t", method = "REML", sparse = TRUE)
 }
 
 metaUI_rve_fit <- function(df) {
   robumeta::robu(metaUI__effect_size ~ 1, data = df,
-    studynum = metaUI__study_id, var.eff.size = metaUI__variance, small = FALSE)
+    studynum = df$metaUI__study_id, var.eff.size = df$metaUI__variance, small = FALSE)
 }
 
 # One cache per server session. Exact keys include all data attributes and model
@@ -177,6 +177,33 @@ metaUI_validate_prepared <- function(df) {
   if (!metric %in% c("SMD", "ZCOR") || df$metaUI__display_scale[1] != if (metric == "ZCOR") "r" else "SMD") stop("Prepared scale contract failed.")
   if (!df$metaUI__direction[1] %in% c("unspecified", "positive", "negative")) stop("Invalid prepared direction.")
   invisible(TRUE)
+}
+
+metaUI_validate_upload <- function(df, built) {
+  metaUI_validate_prepared(df)
+  if (!nrow(df) || !all(names(built) %in% names(df))) stop("Uploaded data need all built app columns and at least one effect.")
+  for (field in c("metaUI__es_type", "metaUI__display_scale", "metaUI__direction"))
+    if (!identical(as.character(df[[field]][1]), as.character(built[[field]][1]))) stop("Uploaded scale/direction differs from the built app; build a fresh app for a new contract.")
+  source_y <- df$metaUI__input_effect; source_v <- df$metaUI__input_variance
+  if (!is.numeric(source_y) || !is.numeric(source_v) || any(!is.finite(source_y)) || any(!is.finite(source_v) | source_v <= 0)) stop("Invalid uploaded source effect/variance fields.")
+  input_scale <- attr(built, "metaUI_validation")$input_scale
+  expected_y <- source_y; expected_v <- source_v
+  if (identical(input_scale, "COR")) {
+    if (any(abs(source_y) >= 1)) stop("Uploaded COR source effects must be in (-1,1).")
+    expected_y <- atanh(source_y); expected_v <- source_v / (1 - source_y^2)^2
+  }
+  if (any(abs(df$metaUI__effect_size - expected_y) > 1e-8 * pmax(1, abs(expected_y))) ||
+      any(abs(df$metaUI__variance - expected_v) > 1e-6 * pmax(abs(expected_v), df$metaUI__variance)))
+    stop("Uploaded source/fitting-scale fields disagree. Re-prepare original input with the declared transformation.")
+  centre <- mean(built$metaUI__effect_size); spread <- stats::sd(built$metaUI__effect_size)
+  degenerate <- !is.finite(spread) || spread == 0
+  z <- if (degenerate) rep(0, nrow(df)) else (df$metaUI__effect_size - centre) / spread
+  supplied <- df$metaUI__es_z
+  disagreements <- if (!is.numeric(supplied)) nrow(df) else sum(!is.finite(supplied) | abs(supplied - z) > 1e-8 * pmax(1, abs(z)))
+  df$metaUI__es_z <- z
+  attr(df, "metaUI_upload_derivations") <- list(z_reference_mean = centre, z_reference_sd = spread,
+    supplied_z_disagreements = disagreements, rule = if (degenerate) "Built SD unavailable/zero: descriptive z=0, outlier discrimination unavailable" else "Descriptive z=(fitting effect-built mean)/built SD; saved scale preserved")
+  df
 }
 
 metaUI_pcurve_data <- function(df, selection = "first", require_N = FALSE) {

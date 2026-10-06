@@ -903,10 +903,8 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
     {
       d <- dmin + i / 100 # effect size being considered
       di <- c(di, d) # add it to the vector (kind of silly, but kept for symmetry)
-      options(warn = -1) # turn off warning becuase R does not like its own pt() function!
-      loss.all <- c(loss.all, loss(df_obs = df_obs, t_obs = t_obs, d_est = d))
+      loss.all <- c(loss.all, suppressWarnings(loss(df_obs = df_obs, t_obs = t_obs, d_est = d)))
       # apply loss function so that effect size, store result
-      options(warn = 0) # turn warnings back on
     }
 
     # find the effect leading to smallest loss in that set, that becomes the starting point in the optimize command
@@ -915,7 +913,6 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
 
     # optimize around the global minimum
     dhat <- optimize(loss, c(dstart - .1, dstart + .1), df_obs = df_obs, t_obs = t_obs)
-    options(warn = -0)
 
     # Plot results
     plot(di, loss.all, xlab = "Effect size\nCohen-d", ylab = "Loss (D stat in KS test)", ylim = c(0, 1), main = "How well does each effect size fit? (lower is better)")

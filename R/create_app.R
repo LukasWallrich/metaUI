@@ -122,7 +122,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   models_from_function <- models
 
   if (is.character(models)) {
-    model_environment <- new.env(parent = environment())
+    model_environment <- new.env(parent = asNamespace("metaUI"))
     sys.source(models, envir = model_environment)
     if (!exists("models_to_run", envir = model_environment, inherits = FALSE)) stop("R script passed to models argument does not create a `models_to_run` variable.")
     models_to_run <- model_environment$models_to_run

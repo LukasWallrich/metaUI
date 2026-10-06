@@ -6,6 +6,6 @@ source_model <- tibble::tibble(
   code = 'if (anyDuplicated(df$metaUI__study_id)) stop("Source-reference requires one effect per independent study.")
     meta::metagen(TE = df$metaUI__effect_size, seTE = df$metaUI__se,
     studlab = df$metaUI__study_id, sm = "SMD", common = FALSE, random = TRUE,
-    method.tau = "REML", method.random.ci = "HK")'
+    method.tau = "REML", method.random.ci = "HK", adhoc.hakn.ci = "", level = .95, level.ma = .95)'
 )
 models_to_run <- dplyr::bind_rows(models_to_run, source_model)

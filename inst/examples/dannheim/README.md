@@ -50,3 +50,10 @@ Directional bias models are unsupported because no extra selection-model
 hypothesis is specified. RVE `small=FALSE` and sparse-data bias diagnostics can
 be anti-conservative; warnings/failures remain explicit. No moderators from LLM
 enrichment are included. This reanalysis is not endorsed by the source authors.
+
+Z-curve is not estimable for this pool under the installed estimator: only three
+of its 12 first-per-study normal Wald statistics fall in the significant fitting
+range, while zcurve requires at least 10 there. The app displays the estimator's
+reason rather than constructing a replacement estimate. P-curve likewise requires
+an explicit direction and is not estimated here. These are optional diagnostics;
+the source-reference model remains eligible.

@@ -39,7 +39,7 @@
 )
 
 
-# KEEP THIS AS THE **LAST** LINE! Helper functions etc must be added above
+# Default specifications; source-reference row appended below. Helper functions etc must be added above
 models_to_run <- models_to_run %>% dplyr::left_join(models_code, by = "name")
 models_to_run
 # Source methodological reference on rounded extracted g/SE; GPL-3-or-later.
@@ -50,6 +50,6 @@ source_model <- tibble::tibble(
   code = 'if (anyDuplicated(df$metaUI__study_id)) stop("Source-reference requires one effect per independent study.")
     meta::metagen(TE = df$metaUI__effect_size, seTE = df$metaUI__se,
     studlab = df$metaUI__study_id, sm = "SMD", common = FALSE, random = TRUE,
-    method.tau = "REML", method.random.ci = "HK")'
+    method.tau = "REML", method.random.ci = "HK", adhoc.hakn.ci = "", level = .95, level.ma = .95)'
 )
 models_to_run <- dplyr::bind_rows(models_to_run, source_model)

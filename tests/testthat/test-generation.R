@@ -27,6 +27,7 @@ test_that("headless app loads and runs the generated server", {
     expect_equal(table$fit_es[1], as.numeric(ref$b), tolerance=1e-8)
     expect_true(nzchar(output$effectestimate))
     expect_true(nzchar(output$heterogeneity))
+    expect_true(is.list(output$foreststudies))
     expect_false(estimatesreactive()$cache_hit)
     session$setInputs(go = 2)
     expect_true(estimatesreactive()$cache_hit)
@@ -45,6 +46,7 @@ test_that("uploaded data persist and invalidate session results", {
   generate_shiny(d, "Upload fixture", save_to_folder = path, launch_app = FALSE)
   uploaded <- as.data.frame(d); attr(uploaded, "metaUI_validation") <- NULL
   uploaded$metaUI__effect_size[1] <- .93
+  uploaded$metaUI__input_effect[1] <- .93
   upload_file <- tempfile(fileext = ".xlsx"); on.exit(unlink(upload_file), add = TRUE)
   writexl::write_xlsx(list(dataset = uploaded,
     filters = data.frame(id = "outliers_z_scores", selection = c(-10, 10))), upload_file)
@@ -62,6 +64,67 @@ test_that("uploaded data persist and invalidate session results", {
     session$setInputs(go = 4)
     expect_true(estimatesreactive()$cache_hit)
     expect_equal(df_filtered()$metaUI__effect_size[1], .93)
+  })
+})
+
+test_that("uploads retain extreme/missing numeric inputs and restored picker selections", {
+  root <- tempfile(); on.exit(unlink(root, recursive = TRUE))
+  x <- fixture(); x$year <- 2001:2016; x$group <- factor(rep(paste0("G", 1:8), each = 2))
+  d <- prepare_data(x, "study", "yi", variance = "vi", es_id = "id",
+    filters = c(Year = "year", Group = "group"))
+  generate_shiny(d, "Upload extremes", save_to_folder = root, launch_app = FALSE)
+  u <- as.data.frame(d); attr(u, "metaUI_validation") <- NULL
+  u$metaUI__filter_Year[1] <- 1900; u$metaUI__filter_Year[2] <- NA_real_
+  u$metaUI__es_z[1] <- 20
+  u$metaUI__effect_size[1] <- mean(d$metaUI__effect_size) + 20 * sd(d$metaUI__effect_size)
+  u$metaUI__input_effect[1] <- u$metaUI__effect_size[1]
+  file <- tempfile(fileext = ".xlsx"); on.exit(unlink(file), add = TRUE)
+  selections <- data.frame(id = c(rep("outliers_z_scores", 2), rep("metaUI__filter_Year", 2), rep("metaUI__filter_Group", 2)),
+    selection = c(-100, 100, 1800, 2100, "G1", "G2"))
+  writexl::write_xlsx(list(dataset = u, filters = selections), file)
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  expect_match(paste(readLines("ui.R"), collapse = "\n"), "metaUI__filter_Year_include_NA")
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Year = c(2001, 2016),
+      metaUI__filter_Group = paste0("G", 1:8), metaUI__filter_Year_include_NA = TRUE, go = 1)
+    session$setInputs(uploadData = list(datapath = file, name = "extremes.xlsx"), executeUpload = 1)
+    expect_false(is.null(state_values$pending_upload_filters))
+    expect_match(output$selection_status, "Restoring saved filters")
+    # Mock client applies the messages; real browser round trip verifies this too.
+    session$setInputs(outliers_z_scores = c(-100, 100), metaUI__filter_Year = c(1800, 2100),
+      metaUI__filter_Group = c("G1", "G2"), go = 2)
+    expect_null(state_values$pending_upload_filters)
+    expect_equal(nrow(df_filtered()), 4)
+    expect_equal(df_filtered()$metaUI__es_z[1], 20)
+    expect_true(is.na(df_filtered()$metaUI__filter_Year[2]))
+    expect_equal(estimatesfiltered()$filtered_rows[1], 12)
+    expect_match(output$selection_status, "Uploaded data")
+    session$setInputs(metaUI__filter_Year_include_NA = FALSE, go = 3)
+    expect_equal(nrow(df_filtered()), 3)
+    saved <- data_list()$filters
+    expect_identical(saved$selection[saved$id == "metaUI__filter_Year_include_NA"], "FALSE")
+  })
+})
+
+test_that("restored filters disclose uploaded rows outside the saved selection", {
+  root <- tempfile(); on.exit(unlink(root, recursive = TRUE))
+  x <- fixture(); x$year <- 2001:2016
+  d <- prepare_data(x, "study", "yi", variance = "vi", es_id = "id", filters = c(Year = "year"))
+  generate_shiny(d, "Saved-range disclosure", save_to_folder = root, launch_app = FALSE)
+  u <- as.data.frame(d); attr(u, "metaUI_validation") <- NULL
+  u$metaUI__filter_Year[1] <- 2020
+  file <- tempfile(fileext = ".xlsx"); on.exit(unlink(file), add = TRUE)
+  writexl::write_xlsx(list(dataset = u, filters = data.frame(
+    id = c(rep("outliers_z_scores", 2), rep("metaUI__filter_Year", 2)), selection = c(-10, 10, 2001, 2016))), file)
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Year = c(2001, 2016), go = 1)
+    session$setInputs(uploadData = list(datapath = file, name = "new-year.xlsx"), executeUpload = 1, go = 2)
+    expect_equal(nrow(df_filtered()), 15)
+    expect_match(output$selection_status, "Excluded 1")
+    expect_match(output$selection_status, "metaUI__filter_Year: 1")
   })
 })
 
@@ -121,4 +184,25 @@ test_that("literal quotes and braces in metadata generate parseable editable fil
                  eff_size_type_label='A \'label\'',save_to_folder=path,launch_app=FALSE)
   for (file in c("global.R","ui.R","server.R","labels_and_options.R"))
     expect_silent(parse(file.path(path,file)))
+})
+
+
+test_that("downloaded empty category selections re-upload without losing their marker", {
+  root <- tempfile(); on.exit(unlink(root, recursive = TRUE))
+  x <- fixture(); x$group <- factor(rep(c("A", "B"), each = 8))
+  d <- prepare_data(x, "study", "yi", variance = "vi", es_id = "id", filters = c(Group = "group"))
+  generate_shiny(d, "Empty filter round trip", save_to_folder = root, launch_app = FALSE)
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Group = character(), go = 1)
+    file <- tempfile(fileext = ".xlsx"); on.exit(unlink(file), add = TRUE)
+    writexl::write_xlsx(data_list(), file)
+    session$setInputs(uploadData = list(datapath = file, name = "empty.xlsx"), executeUpload = 1)
+    expect_false(is.null(state_values$uploaded_data))
+    session$setInputs(metaUI__filter_Group = character(), go = 2)
+    expect_equal(nrow(df_filtered()), 0)
+    expect_match(output$selection_status, "Selected 0 of 16")
+    expect_match(output$selection_status, "Excluded 16")
+  })
 })

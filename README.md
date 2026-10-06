@@ -5,11 +5,11 @@
 [![Lifecycle:Maturing](https://img.shields.io/badge/Lifecycle-Maturing-007EC6)](https://github.com/LukasWallrich/metaUI)
 <!-- badges: end -->
 
-The metaUI package allows users to quickly create powerful and customisable Shiny web apps that allow readers to explore a meta-analytic dataset in depth. They can explore the impact of different analytical choices, see results for subgroups of particular interest, and even modify and update the underlying dataset. 
+The metaUI package allows users to quickly create powerful and customisable Shiny web apps that allow readers to explore a meta-analytic dataset in depth. They can explore the impact of different analytical choices, see results for subgroups of particular interest, and even modify and update the underlying dataset.
 
-The motivation for the package came from the fact that meta-analyses are based on rich datasets that can be analyzed in numerous ways, and it is unlikely that authors and readers will always agree on the “best ways” to analyze the data. Whether it comes to the choice of model (e.g., random versus fixed effects), the methods for assessing or adjusting for publication bias (e.g., z-curve, p-curve, PET/PEESE etc), or the moderators to be considered, disagreements are likely to arise. This can lead to the inclusion of lengthy robustness checks and alternative analyses that are time-consuming and difficult to digest. metaUI, as an R package that supports researchers in creating interactive Shiny web apps can help - these apps allow readers (and reviewers) to explore meta-analytic datasets in a variety of different ways. Apart from allowing readers (and reviewers) to assess the robustness and trustworthiness of results more comprehensively, metaUI apps allow users to assess the results that are most relevant to them, such as by filtering the dataset to focus on a specific group of participants, region, outcome variable, or research method. With the opportunity for users to download the dataset used and to upload alternatives, it will also facilitate the updating of meta-analyses. 
+The motivation for the package came from the fact that meta-analyses are based on rich datasets that can be analyzed in numerous ways, and it is unlikely that authors and readers will always agree on the “best ways” to analyze the data. Whether it comes to the choice of model (e.g., random versus fixed effects), the methods for assessing or adjusting for publication bias (e.g., z-curve, p-curve, PET/PEESE etc), or the moderators to be considered, disagreements are likely to arise. This can lead to the inclusion of lengthy robustness checks and alternative analyses that are time-consuming and difficult to digest. metaUI, as an R package that supports researchers in creating interactive Shiny web apps can help - these apps allow readers (and reviewers) to explore meta-analytic datasets in a variety of different ways. Apart from allowing readers (and reviewers) to assess the robustness and trustworthiness of results more comprehensively, metaUI apps allow users to assess the results that are most relevant to them, such as by filtering the dataset to focus on a specific group of participants, region, outcome variable, or research method. With the opportunity for users to download the dataset used and to upload alternatives, it will also facilitate the updating of meta-analyses.
 
-The idea came from researchers who have created similar web apps for their meta-analyses that have been well received, yet they require substantial time investment and advanced coding skills to create. With metaUI, researchers can get a working app very swiftly – while they still have the flexibility to tailor the display in line with their interests and requirements. The package is now in a stable beta-stage, yet feedback and contributions are very welcome! 
+The idea came from researchers who have created similar web apps for their meta-analyses that have been well received, yet they require substantial time investment and advanced coding skills to create. With metaUI, researchers can get a working app very swiftly – while they still have the flexibility to tailor the display in line with their interests and requirements. This branch is a tested development candidate with scientific and licensing limits documented below; feedback and contributions are welcome.
 
 
 ## Installation
@@ -25,11 +25,11 @@ remotes::install_github("LukasWallrich/metaUI")
 
 The best way to get started in RStudio is with the metaUI template - so in RStudio, go to `File -> New File -> R Markdown` then select `From Template` and `Create a metaUI Shiny app`. To see the template in the most readable format, select `Visual` just above the file that has opened to enter the Visual Editor. Then you can follow the step-by-step instructions.
 
-Outside R Studio, you can run `file.edit(system.file("rmarkdown/templates/create-a-metaui-shiny-app/skeleton/skeleton.Rmd", package = "metaUI"))` to open the template file and then take it from there. 
+Outside R Studio, you can run `file.edit(system.file("rmarkdown/templates/create-a-metaui-shiny-app/skeleton/skeleton.Rmd", package = "metaUI"))` to open the template file and then take it from there.
 
 The [`Getting started` vignette](https://lukaswallrich.github.io/metaUI/articles/getting_started.html) provides a step-by-step example ... or you may want to watch this [video tutorial](https://www.youtube.com/watch?v=iaTMFzWfCe0&ab_channel=ESMARConf) for a step-by-step walk-through.
 
-## Sources 
+## Sources
 
 Much of the package code was based on two previous interactive meta-analyses apps:
 
@@ -89,3 +89,7 @@ are validated, stored in session state, and clear prior cached results.
 faster p-curve calculations/fit reuse from cache hits and first-time fitting costs.
 [Licence audit](validation/licensing-audit.md) records the unresolved Barroso
 source-deposit gate; this candidate is not a substantial public release.
+
+Downloads preserve the full current input dataset and saved filter selections; the
+summary sheet describes the selected rows. An empty selection stays empty on
+re-upload and reports no eligible rows, while the original inputs remain available.

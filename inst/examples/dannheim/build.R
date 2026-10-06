@@ -15,5 +15,5 @@ metaUI::generate_shiny(data,
     "no additional selection-model hypothesis is declared. RVE small=FALSE and small-k bias",
     "diagnostics may be anti-conservative; estimator warnings/failures are retained.",
     "Rounded inputs reproduce the published result approximately. See accompanying provenance.json."),
-  osf_link = "https://www.sjweh.fi/article/4219", date = "2026-10-06")
+  date = "2026-10-06")
 file.copy(c("provenance.json", "README.md"), "mental-health-app", overwrite = FALSE)

@@ -40,3 +40,31 @@ test_that("model-file generation neither leaks state nor accepts stale globals",
   expect_error(generate_shiny(prepared(), "invalid", models = file, save_to_folder = path, launch_app = FALSE), "does not create")
   expect_identical(get("models_to_run", envir = globalenv()), get_model_tibble())
 })
+
+test_that("shipped empirical example builds and runs its actual generated server", {
+  source <- system.file("examples", "dannheim", package = "metaUI")
+  root <- tempfile(); dir.create(root); on.exit(unlink(root, recursive = TRUE))
+  file.copy(list.files(source, full.names = TRUE), root)
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
+  sys.source("build.R", new.env(parent = globalenv()))
+  setwd(file.path(root, "mental-health-app"))
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  x <- read.csv(file.path(root, "mental-health.csv"))
+  reference <- metafor::rma(x$g, sei = x$se_g, method = "REML", test = "knha")
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
+    table <- estimatesfiltered()
+    expect_equal(nrow(table), 8)
+    expect_identical(table$status[c(4, 5)], c("unsupported", "unsupported"))
+    expect_true(all(grepl("direction", table$reason[c(4, 5)])))
+    expect_identical(table$status[8], "ok")
+    expect_equal(table$fit_es[8], as.numeric(reference$b), tolerance = 1e-8)
+    expect_match(output$heterogeneity, "not identified")
+    expect_error(output$pcurve, "requires explicit effect direction")
+    # The estimator rejects this sparse significant-z subset; report its actual
+    # requirement instead of constructing an estimate or inventing a cutoff.
+    expect_true(inherits(zcurve_fit()$result, "error"))
+    expect_error(output$zcurve, "Z-curve not estimated")
+    expect_true(nzchar(output$zcurve_warnings))
+  })
+})

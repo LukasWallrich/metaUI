@@ -136,7 +136,7 @@ The committed single-run records are `validation/timings-baseline.csv`,
 (explicitly positive direction), and `timings-panels.csv`; the commands above
 write the same schema to new scratch files. `timing-session.txt` records versions.
 The full local check uses `--no-manual`; PDF manuals and remote CI were not run.
-Two known Plotly tooltip warnings in server tests are disclosed; model tables,
+The initial milestone had two known Plotly tooltip warnings (fixed in the 6 October follow-up); model tables,
 reference fits, and browser rendering pass. Browser verification also confirms
 that corrected default slider bounds keep all 12 effects in the example.
 The package was installed into a fresh Linux library overlay; compatible existing
@@ -169,3 +169,14 @@ for random fits or code depending on external state. Cached failures/warnings an
 original times remain in downloads; the table/UI disclose cache reuse. Uploads
 persist and clear the cache. Runtime/helper code edits require restarting the app.
 See performance-optimisation.md for same-estimator before/after commands/results.
+
+The final follow-up package is `metaUI_0.1.2.9001.tar.gz`. Use that filename in
+`R CMD check --no-manual` after building this version. For uploads, original input
+and fitting effect/variance fields must agree with the built transformation;
+re-prepare raw edited inputs when needed. Descriptive outlier z is recalculated
+against the built dataset's fixed mean/SD, with disagreements reported. It is not
+a source test statistic. Uploaded results are labelled persistently, and restored
+filter exclusions are counted. Missing-value choices are saved; older workbooks
+without those choices default to include missing values, explicitly reported.
+Arbitrary scientifically mislabelled inputs cannot be validated from numbers
+alone: the author's effect-scale/dependence contract remains necessary.

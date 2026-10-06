@@ -16,6 +16,12 @@ test_that("p-curve optimisation preserves complete baseline results and process 
   bad <- data.frame(studlab = 1:3, TE = .01, seTE = 1)
   expect_error(metaUI:::pcurve(bad), "Two or less")
   expect_identical(getOption("scipen"), original)
+  old_warn <- getOption("warn"); options(warn = -1)
+  on.exit(options(warn = old_warn), add = TRUE)
+  effect <- metaUI:::pcurve(reference$cases$twelve$input, effect.estimation = TRUE,
+    N = rep(100, 12), dmax = .6)
+  expect_true(is.finite(effect$dEstimate))
+  expect_identical(getOption("warn"), -1L)
 })
 
 test_that("exact session cache invalidates data, attributes, models and configuration", {
@@ -79,4 +85,20 @@ test_that("standalone helper copies stay identical", {
     expect_identical(readBin(source, "raw", file.info(source)$size),
                      readBin(target, "raw", file.info(target)$size))
   }
+})
+
+test_that("upload scale and descriptive-z contracts are explicit", {
+  d <- prepared()
+  upload <- as.data.frame(d); attr(upload, "metaUI_validation") <- NULL
+  upload$metaUI__es_z <- 100
+  checked <- metaUI:::metaUI_validate_upload(upload, d)
+  expect_equal(checked$metaUI__es_z, d$metaUI__es_z, tolerance = 1e-10)
+  expect_equal(attr(checked, "metaUI_upload_derivations")$supplied_z_disagreements, nrow(d))
+  bad <- upload; bad$metaUI__effect_size[1] <- .9
+  expect_error(metaUI:::metaUI_validate_upload(bad, d), "source/fitting-scale")
+  raw <- fixture(); raw$yi <- raw$yi / 2
+  cor <- prepare_data(raw, "study", "yi", variance = "vi", es_id = "id", es_type = "COR", variance_scale = "r")
+  bad <- as.data.frame(cor); bad$metaUI__effect_size <- bad$metaUI__input_effect
+  expect_error(metaUI:::metaUI_validate_upload(bad, cor), "source/fitting-scale")
+  expect_equal(metaUI:::metaUI_validate_upload(as.data.frame(cor), cor)$metaUI__effect_size, cor$metaUI__effect_size)
 })

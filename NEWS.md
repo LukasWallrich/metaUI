@@ -1,3 +1,16 @@
+# metaUI 0.1.2.9001 (development candidate)
+
+* Optimise p-curve without changing results and reuse compatible fitted objects.
+  Disclose session-local exact-selection caching and its opt-out for custom code.
+* Validate and persist uploads, restore picker/missing-value choices, widen slider
+  ranges, recompute descriptive z against the built reference, and disclose all
+  filter exclusions and uploaded provenance. Reject inconsistent scale inputs.
+* Report z-curve estimator refusals/warnings; correct Egger residual variance;
+  restore p-curve process options and show unidentified singleton variance splits.
+* Add a CC-BY empirical source-reference example and generated-app/reference tests.
+* Record measured before/after performance and clean hosted Linux checks.
+* No public release: Barroso source redistribution terms remain unresolved.
+
 # metaUI 0.1.2.9000 (correctness candidate)
 
 * Use genuine per-effect IDs for all multilevel nesting; display labels may repeat.
