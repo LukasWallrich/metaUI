@@ -27,6 +27,41 @@ test_that("headless app loads and runs the generated server", {
     expect_equal(table$fit_es[1], as.numeric(ref$b), tolerance=1e-8)
     expect_true(nzchar(output$effectestimate))
     expect_true(nzchar(output$heterogeneity))
+    expect_false(estimatesreactive()$cache_hit)
+    session$setInputs(go = 2)
+    expect_true(estimatesreactive()$cache_hit)
+    expect_identical(estimatesfiltered()$fit_es, table$fit_es)
+  })
+  # A separate reader starts with a separate cache.
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
+    expect_false(estimatesreactive()$cache_hit)
+  })
+})
+
+test_that("uploaded data persist and invalidate session results", {
+  path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
+  d <- prepared()
+  generate_shiny(d, "Upload fixture", save_to_folder = path, launch_app = FALSE)
+  uploaded <- as.data.frame(d); attr(uploaded, "metaUI_validation") <- NULL
+  uploaded$metaUI__effect_size[1] <- .93
+  upload_file <- tempfile(fileext = ".xlsx"); on.exit(unlink(upload_file), add = TRUE)
+  writexl::write_xlsx(list(dataset = uploaded,
+    filters = data.frame(id = "outliers_z_scores", selection = c(-10, 10))), upload_file)
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
+    original <- estimatesfiltered()$fit_es
+    session$setInputs(go = 2); expect_true(estimatesreactive()$cache_hit)
+    session$setInputs(uploadData = list(datapath = upload_file, name = "upload.xlsx"), executeUpload = 1)
+    session$setInputs(go = 3)
+    expect_false(estimatesreactive()$cache_hit)
+    expect_equal(df_filtered()$metaUI__effect_size[1], .93)
+    expect_false(identical(estimatesfiltered()$fit_es, original))
+    session$setInputs(go = 4)
+    expect_true(estimatesreactive()$cache_hit)
+    expect_equal(df_filtered()$metaUI__effect_size[1], .93)
   })
 })
 

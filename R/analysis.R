@@ -1,5 +1,63 @@
 # This file is copied verbatim into generated apps. Keep it independent of metaUI.
 
+metaUI_code_multilevel <- "metaUI_multilevel_fit(df)"
+metaUI_code_rve <- "metaUI_rve_fit(df)"
+
+metaUI_multilevel_fit <- function(df) {
+  metafor::rma.mv(metaUI__effect_size, V = metaUI__variance,
+    random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df,
+    test = "t", method = "REML", sparse = TRUE)
+}
+
+metaUI_rve_fit <- function(df) {
+  robumeta::robu(metaUI__effect_size ~ 1, data = df,
+    studynum = metaUI__study_id, var.eff.size = metaUI__variance, small = FALSE)
+}
+
+# One cache per server session. Exact keys include all data attributes and model
+# code/configuration; no hash collisions, cross-user state, or unbounded history.
+metaUI_fit_cache <- function(max_entries = 3L) {
+  if (length(max_entries) != 1L || !is.numeric(max_entries) || !is.finite(max_entries) ||
+      max_entries < 0 || max_entries > 3 || max_entries != as.integer(max_entries))
+    stop("fit_cache_entries must be an integer from 0 to 3.")
+  entries <- list()
+  cached <- function(df, models, correlation = .6, aggregation = "aggregate") {
+    started <- proc.time()[["elapsed"]]
+    key <- list(data = df, models = models, correlation = correlation, aggregation = aggregation)
+    match <- which(vapply(entries, function(x) identical(x$key, key), logical(1)))
+    hit <- length(match) > 0L
+    if (hit) {
+      entry <- entries[[match[1]]]
+      entries <<- c(list(entry), entries[-match[1]])
+      result <- entry$value
+    } else {
+      result <- metaUI_fit_models(df, models, correlation, aggregation)
+      if (max_entries > 0L) entries <<- utils::head(c(list(list(key = key, value = result)), entries), max_entries)
+    }
+    result$table$cache_hit <- hit
+    result$cache_hit <- hit
+    result$calculation_seconds <- proc.time()[["elapsed"]] - started
+    result
+  }
+  attr(cached, "clear") <- function() entries <<- list()
+  cached
+}
+
+metaUI_reuse_fit <- function(results, models, code, df, fallback) {
+  if (!identical(results$fit_data, df)) return(fallback())
+  idx <- which(models$code == code & !models$aggregated)
+  for (i in idx) if (!is.null(results$fits[[i]]) && results$table$status[i] == "ok" && !results$table$reflected[i]) return(results$fits[[i]])
+  fallback()
+}
+
+metaUI_heterogeneity <- function(mod, df) {
+  identified <- anyDuplicated(df$metaUI__study_id) > 0L
+  data.frame(study_variance = if (identified) mod$sigma2[1] else NA_real_,
+    effect_variance = if (identified) mod$sigma2[2] else NA_real_,
+    total_variance = sum(mod$sigma2), Q = mod$QE, Q_p = mod$QEp,
+    components = if (identified) "Study and within-study effects" else "Split not identified: one effect per study")
+}
+
 metaUI_aggregate <- function(df, correlation = .6, method = "aggregate") {
   if (!is.numeric(correlation) || length(correlation) != 1L || !is.finite(correlation) ||
       correlation < 0 || correlation >= 1) stop("Aggregation correlation must be in [0, 1).")
@@ -51,6 +109,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
   validation <- attr(df, "metaUI_validation")
   if (is.null(available_rows)) available_rows <- if (is.null(validation)) nrow(df) else validation$retained_rows
   preparation_excluded <- if (is.null(validation)) NA_integer_ else nrow(validation$exclusions)
+  fits <- vector("list", nrow(models))
   rows <- lapply(seq_len(nrow(models)), function(i) {
     spec <- models[i, , drop = FALSE]
     x <- if (isTRUE(spec$aggregated)) df_agg else df
@@ -59,6 +118,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
     elapsed <- 0
     result <- c(es = NA_real_, LCL = NA_real_, UCL = NA_real_, k = NA_real_)
     status <- "unsupported"
+    reflected <- FALSE
     if (is.null(reason)) {
       started <- proc.time()[["elapsed"]]
       reason <- tryCatch({
@@ -80,6 +140,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
         result <- candidate
         if (reflected) result[c("es", "LCL", "UCL")] <- c(-result["es"], -result["UCL"], -result["LCL"])
         status <- "ok"
+        if (!spec$aggregated && !reflected && spec$code %in% c(metaUI_code_multilevel, metaUI_code_rve)) fits[[i]] <<- env$mod
         ""
       }, error = function(e) { status <<- "failed"; conditionMessage(e) })
       elapsed <- proc.time()[["elapsed"]] - started
@@ -90,12 +151,12 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
                       filtered_rows = max(0L, available_rows - nrow(df)), preparation_excluded_rows = preparation_excluded,
                       input_rows = nrow(df), analysis_rows = nrow(x),
                       collapsed_rows = nrow(df) - nrow(x), aggregated = spec$aggregated,
-                      fit_seconds = elapsed, row.names = NULL)
+                      fit_seconds = elapsed, reflected = reflected, row.names = NULL)
     row$fit_es <- row$es; row$fit_LCL <- row$LCL; row$fit_UCL <- row$UCL
     if (df$metaUI__es_type[1] == "ZCOR") row[c("es", "LCL", "UCL")] <- lapply(row[c("es", "LCL", "UCL")], tanh)
     row
   })
-  list(df_agg = df_agg, table = dplyr::bind_rows(rows))
+  list(df_agg = df_agg, table = dplyr::bind_rows(rows), fits = fits, fit_data = df)
 }
 
 metaUI_validate_prepared <- function(df) {

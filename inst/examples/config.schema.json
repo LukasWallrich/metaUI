@@ -158,6 +158,11 @@
         },
         "shiny_theme": {
           "type": "string"
+        },
+        "fit_cache_entries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
         }
       }
     },

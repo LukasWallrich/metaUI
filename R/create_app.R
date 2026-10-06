@@ -1,3 +1,8 @@
+declared_imports <- function() {
+  imports <- gsub("\\([^)]*\\)", "", utils::packageDescription("metaUI")$Imports)
+  trimws(strsplit(imports, ",")[[1]])
+}
+
 #' Create the about text for the app
 #'
 #' This function is generally only called internally by [generate_shiny()].
@@ -74,8 +79,9 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
 #' @param launch_app Should the app be launched? Defaults to TRUE if it is not saved (i.e. save_to_folder is NA), FALSE otherwise.
 #' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
-#'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 100. If more effect sizes are selected, a message is shown instead.
+#'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 200. If more effect sizes are selected, a message is shown instead.
 #'   - `shiny_theme` Character. One of the shinythemes that style the app. Defaults to "yeti", see `?shinythemes::shinythemes` for all options.
+#'   - `fit_cache_entries` Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.
 #'   - `selection_list_threshold` Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
 #' @inheritParams create_about
 #' @inheritDotParams create_about
@@ -116,8 +122,10 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   models_from_function <- models
 
   if (is.character(models)) {
-    source(models)
-    if (!exists("models_to_run")) stop("R script passed to models argument does not create a `models_to_run` variable.")
+    model_environment <- new.env(parent = environment())
+    sys.source(models, envir = model_environment)
+    if (!exists("models_to_run", envir = model_environment, inherits = FALSE)) stop("R script passed to models argument does not create a `models_to_run` variable.")
+    models_to_run <- model_environment$models_to_run
   } else if (is.function(models)) {
     models_to_run <- models()
   } else if (is.data.frame(models)) {
@@ -126,6 +134,9 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     stop("Invalid argument type. models must be a function, a tibble, or a path to a file.")
   }
 
+  # Custom code can depend on external state or randomness: cache only by opt-in.
+  if (is.null(options$fit_cache_entries)) opts$fit_cache_entries <- if (identical(models_to_run, get_model_tibble())) 3L else 0L
+  metaUI_fit_cache(opts$fit_cache_entries) # validate before writing
   report <- attr(dataset, "metaUI_validation")
   if (is.null(report)) stop("Dataset needs prepare_data() validation metadata. Re-prepare legacy datasets.")
   if (report$retained_rows != nrow(dataset)) stop("Validation report is stale after subsetting. Re-run prepare_data() on the selected input rows.")
@@ -133,11 +144,16 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   metaUI_aggregate(dataset, correlation) # check the aggregation contract before writing
   report$aggregation <- list(method = "GLS study-level average", correlation = correlation,
     assumptions = "Distinct studies are independent; multilevel V is diagonal (sampling covariance not supplied). RVE uses correlated-effects weights (rho=.8), small=FALSE. Neither N nor p is inferred by aggregation.")
+  report$performance <- list(fit_cache_entries = opts$fit_cache_entries,
+    note = "Session-local exact data/model/config keys; cached warnings/failures and original fit times retained. Custom models default to no cache. Hidden outputs remain suspended by Shiny.")
+  report$model_source <- if (is.character(models)) list(type = "trusted_author_R_file",
+    file = basename(models), md5 = unname(tools::md5sum(models))) else list(type = "model_specifications")
   report$models <- lapply(seq_len(nrow(models_to_run)), function(i) {
     spec <- models_to_run[i, , drop = FALSE]
     x <- if (spec$aggregated) metaUI_aggregate(dataset, correlation) else dataset
     reason <- metaUI_model_reason(spec, x)
-    list(name = spec$name, aggregated = spec$aggregated, status = if (is.null(reason)) "eligible_not_fitted" else "unsupported", reason = reason)
+    list(name = spec$name, aggregated = spec$aggregated, code = spec$code,
+         status = if (is.null(reason)) "eligible_not_fitted" else "unsupported", reason = reason)
   })
   report$pcurve <- tryCatch({
     selected <- metaUI_pcurve_data(dataset)
@@ -179,7 +195,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   file.copy(system.file("template_code", "analysis.R", package = "metaUI"),
             file.path(save_to_folder, "analysis.R"), overwrite = TRUE)
   jsonlite::write_json(report, file.path(save_to_folder, "validation.json"), auto_unbox = TRUE, pretty = TRUE, na = "null")
-  dependencies <- sort(unique(c(trimws(strsplit(utils::packageDescription("metaUI")$Imports, ",")[[1]]), "psych")))
+  dependencies <- sort(unique(c(declared_imports(), "psych")))
   versions <- data.frame(package = dependencies,
     version = vapply(dependencies, function(x) as.character(utils::packageVersion(x)), character(1)))
   utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
@@ -203,11 +219,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 #' @noRd
 
 generate_global.R <- function(metaUI_eff_size_type_label) {
-  req_packages <- utils::packageDescription("metaUI") %>%
-    purrr::pluck("Imports") %>%
-    stringr::str_split(",", simplify = TRUE) %>%
-    purrr::map_chr(stringr::str_trim) %>%
-    unlist()
+  req_packages <- declared_imports()
 
 
   label_code <- paste(deparse(as.character(metaUI_eff_size_type_label)), collapse = "\n")
@@ -222,6 +234,7 @@ generate_global.R <- function(metaUI_eff_size_type_label) {
       if (!requireNamespace(\"{.x}\", quietly = TRUE)) {{
         stop(\"Missing dependency: {.x}. Install dependencies before launching; see dependencies.csv.\")
         }}'))  %>% glue::glue_collapse(sep = '\n')}
+  if (utils::packageVersion('meta') < '7.0.0') stop('meta >= 7.0-0 is required; install dependencies before launch.')
 
   # Ensure component files can be found
    f <- '.'

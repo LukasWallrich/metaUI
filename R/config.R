@@ -29,7 +29,7 @@ build_app <- function(config) {
   if (!is.null(mapping$categorical_filters)) mapping$categorical_filters <- unlist(mapping$categorical_filters)
   dataset <- do.call(prepare_data, c(list(data = resolve(config$data)), mapping))
   opts <- config$options
-  if (!is.null(opts) && (!is.list(opts) || length(setdiff(names(opts), c("correlation_dependent", "max_forest_plot_rows", "selection_list_threshold", "shiny_theme"))))) stop("Invalid options fields")
+  if (!is.null(opts) && (!is.list(opts) || length(setdiff(names(opts), c("correlation_dependent", "max_forest_plot_rows", "selection_list_threshold", "shiny_theme", "fit_cache_entries"))))) stop("Invalid options fields")
   about <- config$about
   if (!is.null(about) && (!is.list(about) || length(setdiff(names(about), c("date", "citation", "osf_link", "contact"))))) stop("Invalid about fields")
   do.call(generate_shiny, c(list(dataset = dataset, dataset_name = config$dataset_name,

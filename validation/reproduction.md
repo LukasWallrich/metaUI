@@ -142,3 +142,30 @@ that corrected default slider bounds keep all 12 effects in the example.
 The package was installed into a fresh Linux library overlay; compatible existing
 dependencies were reused read-only. A container with all dependencies installed
 fresh remains a release gate, rather than a claim from this run.
+
+## Authorised follow-up — 6 October 2026
+
+The earlier records above describe the first milestone. This follow-up adds one
+CC-BY empirical pool and bounded performance changes; no public app deployment.
+Copy all files from `inst/examples/dannheim` to a fresh directory and run:
+
+```sh
+Rscript --vanilla build.R
+Rscript --vanilla -e 'shiny::runApp("mental-health-app", launch.browser=FALSE)'
+```
+
+Building and launching remain separate. The example uses the existing R entry
+point for trusted editable custom model code. It deliberately does not expand the
+JSON schema with executable code. Its last model row is a source-reference
+REML/Hartung–Knapp fit on rounded g/SE inputs; preceding default rows/diagnostics
+are different-method explorations. See the example README and provenance.json.
+No optional p/N is supplied. Exact eligible membership, source sign/scale,
+CI-width SE rule, gate status, and source-file checksums are recorded.
+
+`fit_cache_entries` is the one additional presentation/performance option in JSON
+and `generate_shiny`: integer 0–3. Default models retain three exact recent fit
+selections per session; custom model code defaults to zero. It must remain zero
+for random fits or code depending on external state. Cached failures/warnings and
+original times remain in downloads; the table/UI disclose cache reuse. Uploads
+persist and clear the cache. Runtime/helper code edits require restarting the app.
+See performance-optimisation.md for same-estimator before/after commands/results.

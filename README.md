@@ -68,3 +68,24 @@ The bundled Barroso data use Fisher z, not SMD. No public deployment is automati
 is another platform for cumulative meta-analysis. metaUI's intended contribution is
 an author-owned app with editable R source. See the bounded
 [publication-readiness assessment](validation/publication-readiness.md).
+
+### Empirical example and performance
+
+Copy `inst/examples/dannheim` to a fresh working directory and run
+`Rscript --vanilla build.R`. Launch separately with
+`shiny::runApp("mental-health-app")`. The tiny CC-BY mental-health pool retains
+12 exact benchmark member IDs and original signed Hedges g with CI-derived
+native SE. The source-reference REML/Hartung–Knapp model is checked against
+metafor; other models/diagnostics are explicitly exploratory. Read the example's
+README/provenance before interpreting results. No benchmark corpus is deployed.
+
+Generated apps reuse compatible fitted objects and retain three recent exact
+fit selections per reader session; `cache_hit` discloses reuse. Custom models
+default to no cache. `options=list(fit_cache_entries=0)` disables caching;
+keep it disabled for random models or code depending on external state. Uploads
+are validated, stored in session state, and clear prior cached results.
+
+[Performance measurements](validation/performance-optimisation.md) distinguish
+faster p-curve calculations/fit reuse from cache hits and first-time fitting costs.
+[Licence audit](validation/licensing-audit.md) records the unresolved Barroso
+source-deposit gate; this candidate is not a substantial public release.

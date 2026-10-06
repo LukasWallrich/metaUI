@@ -16,8 +16,21 @@
 * Correct the tutorial's Wald p calculation and Fisher-z labels.
 * Add independent statistical references, headless server tests, and read-only CI.
 * Correct slider rounding so default bounds retain all eligible rows.
-* Existing launch_app=FALSE remains supported. No estimator rewrite, benchmark
-  apps, agent skill, public deployment, or paper draft is included.
+* Reuse exact compatible multilevel/RVE fits in diagnostics. Session-local,
+  three-entry exact-input caching speeds repeated selections; `cache_hit` and
+  original fit timings are retained. Custom models default to no caching;
+  `options$fit_cache_entries = 0` disables it. No cross-reader cache.
+* Deduplicate identical p-curve noncentrality solves without changing numerical
+  results or selection rules; restore process options after p-curve calls.
+* Keep uploaded data in session state, validate their contract, clear cached
+  results on upload, and reject stale globals when loading author model files.
+* Report singleton-study variance splits as unidentified, and fix model plot
+  ordering and Plotly tooltip warnings.
+* Add a tiny CC-BY Dannheim mental-health pool with exact member provenance,
+  a source-reference REML/Hartung–Knapp fit, and labelled explorations.
+* Verify Linux CI, including fresh dependencies; add current/previous R matrix.
+* Existing launch_app=FALSE remains supported. Agent skill, public deployment,
+  paper draft, and runtime rewrite remain deferred.
 
 # metaUI 0.1.2 (under development)
 

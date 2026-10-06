@@ -60,6 +60,11 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   if (anyDuplicated(mappings)) stop("Column mappings must be distinct.")
   original_rows <- seq_len(nrow(data))
   effect_ids_input <- if (is.null(es_id)) original_rows else data[[es_id]]
+  labels_input <- NULL
+  if (!is.na(es_label)) {
+    if (!es_label %in% names(data)) stop("Mapped label column not found: ", es_label)
+    labels_input <- data[[es_label]]
+  }
   derived <- character()
   if (is.null(se)) {
     data$metaUI_input_se <- sqrt(data[[variance]])
@@ -146,8 +151,9 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   }
 
   if (!is.na(es_label)) {
-    data <- data %>%
-      dplyr::rename("metaUI__es_label" = !!rlang::sym(es_label))
+    # A display label may share the study/ID column already renamed above.
+    if (es_label %in% names(data) && !startsWith(es_label, "metaUI__")) data[[es_label]] <- NULL
+    data$metaUI__es_label <- labels_input
   } else {
     data <- data %>%
       dplyr::group_by(.data$metaUI__study_id) %>%

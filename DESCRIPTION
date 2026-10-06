@@ -29,7 +29,7 @@ Imports:
     jsonlite,
     forcats,
     psych,
-    meta,
+    meta (>= 7.0-0),
     metafor,
     plotly,
     poibin,

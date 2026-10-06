@@ -37,18 +37,8 @@ get_model_tibble <- function() {
 
         models_code <- tibble::tribble(
         ~name, ~code,
-            "Random-Effects Multilevel Model", ('metafor::rma.mv(
-                                yi = metaUI__effect_size,
-                                V = metaUI__variance,
-                                random = ~ 1 | metaUI__study_id/metaUI__effect_id,
-                                test = "t", # t inference; not Knapp-Hartung
-                                data = df,
-                                method = "REML",
-                                sparse = TRUE
-                            )'),
-            "Robust Variance Estimation", ('robumeta::robu(
-                        metaUI__effect_size ~ 1, data = df,
-                        studynum = metaUI__study_id, var.eff.size = metaUI__variance, small = FALSE)'),
+            "Random-Effects Multilevel Model", metaUI_code_multilevel,
+            "Robust Variance Estimation", metaUI_code_rve,
             "Trim-and-fill", ('meta::trimfill(meta::metagen(
                                             TE = metaUI__effect_size,
                                             seTE = metaUI__se,

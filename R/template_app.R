@@ -235,6 +235,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             plotOutput("model_comparison", width = "100%") %>% shinycssloaders::withSpinner(),
             div(),
             tableOutput("effectestimate"),
+            textOutput("calculation_status"),
             summary_table_notes
           ),
           tabPanel(
@@ -288,7 +289,7 @@ glue_string <- ('
 
   # Set app states
     state_values <- reactiveValues(
-      to_upload = FALSE,
+      uploaded_data = NULL,
       ever_analyzed = FALSE
     )
 
@@ -319,14 +320,6 @@ glue_string <- ('
       >>)
  </FILTER>
 
-  file_input <- reactive({
-    if (state_values$to_upload == TRUE) {
-      return(input$uploadData)
-    } else {
-      return(NULL)
-    }
-  })
-
   # Apply reactive filtering of dataset when clicking on the button
   df_filtered <- eventReactive(input$go, {
     df_reactive()
@@ -339,29 +332,7 @@ glue_string <- ('
 
 
   df_reactive <- reactive({
-    if (!is.null(file_input())) {
-      df <- readxl::read_xlsx(input$uploadData$datapath, "dataset")
-      metaUI_validate_prepared(df)
-      for (field in c("metaUI__es_type", "metaUI__display_scale", "metaUI__direction"))
-        validate(need(identical(as.character(df[[field]][1]), as.character(metaUI__df[[field]][1])), "Uploaded scale/direction differs from the built app; build a fresh app for a new contract."))
-      attr(df, "metaUI_runtime_rows") <- nrow(df)
-      filter_values <- readxl::read_xlsx(input$uploadData$datapath, "filters") %>% split(.$id)
-      <FILTER>
-      for (i in filters) {
-        if (i$type == "numeric") {
-          updateSliderInput(inputId = i$id, value = c(as.numeric(filter_values[[i$id]]$selection[1]), as.numeric(filter_values[[i$id]]$selection[2])))
-        } else {
-          updateCheckboxGroupInput(inputId = i$id, selected = filter_values[[i$id]]$selection)
-        }
-      }
-       </FILTER>
-
-          updateSliderInput(inputId = "outliers_z_scores", value = c(as.numeric(filter_values[["outliers_z_scores"]]$selection[1]), as.numeric(filter_values[["outliers_z_scores"]]$selection[2])))
-
-      state_values$to_upload <- FALSE
-    } else {
-      df <- metaUI__df
-    }
+    df <- if (is.null(state_values$uploaded_data)) metaUI__df else state_values$uploaded_data
 
 
     <FILTER>
@@ -385,6 +356,7 @@ glue_string <- ('
   })
 
   # Data for forest plot and table ------------------------------------------
+  fit_cached <- metaUI_fit_cache(<<opts$fit_cache_entries>>)
 
   estimatesreactive <- reactive({
     df <- df_filtered()
@@ -401,7 +373,15 @@ glue_string <- ('
 
    state_values$ever_analyzed <- TRUE
 
-    metaUI_fit_models(df, models_to_run, correlation_dependent, aggregation_method[1])
+    fit_cached(df, models_to_run, correlation_dependent, aggregation_method[1])
+  })
+
+  output$calculation_status <- renderText({
+    result <- estimatesreactive()
+    req(result)
+    paste(if (result$cache_hit) "Reused this session\'s identical selection." else "Calculated this selection.",
+          sprintf("Ready in %.3f s (calculation only).", result$calculation_seconds),
+          "Reported fit times describe the original fits.")
   })
 
   estimatesfiltered <- eventReactive(input$go, {
@@ -451,7 +431,7 @@ glue_string <- ('
       ggplot2::xlab(metaUI_eff_size_type_label) +
       ggplot2::geom_errorbar(data = estimates_explo_agg, ggplot2::aes(y = Model, xmin = LCL, xmax = UCL), stat = "identity") +
       ggplot2::theme_bw() +
-      ggplot2::scale_y_discrete(limits = rev(levels(estimates_explo_agg$Model))) +
+      ggplot2::scale_y_discrete(limits = rev(unique(estimates_explo_agg$Model))) +
       ggplot2::theme(text = ggplot2::element_text(size = 20))
   })
 
@@ -461,7 +441,7 @@ glue_string <- ('
   output$effectestimate <- renderTable(
     {
       estimatesfiltered()  %>%
-        dplyr::select(Model, es, LCL, UCL, k, status, reason, warnings, aggregated)
+        dplyr::select(Model, es, LCL, UCL, k, status, reason, warnings, aggregated, cache_hit)
     },
     digits = 2
   )
@@ -683,22 +663,13 @@ glue_string <- ('
   output$heterogeneity <- renderTable({
     df <- df_filtered()
 
-    metapp_total <- metafor::rma.mv(
-      yi = metaUI__effect_size,
-      V = metaUI__variance,
-      random = ~ 1 | metaUI__study_id/metaUI__effect_id,
-      test = "t", # t inference; not Knapp-Hartung
-      data = df,
-      method = "REML",
-      sparse = TRUE
-    )
+    req(estimatesreactive())
+    metapp_total <- metaUI_reuse_fit(estimatesreactive(), models_to_run,
+      metaUI_code_multilevel, df, function() metaUI_multilevel_fit(df))
 
-    het <- data.frame(
-      "Study variance" = metapp_total$sigma2[1],
-      "Within-study effect variance" = metapp_total$sigma2[2],
-      "Q" = round(metapp_total$QE, digits = 2),
-      "Q_p" = fmt_p(metapp_total$QEp, include_equal = FALSE)
-      )
+    het <- metaUI_heterogeneity(metapp_total, df)
+    het$Q <- round(het$Q, 2)
+    het$Q_p <- fmt_p(het$Q_p, include_equal = FALSE)
 
     print(het)
   })
@@ -713,7 +684,8 @@ glue_string <- ('
          need(nrow(df) <= <<opts$max_forest_plot_rows>>, "Forest plots can only be displayed with <<opts$max_forest_plot_rows>> effect sizes or fewer. Use the filters to narrow the selection if possible. If you really want a forest plot with more effect sizes, you will need to download the data and create it in a different tool where you have customization options that keep it legible.")
       )
 
-      rve <- robumeta::robu(metaUI__effect_size ~ 1, data = df, studynum = metaUI__study_id, var.eff.size = metaUI__variance, small = FALSE)
+      rve <- metaUI_reuse_fit(estimatesreactive(), models_to_run,
+        metaUI_code_rve, df, function() metaUI_rve_fit(df))
 
       robumeta::forest.robu(rve,
         es.lab = "metaUI__es_label", study.lab = "metaUI__study_id",
@@ -825,7 +797,7 @@ glue_string <- ('
       ggplot2::geom_violin(fill = grDevices::rgb(100 / 255, 180 / 255, 1, .5)) +
       ggplot2::theme_bw() +
       ggplot2::scale_y_continuous(name = metaUI_eff_size_type_label) +
-      ggplot2::geom_jitter(data = outliers, shape = 16, position = ggplot2::position_jitter(width = .1, height = 0), mapping = ggplot2::aes(text = metaUI__study_id)) +
+      ggplot2::geom_jitter(data = outliers, shape = 16, position = ggplot2::position_jitter(width = .1, height = 0), mapping = ggplot2::aes(group = metaUI__study_id)) +
       ggplot2::theme(
         axis.title.x = ggplot2::element_blank(),
         axis.text.x = ggplot2::element_blank(),
@@ -843,7 +815,7 @@ glue_string <- ('
       title = "Standardized effect size (z-score)"
     )
 
-    plotly_plot <- plotly::ggplotly(violinplot, tooltip = "text") %>%
+    plotly_plot <- plotly::ggplotly(violinplot, tooltip = c("y", "group")) %>%
       plotly::config(modeBarButtons = list(list("toImage")), displaylogo = FALSE) %>%
       plotly::add_lines(
         x = ~1, y = ~ (metaUI__effect_size - efm) / efsd, colors = NULL, yaxis = "y2",
@@ -907,18 +879,49 @@ glue_string <- ('
   # UPLOAD ----------------------------------------------------------------
 
   observeEvent(input$executeUpload, {
-    state_values$to_upload <- TRUE
-
-    if (class(try(nrow(input$uploadData))) != "try-error") {
+    req(input$uploadData)
+    upload <- tryCatch({
       sheets <- readxl::excel_sheets(input$uploadData$datapath)
-      if (!("dataset" %in% sheets && "filters" %in% sheets)) {
-      showModal(modalDialog(title = "Invalid file", "The file needs to contain a dataset and a filters sheet. Typically, you should start from a file downloaded from this application."))
-      } else {
-        shinyjs::runjs("$(\'#go\')[0].click();")
+      if (!all(c("dataset", "filters") %in% sheets)) stop("Upload needs dataset and filters sheets.")
+      df <- readxl::read_xlsx(input$uploadData$datapath, "dataset")
+      metaUI_validate_prepared(df)
+      if (!nrow(df) || !all(names(metaUI__df) %in% names(df))) stop("Uploaded data need all built app columns and at least one effect.")
+      if (!is.numeric(df$metaUI__es_z) || any(!is.finite(df$metaUI__es_z))) stop("Uploaded effect z-scores must be finite.")
+      for (field in c("metaUI__es_type", "metaUI__display_scale", "metaUI__direction"))
+        if (!identical(as.character(df[[field]][1]), as.character(metaUI__df[[field]][1])))
+          stop("Uploaded scale/direction differs from the built app; build a fresh app for a new contract.")
+      <FILTER>
+      for (i in filters) {
+        if (i$type == "numeric" && !is.numeric(df[[i$col]])) stop("Uploaded numeric filter has changed type.")
+        if (i$type == "selection") {
+          if (any(!is.na(df[[i$col]]) & !df[[i$col]] %in% levels(metaUI__df[[i$col]]))) stop("New categories require a fresh app.")
+          df[[i$col]] <- factor(df[[i$col]], levels = levels(metaUI__df[[i$col]]))
+        }
       }
-    } else {
-      showModal(modalDialog(title = "No file selected", HTML("Make sure to select a file prior to upload")))
+      </FILTER>
+      attr(df, "metaUI_runtime_rows") <- nrow(df)
+      selections <- readxl::read_xlsx(input$uploadData$datapath, "filters")
+      if (!all(c("id", "selection") %in% names(selections))) stop("Invalid filter sheet.")
+      list(data = df, filters = split(selections, selections$id))
+    }, error = function(e) e)
+    if (inherits(upload, "error")) {
+      showModal(modalDialog(title = "Invalid upload", conditionMessage(upload)))
+      return()
     }
+    attr(fit_cached, "clear")()
+    state_values$uploaded_data <- upload$data
+    filter_values <- upload$filters
+    <FILTER>
+    for (i in filters) {
+      if (i$type == "numeric") {
+        updateSliderInput(inputId = i$id, value = as.numeric(filter_values[[i$id]]$selection[1:2]))
+      } else {
+        updateCheckboxGroupInput(inputId = i$id, selected = filter_values[[i$id]]$selection)
+      }
+    }
+    </FILTER>
+    updateSliderInput(inputId = "outliers_z_scores", value = as.numeric(filter_values[["outliers_z_scores"]]$selection[1:2]))
+    shinyjs::runjs("$(\'#go\')[0].click();")
   })
 
 

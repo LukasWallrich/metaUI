@@ -183,3 +183,11 @@ test_that("factor study IDs ignore unused levels in first and last selection", {
   r<-fit(d)$table
   expect_equal(r$filtered_rows,c(2,2))
 })
+
+
+test_that("study labels can also be effect display labels", {
+  x <- fixture()
+  d <- prepare_data(x, "study", "yi", variance = "vi", es_id = "id", es_label = "study")
+  expect_identical(as.character(d$metaUI__es_label), x$study)
+  expect_identical(as.character(d$metaUI__study_id), x$study)
+})
