@@ -290,7 +290,7 @@ metaUI_forest_rows <- function(df, estimates, models = NULL) {
     rows[c("es", "LCL", "UCL")] <- lapply(rows[c("es", "LCL", "UCL")], tanh)
   summary_rows <- if (!is.null(models) && nrow(models) == nrow(estimates))
     models$code %in% c(metaUI_code_multilevel, metaUI_code_rve) & !models$aggregated else
-    estimates$Model %in% c("Random-Effects Multilevel Model", "Robust Variance Estimation")
+    estimates$Model %in% c("Random-Effects Multilevel Model", "Robust Variance Estimation") & !estimates$aggregated
   summaries <- estimates[summary_rows & estimates$status == "ok", ]
   if (nrow(summaries)) rows <- rbind(rows, data.frame(label = summaries$Model,
     kind = "Model summary", study = NA_character_, effect_id = NA_character_,
