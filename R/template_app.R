@@ -1,6 +1,6 @@
 # Wrap in function so that it can be saved more easily
 
-labels_and_options <- function(dataset_name, correlation = .6) {
+labels_and_options <- function(dataset_name, correlation = .6, primary_model = NULL) {
   glue::glue('
 
       # TK - defaults? Advanced options?
@@ -9,9 +9,13 @@ labels_and_options <- function(dataset_name, correlation = .6) {
 
       ci_width <- "95 %"
 
+      # Name of the authors\' primary model, exactly as in models.R, or NULL for none.
+      # It is shown first; other rows are labelled explorations. Never substituted.
+      primary_model <- {if (is.null(primary_model)) "NULL" else paste(deparse(primary_model), collapse = "")}
+
       # Fixed texts
       welcome_title <- HTML("Explore this meta-analysis")
-      welcome_text <- HTML("<p>Choose which effects to include with the filters on the left, then click <b>Analyze data</b>. Every tab shows results for the selection you last analysed; if you change a filter afterwards, the app marks the results as out of date until you analyse again.</p><p>The estimators answer different questions and are not interchangeable. The <b>About</b> tab records the data source and the authors\' notes on their primary analysis.</p>")
+      welcome_text <- HTML("<p>Choose which effects to include with the filters on the left, then click <b>Analyze data</b>. Every tab shows results for the selection you last analysed; if you change a filter afterwards, the app marks the results as out of date until you analyse again.</p><p>The estimators answer different questions and are not interchangeable. If the authors declared a primary analysis, it is shown first and the other estimators are labelled explorations. The <b>About</b> tab records the data source and the authors\' notes.</p>")
       dataset_name <- {paste(deparse(as.character(dataset_name)), collapse = "\n")}
       go <- ""
       not_analysed <- HTML("<p><b>No results yet.</b> Choose the effects to include in the left panel, then click <b>Analyze data</b>. Results, plots and diagnostics appear here once the selection has been analysed.</p>")
@@ -73,15 +77,10 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
     rm_prefix <- "metaUI__filter_"
 
     if (is.numeric(data[[filter_col]])) {
-      # Round slider ends to (same) appropriate number of significant digits
-      l <- log10(max(abs(max(data[[filter_col]], na.rm = TRUE)), abs(min(data[[filter_col]], na.rm = TRUE))))
-      # Integer significant digits: two beyond the largest magnitude, at least three.
-      # Bounds round outward (floor/ceiling), so the default range retains every row.
-      sig_dig <- if (is.finite(l)) max(3, floor(l) + 2) else 3
-      values <- data[[filter_col]][!is.na(data[[filter_col]])]
-      step <- if (length(values) && all(values == round(values))) ", step = 1" else ""
+      # Bounds round outward to a tick interval, so the default range retains every row.
+      spec <- metaUI_slider_spec(data[[filter_col]])
       out <- glue::glue('
-      sliderInput("{filter_col %>% stringr::str_replace_all(" ", "_")}",
+      metaUI_slider_input("{filter_col %>% stringr::str_replace_all(" ", "_")}",
       p("{stringr::str_remove(filter_col, "metaUI__filter_")}",
       {if(add_popup)  {{
           glue::glue("
@@ -90,11 +89,7 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
                         \'{escape_quotes(filter_popups[stringr::str_remove(filter_col, rm_prefix)])}\')
                     ")
           }} else  ""}),
-          min = {signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
-          max = {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)},
-          value = c({signif_floor(min(data[[filter_col]], na.rm = TRUE), sig_dig)},
-          {signif_ceiling(max(data[[filter_col]], na.rm = TRUE), sig_dig)}),
-          sep = ""{step}
+          spec = list(min = {spec$min}, max = {spec$max}, step = {spec$step}, ticks = {spec$ticks})
       )
                  ')
 
@@ -189,8 +184,8 @@ generate_mod_tab <- function(data, any_filters) {
       sample_moderation_main,
       {generate_moderator_selection(data)},
       fluidRow(
-        div(column(4, DT::dataTableOutput("moderation_table"), shiny::htmlOutput("moderation_text")),
-            column(8, shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot"))))
+        div(column(5, DT::dataTableOutput("moderation_table"), shiny::htmlOutput("moderation_text")),
+            column(7, shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot"))))
       ),
       sample_moderation_notes
       )
@@ -208,8 +203,9 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
 
   fluidPage(
     theme = shinythemes::shinytheme("{opts$shiny_theme}"),
-    tags$head(tags$link(rel = "stylesheet", href = "metaui.css")),
+    tags$head(tags$link(rel = "stylesheet", href = "metaui.css"), tags$script(src = "metaui.js")),
     shinyjs::useShinyjs(),
+    tags$a(class = "metaui-skip", href = "#metaui_basis", "Skip to results"),
     # Application title
     titlePanel(
     windowTitle = {paste(deparse(paste0("Dynamic Meta-Analysis of ", dataset_name)), collapse = "\n")},
@@ -252,9 +248,10 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             results_panel(
             go,
             summary_table_main,
+            uiOutput("primary_estimate"),
             uiOutput("estimate_gaps"),
             div(class = "metaui-scroll", plotOutput("model_comparison", width = "100%", height = "auto") %>% shinycssloaders::withSpinner()),
-            div(class = "metaui-scroll", tableOutput("effectestimate")),
+            div(id = "effectestimate_box", class = "metaui-scroll", tableOutput("effectestimate")),
             summary_table_notes,
             model_help,
             uiOutput("scale_note"),
@@ -277,8 +274,8 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             "Publication Bias", results_panel(go, qrppb_main, funnel_main, plotOutput("funnel", width = "100%") %>% shinycssloaders::withSpinner(),
             eggers_main, DT::dataTableOutput("eggers") %>% shinycssloaders::withSpinner(),
             firstvalues,
-            pcurve_main, plotOutput("pcurve") %>% shinycssloaders::withSpinner(),
-            zcurve_main, plotOutput("zcurve") %>% shinycssloaders::withSpinner(),
+            pcurve_main, div(class = "metaui-scroll", plotOutput("pcurve", height = "auto") %>% shinycssloaders::withSpinner()),
+            zcurve_main, div(class = "metaui-scroll", plotOutput("zcurve", height = "auto") %>% shinycssloaders::withSpinner()),
             div(class = "metaui-reason", textOutput("zcurve_warnings")))
           ),
           tabPanel(
@@ -323,18 +320,12 @@ glue_string <- ('
     )
 
   # Create slider to filter by z-scores
-  z_sig_dig <- 2
 
   insertUI(
     selector = "#z_score_filter",
     where = "beforeEnd",
-    ui = sliderInput("outliers_z_scores", "Exclude based on z-scores",
-      min = signif_floor(min(metaUI__df$metaUI__es_z), z_sig_dig),
-      max = signif_ceiling(max(metaUI__df$metaUI__es_z), z_sig_dig), value = c(
-        signif_floor(min(metaUI__df$metaUI__es_z), z_sig_dig),
-        signif_ceiling(max(metaUI__df$metaUI__es_z, na.rm = TRUE), z_sig_dig)
-      ), sep = ""
-    )
+    ui = metaUI_slider_input("outliers_z_scores", "Exclude based on z-scores",
+      metaUI_slider_spec(metaUI__df$metaUI__es_z, integer = FALSE))
   )
  <FILTER>
   filters <- list(<<
@@ -412,8 +403,11 @@ glue_string <- ('
     validate(need(isTruthy(input$go), "No analysis yet. Results will describe the selection at the moment you click Analyze data."))
     df <- df_filtered()
     counts <- attr(df, "metaUI_filter_report")
-    filter_names <- sub("^metaUI__filter_", "", names(counts$successive_filter_exclusions))
-    filter_names[filter_names == "outliers_z_scores"] <- "z-score range"
+    # Input IDs replace spaces with underscores; show the column labels instead
+    filter_cols <- grep("^metaUI__filter_", names(metaUI__df), value = TRUE)
+    labels <- c(stats::setNames(sub("^metaUI__filter_", "", filter_cols), gsub(" ", "_", filter_cols)),
+      outliers_z_scores = "z-score range")
+    filter_names <- unname(labels[names(counts$successive_filter_exclusions)])
     details <- paste(paste(filter_names, unlist(counts$successive_filter_exclusions), sep = ": "), collapse = "; ")
     upload <- attr(df, "metaUI_upload_info")
     paste(if (is.null(upload)) "Built dataset (as published with this app)." else paste0("Uploaded data: ", upload$file,
@@ -510,25 +504,67 @@ glue_string <- ('
   })
 
   # MODEL COMPARISON -----------------------------------------------------
-  output$model_comparison <- renderPlot({
-    estimates_explo_agg <- estimatesfiltered() %>% dplyr::filter(status == "ok")
-    validate(need(nrow(estimates_explo_agg) > 0, "No model could be estimated for this selection; see the table below for reasons."))
-    estimates_explo_agg$Model <- stringr::str_wrap(estimates_explo_agg$Model, 32)
+  # Authors may declare one primary model (labels_and_options.R). It is listed first
+  # and never replaced by another model when it cannot be estimated.
+  primary_index <- function(table) if (is.null(primary_model)) integer() else which(table$Model == primary_model)
+  display_order <- function(table) { first <- primary_index(table); c(first, setdiff(seq_len(nrow(table)), first)) }
+  ci_label <- paste(gsub(" ", "", ci_width), "CI")
 
-    ggplot2::ggplot() +
+  output$model_comparison <- renderPlot({
+    table <- estimatesfiltered()
+    req(table)
+    table$role <- ifelse(seq_len(nrow(table)) %in% primary_index(table), "primary", "exploration")
+    estimates_explo_agg <- table[display_order(table), , drop = FALSE] %>% dplyr::filter(status == "ok")
+    validate(need(nrow(estimates_explo_agg) > 0, "No model could be estimated for this selection; see the table below for reasons."))
+    estimates_explo_agg$Model <- ifelse(estimates_explo_agg$role == "primary",
+      paste0(stringr::str_wrap(estimates_explo_agg$Model, 26), "\\n(primary)"), stringr::str_wrap(estimates_explo_agg$Model, 26))
+    # Summary rows are back-transformed to r for correlations; say so on the axis.
+    x_label <- if (metaUI__df$metaUI__es_type[1] == "ZCOR") "Correlation r (back-transformed from Fisher z)" else metaUI_eff_size_type_label
+
+    ggplot2::ggplot(estimates_explo_agg, ggplot2::aes(y = Model, colour = role)) +
       ggplot2::geom_vline(xintercept = 0, linetype = 2, colour = "grey55") +
-      ggplot2::geom_errorbar(data = estimates_explo_agg, ggplot2::aes(y = Model, xmin = LCL, xmax = UCL), width = .25, colour = "#22303c") +
-      ggplot2::geom_point(data = estimates_explo_agg, ggplot2::aes(x = es, y = Model), size = 2.6, colour = "#1c5a85") +
-      ggplot2::labs(x = metaUI_eff_size_type_label, y = NULL) +
-      ggplot2::theme_minimal(base_size = 15) +
+      ggplot2::geom_errorbar(ggplot2::aes(xmin = LCL, xmax = UCL), width = .25, na.rm = TRUE) +
+      ggplot2::geom_point(ggplot2::aes(x = es, size = role)) +
+      ggplot2::scale_colour_manual(values = c(primary = "#1c5a85", exploration = "#52616d"), guide = "none") +
+      ggplot2::scale_size_manual(values = c(primary = 3.4, exploration = 2.4), guide = "none") +
+      ggplot2::labs(x = stringr::str_wrap(x_label, 34), y = NULL) +
+      ggplot2::theme_minimal(base_size = 14) +
       ggplot2::scale_y_discrete(limits = rev(unique(estimates_explo_agg$Model))) +
       ggplot2::theme(panel.grid.major.y = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(),
                      axis.text.y = ggplot2::element_text(colour = "#22303c", hjust = 1, lineheight = .9))
-  }, height = function() 90 + 52 * max(1, sum(estimatesfiltered()$status == "ok")))
+  }, height = function() 90 + 52 * max(1, sum(estimatesfiltered()$status == "ok"), na.rm = TRUE))
+
+  output$primary_estimate <- renderUI({
+    table <- estimatesfiltered()
+    req(table)
+    if (is.null(primary_model)) return(div(class = "metaui-primary metaui-primary-none",
+      tags$p("The authors have not marked a primary model. The rows below are alternative estimators applied to the same selection; the app does not choose between them.")))
+    index <- primary_index(table)
+    if (!length(index)) return(div(class = "metaui-primary metaui-primary-missing", role = "alert",
+      tags$p(tags$b("Declared primary model not found: "), primary_model, ". Check the name in labels_and_options.R against models.R.")))
+    row <- table[index[1], ]
+    fmt <- function(x) formatC(x, format = "f", digits = 2)
+    result <- if (row$status == "ok") tagList(
+      tags$p(class = "metaui-primary-value", fmt(row$es), " ",
+        tags$span(class = "metaui-primary-ci", if (is.na(row$LCL) || is.na(row$UCL)) "no interval reported" else paste0(ci_label, " [", fmt(row$LCL), ", ", fmt(row$UCL), "]"))),
+      tags$p(class = "metaui-note", paste0(metaUI_eff_size_type_label, ". k = ", row$k, "; ", if (row$aggregated) "study-level" else "effect-level", " fit."),
+        if (nzchar(row$warnings)) tags$span(class = "metaui-primary-warning", paste("Warnings:", row$warnings))))
+    else tags$p(class = "metaui-primary-gap", tags$b(paste0("Not estimated for this selection (", row$status, "): ")), row$reason,
+      " The app does not substitute another model; the explorations below are not replacements.")
+    div(class = "metaui-primary", role = "region", `aria-label` = "Primary analysis",
+      tags$p(class = "metaui-primary-label", "Primary analysis, declared by the authors"),
+      tags$p(class = "metaui-primary-name", row$Model), result)
+  })
+
+  observe({
+    table <- estimatesfiltered()
+    shinyjs::toggleClass("effectestimate_box", "metaui-has-primary", condition = !is.null(table) && length(primary_index(table)) > 0)
+  })
 
   # Name every model missing from the plot so none disappears silently
   output$estimate_gaps <- renderUI({
     table <- estimatesfiltered()
+    req(table)
     missing <- table[table$status != "ok", , drop = FALSE]
     if (!nrow(missing)) return(NULL)
     div(class = "metaui-gaps", tags$b(paste0("Not plotted (", nrow(missing), " of ", nrow(table), " models):")),
@@ -551,7 +587,9 @@ glue_string <- ('
       " between effects from the same study)."), " Effect-level models (by default the multilevel model and RVE) use every selected effect. Different studies are assumed to be independent.")
     tags$details(class = "metaui-help", open = NA, tags$summary("Reading these estimates"),
       tags$p(scale_text), tags$p(direction_text), tags$p(dependence_text),
-      tags$p("The rows are different estimators applied to the same selection. They answer different questions, are not interchangeable, and the app does not choose between them."))
+      tags$p(if (!is.null(estimatesfiltered()) && length(primary_index(estimatesfiltered()))) paste0("The authors declared ", primary_model, " as their primary analysis. ",
+        "The other rows are explorations: different estimators applied to the same selection. They answer different questions and are not interchangeable with it.") else
+        "The rows are different estimators applied to the same selection. They answer different questions, are not interchangeable, and the app does not choose between them."))
   })
 
   # MODEL COMPARISON TABLE -------------------------------------------------------------------
@@ -559,16 +597,23 @@ glue_string <- ('
   output$effectestimate <- renderTable(
     {
       table <- estimatesfiltered()
+      req(table)
+      role <- ifelse(seq_len(nrow(table)) %in% primary_index(table), "primary", "exploration")
+      order <- display_order(table)
+      table <- table[order, , drop = FALSE]; role <- role[order]
       fmt <- function(x) ifelse(is.na(x), "", formatC(x, format = "f", digits = 2))
-      data.frame(Model = table$Model, Estimate = fmt(table$es),
-        `95% CI` = ifelse(is.na(table$LCL) & is.na(table$UCL), "", paste0("[", fmt(table$LCL), ", ", fmt(table$UCL), "]")),
+      out <- data.frame(Model = table$Model, Estimate = fmt(table$es),
+        CI = ifelse(is.na(table$LCL) & is.na(table$UCL), "", paste0("[", fmt(table$LCL), ", ", fmt(table$UCL), "]")),
         k = ifelse(is.na(table$k), "", format(table$k, trim = TRUE)),
         Status = ifelse(table$status == "ok", "estimated", table$status), # keep validation.json vocabulary
         `Reason or warnings` = trimws(paste(table$reason, table$warnings)),
         Fit = ifelse(table$aggregated, "study-level", "effect-level"),
         check.names = FALSE)
+      names(out)[3] <- ci_label
+      if (!is.null(primary_model)) out <- cbind(Role = role, out)
+      out
     },
-    align = "lrrrlll"
+    align = if (is.null(primary_model)) "lrrrlll" else "llrrrlll"
   )
 
 
@@ -581,7 +626,7 @@ glue_string <- ('
         glue::glue("
     output$`summary_{f$id}_table` <- renderTable({{ # {{ escapes the glue syntax
     df <- df_filtered()
-    summarise_numeric(df[[\'{f$col}\']], \'{f$id  %>% stringr::str_remove(\'metaUI__filter_\')}\')
+    summarise_numeric(df[[\'{f$col}\']], \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\')
   }})
 
   output$`summary_{f$id}_plot` <- renderPlot({{
@@ -589,7 +634,7 @@ glue_string <- ('
     ggplot2::ggplot(df, ggplot2::aes(x = `{f$col}`)) +
       ggplot2::geom_density(na.rm = TRUE) +
       ggplot2::geom_rug(alpha = .1, na.rm = TRUE) +
-      ggplot2::theme_light() +
+      ggplot2::theme_light(base_size = 14) +
       ggplot2::xlab(\'{f$col %>% stringr::str_remove(\'metaUI__filter_\')}\')
   }})
   ")
@@ -607,7 +652,7 @@ glue_string <- ('
 
     ggplot2::ggplot(counts, ggplot2::aes(x = reorder(.data[[\'{f$col %>% stringr::str_remove(\'metaUI__filter_\')}\']], Count), y = Count)) +
       ggplot2::geom_col(fill = \'#337ab7\') + ggplot2::coord_flip() +
-      ggplot2::labs(x = NULL, y = \'Effects\') + ggplot2::theme_minimal()
+      ggplot2::labs(x = NULL, y = \'Effects\') + ggplot2::theme_minimal(base_size = 14)
 
   }})
         ")
@@ -644,7 +689,7 @@ glue_string <- ('
     }
 
     out %>% DT::datatable(
-      rownames = FALSE,
+      rownames = FALSE, options = list(scrollX = TRUE),
       caption = tags$caption(
         style = "caption-side: bottom; text-align: left; margin: 8px 0;",
         glue::glue("The effect size is given as {metaUI_eff_size_type_label}")
@@ -675,7 +720,7 @@ glue_string <- ('
         ggplot2::geom_violin(fill = NA) +
         ggplot2::theme_bw() +
         ggplot2::geom_jitter(width = .1, alpha = .25) +
-        ggplot2::xlab(input$moderator %>% stringr::str_remove("metaUI__filter_")) +
+        ggplot2::xlab(NULL) + # the moderator is named in the selector; a flipped title collides with labels
         ggplot2::ylab(metaUI_eff_size_type_label) +
         ggplot2::geom_hline(yintercept = 0, linetype = "dashed") +
         ggplot2::coord_flip()
@@ -747,10 +792,13 @@ glue_string <- ('
     df <- df_filtered()
     if (is.numeric(df[[input$moderator]])) {
       modtable <- psych::describe(df[input$moderator] %>% as.data.frame(), fast = TRUE) # [c(2:5, 8, 9)]
+      k_moderator <- modtable$n
       modtable[, 2:6] <- round_(as.data.frame(modtable)[, 2:6], digits = 2)
       modtable <- modtable %>% dplyr::rename(k = n)
-      modtable$Intercept <- round_(model$b[1], digits = 2)
-      modtable$`&beta;` <- round_(model$b[2], digits = 2)
+      modtable$k <- k_moderator
+      # Three significant digits: a per-unit slope such as -0.0027 must not read as -0.00
+      modtable$Intercept <- format(signif(model$b[1], 3), scientific = FALSE)
+      modtable$`&beta;` <- format(signif(model$b[2], 3), scientific = FALSE)
       modtable$vars <- NULL
       modtable$range <- NULL
       modtable$se <- NULL
@@ -773,7 +821,7 @@ glue_string <- ('
 
     }
 
-    modtable %>% DT::datatable(options = list(dom = "t"), escape = FALSE)
+    modtable %>% DT::datatable(rownames = FALSE, options = list(dom = "t", scrollX = TRUE, ordering = FALSE), escape = FALSE)
   })
 
   output$moderation_text <- shiny::renderText({
@@ -820,7 +868,9 @@ glue_string <- ('
       )
     },
     # TK - create a function that adjusts the height of the plot based on the number of studies
-    height = function () if (nrow(df_filtered()) > <<opts$max_forest_plot_rows>>) 200 else 400 + 25 * nrow(df_filtered()),
+    # robumeta draws a heading row per study plus one row per effect
+    height = function () if (nrow(df_filtered()) > <<opts$max_forest_plot_rows>>) 200 else
+      220 + 22 * (nrow(df_filtered()) + length(unique(df_filtered()$metaUI__study_id))),
     width = 900
     )
 
@@ -859,7 +909,7 @@ glue_string <- ('
       "p" = ifelse(round(eggers$p.value, 3) == 0, "< .001", round(eggers$p.value, 3)),
       check.names = FALSE
     )
-    eggers_table[1, ] %>% DT::datatable(options = list(dom = "t"), escape = FALSE) %>%
+    eggers_table[1, ] %>% DT::datatable(options = list(dom = "t", scrollX = TRUE), escape = FALSE) %>%
      DT::formatRound(columns = 1:3, digits=3)
 
   })
@@ -875,7 +925,7 @@ glue_string <- ('
     result <- tryCatch(pcurve(selected, effect.estimation = FALSE), error = function(e) e)
     validate(need(!inherits(result, "error"), if (inherits(result, "error")) conditionMessage(result) else ""))
     graphics::mtext(paste("Direction-contrary exclusions:", attr(selected, "direction_exclusions")), side = 3, line = 0)
-  })
+  }, width = function() max(680, session$clientData$output_pcurve_width), height = 520, res = 96)
 
 
   # ZCURVE ------------------------------------------------------------------
@@ -903,7 +953,7 @@ glue_string <- ('
     value <- zcurve_fit()
     validate(need(!inherits(value$result, "error"), "Z-curve not estimated for this selection; see the estimator reason below."))
     zcurve::plot.zcurve(value$result, annotation = TRUE, main = "")
-  })
+  }, width = function() max(680, session$clientData$output_zcurve_width), height = 480, res = 96)
 
   # VIOLIN PLOTLY -------------------------------------------------------------
   output$violin <- plotly::renderPlotly({
@@ -958,7 +1008,7 @@ glue_string <- ('
 
     # Hide boxplot outliers so that they are not shown multiple times
     plotly_plot$x$data <- lapply(plotly_plot$x$data, FUN = function(x) {
-      if (x$type == "box") {
+      if (identical(x$type, "box")) { # traces without a type (e.g. no outliers) are left alone
         x$marker <- list(opacity = 0)
       }
       return(x)
@@ -977,10 +1027,11 @@ glue_string <- ('
       dataset = if (is.null(state_values$uploaded_data)) metaUI__df else state_values$uploaded_data,
       summary = if (nrow(df_filtered())) as.data.frame(estimatesfiltered()) else data.frame(status = "unsupported", reason = "No eligible rows selected"),
       filters = filter_selections,
-      provenance = data.frame(field = c("uploaded", "file", "z_rule"),
+      provenance = data.frame(field = c("uploaded", "file", "z_rule", "primary_model"),
         value = c(as.character(!is.null(state_values$upload_info)),
           if (is.null(state_values$upload_info)) "built dataset" else state_values$upload_info$file,
-          if (is.null(state_values$upload_info)) "prepare_data descriptive standardisation" else state_values$upload_info$z_rule))
+          if (is.null(state_values$upload_info)) "prepare_data descriptive standardisation" else state_values$upload_info$z_rule,
+          if (is.null(primary_model)) "none declared" else primary_model))
     )
   })
 

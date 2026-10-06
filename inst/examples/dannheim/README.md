@@ -43,6 +43,7 @@ result g=-0.38, CI [-0.69,-0.08]; it does not claim access to unrounded source d
 That model rejects repeated study IDs, including uploads. `models.R` contains
 standalone editable R specifications, without requiring metaUI at app startup.
 
+`build.R` declares this row as the app's `primary_model`, so it is shown first.
 Other models/diagnostics are **explorations with different methods**, not source
 reproductions or recommendations. A two-component multilevel variance split is
 unidentified with one effect per study: only its total is interpretable here.

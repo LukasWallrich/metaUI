@@ -61,6 +61,10 @@ metaUI::build_app("tiny.json")     # copy tiny.json and tiny.csv to a fresh fold
 shiny::runApp("tiny-app")         # separate, blocking launch action
 ```
 
+Authors may name one primary model (`primary_model` in `generate_shiny()` or the
+JSON config). Apps show it first and label the other rows as explorations; they never
+substitute another model when it is unsupported.
+
 Generation refuses a nonempty folder by default. p/N are optional for the primary
 models; directional models require explicit direction. COR/ZCOR require explicit
 variance scales. Read the generated validation report before interpreting results.
