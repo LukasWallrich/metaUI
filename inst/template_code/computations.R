@@ -47,6 +47,7 @@ metaUI_validate_alternatives <- function(df, specs) {
       if (any(abs(y) >= 1)) stop("Alternative COR effects must be in (-1,1): ", spec$name)
       v <- v / (1 - y^2)^2; y <- atanh(y)
     }
+    if (any(!is.finite(y)) || any(!is.finite(v))) stop("Invalid alternative fitting-scale inputs: ", spec$name)
     if (any(abs(y - df[[spec$fit_effect]]) > 1e-8 * pmax(1, abs(y))) ||
         any(abs(v - df[[spec$fit_variance]]) > 1e-6 * pmax(v, df[[spec$fit_variance]])))
       stop("Alternative source/fitting-scale fields disagree: ", spec$name)

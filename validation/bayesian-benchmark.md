@@ -5,7 +5,10 @@ accuracy, flat mean and half-normal(0.5) heterogeneity prior; no cache.
 Synthetic independent-study observations with sigma between 0.1 and 0.3 and
 between-study SD 0.2. The machine also ran R package checks, so wall times are
 approximate and conservative; these are individual observations, not a population
-95th percentile. Raw scripts/logs are in `/home/lukas/work/metaui-complete`.
+95th percentile. Reproduce with `Rscript --vanilla tools/benchmark-bayesian.R bayes.csv`:
+seed 90 generated the 10- and 50-study observations in sequence and seed 92 the
+200-study run (120-second limit). The 20-study observation came from a separate run
+whose seed was not recorded; the script uses seed 91 for it.
 
 | Studies | Measured wall seconds | Interpretation |
 |---:|---:|---|

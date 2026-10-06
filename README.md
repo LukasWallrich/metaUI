@@ -150,8 +150,9 @@ optional `bayesmeta` package. The mean prior is flat; the heterogeneity prior is
 half-normal with scale 0.5 for SMD or 0.25 for Fisher z, configurable with
 `tau_scale`. Central 95% credible intervals and posterior medians are reported,
 and the sensitivity tab compares half and double that prior scale. This uses
-aggregated studies and the declared within-study correlation, or the configured
-first-effect rule. The build records the priors and aggregation assumptions.
+aggregated studies and the declared within-study correlation. Authors who edit
+`aggregation_method` in the generated `labels_and_options.R` to `"first"` switch it
+to the first-effect rule; the build records the priors and the default aggregation.
 The default cap of 20 studies protects interactive use: first-fit benchmarks took
 about 20 seconds at 20 studies and 97 seconds at 50 on the review machine.
 Authors can set `max_studies` from 2 to 50, with a build warning above 20. Each

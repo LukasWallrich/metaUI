@@ -97,7 +97,7 @@ provides live-data refresh, model/moderator controls, optional Bayesian analyses
 and a code generator. metaUI already offers dataset upload/download, filtering,
 moderation and model comparison, with author-owned editable generated R code.
 The clearest useful transfers are exportable forest plots (implemented here),
-validated shareable selections, and opt-in Bayesian estimation (implemented in the next layer).
+validated shareable selections, and opt-in Bayesian estimation (since implemented in metaUI 0.2.0).
 Live remote refresh needs source authentication, provenance, validation and
 failure recovery; it should not silently alter the dataset behind published results.
 

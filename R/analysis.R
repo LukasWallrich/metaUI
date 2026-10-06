@@ -83,17 +83,20 @@ metaUI_aggregate <- function(df, correlation = .6, method = "aggregate") {
 }
 
 # Identify the default estimators by their code, so renaming a model keeps its
-# direction handling and input checks. Unrecognised code keeps its display name.
-metaUI_model_role <- function(spec) {
+# direction handling and input checks. Unrecognised code returns `fallback`.
+metaUI_model_role <- function(spec, fallback = spec$name) {
   code <- gsub("\\s+", "", spec$code)
-  roles <- c("P-uniform star" = "puniform::puni_star(",
+  roles <- c("Random-Effects Multilevel Model" = metaUI_code_multilevel,
+             "Robust Variance Estimation" = metaUI_code_rve,
+             "Trim-and-fill" = "meta::trimfill(meta::metagen(",
+             "P-uniform star" = "puniform::puni_star(",
              "Hedges-Vevea Selection Model" = "weightr::weightfunct(",
              "P-Curve (first value)" = 'metaUI_pcurve_fit(df,"first")',
              "P-Curve (last value)" = 'metaUI_pcurve_fit(df,"last")',
              "Precision Effect Test" = "lm(metaUI__effect_size~sqrt(metaUI__variance),",
              "Precision Effect Estimate using Standard Error" = "lm(metaUI__effect_size~metaUI__variance,")
   hit <- names(roles)[vapply(roles, grepl, logical(1), x = code, fixed = TRUE)]
-  if (length(hit)) hit[1] else spec$name
+  if (length(hit)) hit[1] else fallback
 }
 
 metaUI_model_reason <- function(spec, df) {
@@ -170,7 +173,9 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
                       input_rows = nrow(df), analysis_rows = nrow(x),
                       collapsed_rows = nrow(df) - nrow(x), aggregated = spec$aggregated,
                       fit_seconds = elapsed, reflected = reflected, row.names = NULL)
-    row$interval_type <- if (bayesian) "95% central credible interval (prior-dependent)" else "Confidence interval (coverage model-dependent)"
+    row$interval_type <- if (bayesian) "95% central credible interval (prior-dependent)" else
+      if (is.na(metaUI_model_role(spec, NA_character_))) "Author-defined interval (type and coverage unknown)" else
+      "Confidence interval (coverage model-dependent)"
     row$fit_es <- row$es; row$fit_LCL <- row$LCL; row$fit_UCL <- row$UCL
     if (df$metaUI__es_type[1] == "ZCOR") row[c("es", "LCL", "UCL")] <- lapply(row[c("es", "LCL", "UCL")], tanh)
     row
@@ -219,6 +224,8 @@ metaUI_validate_upload <- function(df, built) {
   if (length(specs)) {
     attr(df, "metaUI_alternatives") <- specs
     attr(df, "metaUI_input_scale") <- input_scale
+    label <- attr(built, "metaUI_primary_label")
+    attr(df, "metaUI_primary_label") <- if (is.null(label)) attr(built, "metaUI_validation")$primary_label else label
   }
   centre <- mean(built$metaUI__effect_size); spread <- stats::sd(built$metaUI__effect_size)
   degenerate <- !is.finite(spread) || spread == 0

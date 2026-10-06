@@ -10,7 +10,7 @@ The included-code/data licensing review is in `validation/licensing-audit.md`
 and `inst/COPYRIGHTS`. No deprecated API transition requires advancement.
 The source was fetched before stacking; changes are pushed through the PR stack.
 
-Local evidence is in `/home/lukas/work/metaui-complete`: source and installed test
+Local evidence was kept outside the repository: source and installed test
 logs, independent Bayesian quadrature test, numerical benchmarks, generated-app
 browser checks, build/check logs, URL and spelling checks. Vignettes use only
 bundled data and build offline. The manual uses the existing local TinyTeX.
@@ -62,5 +62,5 @@ mobile access, and adds independent numerical references and browser regression
 checks. The documentation explains model assumptions and where estimators are
 unsupported. These analyses remain conditional on the authors' scientific choices.
 
-Private review app: http://100.121.34.85:7895/ (synthetic data only).
-The server remains available on the tailnet; no public deployment is made.
+A private review instance (synthetic data only) was used for manual checks; no
+public deployment is made.

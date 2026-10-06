@@ -113,3 +113,27 @@ test_that("schema two authors new features while schema one keeps its contract",
   expect_equal(report$alternatives[[1]]$name,"Corrected")
   expect_equal(report$primary_label,"As supplied")
 })
+
+test_that("review guards reject missing labels, odd option lists and percent-like categories", {
+  x <- fixture(); x$corrected <- x$yi * .9
+  alt <- list(es_field = "corrected", variance = "vi", es_type = "SMD", justification = "Illustrative")
+  expect_error(prepared(x, alternatives = list(A = alt), primary_label = NA_character_), "primary_label")
+  expect_error(prepared(x, alternatives = setNames(list(alt), NA_character_)), "uniquely named")
+  alt$justification <- NA_character_
+  expect_error(prepared(x, alternatives = list(A = alt)), "justification")
+  expect_error(metaUI:::metaUI_bayesian_options(list(TRUE), "SMD"), "uniquely named")
+  expect_error(metaUI:::metaUI_bayesian_options(list(max_study = 3), "SMD"), "Unknown Bayesian option")
+  old <- options(OutDec = ","); on.exit(options(old))
+  expect_match(metaUI:::metaUI_bayesian_spec(list(tau_scale = .5, max_studies = 20))$code, "tau_scale = 0.5", fixed = TRUE)
+  options(old)
+  expect_error(build_app(list(schema_version = TRUE, data = "x", dataset_name = "x", output = "x", mapping = list())), "schema_version")
+  x <- fixture(); x$group <- factor(rep(c("50%25", "b"), 8)); x$year <- 2001:2016
+  d <- prepared(x, filters = c("group", "year"))
+  filters <- list(list(id="metaUI__filter_group",col="metaUI__filter_group",type="categorical"),list(id="metaUI__filter_year",col="metaUI__filter_year",type="numeric"))
+  spec <- metaUI:::metaUI_slider_spec(d$metaUI__filter_year)
+  r <- data.frame(id=c(rep("outliers_z_scores",2),"metaUI__filter_group",rep("metaUI__filter_year",2),"metaUI__filter_year_include_NA"),
+    selection=c(-1.8,2.2,"50%25",spec$min,spec$max,"TRUE"))
+  parsed <- metaUI:::metaUI_parse_selection(metaUI:::metaUI_selection_query(r,"abc",1/3),"abc",d,filters)
+  expect_equal(parsed$filters$metaUI__filter_group$selection, "50%25")
+  expect_identical(parsed$sesoi, 1/3)
+})

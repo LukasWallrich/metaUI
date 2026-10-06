@@ -502,10 +502,12 @@ glue_string <- ('
   # Aggregated values meta-analysis ----------------------------------------------
 
 
-  comparison_cache <- metaUI_fit_cache(6L, limit = 6L)
+  # Six entries cover all computations of one selection; 0 keeps the cache opt-out.
+  comparison_cache <- metaUI_fit_cache(if (<<opts$fit_cache_entries>> == 0) 0L else 6L, limit = 6L)
   comparison_models <- models_to_run[models_to_run$code %in% c(metaUI_code_multilevel, metaUI_code_rve), , drop = FALSE]
   computations_comparison <- eventReactive(input$go, {
     df <- df_filtered()
+    if (!nrow(df)) return(data.frame(computation = "All", Model = "Unavailable", es = NA_real_, LCL = NA_real_, UCL = NA_real_, status = "unsupported", reason = "No eligible rows selected"))
     if (!nrow(comparison_models)) return(data.frame(computation = "All", Model = "Unavailable", es = NA_real_, LCL = NA_real_, UCL = NA_real_, status = "unsupported", reason = "No multilevel or RVE specification is present."))
     choices <- metaUI_computations(metaUI__df)
     do.call(rbind, lapply(seq_along(choices), function(i) {
@@ -528,6 +530,7 @@ glue_string <- ('
   bayesian_options <- <<paste(deparse(opts$bayesian), collapse = "\n")>>
   bayesian_sensitivity <- eventReactive(input$go, {
     result <- estimatesreactive()
+    if (is.null(result)) return(data.frame(status = "unsupported", reason = "No eligible rows selected"))
     idx <- if (is.null(bayesian_options)) integer() else which(models_to_run$code == metaUI_bayesian_spec(bayesian_options)$code)
     primary <- if (length(idx)) result$fits[[idx[1]]] else NULL
     metaUI_bayesian_sensitivity(result$df_agg, bayesian_options, primary)
@@ -1222,7 +1225,10 @@ glue_string <- ('
     attr(fit_cached, "clear")()
     state_values$uploaded_data <- upload$data
     derivation <- attr(upload$data, "metaUI_upload_derivations")
-    state_values$upload_info <- list(file = basename(input$uploadData$name), rows = nrow(upload$data),
+    # The upload number distinguishes files with identical metadata.
+    state_values$upload_count <- if (is.null(state_values$upload_count)) 1L else state_values$upload_count + 1L
+    upload_number <- state_values$upload_count
+    state_values$upload_info <- list(file = basename(input$uploadData$name), rows = nrow(upload$data), upload_number = upload_number,
       z_rule = derivation$rule, z_disagreements = derivation$supplied_z_disagreements,
       checkbox_note = "Missing-value choices restored; older files without them default to including missing values.")
     filter_values <- upload$filters

@@ -1,7 +1,7 @@
 # Links contain only a built-dataset identity and validated reader selections.
 metaUI_selection_query <- function(selections, dataset_key, bound = NULL) {
   payload <- list(dataset = dataset_key, filters = selections, sesoi = bound)
-  encoded <- utils::URLencode(jsonlite::toJSON(payload, auto_unbox = TRUE, na = "null", null = "null"), reserved = TRUE)
+  encoded <- utils::URLencode(jsonlite::toJSON(payload, auto_unbox = TRUE, na = "null", null = "null", digits = I(17)), reserved = TRUE, repeated = TRUE)
   query <- paste0("?metaui=1&selection=", encoded)
   if (nchar(query, type = "bytes") > 6000L) stop("This selection is too large for a shareable URL; use the workbook download.")
   query
@@ -30,16 +30,14 @@ metaUI_parse_selection <- function(query, dataset_key, built, filters = list()) 
     x <- suppressWarnings(as.numeric(saved[[id]]$selection))
     if (length(x) != 2L || any(!is.finite(x)) || x[1] > x[2] || !is.finite(diff(x)))
       stop("Invalid saved range: ", id)
-    if (id == "outliers_z_scores") {
-      values <- built$metaUI__es_z; digits <- 2
+    # Same bounds as the built sliders (metaUI_slider_spec), skipped if no finite values.
+    spec <- if (id == "outliers_z_scores") {
+      if (any(is.finite(built$metaUI__es_z))) metaUI_slider_spec(built$metaUI__es_z, integer = FALSE)
     } else {
       filter <- Filter(function(f) f$id == id, filters)[[1]]
-      values <- built[[filter$col]]; values <- values[is.finite(values)]
-      l <- log10(max(abs(values)))
-      digits <- if (is.finite(l)) max(3, floor(l) + 2) else 3
+      if (any(is.finite(built[[filter$col]]))) metaUI_slider_spec(built[[filter$col]])
     }
-    limits <- c(signif_floor(min(values), digits), signif_ceiling(max(values), digits))
-    if (x[1] < limits[1] - 1e-8 || x[2] > limits[2] + 1e-8) stop("Saved range is outside the built slider: ", id)
+    if (!is.null(spec) && (x[1] < spec$min - 1e-8 || x[2] > spec$max + 1e-8)) stop("Saved range is outside the built slider: ", id)
   }
   for (filter in filters) {
     if (filter$type == "numeric") {

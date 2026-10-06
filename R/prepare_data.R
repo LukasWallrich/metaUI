@@ -54,11 +54,11 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
     es_id = es_id, variance_scale = variance_scale, direction = direction,
     categorical_filters = categorical_filters)
   if (!is.list(alternatives) || length(alternatives) > 5L ||
-      (length(alternatives) && (is.null(names(alternatives)) || any(!nzchar(names(alternatives))) ||
+      (length(alternatives) && (is.null(names(alternatives)) || anyNA(names(alternatives)) || any(!nzchar(trimws(names(alternatives)))) ||
         anyDuplicated(names(alternatives)) || "As supplied" %in% names(alternatives))))
     stop("alternatives must be a uniquely named list of at most five computations.")
 
-  if (!is.character(primary_label) || length(primary_label) != 1L || !nzchar(trimws(primary_label)) || primary_label %in% names(alternatives)) stop("primary_label must be a unique nonempty string.")
+  if (!is.character(primary_label) || length(primary_label) != 1L || is.na(primary_label) || !nzchar(trimws(primary_label)) || primary_label %in% names(alternatives)) stop("primary_label must be a unique nonempty string.")
   direction <- match.arg(direction)
   if (!es_type %in% c("SMD", "COR", "ZCOR"))
     stop("Supported metrics are SMD, COR and ZCOR; other metrics require custom analysis.")
@@ -237,7 +237,7 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
     if (!is.list(spec) || !all(required %in% names(spec)) ||
         length(setdiff(names(spec), allowed)) ||
         !any(c("variance", "se") %in% names(spec)) ||
-        !is.character(spec$justification) || length(spec$justification) != 1L || !nzchar(trimws(spec$justification)))
+        !is.character(spec$justification) || length(spec$justification) != 1L || is.na(spec$justification) || !nzchar(trimws(spec$justification)))
       stop("Alternative must declare effect, variance/SE, scale and justification: ", names(alternatives)[i])
     args <- alternative_base
     args$se <- NULL; args$variance <- NULL; args$variance_scale <- NULL

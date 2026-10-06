@@ -1,8 +1,11 @@
 # Deterministic two-level normal/normal model; all arguments use the fitting scale.
 metaUI_bayesian_options <- function(options, scale) {
   if (is.null(options)) return(NULL)
-  if (!is.list(options) || length(setdiff(names(options), c("enabled", "tau_scale", "max_studies"))))
-    stop("Bayesian options must contain enabled, tau_scale and/or max_studies.")
+  if (!is.list(options)) stop("Bayesian options must be a list, e.g. list(enabled = TRUE, tau_scale = 0.5, max_studies = 20).")
+  if (length(options) && (is.null(names(options)) || any(!nzchar(names(options))) || anyDuplicated(names(options))))
+    stop("Bayesian options must be uniquely named.")
+  unknown <- setdiff(names(options), c("enabled", "tau_scale", "max_studies"))
+  if (length(unknown)) stop("Unknown Bayesian option(s): ", paste(unknown, collapse = ", "), ". Allowed: enabled, tau_scale, max_studies.")
   if (is.null(options$enabled)) options$enabled <- TRUE
   if (!is.logical(options$enabled) || length(options$enabled) != 1L || is.na(options$enabled)) stop("Bayesian enabled must be TRUE or FALSE.")
   if (!options$enabled) return(NULL)
@@ -30,7 +33,7 @@ metaUI_bayesian_spec <- function(options) {
   tibble::tibble(name = "Bayesian normal-normal model", aggregated = TRUE,
     es = "mod$qposterior(mu.p = .5)", LCL = "mod$qposterior(mu.p = .025)", UCL = "mod$qposterior(mu.p = .975)",
     k = "length(mod$y)", code = paste0("metaUI_bayesian_fit(df, tau_scale = ",
-      format(options$tau_scale, digits = 17), ", max_studies = ", options$max_studies, ")"))
+      format(options$tau_scale, digits = 17, decimal.mark = "."), ", max_studies = ", options$max_studies, ")"))
 }
 
 metaUI_bayesian_sensitivity <- function(df, options, primary = NULL) {
