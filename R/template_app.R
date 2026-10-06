@@ -1065,7 +1065,10 @@ glue_string <- ('
   # UPLOAD ----------------------------------------------------------------
 
   observeEvent(input$executeUpload, {
-    req(input$uploadData)
+    if (is.null(input$uploadData)) {
+      showModal(modalDialog(title = "No file selected", "Choose a workbook before clicking Upload dataset."))
+      return()
+    }
     upload <- tryCatch({
       sheets <- readxl::excel_sheets(input$uploadData$datapath)
       if (!all(c("dataset", "filters") %in% sheets)) stop("Upload needs dataset and filters sheets.")

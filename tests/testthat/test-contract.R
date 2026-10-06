@@ -97,6 +97,9 @@ test_that("directional bias fits match explicitly oriented reference fits", {
   expect_equal(minus$LCL,-plus$UCL,tolerance=1e-8)
   # Same right-sided assumption on reflected data is a different model scenario.
   expect_equal(prepared(x,direction="positive")$metaUI__direction,rep("positive",16))
+  renamed <- m; renamed$name <- c("My p-uniform", "My selection model")
+  expect_equal(fit(prepared(x,direction="negative"),renamed)$table$es, minus$es, tolerance=1e-8)
+  expect_match(fit(prepared(x),renamed)$table$reason, "explicit")
 })
 
 test_that("synthetic Fisher-z data agree with direct reference fits", {

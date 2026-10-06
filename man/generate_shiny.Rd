@@ -64,7 +64,7 @@ a character vector with all packages to display.}
 \item{overwrite}{Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.}
 }
 \value{
-This function does not have a meaningful return value - it rather launches the Shiny app and/or saves it to disk.
+If \code{launch_app = FALSE}, invisibly the normalised path of the generated app folder. Otherwise a Shiny app object for the saved folder, which launches when printed.
 }
 \description{
 This function generates the Shiny app. It is the main function of the package. The app can either be launched directly, or saved to

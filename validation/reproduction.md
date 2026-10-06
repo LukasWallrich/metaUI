@@ -13,7 +13,7 @@ Rscript --vanilla -e 'roxygen2::roxygenise()'
 R CMD INSTALL --library=/home/lukas/work/metaui-rc/library .
 Rscript --vanilla -e 'library(metaUI); testthat::test_dir("tests/testthat")'
 R CMD build .
-R CMD check --no-manual metaUI_0.1.2.9000.tar.gz
+R CMD check --no-manual metaUI_*.tar.gz  # the archive version matches DESCRIPTION
 ```
 
 Copy `inst/examples/tiny.csv` and `tiny.json` into a fresh working folder, then:
@@ -108,7 +108,8 @@ measurement, not an end-to-end network benchmark. The baseline uses its original
 models; unspecified direction in the candidate intentionally excludes directional
 fits. Comparison of all-model totals is therefore not a speed-up claim.
 At k1000 the individual forest is explicitly limited to 200 effects by the app;
-no 1000-effect forest render is claimed. Synthetic data and known fitting-scale
+no 1000-effect forest render is claimed. Forest timings include a fresh RVE fit,
+whereas the app reuses its cached fit, so they are conservative upper bounds. Synthetic data and known fitting-scale
 assumptions allow timings, not estimator validation from performance alone.
 
 The explicit CSV categorical mapping is `filters = list(Region="region")` plus
@@ -130,6 +131,9 @@ numeric moderation, funnel, Egger, direction-screened p-curve, and z-curve witho
 bootstrap. These are separate fit/render measurements, not a sum of hidden panels
 or a promise about click-to-result latency. Warm timings are single repeats, without
 uncertainty intervals; normal system contention and timer resolution affect them.
+Each panel timing includes opening a PNG device, and funnel and Egger each refit
+their shared `metagen` object, which the app computes once; they are therefore
+conservative upper bounds for the app's per-panel work.
 
 The committed single-run records are `validation/timings-baseline.csv`,
 `timings-candidate.csv` (unspecified direction), `timings-directed.csv`

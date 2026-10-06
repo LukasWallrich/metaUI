@@ -95,12 +95,13 @@ generate_shiny(my_data, dataset_name = "____")
 To then create the Shiny app in a format that can be customized and deployed to shinyapps.io, you need to provide some more details regarding the information that should be displayed and **the path that the app should be saved to**.
 
 ```{r}
+# Choose a fresh destination once: existing author edits are protected.
+app_folder <- "my-app"
 generate_shiny(my_data, 
                dataset_name = "____",
                # A label for how the effect size should be described in charts
                eff_size_type_label = "____",
-               # Choose a fresh destination: existing author edits are protected.
-               save_to_folder = "my-app",
+               save_to_folder = app_folder,
                launch_app = FALSE,
                # Details to show on the about page - see ?create_about for all options
                citation = "____",
@@ -108,7 +109,7 @@ generate_shiny(my_data,
                )
 ```
 
-After you have run the above, the app will be saved into the folder specified. Inspect `validation.json` and `dependencies.csv`, install the recorded dependencies, then run `shiny::runApp("my-app")` as a separate action. The generated app never installs packages on startup.
+After you have run the above, the app will be saved into the folder specified. Inspect `validation.json` and `dependencies.csv`, install the recorded dependencies, then run `shiny::runApp(app_folder)` as a separate action. The generated app never installs packages on startup.
 
 To further customize the app, consider editing:
 
@@ -126,7 +127,7 @@ Follow the instructions provided by Posit/RStudio [here](https://shiny.rstudio.c
 
 ```{r eval=FALSE}
 # Public deployment is a separate, deliberate action after validation/review.
-rsconnect::deployApp(appDir = "my-app")
+rsconnect::deployApp(appDir = app_folder)
 ```
 
 Once that is done, the app should open in your browser, and you can copy the link from the address bar. That's it - you now have your own meta-analysis Shiny app.
