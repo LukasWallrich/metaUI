@@ -34,7 +34,7 @@ primary analysis. Generated apps show it first and label the other rows as explo
 estimated for a reader's selection, the app reports why and does not substitute another model. The default,
 \code{NULL}, declares no primary model, and the app then says that it does not choose between estimators.}
 
-\item{filter_popups}{Named list of expandable filter-help content. Plain text is escaped; wrap trusted HTML in \code{\link[htmltools:HTML]{htmltools::HTML()}}, for example \code{list(Year = HTML("<i>Note:</i> Data collection year."))}.}
+\item{filter_popups}{Named list of expandable filter-help content. Plain text is escaped; wrap trusted HTML in \code{\link[htmltools:HTML]{htmltools::HTML()}}, for example \code{list(Year = htmltools::HTML("<i>Note:</i> Data collection year."))}.}
 
 \item{save_to_folder}{Folder for the generated code and data. Defaults to NA, which uses a temporary folder. A nonempty destination is refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.}
 

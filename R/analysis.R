@@ -253,7 +253,9 @@ metaUI_pcurve_fit <- function(df, selection = "first") {
 
 # Forest rows retain fitting-scale values and add the reader-facing scale.
 # Effect intervals are normal sampling intervals, not shrunk predictions.
-metaUI_forest_rows <- function(df, estimates) {
+# Summaries are the unaggregated default multilevel/RVE fits, found by their code
+# (`models` rows align with `estimates`) so renamed models are kept.
+metaUI_forest_rows <- function(df, estimates, models = NULL) {
   df <- df[order(as.character(df$metaUI__study_id), as.character(df$metaUI__effect_id)), , drop = FALSE]
   label <- if ("metaUI__es_label" %in% names(df)) df$metaUI__es_label else df$metaUI__effect_id
   rows <- data.frame(label = paste(df$metaUI__study_id, label, sep = ": "),
@@ -264,7 +266,10 @@ metaUI_forest_rows <- function(df, estimates) {
   rows$es <- rows$fit_es; rows$LCL <- rows$fit_LCL; rows$UCL <- rows$fit_UCL
   if (df$metaUI__display_scale[1] == "r")
     rows[c("es", "LCL", "UCL")] <- lapply(rows[c("es", "LCL", "UCL")], tanh)
-  summaries <- estimates[estimates$Model %in% c("Random-Effects Multilevel Model", "Robust Variance Estimation") & estimates$status == "ok", ]
+  summary_rows <- if (!is.null(models) && nrow(models) == nrow(estimates))
+    models$code %in% c(metaUI_code_multilevel, metaUI_code_rve) & !models$aggregated else
+    estimates$Model %in% c("Random-Effects Multilevel Model", "Robust Variance Estimation")
+  summaries <- estimates[summary_rows & estimates$status == "ok", ]
   if (nrow(summaries)) rows <- rbind(rows, data.frame(label = summaries$Model,
     kind = "Model summary", study = NA_character_, effect_id = NA_character_,
     fit_es = summaries$fit_es, fit_LCL = summaries$fit_LCL, fit_UCL = summaries$fit_UCL,

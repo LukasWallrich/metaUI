@@ -903,7 +903,7 @@ glue_string <- ('
     df <- df_filtered()
     validate(need(nrow(df) > 0, "No eligible rows selected for the forest plot."),
       need(nrow(df) <= <<opts$max_forest_plot_rows>>, forest_limit_message))
-    metaUI_forest_rows(df, estimatesfiltered())
+    metaUI_forest_rows(df, estimatesfiltered(), models_to_run)
   })
   forest_plot <- reactive(metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1]))
   forest_height <- function() 150 + 25 * nrow(forest_rows())

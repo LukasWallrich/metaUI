@@ -44,7 +44,7 @@
 * Document console blocking on interactive launch and the build-only alternative.
 * Add a synthetic correlation example with an independent Fisher-z reference fit.
 * Forest plots show observed effects on the displayed scale, compare available
-  multilevel/RVE summary intervals, and export PDF, PNG and CSV with both scales.
+  multilevel/RVE summary intervals, and export PDF, PNG and CSV (both scales in the CSV).
 * Add practical-equivalence interval assessment with a reader-chosen symmetric
   bound (no default), strict containment, threshold values and model limitations.
   Bound changes do not refit models; downloads record the assessment and bound.

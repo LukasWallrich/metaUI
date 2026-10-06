@@ -92,7 +92,7 @@ Now you are ready to launch a first version of the app. This is useful to see wh
 generate_shiny(my_data, dataset_name = "____")
 ```
 
-This interactive call launches Shiny and blocks the R console until you stop the app (use the Stop button in RStudio or Escape). To keep the console available while building, use `launch_app = FALSE` and launch the saved app separately with `shiny::runApp()`.
+This interactive call launches Shiny and blocks the R console until you stop the app (use the Stop button in RStudio or Escape). To keep the console available while building, skip this call: the next chunk saves to `app_folder` with `launch_app = FALSE`, and you then launch the saved app separately with `shiny::runApp(app_folder)`.
 
 To then create the Shiny app in a format that can be customized and deployed to shinyapps.io, you need to provide some more details regarding the information that should be displayed and **the path that the app should be saved to**.
 

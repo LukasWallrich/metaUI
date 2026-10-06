@@ -79,7 +79,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' primary analysis. Generated apps show it first and label the other rows as explorations. If it cannot be
 #' estimated for a reader's selection, the app reports why and does not substitute another model. The default,
 #' `NULL`, declares no primary model, and the app then says that it does not choose between estimators.
-#' @param filter_popups Named list of expandable filter-help content. Plain text is escaped; wrap trusted HTML in [htmltools::HTML()], for example `list(Year = HTML("<i>Note:</i> Data collection year."))`.
+#' @param filter_popups Named list of expandable filter-help content. Plain text is escaped; wrap trusted HTML in [htmltools::HTML()], for example `list(Year = htmltools::HTML("<i>Note:</i> Data collection year."))`.
 #' @param save_to_folder Folder for the generated code and data. Defaults to NA, which uses a temporary folder. A nonempty destination is refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
 #' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.
