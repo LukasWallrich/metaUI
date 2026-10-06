@@ -105,6 +105,8 @@ test_that("schema two authors new features while schema one keeps its contract",
   config <- list(schema_version=1,data=csv,output=file.path(root,"app"),dataset_name="Config alternatives",
     mapping=list(study_label="study",es_field="yi",variance="vi",es_type="SMD",es_id="id",alternatives=list(Corrected=list(es_field="alt",variance="vi",es_type="SMD",justification="Illustrative correction"))))
   expect_error(build_app(config),"schema_version 2")
+  old <- config; old$mapping$alternatives <- NULL; old["bayesian"] <- list(NULL)
+  expect_error(build_app(old),"schema_version 2")
   config$schema_version <- 2
   build_app(config)
   report <- jsonlite::read_json(file.path(config$output,"validation.json"))
