@@ -1,30 +1,5 @@
 # Ensure this is aligned in /R and /inst as it is used by both this package and the Shiny apps. Locally ensured with git pre-commit hook
 
-# Function to round numbers up and down to a given number of significant digits
-signif_ceiling <- function(x, digits = 2) {
-  if (x == 0) {
-    return(0)
-  }
-  else {
-    digits <- max(1L, as.integer(ceiling(digits)))
-    scale <- 10^(digits - 1 - floor(log10(abs(x))))
-    if (!is.finite(scale) || !is.finite(x * scale)) return(x)
-    return(ceiling(x * scale) / scale)
-  }
-}
-
-signif_floor <- function(x, digits = 2) {
-  if (x == 0) {
-    return(0)
-  }
-  else {
-    digits <- max(1L, as.integer(ceiling(digits)))
-    scale <- 10^(digits - 1 - floor(log10(abs(x))))
-    if (!is.finite(scale) || !is.finite(x * scale)) return(x)
-    return(floor(x * scale) / scale)
-  }
-}
-
 # Slider bounds rounded outward to a round tick interval, so the default range keeps
 # every value. Shiny derives a fractional tick count from (max - min) / step, which
 # makes the last grid labels collide; `ticks` is the exact number of grid intervals.
@@ -186,16 +161,6 @@ round_ <- function(x, digits = 2) {
   attributes(out) <- attributes(x)
   out[is.na(x)] <- NA
   out
-}
-
-# Thanks to https://stackoverflow.com/a/41194093/10581449
-allglobal <- function() {
-  if (identical(parent.frame(), globalenv())) return(FALSE)
-  lss <- ls(envir = parent.frame())
-  my_assign <- function(name, value, envir = 1L) assign(name, value, pos = envir)
-  for (i in lss) {
-    my_assign(i, get(i, envir = parent.frame()))
-  }
 }
 
 escape_quotes <- function(input_str) {
