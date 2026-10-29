@@ -51,7 +51,7 @@ async function settledSample(effects) {
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto(url);
   await page.waitForFunction(()=>window.Shiny?.shinyapp?.$socket?.readyState===1);
-  await page.getByRole('button',{name:'Dismiss',exact:true}).click();
+  await page.getByText('How to use this analysis', {exact:true}).waitFor();
   await page.waitForFunction(()=>Array.isArray(window.Shiny.shinyapp.$inputValues.outliers_z_scores));
   const helpButton = page.getByRole('button',{name:'Help for Year'});
   const helpPanel = page.locator('#' + await helpButton.getAttribute('aria-controls'));
@@ -62,6 +62,7 @@ async function settledSample(effects) {
   await page.keyboard.press('Escape');
   await helpPanel.waitFor({state:'hidden'});
   await page.locator('#go').click(); await settledSample(16);
+  await page.getByText('Selection details', {exact:true}).click();
   assert((await page.locator('#effectestimate').innerText()).includes('unsupported'));
   await page.locator('#go').click();
   await page.waitForFunction(()=>document.querySelector('#calculation_status')?.textContent.includes('Reused'));
@@ -84,6 +85,7 @@ async function settledSample(effects) {
     if (extension === 'csv') assert(bytes.toString().includes('Selected effect'), id + ' is missing effect rows');
   }
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
+  await page.getByText('Assess practical equivalence', {exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('No bound chosen'));
   await page.locator('#sesoi').fill('1');
   await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval within bounds'));
@@ -91,6 +93,7 @@ async function settledSample(effects) {
   for (const column of ['assessment','threshold','bound']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
   assert(await page.locator('#equivalence tbody tr').count() >= 2, 'expected one assessment row per model');
   assert((await page.locator('#apply_state').innerText()).includes('Results match'));
+  await page.getByText('Download or update data', {exact:true}).click();
   const downloadEvent=page.waitForEvent('download');
   await page.locator('#downloadData').click();
   const download=await downloadEvent;

@@ -18,7 +18,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       welcome_text <- HTML("<p>Choose which effects to include with the filters on the left, then click <b>Analyze data</b>. Every tab shows results for the selection you last analysed; if you change a filter afterwards, the app marks the results as out of date until you analyse again.</p><p>The estimators answer different questions and are not interchangeable. If the authors declared a primary analysis, it is shown first and the other estimators are labelled explorations. The <b>About</b> tab records the data source and the authors\' notes.</p>")
       dataset_name <- {paste(deparse(as.character(dataset_name)), collapse = "\n")}
       go <- ""
-      not_analysed <- HTML("<p><b>No results yet.</b> Choose the effects to include in the left panel, then click <b>Analyze data</b>. Results, plots and diagnostics appear here once the selection has been analysed.</p>")
+      not_analysed <- HTML("<h3>Your evidence, ready to explore</h3><p>Begin with all effects to see the overall picture. Then adjust the filters to explore the evidence most relevant to your question.</p><ol><li><b>Select effects</b> with the filters.</li><li><b>Analyze data</b> to fit the models.</li><li><b>Explore the results</b> across the tabs above.</li></ol><p class=\'metaui-empty-hint\'>Your results will appear here after you select Analyze data.</p>")
 
       summary_overview_main <- HTML("<h3>Selected sample</h3>")
       summary_table_main <- HTML("<h3>Effect size estimates</h3>")
@@ -173,7 +173,7 @@ get_favicon_tag <- function(dataset_name) {
   favicon <- paste(readLines(system.file("template_code", "favicon.svg", package = "metaUI")), collapse = "")
   glue::glue('tagList(
     tags$head(tags$link(rel="icon", href="data:image/svg+xml,{utils::URLencode(favicon, reserved = TRUE)}", type="image/svg+xml")),
-    tags$span({paste(deparse(paste0("Dynamic Meta-Analysis of ", dataset_name)), collapse = "\n")}))')
+    tags$span({paste(deparse(dataset_name), collapse = "\n")}))')
 
 }
 
@@ -209,27 +209,32 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
     shinyjs::useShinyjs(),
     tags$a(class = "metaui-skip", href = "#metaui_basis", "Skip to results"),
     # Application title
+    div(class = "metaui-header",
+    div(class = "metaui-brand", tags$span(class = "metaui-brand-mark", "metaUI"), tags$span("Interactive meta-analysis")),
     titlePanel(
     windowTitle = {paste(deparse(paste0("Dynamic Meta-Analysis of ", dataset_name)), collapse = "\n")},
     title = {get_favicon_tag(dataset_name)}),
+    p(class = "metaui-header-description", "Explore the evidence. See how your selection shapes the results."),
+    tags$details(class = "metaui-help metaui-introduction", tags$summary("How to use this analysis"), welcome_text)),
     sidebarLayout(
       sidebarPanel(
         width = 3,
         tags$h2(class = "metaui-panel-title", "Select effects"),
+        p(class = "metaui-help-text", "Start with all effects, or narrow the evidence below."),
         {if (length(metaUI_computation_specs(data))) paste0(
           \'selectInput("computation", "Effect-size computation", choices = \',
           paste(deparse(metaUI_computations(data)), collapse = "\n"), \', selected = "primary"),\nuiOutput("computation_note"),\') else ""}
         div(id = "filters",
         {generate_ui_filters(data, filter_popups, any_filters, opts = opts)}
-        uiOutput("z_score_filter"), zscore_help),
+        tags$details(class = "metaui-help metaui-advanced", tags$summary("Exclude extreme effects"), uiOutput("z_score_filter"), zscore_help)),
         div(class = "metaui-actions",
           actionButton("go", "Analyze data", class = "btn-primary"),
           actionButton("resetFilters", "Reset filters")),
         div(id = "apply_state_box", class = "metaui-apply-state", role = "status", `aria-live` = "polite",
           textOutput("apply_state")),
         uiOutput("share_selection"), textOutput("link_notice"),
-        tags$hr(),
-        tags$h2(class = "metaui-panel-title", "Data"),
+        tags$details(class = "metaui-help metaui-data-tools",
+        tags$summary("Download or update data"),
         actionButton("downloadData", "Download data and results", icon = icon("download")),
         conditionalPanel("false",
           downloadButton("executeDownload", "Execute the download")
@@ -239,14 +244,15 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
                 accept = c(".xlsx")
       ),
       actionButton("executeUpload", "Upload and analyse", icon = icon("upload")),
-      data_help
+      data_help)
       ),
       mainPanel(
         width = 9,
         # States which selection and data the visible results use
         div(id = "metaui_basis", class = "metaui-basis", role = "status", `aria-live` = "polite",
-          textOutput("selection_status"),
-          textOutput("calculation_status")),
+          textOutput("selection_overview"),
+          textOutput("calculation_status"),
+          tags$details(class = "metaui-selection-details", tags$summary("Selection details"), textOutput("selection_status"))),
         tabsetPanel(
           type = "tabs",
           tabPanel(
@@ -257,16 +263,18 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             uiOutput("primary_estimate"),
             uiOutput("estimate_gaps"),
             div(class = "metaui-scroll", plotOutput("model_comparison", width = "100%", height = "auto") %>% shinycssloaders::withSpinner()),
-            div(id = "effectestimate_box", class = "metaui-scroll", tableOutput("effectestimate")),
-            summary_table_notes,
+            p(class = "metaui-table-hint", "Model details: scroll the table sideways to see all columns."),
+            div(id = "effectestimate_box", class = "metaui-scroll", tabindex = "0", role = "region", `aria-label` = "Model estimates, scroll horizontally for all columns", tableOutput("effectestimate")),
+            tags$details(class = "metaui-help", tags$summary("How to read these estimates"), summary_table_notes),
             model_help,
             uiOutput("scale_note"),
+            tags$details(class = "metaui-help metaui-equivalence", tags$summary("Assess practical equivalence"),
             tags$h3("Practical equivalence: interval assessment"),
             numericInput("sesoi", "Smallest effect size of interest (symmetric bound, on the displayed scale)",
               value = NA_real_, min = 0),
             p(class = "metaui-note", "Choose a scientifically justified bound; there is no universal default. Changing it compares the existing intervals without refitting. The threshold column means the interval is contained for any bound strictly larger than that value."),
             uiOutput("equivalence_note"),
-            div(class = "metaui-scroll", tableOutput("equivalence")),
+            div(class = "metaui-scroll", tableOutput("equivalence"))),
             summary_overview_main,
             div(class = "metaui-scroll", tableOutput("sample"))
             )
@@ -285,7 +293,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
           {if (!is.null(opts$bayesian)) \'tabPanel("Bayesian sensitivity", results_panel(p("Study-level normal-normal model, flat prior on the mean, half-normal prior on heterogeneity. Aggregation uses the declared within-study correlation or first effect per study. Compare half, baseline and double the heterogeneity prior scale; tau is on the fitting scale. Intervals are 95% central credible intervals and depend on the prior."), tableOutput("bayesian_sensitivity"))),\' else ""}
           {if (length(metaUI_computation_specs(data))) \'tabPanel("Effect computations", results_panel(p("Compare the same selected effects using each author-defined computation. Only the multilevel and RVE models are fitted here. The z-score filter stays anchored to the primary computation."), div(class = "metaui-scroll", tableOutput("computation_comparison")))),\' else ""}
           {generate_mod_tab(data, any_filters)}
-          tabPanel("Forest Plot", results_panel(go, scroll, uiOutput("forest_panel"))),
+          tabPanel("Forest Plot", results_panel(go, tags$h3("Effects by study"), p(class = "metaui-note", "Observed effects and 95% sampling intervals; diamonds show available model summaries."), uiOutput("forest_panel"), tags$details(class = "metaui-help", tags$summary("About this plot"), scroll))),
           tabPanel(
             "Publication Bias", results_panel(go, qrppb_main, funnel_main, plotOutput("funnel", width = "100%") %>% shinycssloaders::withSpinner(),
             eggers_main, DT::dataTableOutput("eggers") %>% shinycssloaders::withSpinner(),
@@ -322,11 +330,7 @@ generate_server <- function(metaUI__df, opts = list()) {
 glue_string <- ('
     function(input, output, session) {
 
-    showModal(modalDialog(
-        title = welcome_title,
-       welcome_text,
-       easyClose = TRUE
-      ))
+    # Getting-started guidance stays available inline without blocking the app.
 
   # Set app states
     state_values <- reactiveValues(
@@ -424,6 +428,14 @@ glue_string <- ('
     df
   })
 
+  output$selection_overview <- renderText({
+    validate(need(isTruthy(input$go), "Ready to explore. Select effects, then Analyze data."))
+    df <- df_filtered()
+    counts <- attr(df, "metaUI_filter_report")
+    paste0(counts$retained_rows, " of ", counts$available_rows, " effects selected", " • ",
+      counts$total_excluded, " excluded", if (filters_changed()) " • Filters changed: analyze again to update" else " • Applied selection")
+  })
+
   output$selection_status <- renderText({
     if (!is.null(state_values$pending_upload_filters)) return("Restoring saved filters: waiting for matching browser inputs; review changed bounds before clicking Analyze manually.")
     validate(need(isTruthy(input$go), "No analysis yet. Results will describe the selection at the moment you click Analyze data."))
@@ -444,6 +456,8 @@ glue_string <- ('
       "Selected", counts$retained_rows, "of", counts$available_rows,
       "rows. Excluded", counts$total_excluded, paste0("by successive filters (", details, ")."))
   })
+
+  outputOptions(output, "selection_status", suspendWhenHidden = FALSE)
 
   # Compare live inputs with the selections behind the displayed results
   filters_changed <- reactive({
@@ -490,9 +504,8 @@ glue_string <- ('
   output$calculation_status <- renderText({
     result <- estimatesreactive()
     req(result)
-    paste(if (result$cache_hit) "Reused model estimates from an identical earlier selection in this session (not refitted)." else "Models fitted for this selection.",
-          sprintf("Ready in %.3f s (calculation only).", result$calculation_seconds),
-          "Reported fit times describe the original fits.")
+    paste(if (result$cache_hit) "Reused identical earlier fits." else "Models fitted.",
+          sprintf("Calculation: %.2f s.", result$calculation_seconds))
   })
 
   estimatesfiltered <- eventReactive(input$go, {
@@ -618,14 +631,14 @@ glue_string <- ('
       ggplot2::geom_vline(xintercept = 0, linetype = 2, colour = "grey55") +
       ggplot2::geom_errorbar(ggplot2::aes(xmin = LCL, xmax = UCL), width = .25, na.rm = TRUE) +
       ggplot2::geom_point(ggplot2::aes(x = es, size = role)) +
-      ggplot2::scale_colour_manual(values = c(primary = "#1c5a85", exploration = "#52616d"), guide = "none") +
+      ggplot2::scale_colour_manual(values = c(primary = "#096b74", exploration = "#506477"), guide = "none") +
       ggplot2::scale_size_manual(values = c(primary = 3.4, exploration = 2.4), guide = "none") +
       ggplot2::labs(x = stringr::str_wrap(x_label, 34), y = NULL) +
       ggplot2::theme_minimal(base_size = 14) +
       ggplot2::scale_y_discrete(limits = rev(unique(estimates_explo_agg$Model))) +
       ggplot2::theme(panel.grid.major.y = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(),
                      axis.text.y = ggplot2::element_text(colour = "#22303c", hjust = 1, lineheight = .9))
-  }, height = function() 90 + 52 * max(1, sum(estimatesfiltered()$status == "ok"), na.rm = TRUE))
+  }, height = function() 65 + 38 * max(1, sum(estimatesfiltered()$status == "ok"), na.rm = TRUE))
 
   output$primary_estimate <- renderUI({
     table <- estimatesfiltered()
@@ -950,9 +963,9 @@ glue_string <- ('
       return(p(class = "metaui-reason", role = "status", forest_limit_message))
     }
     tagList(
-      downloadButton("forest_pdf", "Download PDF"),
+      div(class = "metaui-export-actions", downloadButton("forest_pdf", "Download PDF"),
       downloadButton("forest_png", "Download PNG"),
-      downloadButton("forest_csv", "Download plot data"),
+      downloadButton("forest_csv", "Download plot data")),
       div(class = "metaui-scroll", shinycssloaders::withSpinner(
         plotOutput("foreststudies", height = "auto"))))
   })
@@ -963,8 +976,8 @@ glue_string <- ('
     metaUI_forest_rows(df, estimatesfiltered(), models_to_run)
   })
   forest_plot <- reactive(metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1]))
-  forest_height <- function() 150 + 25 * nrow(forest_rows())
-  output$foreststudies <- renderPlot(print(forest_plot()), height = forest_height, width = 900)
+  forest_height <- function() 100 + 23 * nrow(forest_rows())
+  output$foreststudies <- renderPlot(print(forest_plot()), height = forest_height, width = function() max(760, session$clientData$output_foreststudies_width))
   output$forest_pdf <- downloadHandler(filename = function() "forest-plot.pdf", content = function(file) {
     ggplot2::ggsave(file, forest_plot(), device = "pdf", width = 10,
       height = forest_height() / 96, limitsize = FALSE)
@@ -1346,8 +1359,8 @@ glue_string <- ('
       "Uploaded data are private to this session. Share the workbook; a filter URL cannot recreate those data."))
     query <- tryCatch(selection_query(), error = function(e) e)
     if (inherits(query, "error")) return(p(class = "metaui-note", conditionMessage(query)))
-    p(class = "metaui-note", tags$a(href = query, "Link to this applied selection"),
-      "Copy this link or the address bar to share results for the built dataset.")
+    div(class = "metaui-share", tags$a(href = query, class = "btn btn-default", icon("link"), "Share this selection"),
+      p(class = "metaui-note", "Copy the link address to share these results."))
   })
 
 }
