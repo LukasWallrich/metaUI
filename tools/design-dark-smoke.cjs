@@ -6,6 +6,7 @@ const path = require('node:path');
 const evidence = process.env.METAUI_DESIGN_EVIDENCE;
 assert(evidence, 'Set METAUI_DESIGN_EVIDENCE'); fs.mkdirSync(evidence,{recursive:true});
 let browser, page;
+const pageErrors=[];
 function ratio(a,b) {
   const lum = value => value.match(/[\d.]+/g).slice(0,3).map(Number).map(x=>x/255)
     .map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4).reduce((s,x,i)=>s+x*[.2126,.7152,.0722][i],0);
@@ -15,15 +16,18 @@ async function readable(locator,label,pseudo=null) {
   const styles=await locator.evaluateAll((elements,pseudo)=>elements.map(el=>{
     const foreground=getComputedStyle(el,pseudo).color; let node=el,background;
     while(node){background=getComputedStyle(node).backgroundColor;if(background!=='rgba(0, 0, 0, 0)'&&background!=='transparent')break;node=node.parentElement;}
-    return {text:el.textContent.trim(),foreground,background,opacity:getComputedStyle(el,pseudo).opacity};
+    let opacity=pseudo?Number(getComputedStyle(el,pseudo).opacity):1;
+    for(let parent=el;parent;parent=parent.parentElement)opacity*=Number(getComputedStyle(parent).opacity);
+    return {text:el.textContent.trim(),foreground,background,opacity,content:pseudo?getComputedStyle(el,pseudo).content:null};
   }),pseudo);
   assert(styles.length,label+' did not render');
-  for(const style of styles){assert(ratio(style.foreground,style.background)>=4.5,label+' contrast: '+JSON.stringify(style));if(pseudo)assert.equal(style.opacity,"1",label+" must not fade the sort indicator");}
+  for(const style of styles){assert(ratio(style.foreground,style.background)>=4.5,label+' contrast: '+JSON.stringify(style));assert.equal(style.opacity,1,label+" must be fully opaque");if(pseudo)assert.match(style.content,/\u2191|\u2193|\u2195/u,label+" must render a sort arrow");}
   return styles;
 }
 (async()=>{
   browser=await chromium.launch({headless:true,...(process.env.METAUI_CHROMIUM?{executablePath:process.env.METAUI_CHROMIUM}:{})});
   page=await browser.newPage({viewport:{width:1440,height:1000}});
+  page.on('pageerror',error=>pageErrors.push(error.message));
   await page.goto(process.env.METAUI_DESIGN_DARK_URL || 'http://127.0.0.1:18803');
   await page.waitForFunction(()=>window.Shiny?.shinyapp?.$socket?.readyState===1&&Array.isArray(window.Shiny.shinyapp.$inputValues.outliers_z_scores));
   await page.getByText('Download or upload data',{exact:true}).click();
@@ -73,6 +77,7 @@ async function readable(locator,label,pseudo=null) {
   await readable(page.locator('#go'),'Update action');
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('#go')).outlineStyle==='dashed');
   await page.screenshot({path:path.join(evidence,'dark-stale.png')});
+  assert.deepEqual(pageErrors,[],'Dark app raised page-level JavaScript errors');
   fs.writeFileSync(path.join(evidence,'dark-result.json'),JSON.stringify({ok:true,modal,sampleHeaders,paging,biasHeaders,staleNotice},null,2));
   console.log('Dark design browser checks passed.');
 })().catch(async error=>{console.error(error);process.exitCode=1;if(page)await page.screenshot({path:path.join(evidence,'dark-failure.png')}).catch(()=>{});})

@@ -41,7 +41,8 @@ the interface font selection does not change plot fonts or statistical results.
   pagination and sort indicators, selectize and numeric inputs, equivalence bands,
   stale states and forest output.
   `tools/design-browser.cjs` owns the helper/light/dark server lifecycle; CI now
-  generates these fixtures and runs both design browser suites.
+  generates these fixtures and runs both design browser suites. Dark checks also
+  reject page-level JavaScript errors, faded controls and missing sort glyphs.
 - The existing generated-app browser smoke covers exports, workbook round trips,
   changed uploads, equivalence, filtering and reset.
 - The early Analyze control remains disabled until the dynamically inserted
@@ -72,3 +73,9 @@ The failing cross-platform CI checks came from a literal bullet in the base
 redesign's R template. The generated code now carries a Unicode escape, keeping
 package source ASCII while preserving the displayed separator. That fix is in
 both PR branches; PR #40's four-platform and browser checks passed on GitHub.
+
+The browser runner handles SIGINT/SIGTERM through shared child cleanup. An
+interruption probe first reproduced three surviving Shiny children; both signals
+then stopped all three and returned the expected status after the fix. Palette
+matching returns the correct names for teal, blue and plum; preset colours and
+validated design colours both use uppercase hex.
