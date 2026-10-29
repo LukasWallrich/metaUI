@@ -61,7 +61,8 @@ on that folder, or modified by editing server.R, ui.R, global.R and models.R in 
 <span>  <span class="va">...</span>,</span>
 <span>  options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  bayesian <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  bayesian <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  design <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -142,6 +143,10 @@ a character vector with all packages to display.</p></dd>
 
 <dt id="arg-bayesian">bayesian<a class="anchor" aria-label="anchor" href="#arg-bayesian"></a></dt>
 <dd><p>NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.</p></dd>
+
+
+<dt id="arg-design">design<a class="anchor" aria-label="anchor" href="#arg-design"></a></dt>
+<dd><p>Optional settings from <code><a href="app_design.html">app_design()</a></code>. Use <code><a href="design_app.html">design_app()</a></code> to preview and export them.</p></dd>
 
 </dl></div>
     <div class="section level2">

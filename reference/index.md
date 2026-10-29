@@ -2,8 +2,14 @@
 
 ## All functions
 
+- [`app_design()`](https://lukaswallrich.github.io/metaUI/reference/app_design.md)
+  : Choose a generated app's design
+
 - [`build_app()`](https://lukaswallrich.github.io/metaUI/reference/build_app.md)
   : Build an app from a declarative JSON configuration
+
+- [`design_app()`](https://lukaswallrich.github.io/metaUI/reference/design_app.md)
+  : Preview and export an app design
 
 - [`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
   : Generate Shiny app

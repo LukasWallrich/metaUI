@@ -38,6 +38,15 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="metaui-020">metaUI 0.2.0<a class="anchor" aria-label="anchor" href="#metaui-020"></a></h2>
+<div class="section level3">
+<h3 id="author-design-helper-0-2-0">Author design helper<a class="anchor" aria-label="anchor" href="#author-design-helper-0-2-0"></a></h3>
+<ul><li>
+<code><a href="../reference/design_app.html">design_app()</a></code> previews colours, fonts, type size, spacing and corners and exports R/JSON settings. <code><a href="../reference/app_design.html">app_design()</a></code> validates settings and contrast.</li>
+<li>
+<code>generate_shiny(design = ...)</code> and the JSON <code>design</code> field apply those settings to generated apps. Existing apps/configurations keep their default appearance.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="other-changes-0-2-0">Other changes<a class="anchor" aria-label="anchor" href="#other-changes-0-2-0"></a></h3>
 <ul><li>Add author-defined effect-size computations with explicit scale/variance contracts, consistent row selection, comparisons, provenance and workbook restoration.</li>
 <li>Add opt-in deterministic Bayesian normal-normal analysis, posterior median and central credible intervals, disclosed priors and heterogeneity-prior sensitivity.</li>
 <li>Share applied selections through build-specific validated URLs; uploaded datasets remain workbook-only, and restoration waits for browser acknowledgement.</li>
@@ -70,6 +79,7 @@
 <li>Add practical-equivalence interval assessment with a reader-chosen symmetric bound (no default), strict containment, threshold values and model limitations. Bound changes do not refit models; downloads record the assessment and bound.</li>
 <li>No public release or tag is created.</li>
 </ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.2.9000" id="metaui-0129000-correctness-candidate">metaUI 0.1.2.9000 (correctness candidate)<a class="anchor" aria-label="anchor" href="#metaui-0129000-correctness-candidate"></a></h2>
 <ul><li>Use genuine per-effect IDs for all multilevel nesting; display labels may repeat.</li>

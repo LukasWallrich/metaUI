@@ -23,7 +23,8 @@ generate_shiny(
   ...,
   options = list(),
   overwrite = FALSE,
-  bayesian = NULL
+  bayesian = NULL,
+  design = NULL
 )
 ```
 
@@ -149,6 +150,14 @@ generate_shiny(
   prior on the mean and a half-normal heterogeneity prior. Correlation
   default tau_scale is .25 on Fisher z. Requires optional bayesmeta.
   Sensitivity analyses use half and double the scale.
+
+- design:
+
+  Optional settings from
+  [`app_design()`](https://lukaswallrich.github.io/metaUI/reference/app_design.md).
+  Use
+  [`design_app()`](https://lukaswallrich.github.io/metaUI/reference/design_app.md)
+  to preview and export them.
 
 ## Value
 
