@@ -157,15 +157,11 @@ test_that("p-curve statistics reflect declared direction without N imputation", 
   expect_error(fit(prepared()[0,]),"No eligible rows")
 })
 
-test_that("slider rounding encloses all effects and never silently filters extremes", {
-  x<-c(-1.817429,1.689891,-.001817,1817.429,0)
-  lo<-vapply(x,metaUI:::signif_floor,numeric(1),digits=2)
-  hi<-vapply(x,metaUI:::signif_ceiling,numeric(1),digits=2)
-  expect_true(all(lo <= x));expect_true(all(hi >= x))
-  expect_equal(lo[1],-1.9)
-  d<-prepared()
-  bounds<-c(metaUI:::signif_floor(min(d$metaUI__es_z)),metaUI:::signif_ceiling(max(d$metaUI__es_z)))
-  expect_true(all(d$metaUI__es_z >= bounds[1] & d$metaUI__es_z <= bounds[2]))
+test_that("slider bounds enclose all effects and never silently filter extremes", {
+  for (x in list(c(-1.817429, 1.689891), c(-.001817, 0, .0021), c(0, 1817.429), prepared()$metaUI__es_z)) {
+    spec <- metaUI:::metaUI_slider_spec(x, integer = FALSE)
+    expect_true(spec$min <= min(x) && spec$max >= max(x))
+  }
 })
 
 test_that("IDs can also be display labels and small variances require matching SE", {
