@@ -979,7 +979,7 @@ glue_string <- ('
       need(nrow(df) <= <<opts$max_forest_plot_rows>>, forest_limit_message))
     metaUI_forest_rows(df, estimatesfiltered(), models_to_run)
   })
-  forest_plot <- reactive(metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1], accent = "<<if (is.null(opts$design)) "#096b74" else opts$design$accent>>", ink = "<<if (is.null(opts$design)) "#182f46" else opts$design$text>>", background = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>"))
+  forest_plot <- reactive(metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1], accent = "<<if (is.null(opts$design)) "#096b74" else opts$design$accent>>", ink = "<<if (is.null(opts$design)) "#182f46" else opts$design$text>>", background = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", interval_colour = "<<if (is.null(opts$design)) "#52616d" else opts$design$text>>"))
   forest_height <- function() 100 + 23 * nrow(forest_rows())
   output$foreststudies <- renderPlot(print(forest_plot()), height = forest_height, width = function() max(760, session$clientData$output_foreststudies_width))
   output$forest_pdf <- downloadHandler(filename = function() "forest-plot.pdf", content = function(file) {

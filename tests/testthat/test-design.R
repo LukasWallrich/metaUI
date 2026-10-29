@@ -39,6 +39,7 @@ test_that("design exports survive app generation and JSON builds", {
   expect_match(paste(readLines(file.path(path, "server.R")), collapse = "\n"), 'accent = "#69429A"', fixed = TRUE)
   generate_shiny(d, "Plain fixture", save_to_folder = path, launch_app = FALSE, overwrite = TRUE)
   expect_false(file.exists(file.path(path, "www", "app-design.css")))
+  expect_false(file.exists(file.path(path, "design.json")))
   expect_false(grepl("app-design.css", paste(readLines(file.path(path, "ui.R")), collapse = "\n"), fixed = TRUE))
   bad <- tempfile("invalid-design-")
   expect_error(generate_shiny(d, "Bad", design = list(accent = "#FFFFFF"), save_to_folder = bad, launch_app = FALSE), "contrast")
@@ -69,9 +70,20 @@ test_that("helper refuses invalid exports and recovers after correction", {
 test_that("dark palettes keep the forest labels on the selected surface", {
   d <- app_design(accent = "#90CAF9", text = "#F7F9FC", background = "#131C27", surface = "#202C3A")
   rows <- data.frame(es = .2, LCL = .1, UCL = .3, row = 1, label = "Example", kind = "Selected effect")
-  plot <- metaUI:::metaUI_forest_plot(rows, "SMD", accent = d$accent, ink = d$text, background = d$surface)
+  plot <- metaUI:::metaUI_forest_plot(rows, "SMD", accent = d$accent, ink = d$text, background = d$surface, interval_colour = d$text)
+  expect_equal(plot$layers[[2]]$aes_params$colour, d$text)
+  expect_gte(metaUI:::design_contrast(plot$layers[[2]]$aes_params$colour, d$surface), 3)
   expect_equal(plot$theme$plot.background$fill, d$surface)
   expect_equal(plot$theme$axis.text$colour, d$text)
   expect_equal(plot$data$es, rows$es)
   expect_true(all(metaUI:::design_contrasts(d) >= 4.5))
+})
+
+
+test_that("presets and platform font stacks describe exported settings", {
+  expect_identical(metaUI:::design_palette_name(app_design()), "teal")
+  expect_identical(metaUI:::design_palette_name(app_design(accent = "#235A97")), "blue")
+  expect_identical(metaUI:::design_palette_name(app_design(accent = "#7B3E68")), "custom")
+  expect_match(metaUI:::design_fonts()[["system"]], "system-ui", fixed = TRUE)
+  expect_type(app_design(text_size = 18L)$text_size, "double")
 })

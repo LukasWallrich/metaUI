@@ -51,6 +51,7 @@ jobs:
         run: |
           R CMD INSTALL .
           Rscript --vanilla tools/browser-fixture.R "$RUNNER_TEMP/metaui-smoke"
+          Rscript --vanilla tools/design-fixture.R "$RUNNER_TEMP/metaui-design"
       - name: Install browser in runner scratch directory
         run: |
           npm install --prefix "$RUNNER_TEMP/metaui-browser" --no-save playwright@1.63.0
@@ -60,8 +61,15 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/metaui-browser/node_modules
           METAUI_SMOKE_DIR: ${{ runner.temp }}/metaui-smoke
         run: node tools/browser-smoke.cjs
+      - name: Exercise the author helper and light/dark generated apps
+        env:
+          NODE_PATH: ${{ runner.temp }}/metaui-browser/node_modules
+          METAUI_DESIGN_ROOT: ${{ runner.temp }}/metaui-design
+        run: node tools/design-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: generated-app-browser-evidence
-          path: ${{ runner.temp }}/metaui-smoke/evidence
+          path: |
+            ${{ runner.temp }}/metaui-smoke/evidence
+            ${{ runner.temp }}/metaui-design/evidence

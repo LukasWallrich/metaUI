@@ -38,7 +38,9 @@ A named list of validated design settings.
 \description{
 Create settings for \code{\link[=generate_shiny]{generate_shiny()}} or \code{\link[=design_app]{design_app()}}. Colours must be
 opaque six-digit hex values. Text and accent colours must have at least 4.5:1
-contrast against the page, panels and derived tints. Fonts use local fallbacks.
+contrast against the page, panels and derived tints. Fonts come from each
+reader's device and use fallbacks; no author-machine font files are needed.
+Named fonts may be substituted on other platforms.
 }
 \examples{
 design <- app_design(accent = "#69429A", font = "georgia", radius = 4)

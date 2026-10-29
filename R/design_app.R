@@ -23,10 +23,11 @@ design_app <- function(design = app_design()) {
       shiny::tags$span("metaUI"), shiny::h1("App design")),
     shiny::div(class = "designer-layout",
       shiny::tags$aside(class = "designer-controls", `aria-label` = "Design settings",
-        shiny::selectInput("palette", "Palette", c("Teal" = "teal", "Blue" = "blue", "Plum" = "plum", "Custom" = "custom"), selected = "custom", selectize = FALSE),
+        shiny::selectInput("palette", "Palette", c("Teal" = "teal", "Blue" = "blue", "Plum" = "plum", "Custom" = "custom"), selected = design_palette_name(initial), selectize = FALSE),
         shiny::div(class = "designer-colours", picker("accent", "Accent"), picker("text", "Text"),
           picker("background", "Page"), picker("surface", "Panels")),
         shiny::selectInput("font", "Interface font", c("System sans" = "system", "Arial" = "arial", "Verdana" = "verdana", "Georgia" = "georgia"), initial$font, selectize = FALSE),
+        shiny::p(class = "designer-note", "Fonts come from each reader's device; named fonts may be substituted."),
         shiny::sliderInput("text_size", "Text size (px)", 14, 20, value = initial$text_size, step = 1),
         shiny::radioButtons("spacing", "Spacing", c("Comfortable" = "comfortable", "Compact" = "compact"), initial$spacing, inline = TRUE),
         shiny::sliderInput("radius", "Panel corners (px)", 0, 16, value = initial$radius, step = 1),
@@ -35,7 +36,7 @@ design_app <- function(design = app_design()) {
       shiny::tags$main(class = "designer-main",
         shiny::div(class = "designer-preview-bar", shiny::h2("Preview"),
           shiny::radioButtons("viewport", NULL, c("Desktop" = "desktop", "Phone" = "phone"), inline = TRUE)),
-        shiny::p(class = "designer-note", "Illustrative results. Fonts use local fallbacks."),
+        shiny::p(class = "designer-note", "Illustrative results."),
         shiny::div(id = "preview", class = "designer-preview", shiny::uiOutput("preview")),
         shiny::div(class = "designer-export", shiny::h2("Use this design"),
           shiny::p("Pass ", shiny::tags$code("design = design"), " to ", shiny::tags$code("generate_shiny()"), "."),
@@ -68,16 +69,20 @@ design_app <- function(design = app_design()) {
       shiny::updateSliderInput(session, "radius", value = d$radius)
     }
     shiny::observeEvent(input$palette, {
-      accents <- c(teal = "#096B74", blue = "#235A97", plum = "#69429A")
-      if (input$palette %in% names(accents)) {
-        d <- last_valid(); d$accent <- accents[[input$palette]]
-        d$background <- "#EDF3F7"; d$surface <- "#FFFFFF"; d$text <- "#182F46"
+      palettes <- design_palettes()
+      if (input$palette %in% names(palettes)) {
+        d <- palettes[[input$palette]]
         for (key in c("accent", "background", "surface", "text"))
           shinyWidgets::updateColorPickr(session, key, value = d[[key]])
       }
     }, ignoreInit = TRUE)
+    shiny::observeEvent(list(input$accent, input$background, input$surface, input$text), {
+      d <- current_design()
+      target <- if (inherits(d, "error")) "custom" else design_palette_name(d)
+      if (!identical(input$palette, target)) shiny::updateSelectInput(session, "palette", selected = target)
+    }, ignoreInit = TRUE)
     shiny::observeEvent(input$reset_design, {
-      set_controls(initial); shiny::updateSelectInput(session, "palette", selected = "custom")
+      set_controls(initial); shiny::updateSelectInput(session, "palette", selected = design_palette_name(initial))
     })
     output$contrast <- shiny::renderText({
       d <- current_design()

@@ -33,7 +33,7 @@ let browser;
     return {accent:getComputedStyle(d.documentElement).getPropertyValue('--metaui-accent').trim(),
       font:getComputedStyle(d.body).fontFamily,headingFont:getComputedStyle(d.querySelector('h2')).fontFamily,
       textSize:getComputedStyle(d.body).fontSize,padding:getComputedStyle(d.querySelector('.well')).padding,
-      radius:getComputedStyle(d.querySelector('.well')).borderRadius};
+      radius:getComputedStyle(d.querySelector('.well')).borderRadius,buttonBackground:getComputedStyle(d.querySelector('#go')).backgroundColor};
   });
   assert.equal(preview.accent, '#69429A'); assert.equal(preview.textSize,'18px');
   assert(preview.headingFont.includes('Georgia')); assert.equal(preview.padding,'16px');
@@ -46,6 +46,14 @@ let browser;
   assert.equal(settings.accent,'#69429A'); assert.equal(settings.font,'georgia');
   assert.equal(settings.text_size,18); assert.equal(settings.radius,0); assert.equal(settings.spacing,'compact');
   execFileSync('Rscript',['-e','e <- new.env(); sys.source(commandArgs(TRUE)[1],e); stopifnot(e$design$font == "georgia", e$design$radius == 0)',path.join(evidence,'design.R')]);
+  // Manual edits leave the preset, so selecting it again can restore its colours.
+  await page.getByRole('button',{name:'Accent colour picker',exact:true}).click();
+  await page.getByRole('textbox',{name:'color input field',exact:true}).fill('#7B3E68');
+  await page.getByRole('heading',{name:'App design',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#palette').value==='custom');
+  await page.selectOption('#palette','plum');
+  await page.waitForFunction(()=>document.querySelector('#r_code')?.textContent.includes('#69429A'));
+  assert.equal(await page.locator('#font').inputValue(),'georgia');
   // A low-contrast edit must withhold exports, while preserving the last valid preview.
   await page.getByRole('button',{name:'Accent colour picker',exact:true}).click();
   await page.getByRole('textbox',{name:'color input field',exact:true}).fill('#FFFFFF');
@@ -55,6 +63,7 @@ let browser;
   assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('iframe').contentDocument.documentElement).getPropertyValue('--metaui-accent').trim()),'#69429A');
   await page.getByRole('button',{name:'Reset choices',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#r_code')?.textContent.includes('#096B74') && document.querySelector('#export_downloads a'));
+  await page.waitForFunction(()=>document.querySelector('#palette').value==='teal');
   await page.getByRole('radio',{name:'Phone',exact:true}).check();
   await page.waitForFunction(()=>document.querySelector('iframe').style.width==='390px');
   await page.setViewportSize({width:390,height:844});
@@ -68,7 +77,7 @@ let browser;
   const actual = await page.evaluate(()=>({accent:getComputedStyle(document.documentElement).getPropertyValue('--metaui-accent').trim(),
     font:getComputedStyle(document.body).fontFamily,headingFont:getComputedStyle(document.querySelector('h2')).fontFamily,
     textSize:getComputedStyle(document.body).fontSize,padding:getComputedStyle(document.querySelector('.well')).padding,
-    radius:getComputedStyle(document.querySelector('.well')).borderRadius}));
+    radius:getComputedStyle(document.querySelector('.well')).borderRadius,buttonBackground:getComputedStyle(document.querySelector('#go')).backgroundColor}));
   assert.deepEqual(actual,preview);
   await page.locator('#go').click(); await page.locator('#sample table').waitFor();
   assert((await page.locator('#primary_estimate').innerText()).includes('0.24'));

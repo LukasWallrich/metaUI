@@ -27,7 +27,9 @@ the interface font selection does not change plot fonts or statistical results.
 
 ## Verification
 
-- Full R suite passed with one optional `bayesmeta` test skipped.
+- Full local R CMD check passed with zero errors and warnings, including the
+  Bayesian tests after installing the optional dependency. One incoming-check
+  note reports existing p-curve URLs returning HTTP 406 from this machine.
 - Focused tests cover R/JSON settings round trips, config builds, validation before
   writes, preserving input data, theme removal on rebuild, invalid-export recovery
   and label/background colours on dark forest plots.
@@ -35,6 +37,10 @@ the interface font selection does not change plot fonts or statistical results.
   versus generated-app computed styles, downloaded R evaluation and JSON values,
   invalid contrast, reset, phone preview and mobile document overflow. It also
   fits the generated app's unchanged synthetic primary model (estimate 0.24).
+- `tools/design-dark-smoke.cjs` exercises real dark dialogs, DataTables headers,
+  pagination and sort indicators, selectize and numeric inputs, and forest output.
+  `tools/design-browser.cjs` owns the helper/light/dark server lifecycle; CI now
+  generates these fixtures and runs both design browser suites.
 - The existing generated-app browser smoke covers exports, workbook round trips,
   changed uploads, equivalence, filtering and reset.
 - The early Analyze control remains disabled until the dynamically inserted
@@ -42,3 +48,25 @@ the interface font selection does not change plot fonts or statistical results.
   models and filtering rules are unchanged.
 
 The PR includes screenshots of the helper, its generated app and a dark palette.
+
+## Review corrections
+
+Opus and Argon both requested changes after reproducing unreadable dark-theme
+controls. The override now covers modal and notification surfaces, DataTables
+headers/sorting/paging, native/selectize inputs, and data-tool buttons. Selectors
+also override DataTables styles loaded after the app stylesheet. Regression tests
+first reproduced the white dialog/light text failure and the paging failure,
+then passed after the corrections. Forest intervals use the chosen text colour
+and are checked against the panel at the graphics contrast threshold.
+
+Both reviewers confirmed that font stacks are deployable without author-machine
+font files. System sans now uses `system-ui` and platform fallbacks. The helper
+explains device-dependent substitution; it does not promise identical fonts on
+all devices. An explicit default design differs from the legacy `design = NULL`
+look. Manual colour edits update the preset selector, and no empty settings record
+is retained when rebuilding without a design.
+
+The failing cross-platform CI checks came from a literal bullet in the base
+redesign's R template. The generated code now carries a Unicode escape, keeping
+package source ASCII while preserving the displayed separator. That fix is in
+both PR branches; PR #40's four-platform and browser checks passed on GitHub.

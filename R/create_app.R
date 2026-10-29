@@ -227,7 +227,9 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   # Rebuilding without design settings must not retain a previous theme.
   if (is.null(opts$design) && file.exists(file.path(save_to_folder, "www", "app-design.css")))
     unlink(file.path(save_to_folder, "www", "app-design.css"))
-  jsonlite::write_json(opts$design, file.path(save_to_folder, "design.json"), auto_unbox = TRUE, pretty = TRUE)
+  if (!is.null(opts$design)) jsonlite::write_json(opts$design, file.path(save_to_folder, "design.json"), auto_unbox = TRUE, pretty = TRUE)
+  if (is.null(opts$design) && file.exists(file.path(save_to_folder, "design.json")))
+    unlink(file.path(save_to_folder, "design.json"))
   file.copy(system.file("template_code", "dmetar_contributions.R", package="metaUI"),
             file.path(save_to_folder, "dmetar_contributions.R"), overwrite = TRUE)
   if (is.character(models)) {

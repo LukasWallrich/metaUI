@@ -2,7 +2,9 @@
 #'
 #' Create settings for [generate_shiny()] or [design_app()]. Colours must be
 #' opaque six-digit hex values. Text and accent colours must have at least 4.5:1
-#' contrast against the page, panels and derived tints. Fonts use local fallbacks.
+#' contrast against the page, panels and derived tints. Fonts come from each
+#' reader's device and use fallbacks; no author-machine font files are needed.
+#' Named fonts may be substituted on other platforms.
 #' @param accent Colour for actions, links and primary estimates.
 #' @param background Page background colour.
 #' @param surface Panel background colour.
@@ -41,12 +43,21 @@ app_design <- function(accent = "#096B74", background = "#EDF3F7",
     if (!is.numeric(value) || length(value) != 1L || is.na(value) || !is.finite(value) || value < bounds[1] || value > bounds[2])
       stop(key, " must be a finite number from ", bounds[1], " to ", bounds[2], ".")
   }
-  c(lapply(colours, toupper), list(font = font, text_size = text_size, spacing = spacing, radius = radius))
+  c(lapply(colours, toupper), list(font = font, text_size = as.numeric(text_size), spacing = spacing, radius = as.numeric(radius)))
 }
 
-design_fonts <- function() c(system = '"Segoe UI", Arial, sans-serif',
-  arial = 'Arial, Helvetica, sans-serif', verdana = 'Verdana, Geneva, sans-serif',
-  georgia = 'Georgia, "Times New Roman", serif')
+design_fonts <- function() c(system = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
+  arial = 'Arial, Helvetica, "Liberation Sans", sans-serif', verdana = 'Verdana, Geneva, "DejaVu Sans", sans-serif',
+  georgia = 'Georgia, "Times New Roman", "Liberation Serif", serif')
+
+design_palettes <- function() lapply(c(teal = "#096B74", blue = "#235A97", plum = "#69429A"), function(accent)
+  list(accent = accent, background = "#EDF3F7", surface = "#FFFFFF", text = "#182F46"))
+
+design_palette_name <- function(design) {
+  palettes <- design_palettes()
+  matches <- vapply(palettes, function(palette) identical(unlist(design[names(palette)]), unlist(palette)), logical(1))
+  if (any(matches)) names(palettes)[which(matches)[1]] else "custom"
+}
 
 design_contrast <- function(a, b) {
   luminance <- function(x) {
@@ -113,7 +124,14 @@ design_css <- function(design) {
     '.btn-primary{color:var(--metaui-button);}.btn-primary:hover,.btn-primary:focus{color:var(--metaui-button);background:var(--metaui-hover);border-color:var(--metaui-hover);}\n',
     '.btn-primary.metaui-needs-run{background:var(--metaui-attention);border-color:var(--metaui-attention);color:white;}\n',
     '.metaui-help>summary:hover{background:var(--metaui-tint);}.table>tbody>tr>td{border-color:var(--metaui-rule);}\n',
-    'table.dataTable tbody tr{background:var(--metaui-panel);color:var(--metaui-ink);}.dataTables_wrapper .dataTables_length,.dataTables_wrapper .dataTables_filter,.dataTables_wrapper .dataTables_info{color:var(--metaui-ink);}.dataTables_wrapper input,.dataTables_wrapper select{background:var(--metaui-panel);color:var(--metaui-ink);border-color:var(--metaui-rule);}\n',
+    'body table.dataTable tbody tr{background:var(--metaui-panel);color:var(--metaui-ink);}body .dataTables_wrapper .dataTables_length,body .dataTables_wrapper .dataTables_filter,body .dataTables_wrapper .dataTables_info{color:var(--metaui-ink);}body .dataTables_wrapper input,body .dataTables_wrapper select{background:var(--metaui-panel);color:var(--metaui-ink);border-color:var(--metaui-rule);}\n',
+    '.modal-content,.shiny-notification{background:var(--metaui-panel);color:var(--metaui-ink);border-color:var(--metaui-rule);}.modal-header,.modal-footer{border-color:var(--metaui-rule);}.modal .close{color:var(--metaui-ink);opacity:1;text-shadow:none;}\n',
+    '.form-control,.selectize-input,.selectize-input.full,.selectize-input.input-active,.selectize-dropdown{background:var(--metaui-panel);color:var(--metaui-ink);border-color:var(--metaui-rule);}.form-control[disabled],.form-control[readonly]{background:var(--metaui-surface);color:var(--metaui-ink);}.form-control::placeholder{color:var(--metaui-slate);opacity:1;}.selectize-input input{color:var(--metaui-ink)!important;}.selectize-dropdown .active,.selectize-dropdown .selected{background:var(--metaui-tint);color:var(--metaui-ink);}.selectize-control.single .selectize-input:after{border-top-color:var(--metaui-ink);}\n',
+    '.btn-default:not(.btn-primary),.metaui-data-tools .btn:not(.btn-primary),.modal-footer .btn:not(.btn-primary){background:var(--metaui-panel);color:var(--metaui-accent);border-color:var(--metaui-rule);}.btn-default:not(.btn-primary):hover,.btn-default:not(.btn-primary):focus,.metaui-data-tools .btn:not(.btn-primary):hover{background:var(--metaui-tint);color:var(--metaui-accent);border-color:var(--metaui-accent);}\n',
+    'body table.dataTable thead th,body table.dataTable thead td,body table.dataTable tfoot th,body table.dataTable tfoot td{background:var(--metaui-surface);color:var(--metaui-ink);border-color:var(--metaui-rule);}body .dataTables_wrapper .dataTables_paginate .ellipsis{color:var(--metaui-ink);}\n',
+    'body table.dataTable.stripe tbody tr.odd,body table.dataTable.display tbody tr.odd,body table.dataTable.display tbody tr.odd>.sorting_1,body table.dataTable.display tbody tr.even>.sorting_1{background:var(--metaui-surface);color:var(--metaui-ink);}\n',
+    'body table.dataTable thead>tr>th.sorting,body table.dataTable thead>tr>th.sorting_asc,body table.dataTable thead>tr>th.sorting_desc{background-image:none!important;position:relative;padding-right:24px;}body table.dataTable thead>tr>th.sorting:after,body table.dataTable thead>tr>th.sorting_asc:after,body table.dataTable thead>tr>th.sorting_desc:after{position:absolute;right:7px;top:50%;bottom:auto;transform:translateY(-50%);color:var(--metaui-ink);opacity:1;}body table.dataTable thead>tr>th.sorting:before,body table.dataTable thead>tr>th.sorting_asc:before,body table.dataTable thead>tr>th.sorting_desc:before{display:none;}body table.dataTable thead>tr>th.sorting:after{content:"\\2195";}body table.dataTable thead>tr>th.sorting_asc:after{content:"\\2191";}body table.dataTable thead>tr>th.sorting_desc:after{content:"\\2193";}\n',
+    'body .dataTables_wrapper .dataTables_paginate .paginate_button,body .dataTables_wrapper .dataTables_paginate .paginate_button.disabled,body .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover,body .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:focus{color:var(--metaui-ink)!important;background:var(--metaui-panel)!important;border-color:var(--metaui-rule)!important;}body .dataTables_wrapper .dataTables_paginate .paginate_button.current,body .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover,body .dataTables_wrapper .dataTables_paginate .paginate_button.current:focus,body .dataTables_wrapper .dataTables_paginate .paginate_button:hover,body .dataTables_wrapper .dataTables_paginate .paginate_button:focus{color:var(--metaui-accent)!important;background:var(--metaui-tint)!important;border-color:var(--metaui-accent)!important;}\n',
     '#effectestimate_box{scrollbar-color:var(--metaui-slate) var(--metaui-background);}\n',
     '.irs--shiny .irs-from,.irs--shiny .irs-to,.irs--shiny .irs-single{color:var(--metaui-button);}\n')
 }

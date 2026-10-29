@@ -315,10 +315,10 @@ metaUI_forest_rows <- function(df, estimates, models = NULL) {
   rows
 }
 
-metaUI_forest_plot <- function(rows, scale, accent = "#096b74", ink = "#182f46", background = "#FFFFFF") {
+metaUI_forest_plot <- function(rows, scale, accent = "#096b74", ink = "#182f46", background = "#FFFFFF", interval_colour = "#52616d") {
   ggplot2::ggplot(rows, ggplot2::aes(x = .data$es, y = .data$row)) +
     ggplot2::geom_vline(xintercept = 0, colour = "grey70", linetype = 2) +
-    ggplot2::geom_segment(ggplot2::aes(x = .data$LCL, xend = .data$UCL, yend = .data$row), colour = "#52616d") +
+    ggplot2::geom_segment(ggplot2::aes(x = .data$LCL, xend = .data$UCL, yend = .data$row), colour = interval_colour) +
     ggplot2::geom_point(ggplot2::aes(shape = .data$kind), size = 2.8, colour = accent, fill = accent) +
     ggplot2::scale_shape_manual(values = c("Selected effect" = 16, "Model summary" = 23), guide = "none") +
     ggplot2::scale_y_continuous(breaks = rows$row, labels = rows$label) +
