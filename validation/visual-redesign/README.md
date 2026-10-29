@@ -1,5 +1,17 @@
 # Visual redesign verification
 
+## Copy reduction
+
+At Lukas’s request, Opus 5.5 removed the slogan, three-step welcome, sidebar
+preamble, routine status confirmations and repeated instructions. It shortened
+labels across the app and moved technical explanations into existing disclosures.
+Scientific warnings, provenance and model distinctions remain. The original visual
+review below describes the preceding revision; it is not a review of these cuts.
+
+Current screenshots: [start](unslop-start.png), [summary](unslop-summary.png),
+[mobile](unslop-mobile.png).
+
+
 The generated Shiny interface now separates selecting evidence, running models,
 and reading results. The analysis and filtering contracts remain unchanged.
 

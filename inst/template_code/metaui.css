@@ -35,8 +35,6 @@ h4 { font-size: 18px; margin: 22px 0 8px; }
 .metaui-basis.metaui-stale .shiny-text-output { opacity: .8; }
 
 /* Empty, gap and reason states */
-.metaui-empty { margin: 22px 0; padding: 18px 20px; border: 1px dashed var(--metaui-rule); border-radius: 4px; max-width: 70ch; }
-.metaui-empty p { margin: 0; }
 .metaui-gaps { margin: 6px 0 12px; padding: 8px 12px; border-left: 3px solid var(--metaui-slate); background: var(--metaui-surface); font-size: 14px; }
 .metaui-gaps ul { margin: 4px 0 0; padding-left: 20px; }
 .shiny-output-error-validation { color: var(--metaui-slate); font-size: 15px; padding: 8px 0; }
@@ -135,17 +133,14 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 body { background: #edf3f7; font-family: "Source Sans Pro", "Segoe UI", sans-serif; font-size: 15px; line-height: 1.55; }
 .container-fluid { max-width: 1680px; padding: 0 32px 40px; }
 .metaui-header { margin: 0 -32px 28px; padding: 23px 36px 20px; background: #fff; border-top: 5px solid var(--metaui-accent); border-bottom: 1px solid var(--metaui-rule); }
-.metaui-brand { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--metaui-slate); }
-.metaui-brand-mark { font-size: 19px; font-weight: 700; color: var(--metaui-accent); border-right: 1px solid var(--metaui-rule); padding-right: 14px; }
-.metaui-header h2 { font-size: clamp(25px, 2.1vw, 34px); font-weight: 600; letter-spacing: -.6px; margin: 14px 0 8px; max-width: 55ch; }
-.metaui-header-description { margin: 0; color: var(--metaui-slate); font-size: 16px; }
-.metaui-introduction { margin: 10px 0 0; }
-.metaui-introduction p { max-width: 85ch; margin-top: 10px; }
+.metaui-brand { font-size: 14px; font-weight: 700; color: var(--metaui-accent); }
+.metaui-header h2 { font-size: 28px; font-weight: 600; letter-spacing: -.6px; margin: 4px 0 0; max-width: 55ch; }
+.metaui-intro { margin-top: 6px; color: var(--metaui-slate); max-width: 85ch; }
+.metaui-intro p { margin: 0; }
 .row > .col-sm-3:has(> form.well) { width: 27%; }
 .row > .col-sm-3:has(> form.well) + .col-sm-9 { width: 73%; }
 .well { background: white; border: 1px solid var(--metaui-rule); border-radius: 10px; padding: 23px; }
-.metaui-panel-title { font-size: 21px; font-weight: 600; margin-bottom: 6px; }
-.well > .metaui-help-text { margin-bottom: 24px; }
+.metaui-panel-title { font-size: 21px; font-weight: 600; margin-bottom: 20px; }
 .shiny-input-container { max-width: 100%; }
 .well .control-label { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
 .well .shiny-input-container { margin-bottom: 22px; }
@@ -160,6 +155,7 @@ input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 
 .btn-primary:hover, .btn-primary:focus { background: #07545c; border-color: #07545c; }
 .metaui-apply-state { border: 0; padding: 8px 0; font-size: 13px; }
 .metaui-apply-state.metaui-stale { padding: 10px; border-radius: 5px; }
+.metaui-apply-state:has(> .shiny-text-output:empty) { display: none; }
 .metaui-data-tools { border-top: 1px solid var(--metaui-rule); padding-top: 17px; margin-top: 17px; }
 .metaui-data-tools > summary { margin-bottom: 15px; }
 .metaui-data-tools .btn { margin-bottom: 12px; }
@@ -173,13 +169,8 @@ input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 
 .nav-tabs > li > a:hover { background: #f0f5f8; border: 0; }
 .tab-content { background: white; border: 1px solid var(--metaui-rule); border-top: 0; border-radius: 0 0 10px 10px; padding: 8px 25px 26px; min-height: 480px; }
 .tab-content h3 { font-weight: 600; font-size: 23px; letter-spacing: -.3px; }
-.metaui-empty { max-width: 64ch; border: 0; margin: 24px auto; padding: 30px 18px; }
-.metaui-empty h3 { font-size: 29px; margin-top: 0; }
-.metaui-empty p { color: var(--metaui-slate); font-size: 16px; }
-.metaui-empty ol { list-style: none; counter-reset: start; padding: 0; margin: 28px 0; }
-.metaui-empty li { counter-increment: start; padding: 12px 0; display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
-.metaui-empty li::before { content: counter(start); display: inline-flex; align-items: center; justify-content: center; width: 27px; height: 27px; background: #e1eff0; color: #075e67; border-radius: 50%; margin-right: 7px; font-size: 13px; font-weight: 600; }
-.metaui-empty .metaui-empty-hint { font-size: 14px; border-top: 1px solid var(--metaui-rule); padding-top: 18px; }
+.metaui-empty { margin: 24px 0; color: var(--metaui-slate); font-size: 16px; }
+.metaui-empty p { margin: 0; }
 .metaui-primary { max-width: none; background: #edf7f6; border: 1px solid #c6e1df; border-left: 4px solid var(--metaui-accent); padding: 20px 23px; border-radius: 7px; }
 .metaui-primary-label { color: #366569; }
 .metaui-primary-value { font-size: 36px; font-weight: 600; letter-spacing: -.7px; color: #075e67; }
@@ -206,27 +197,16 @@ input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 
 @media (max-width: 767px) {
   .container-fluid { padding: 0 15px 25px; }
   .metaui-header { margin: 0 -15px 18px; padding: 20px; }
-  .metaui-header h2 { font-size: 26px; }
-  .metaui-header-description { font-size: 15px; }
   .row > .col-sm-3:has(> form.well), .row > .col-sm-3:has(> form.well) + .col-sm-9 { width: 100%; }
   .well { padding: 20px; }
   .metaui-skip { margin: 8px 0; }
   .tab-content { padding: 8px 15px 20px; }
   .nav-tabs > li > a { padding: 9px 11px; font-size: 13px; }
-  .metaui-empty { padding: 15px 3px; }
-  .metaui-empty li { display: block; }
   .metaui-primary { padding: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
 /* Keep the evidence above the fold, including on compact screens. */
-.metaui-header { display: grid; grid-template-columns: 1fr auto; gap: 0 24px; padding: 13px 32px 14px; margin-bottom: 20px; }
-.metaui-brand { grid-column: 1 / -1; font-size: 12px; }
-.metaui-brand-mark { font-size: 16px; }
-.metaui-header > .row { grid-column: 1; }
-.metaui-header h2 { margin: 6px 0 3px; font-size: 28px; }
-.metaui-header-description { font-size: 14px; }
-.metaui-introduction { grid-column: 2; grid-row: 2 / 4; align-self: center; margin: 0; max-width: 30ch; }
-.metaui-introduction[open] { grid-column: 1 / -1; grid-row: auto; max-width: 85ch; }
+.metaui-header { padding: 13px 32px 14px; margin-bottom: 20px; }
 .metaui-help > summary, .metaui-selection-details > summary { display: block; cursor: pointer; }
 .metaui-help > summary::before, .metaui-selection-details > summary::before { content: '▸'; display: inline-block; margin-right: 8px; }
 .metaui-help[open] > summary::before, .metaui-selection-details[open] > summary::before { content: '▾'; }
@@ -241,24 +221,21 @@ input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 
 .metaui-selection-details { font-size: 12px; margin-top: 3px; }
 .metaui-selection-details > summary { color: #395d6a; }
 .metaui-selection-details[open] #selection_status { padding-top: 8px; }
+.metaui-share { margin-top: 8px; }
 .metaui-share .btn { display: block; color: var(--metaui-accent); border-color: #bdd7da; background: #f2f8f8; text-align: center; padding: 8px; }
-.metaui-share .metaui-note { font-size: 12px; margin-top: 5px; }
 .metaui-primary { padding: 13px 18px; }
 .metaui-primary-value { font-size: 32px; }
 .metaui-export-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 10px; }
 .metaui-export-actions .btn { background: white; color: #096b74; border: 1px solid #bdd7da; padding: 7px 12px; }
 @media (max-width: 767px) {
-  .metaui-header { display: block; padding: 13px 20px; margin-bottom: 14px; }
-  .metaui-header h2 { font-size: 24px; margin: 8px 0; }
-  .metaui-header-description { display: none; }
-  .metaui-introduction { max-width: none; font-size: 13px; }
+  .metaui-header { padding: 13px 20px; margin-bottom: 14px; }
+  .metaui-header h2 { font-size: 24px; }
   .well .shiny-input-container { margin-bottom: 15px; }
-  .well > .metaui-help-text { margin-bottom: 16px; }
 }
-.metaui-table-hint { font-size: 13px; color: var(--metaui-slate); margin: 10px 0 6px; }
 #effectestimate_box { scrollbar-color: #7896a5 #edf3f7; scrollbar-width: auto; border: 1px solid var(--metaui-rule); border-radius: 5px; }
 #effectestimate_box:focus-visible { outline: 3px solid var(--metaui-accent); outline-offset: 3px; }
 #effectestimate { min-width: 1120px; }
 #effectestimate th:nth-child(2), #effectestimate td:nth-child(2) { min-width: 190px; }
 #effectestimate th:nth-child(5), #effectestimate td:nth-child(5) { white-space: normal; min-width: 150px; max-width: 190px; }
-#effectestimate table { margin-bottom: 10px; }
+#effectestimate table { margin-bottom: 0; }
+#effectestimate_box { margin-top: 12px; }

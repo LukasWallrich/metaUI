@@ -51,7 +51,7 @@ async function settledSample(effects) {
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto(url);
   await page.waitForFunction(()=>window.Shiny?.shinyapp?.$socket?.readyState===1);
-  await page.getByText('How to use this analysis', {exact:true}).waitFor();
+  await page.getByText('Select effects', {exact:true}).waitFor();
   await page.waitForFunction(()=>Array.isArray(window.Shiny.shinyapp.$inputValues.outliers_z_scores));
   const helpButton = page.getByRole('button',{name:'Help for Year'});
   const helpPanel = page.locator('#' + await helpButton.getAttribute('aria-controls'));
@@ -92,8 +92,8 @@ async function settledSample(effects) {
   const equivalenceHeader = await page.locator('#equivalence thead').innerText();
   for (const column of ['assessment','threshold','bound']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
   assert(await page.locator('#equivalence tbody tr').count() >= 2, 'expected one assessment row per model');
-  assert((await page.locator('#apply_state').innerText()).includes('Results match'));
-  await page.getByText('Download or update data', {exact:true}).click();
+  assert.equal((await page.locator('#apply_state').innerText()).trim(), '');
+  await page.getByText('Download or upload data', {exact:true}).click();
   const downloadEvent=page.waitForEvent('download');
   await page.locator('#downloadData').click();
   const download=await downloadEvent;
