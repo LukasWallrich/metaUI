@@ -996,7 +996,7 @@ glue_string <- ('
   meta_agg <- reactive({
     df_agg <- df_agg()
 
-    meta::metagen(
+    fit <- tryCatch(meta::metagen(
       TE = metaUI__effect_size,
       seTE = metaUI__se,
       data = df_agg,
@@ -1007,14 +1007,21 @@ glue_string <- ('
       method.random.ci = "HK",
       prediction = TRUE,
       sm = df_agg$metaUI__es_type[1]
-    )
+    ), error = function(e) e)
+    # Build the message only on failure: need() evaluates its message eagerly
+    if (inherits(fit, "error")) {
+      shiny::validate(shiny::need(FALSE, paste(
+        "The random-effects model for the funnel plot and Egger test could not be estimated for this selection:", conditionMessage(fit)
+      )))
+    }
+    fit
   })
 
   output$funnel <- renderPlot({
     meta_agg <- meta_agg()
 
     metafor::funnel(meta_agg, xlab = metaUI_eff_size_type_label, studlab = FALSE, contour = .95, col.contour = "light grey")
-  })
+  }, height = 400) # fixed: after an error the collapsed container would otherwise set the next plot height
 
   output$eggers <- DT::renderDataTable({
     meta_agg <- meta_agg()

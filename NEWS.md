@@ -12,6 +12,10 @@
   than raw HTML.
 * Write categorical filter levels into the generated `ui.R` as escaped R strings;
   a level containing a double quote previously stopped the app from starting.
+* Show a clear message when the random-effects model behind the funnel plot and
+  Egger's test does not converge, instead of a raw error. Keep the funnel plot at a
+  fixed height so it recovers after an error, and stop widget error messages
+  overlapping the content below them.
 * Remove the unused helpers `signif_floor()`, `signif_ceiling()` and `allglobal()`.
 * Standardise the outlier violin's z-axis against the built dataset, as the z-score
   filter does, and align it with the effect-size axis. Show every moderation-table

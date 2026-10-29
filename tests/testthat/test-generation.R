@@ -21,6 +21,9 @@ test_that("headless app loads and runs the generated server", {
   expect_match(as.character(env$ui), '<div id="z_score_filter"></div>', fixed = TRUE)
   server_code <- readLines("server.R")
   expect_true(any(grepl('formatRound("Effect size", digits = 3)', server_code, fixed = TRUE)))
+  # need() evaluates its message eagerly, so condition messages must be built only on failure
+  expect_false(any(grepl("need(!inherits(", server_code, fixed = TRUE) & grepl("attr(", server_code, fixed = TRUE)))
+  expect_true(any(grepl("shiny::validate(shiny::need(FALSE, paste(", server_code, fixed = TRUE)))
   # The violin z-axis must use the same full-dataset reference as the z-score filter
   expect_true(any(grepl("efsd <- sd(metaUI__df$metaUI__effect_size)", server_code, fixed = TRUE)))
   expect_true(file.exists(file.path(path, "www", "metaui.css")))
