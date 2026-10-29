@@ -100,13 +100,15 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
 
     } else if (is.factor(data[[filter_col]])) {
 
-      choices <- levels(data[[filter_col]]) %>% na.omit()
+      # Serialise as R code so levels containing quotes or backslashes stay valid
+      levels_ <- levels(data[[filter_col]]) %>% na.omit() %>% as.character()
+      choices <- paste(deparse(levels_), collapse = "\n")
 
-      out <- glue::glue('{if (length(choices) < opts$selection_list_threshold) "checkboxGroupInput(" else "shinyWidgets::pickerInput(multiple = TRUE, options = list(`actions-box` = TRUE), "} "{filter_col %>% stringr::str_replace_all(" ", "_")}",
+      out <- glue::glue('{if (length(levels_) < opts$selection_list_threshold) "checkboxGroupInput(" else "shinyWidgets::pickerInput(multiple = TRUE, options = list(`actions-box` = TRUE), "} "{filter_col %>% stringr::str_replace_all(" ", "_")}",
       tagList("{stringr::str_remove(filter_col, rm_prefix)}",
       {help}),
-          choices = c("{glue::glue_collapse(choices, sep = \'", "\')}"),
-        selected = c("{glue::glue_collapse(choices, sep = \'", "\')}")
+          choices = {choices},
+        selected = {choices}
         )')
     } else {
       stop("Filter/moderator variables must be numeric or factors. This check failed first for ", filter_col)
@@ -778,17 +780,25 @@ glue_string <- ('
     }
 
     if ("URL" %in% names(out)) {
-      out <- out %>% dplyr::mutate(URL = glue::glue("<a href={URL}>{URL}</a>"))
+      out$URL <- vapply(out$URL, function(url) if (is.na(url) || url == "") "" else
+        as.character(tags$a(href = url, target = "_blank", rel = "noopener", url)), character(1))
     }
 
-    out %>% DT::datatable(
+    # Round non-integer numeric columns: effect sizes to 3 decimals, moderators to 2
+    decimals <- names(out)[vapply(out, function(x) is.numeric(x) && any(x != round(x), na.rm = TRUE), logical(1))]
+    decimals <- setdiff(decimals, "Effect size")
+
+    table <- out %>% DT::datatable(
       rownames = FALSE, options = list(scrollX = TRUE),
+      escape = setdiff(names(out), "URL"), # URL holds links built (and escaped) above
       caption = tags$caption(
         style = "caption-side: bottom; text-align: left; margin: 8px 0;",
         glue::glue("The effect size is given as {metaUI_eff_size_type_label}")
       )
     ) %>%
       DT::formatRound("Effect size", digits = 3)
+    if (length(decimals)) table <- DT::formatRound(table, decimals, digits = 2)
+    table
   })
 
  <FILTER>

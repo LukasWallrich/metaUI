@@ -6,8 +6,13 @@
   central credible intervals, disclosed priors and heterogeneity-prior sensitivity.
 * Share applied selections through build-specific validated URLs; uploaded datasets
   remain workbook-only, and restoration waits for browser acknowledgement.
-* Render the z-score slider container as a plain `div` so it is no longer greyed out,
-  and round effect sizes in the list of effect sizes to three decimals.
+* Render the z-score slider container as a plain `div` so it is no longer greyed out.
+* In the list of effect sizes, round effect sizes to three decimals and other
+  non-integer numeric columns to two, and render URL/DOI columns as links rather
+  than raw HTML.
+* Write categorical filter levels into the generated `ui.R` as escaped R strings;
+  a level containing a double quote previously stopped the app from starting.
+* Remove the unused helpers `signif_floor()`, `signif_ceiling()` and `allglobal()`.
 * Standardise the outlier violin's z-axis against the built dataset, as the z-score
   filter does, and align it with the effect-size axis. Show every moderation-table
   row (paging hid levels beyond the 10th and the kurtosis row). Label heterogeneity

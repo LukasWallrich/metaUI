@@ -25,7 +25,7 @@ test_that("headless app loads and runs the generated server", {
   expect_true(any(grepl("efsd <- sd(metaUI__df$metaUI__effect_size)", server_code, fixed = TRUE)))
   expect_true(file.exists(file.path(path, "www", "metaui.css")))
   shiny::testServer(env$server, {
-    z_range <- c(metaUI:::signif_floor(min(d$metaUI__es_z)), metaUI:::signif_ceiling(max(d$metaUI__es_z)))
+    z_range <- unlist(metaUI:::metaUI_slider_spec(d$metaUI__es_z, integer = FALSE)[c("min", "max")])
     session$setInputs(outliers_z_scores = z_range)
     expect_match(output$apply_state, "Not analysed yet")
     expect_error(output$selection_status, "No analysis yet")
@@ -319,12 +319,29 @@ test_that("status and summaries show filter labels with spaces, not input IDs", 
   })
 })
 
-test_that("moderation table shows every row", {
+test_that("filters with quoted levels and URL columns generate a working app", {
   path <- tempfile("metaui-app-")
   on.exit(unlink(path, recursive = TRUE))
-  x <- fixture(); x$group <- factor(rep(c("a", "b"), 8))
-  generate_shiny(prepared(x, filters = c(Group = "group")), "Tiny synthetic fixture",
+  x <- fixture(); x$group <- factor(rep(c("a", '"quoted" b'), 8))
+  x$url <- rep(c("10.1234/abc", "https://example.org/?a=1&b=2"), 8)
+  x$age <- seq(20.25, by = 1.5, length.out = 16)
+  generate_shiny(prepared(x, filters = c(Group = "group", Age = "age"), url = "url"), "Tiny synthetic fixture",
     save_to_folder = path, launch_app = FALSE, date = "2026-10-05")
+  server_code <- readLines(file.path(path, "server.R"))
   # dom = "t" hides the pager, so paging would silently drop levels beyond the 10th
-  expect_true(any(grepl('dom = "t", paging = FALSE', readLines(file.path(path, "server.R")), fixed = TRUE)))
+  expect_true(any(grepl('dom = "t", paging = FALSE', server_code, fixed = TRUE)))
+  # URL cells hold links (built with htmltools, so they are escaped) and must not be re-escaped
+  expect_true(any(grepl('escape = setdiff(names(out), "URL")', server_code, fixed = TRUE)))
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
+  env <- new.env(parent = globalenv())
+  sys.source("global.R", env) # fails to parse if a level is written unescaped
+  expect_match(as.character(env$ui), "&quot;quoted&quot; b", fixed = TRUE)
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Group = c("a", '"quoted" b'),
+      metaUI__filter_Age = c(0, 100), metaUI__filter_Age_include_NA = TRUE, go = 1)
+    expect_equal(nrow(df_filtered()), 16)
+    # Numeric moderators are rounded to 2 decimals, effect sizes to 3
+    expect_match(output$sample_table, "formatRound(data, 2, 3", fixed = TRUE)
+    expect_match(output$sample_table, "formatRound(data, 3, 3", fixed = TRUE)
+  })
 })
