@@ -17,6 +17,9 @@ test_that("headless app loads and runs the generated server", {
   env <- new.env(parent = globalenv())
   sys.source("global.R", env)
   expect_s3_class(env$ui, "shiny.tag.list")
+  # insertUI() fills a plain div; an unrendered uiOutput() would stay greyed out
+  expect_match(as.character(env$ui), '<div id="z_score_filter"></div>', fixed = TRUE)
+  expect_true(any(grepl('formatRound("Effect size", digits = 3)', readLines("server.R"), fixed = TRUE)))
   expect_true(file.exists(file.path(path, "www", "metaui.css")))
   shiny::testServer(env$server, {
     z_range <- c(metaUI:::signif_floor(min(d$metaUI__es_z)), metaUI:::signif_ceiling(max(d$metaUI__es_z)))

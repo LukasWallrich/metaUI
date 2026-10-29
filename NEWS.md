@@ -6,6 +6,8 @@
   central credible intervals, disclosed priors and heterogeneity-prior sensitivity.
 * Share applied selections through build-specific validated URLs; uploaded datasets
   remain workbook-only, and restoration waits for browser acknowledgement.
+* Render the z-score slider container as a plain `div` so it is no longer greyed out,
+  and round effect sizes in the list of effect sizes to three decimals.
 * Extend declarative authoring to schema version 2, retaining version 1 behavior.
 * Make package examples runnable without launching an app and prepare release checks.
 * Optimise p-curve without changing results and reuse compatible fitted objects.

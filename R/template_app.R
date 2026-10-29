@@ -221,7 +221,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
           paste(deparse(metaUI_computations(data)), collapse = "\n"), \', selected = "primary"),\nuiOutput("computation_note"),\') else ""}
         div(id = "filters",
         {generate_ui_filters(data, filter_popups, any_filters, opts = opts)}
-        uiOutput("z_score_filter"), zscore_help),
+        div(id = "z_score_filter"), zscore_help), # filled by insertUI(); a uiOutput() would stay greyed out
         div(class = "metaui-actions",
           actionButton("go", "Analyze data", class = "btn-primary"),
           actionButton("resetFilters", "Reset filters")),
@@ -787,7 +787,8 @@ glue_string <- ('
         style = "caption-side: bottom; text-align: left; margin: 8px 0;",
         glue::glue("The effect size is given as {metaUI_eff_size_type_label}")
       )
-    )
+    ) %>%
+      DT::formatRound("Effect size", digits = 3)
   })
 
  <FILTER>
