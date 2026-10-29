@@ -51,7 +51,7 @@ async function settledSample(effects) {
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto(url);
   await page.waitForFunction(()=>window.Shiny?.shinyapp?.$socket?.readyState===1);
-  await page.getByRole('button',{name:'Dismiss',exact:true}).click();
+  await page.getByText('Select effects', {exact:true}).waitFor();
   await page.waitForFunction(()=>Array.isArray(window.Shiny.shinyapp.$inputValues.outliers_z_scores));
   const helpButton = page.getByRole('button',{name:'Help for Year'});
   const helpPanel = page.locator('#' + await helpButton.getAttribute('aria-controls'));
@@ -62,6 +62,7 @@ async function settledSample(effects) {
   await page.keyboard.press('Escape');
   await helpPanel.waitFor({state:'hidden'});
   await page.locator('#go').click(); await settledSample(16);
+  await page.getByText('Selection details', {exact:true}).click();
   assert((await page.locator('#effectestimate').innerText()).includes('unsupported'));
   await page.locator('#go').click();
   await page.waitForFunction(()=>document.querySelector('#calculation_status')?.textContent.includes('Reused'));
@@ -84,13 +85,15 @@ async function settledSample(effects) {
     if (extension === 'csv') assert(bytes.toString().includes('Selected effect'), id + ' is missing effect rows');
   }
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
+  await page.getByText('Assess practical equivalence', {exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('No bound chosen'));
   await page.locator('#sesoi').fill('1');
   await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval within bounds'));
   const equivalenceHeader = await page.locator('#equivalence thead').innerText();
   for (const column of ['assessment','threshold','bound']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
   assert(await page.locator('#equivalence tbody tr').count() >= 2, 'expected one assessment row per model');
-  assert((await page.locator('#apply_state').innerText()).includes('Results match'));
+  assert.equal((await page.locator('#apply_state').innerText()).trim(), '');
+  await page.getByText('Download or upload data', {exact:true}).click();
   const downloadEvent=page.waitForEvent('download');
   await page.locator('#downloadData').click();
   const download=await downloadEvent;
@@ -110,7 +113,11 @@ async function settledSample(effects) {
   await page.screenshot({path:path.join(evidence,'uploaded-summary.png')});
   // A single excluded year makes the next result three effects.
   await page.locator('#metaUI__filter_Year_include_NA').uncheck();
+  // This output starts hidden; it must resume when a filter changes.
+  await page.locator('#apply_state_box').waitFor({state:'visible'});
+  await page.waitForFunction(()=>document.querySelector('#apply_state')?.textContent.includes('Filters changed'));
   await page.locator('#go').click(); await settledSample(3);
+  await page.locator('#apply_state_box').waitFor({state:'hidden'});
   await page.locator('#resetFilters').click();
   await page.waitForFunction(()=>document.querySelector('#metaUI__filter_Group').selectedOptions.length===8);
   await page.locator('#go').click(); await settledSample(15);

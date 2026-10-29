@@ -30,12 +30,12 @@ test_that("headless app loads and runs the generated server", {
   shiny::testServer(env$server, {
     z_range <- unlist(metaUI:::metaUI_slider_spec(d$metaUI__es_z, integer = FALSE)[c("min", "max")])
     session$setInputs(outliers_z_scores = z_range)
-    expect_match(output$apply_state, "Not analysed yet")
+    expect_identical(output$apply_state, "")
     expect_error(output$selection_status, "No analysis yet")
     session$setInputs(go = 1)
     session$flushReact()
     expect_false(filters_changed())
-    expect_match(output$apply_state, "Results match")
+    expect_identical(output$apply_state, "")
     table <- estimatesfiltered()
     expect_equal(table$status[1:2], c("ok","ok"))
     ref <- metafor::rma.mv(metaUI__effect_size, V=metaUI__variance, random=~1|metaUI__study_id/metaUI__effect_id,

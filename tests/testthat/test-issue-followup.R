@@ -24,9 +24,9 @@ test_that("oversized forest selections show HTML without creating a plot output"
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
-    expect_match(output$forest_panel$html, "8 effect sizes or fewer")
+    expect_match(output$forest_panel$html, "limited to 8 effects")
     expect_false(grepl('id="foreststudies"', output$forest_panel$html, fixed = TRUE))
-    expect_error(output$foreststudies, "8 effect sizes or fewer")
+    expect_error(output$foreststudies, "limited to 8 effects")
     # The exact boundary should still render a plot.
     state_values$uploaded_data <- d[1:8, ]
     session$setInputs(go = 2)

@@ -35,8 +35,6 @@ h4 { font-size: 18px; margin: 22px 0 8px; }
 .metaui-basis.metaui-stale .shiny-text-output { opacity: .8; }
 
 /* Empty, gap and reason states */
-.metaui-empty { margin: 22px 0; padding: 18px 20px; border: 1px dashed var(--metaui-rule); border-radius: 4px; max-width: 70ch; }
-.metaui-empty p { margin: 0; }
 .metaui-gaps { margin: 6px 0 12px; padding: 8px 12px; border-left: 3px solid var(--metaui-slate); background: var(--metaui-surface); font-size: 14px; }
 .metaui-gaps ul { margin: 4px 0 0; padding-left: 20px; }
 .shiny-output-error-validation { color: var(--metaui-slate); font-size: 15px; padding: 8px 0; }
@@ -125,3 +123,121 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
 .metaui-filter-help-panel table { display: block; overflow-x: auto; max-width: 100%; }
 /* Sample charts must fit their column while Shiny redraws after a resize. */
 div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
+
+/* Evidence workspace: a quiet canvas with a distinct selection rail. */
+:root {
+  --metaui-ink: #182f46;
+  --metaui-slate: #506477;
+  --metaui-rule: #d9e3eb;
+  --metaui-surface: #f0f5f8;
+  --metaui-accent: #096b74;
+}
+body { background: #edf3f7; font-family: "Source Sans Pro", "Segoe UI", sans-serif; font-size: 15px; line-height: 1.55; }
+.container-fluid { max-width: 1680px; padding: 0 32px 40px; }
+.metaui-header { margin: 0 -32px 28px; padding: 23px 36px 20px; background: #fff; border-top: 5px solid var(--metaui-accent); border-bottom: 1px solid var(--metaui-rule); }
+.metaui-brand { font-size: 14px; font-weight: 700; color: var(--metaui-accent); }
+.metaui-header h2 { font-size: 28px; font-weight: 600; letter-spacing: -.6px; margin: 4px 0 0; max-width: 55ch; }
+.metaui-intro { margin-top: 6px; color: var(--metaui-slate); max-width: 85ch; }
+.metaui-intro p { margin: 0; }
+.row > .col-sm-3:has(> form.well) { width: 27%; }
+.row > .col-sm-3:has(> form.well) + .col-sm-9 { width: 73%; }
+.well { background: white; border: 1px solid var(--metaui-rule); border-radius: 10px; padding: 23px; }
+.metaui-panel-title { font-size: 21px; font-weight: 600; margin-bottom: 20px; }
+.shiny-input-container { max-width: 100%; }
+.well .control-label { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+.well .shiny-input-container { margin-bottom: 22px; }
+.well .checkbox { margin-top: 8px; margin-bottom: 8px; }
+input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 15px; }
+.metaui-advanced { padding-top: 15px; border-top: 1px solid var(--metaui-rule); }
+.metaui-advanced > summary { margin-bottom: 12px; }
+.metaui-actions { display: grid; grid-template-columns: 1fr; gap: 8px; padding-top: 10px; }
+.btn { border-radius: 6px; font-size: 14px; padding: 10px 14px; transition: background-color .15s; }
+.metaui-actions #go { width: 100%; text-align: center; font-size: 16px; font-weight: 600; }
+.metaui-actions #resetFilters { text-align: center; background: white; color: var(--metaui-slate); border-color: var(--metaui-rule); }
+.btn-primary:hover, .btn-primary:focus { background: #07545c; border-color: #07545c; }
+.metaui-apply-state { border: 0; padding: 8px 0; font-size: 13px; }
+.metaui-apply-state.metaui-stale { padding: 10px; border-radius: 5px; }
+.metaui-apply-state:has(> .shiny-text-output:empty) { display: none; }
+.metaui-data-tools { border-top: 1px solid var(--metaui-rule); padding-top: 17px; margin-top: 17px; }
+.metaui-data-tools > summary { margin-bottom: 15px; }
+.metaui-data-tools .btn { margin-bottom: 12px; }
+.metaui-basis { background: #e1eff0; border-left: 3px solid var(--metaui-accent); border-radius: 5px; padding: 12px 16px; margin-bottom: 18px; }
+#calculation_status { font-size: 12px; color: var(--metaui-slate); }
+.nav-tabs { border: 0; display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 0; padding: 5px; background: #e1eaf0; border-radius: 8px 8px 0 0; }
+.nav-tabs::before, .nav-tabs::after { display: none; }
+.nav-tabs > li { float: none; margin: 0; }
+.nav-tabs > li > a { border: 0; border-radius: 5px; padding: 10px 13px; color: #354d61; font-size: 14px; font-weight: 600; margin: 0; }
+.nav-tabs > li.active > a, .nav-tabs > li.active > a:hover, .nav-tabs > li.active > a:focus { background: #fff; color: #075e67; border: 0; box-shadow: 0 1px 3px #182f4614; }
+.nav-tabs > li > a:hover { background: #f0f5f8; border: 0; }
+.tab-content { background: white; border: 1px solid var(--metaui-rule); border-top: 0; border-radius: 0 0 10px 10px; padding: 8px 25px 26px; min-height: 480px; }
+.tab-content h3 { font-weight: 600; font-size: 23px; letter-spacing: -.3px; }
+.metaui-empty { margin: 24px 0; color: var(--metaui-slate); font-size: 16px; }
+.metaui-empty p { margin: 0; }
+.metaui-primary { max-width: none; background: #edf7f6; border: 1px solid #c6e1df; border-left: 4px solid var(--metaui-accent); padding: 20px 23px; border-radius: 7px; }
+.metaui-primary-label { color: #366569; }
+.metaui-primary-value { font-size: 36px; font-weight: 600; letter-spacing: -.7px; color: #075e67; }
+.metaui-primary-ci { font-size: 16px; font-weight: 400; letter-spacing: 0; }
+.metaui-primary-none, .metaui-primary-missing { background: var(--metaui-surface); }
+.table { font-size: 14px; margin-bottom: 20px; }
+.table > thead > tr > th { background: #f0f5f8; border-bottom: 2px solid var(--metaui-rule); color: #3a5267; font-size: 13px; font-weight: 600; padding: 12px 10px; }
+.table > tbody > tr > td { border-top: 1px solid #e6edf2; padding: 11px 10px; line-height: 1.5; }
+.table-striped > tbody > tr:nth-of-type(odd) { background: #f8fafc; }
+.table > tbody > tr:hover { background: #edf7f6; }
+.metaui-help { font-size: 14px; }
+.metaui-help summary { padding: 5px 0; }
+.metaui-equivalence { max-width: none; border-top: 1px solid var(--metaui-rule); border-bottom: 1px solid var(--metaui-rule); padding: 10px 0; margin: 20px 0; }
+.metaui-note { line-height: 1.6; }
+.irs--shiny .irs-bar, .irs--shiny .irs-single, .irs--shiny .irs-from, .irs--shiny .irs-to { background: var(--metaui-accent); border-color: var(--metaui-accent); }
+.form-control { border-radius: 5px; border-color: #b6c7d3; box-shadow: none; }
+@media (max-width: 1100px) and (min-width: 768px) {
+  .row > .col-sm-3:has(> form.well) { width: 32%; }
+  .row > .col-sm-3:has(> form.well) + .col-sm-9 { width: 68%; }
+  .container-fluid { padding-left: 20px; padding-right: 20px; }
+  .metaui-header { margin-left: -20px; margin-right: -20px; }
+  .well { padding: 18px; }
+}
+@media (max-width: 767px) {
+  .container-fluid { padding: 0 15px 25px; }
+  .metaui-header { margin: 0 -15px 18px; padding: 20px; }
+  .row > .col-sm-3:has(> form.well), .row > .col-sm-3:has(> form.well) + .col-sm-9 { width: 100%; }
+  .well { padding: 20px; }
+  .metaui-skip { margin: 8px 0; }
+  .tab-content { padding: 8px 15px 20px; }
+  .nav-tabs > li > a { padding: 9px 11px; font-size: 13px; }
+  .metaui-primary { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+/* Keep the evidence above the fold, including on compact screens. */
+.metaui-header { padding: 13px 32px 14px; margin-bottom: 20px; }
+.metaui-help > summary, .metaui-selection-details > summary { display: block; cursor: pointer; }
+.metaui-help > summary::before, .metaui-selection-details > summary::before { content: '▸'; display: inline-block; margin-right: 8px; }
+.metaui-help[open] > summary::before, .metaui-selection-details[open] > summary::before { content: '▾'; }
+.metaui-help > summary:hover { color: #043e45; background: #edf7f6; }
+.metaui-advanced { padding-top: 8px; margin: 8px 0; }
+.metaui-advanced > summary { margin-bottom: 0; padding: 8px 0; }
+.metaui-advanced[open] > summary { margin-bottom: 12px; }
+.metaui-actions { padding-top: 6px; }
+.metaui-basis { padding: 10px 14px; margin-bottom: 14px; }
+#selection_overview { font-weight: 600; }
+#calculation_status { font-size: 13px; color: #3c566b; }
+.metaui-selection-details { font-size: 12px; margin-top: 3px; }
+.metaui-selection-details > summary { color: #395d6a; }
+.metaui-selection-details[open] #selection_status { padding-top: 8px; }
+.metaui-share { margin-top: 8px; }
+.metaui-share .btn { display: block; color: var(--metaui-accent); border-color: #bdd7da; background: #f2f8f8; text-align: center; padding: 8px; }
+.metaui-primary { padding: 13px 18px; }
+.metaui-primary-value { font-size: 32px; }
+.metaui-export-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 10px; }
+.metaui-export-actions .btn { background: white; color: #096b74; border: 1px solid #bdd7da; padding: 7px 12px; }
+@media (max-width: 767px) {
+  .metaui-header { padding: 13px 20px; margin-bottom: 14px; }
+  .metaui-header h2 { font-size: 24px; }
+  .well .shiny-input-container { margin-bottom: 15px; }
+}
+#effectestimate_box { scrollbar-color: #7896a5 #edf3f7; scrollbar-width: auto; border: 1px solid var(--metaui-rule); border-radius: 5px; }
+#effectestimate_box:focus-visible { outline: 3px solid var(--metaui-accent); outline-offset: 3px; }
+#effectestimate { min-width: 1120px; }
+#effectestimate th:nth-child(2), #effectestimate td:nth-child(2) { min-width: 190px; }
+#effectestimate th:nth-child(5), #effectestimate td:nth-child(5) { white-space: normal; min-width: 150px; max-width: 190px; }
+#effectestimate table { margin-bottom: 0; }
+#effectestimate_box { margin-top: 12px; }

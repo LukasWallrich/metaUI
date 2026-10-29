@@ -90,7 +90,7 @@ test_that("standalone alternative results and download provenance survive restor
     expect_equal(data_list()$dataset$metaUI__effect_size,x$yi)
     expect_equal(data_list()$summary$fit_es,previous)
     expect_equal(data_list()$provenance$value[1],"FALSE")
-    expect_match(output$link_notice,"not yet analysed")
+    expect_match(output$link_notice,"Uploaded data not analysed")
     session$setInputs(go=2)
     expect_equal(data_list()$dataset$metaUI__effect_size[1],.93)
     expect_equal(df_filtered()$metaUI__effect_size,x$alt)
