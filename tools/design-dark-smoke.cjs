@@ -57,6 +57,7 @@ async function readable(locator,label,pseudo=null) {
   const beforeBound=await page.locator('#model_comparison img').getAttribute('src');
   await page.locator('#sesoi').fill('0.3');
   await page.waitForFunction(before=>{const img=document.querySelector('#model_comparison img');return img?.naturalWidth>0&&img.src!==before;},beforeBound);
+  await page.evaluate(()=>window.scrollTo(0,0));
   await page.screenshot({path:path.join(evidence,'dark-equivalence.png')});
   await page.getByRole('tab',{name:'Forest Plot',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#foreststudies img')?.naturalWidth>0);
