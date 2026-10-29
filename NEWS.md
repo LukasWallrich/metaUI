@@ -8,6 +8,10 @@
   remain workbook-only, and restoration waits for browser acknowledgement.
 * Render the z-score slider container as a plain `div` so it is no longer greyed out,
   and round effect sizes in the list of effect sizes to three decimals.
+* Standardise the outlier violin's z-axis against the built dataset, as the z-score
+  filter does, and align it with the effect-size axis. Show every moderation-table
+  row (paging hid levels beyond the 10th and the kurtosis row). Label heterogeneity
+  variance components as sigma-squared, rounded to four decimals.
 * Extend declarative authoring to schema version 2, retaining version 1 behavior.
 * Make package examples runnable without launching an app and prepare release checks.
 * Optimise p-curve without changing results and reuse compatible fitted objects.

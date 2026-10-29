@@ -19,7 +19,10 @@ test_that("headless app loads and runs the generated server", {
   expect_s3_class(env$ui, "shiny.tag.list")
   # insertUI() fills a plain div; an unrendered uiOutput() would stay greyed out
   expect_match(as.character(env$ui), '<div id="z_score_filter"></div>', fixed = TRUE)
-  expect_true(any(grepl('formatRound("Effect size", digits = 3)', readLines("server.R"), fixed = TRUE)))
+  server_code <- readLines("server.R")
+  expect_true(any(grepl('formatRound("Effect size", digits = 3)', server_code, fixed = TRUE)))
+  # The violin z-axis must use the same full-dataset reference as the z-score filter
+  expect_true(any(grepl("efsd <- sd(metaUI__df$metaUI__effect_size)", server_code, fixed = TRUE)))
   expect_true(file.exists(file.path(path, "www", "metaui.css")))
   shiny::testServer(env$server, {
     z_range <- c(metaUI:::signif_floor(min(d$metaUI__es_z)), metaUI:::signif_ceiling(max(d$metaUI__es_z)))
@@ -314,4 +317,14 @@ test_that("status and summaries show filter labels with spaces, not input IDs", 
     expect_match(output$selection_status, "Risk of bias: 0", fixed = TRUE)
     expect_match(output$summary_metaUI__filter_Risk_of_bias_table, "Risk of bias", fixed = TRUE)
   })
+})
+
+test_that("moderation table shows every row", {
+  path <- tempfile("metaui-app-")
+  on.exit(unlink(path, recursive = TRUE))
+  x <- fixture(); x$group <- factor(rep(c("a", "b"), 8))
+  generate_shiny(prepared(x, filters = c(Group = "group")), "Tiny synthetic fixture",
+    save_to_folder = path, launch_app = FALSE, date = "2026-10-05")
+  # dom = "t" hides the pager, so paging would silently drop levels beyond the 10th
+  expect_true(any(grepl('dom = "t", paging = FALSE', readLines(file.path(path, "server.R")), fixed = TRUE)))
 })
