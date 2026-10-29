@@ -44,8 +44,9 @@ the interface font selection does not change plot fonts or statistical results.
 - The existing generated-app browser smoke covers exports, workbook round trips,
   changed uploads, equivalence, filtering and reset.
 - The early Analyze control remains disabled until the dynamically inserted
-  z-score filter is bound. A regression check covers the silent readiness guard;
-  models and filtering rules are unchanged.
+  z-score filter is bound. Focused source tests cover the silent readiness guard; browser tests wait
+  for readiness and do not assert the pre-bind state. Models and filtering rules
+  are unchanged.
 
 The PR includes screenshots of the helper, its generated app and a dark palette.
 
@@ -53,7 +54,7 @@ The PR includes screenshots of the helper, its generated app and a dark palette.
 
 Opus and Argon both requested changes after reproducing unreadable dark-theme
 controls. The override now covers modal and notification surfaces, DataTables
-headers/sorting/paging, native/selectize inputs, and data-tool buttons. Selectors
+headers/sorting/paging, native/selectize inputs, data-tool buttons and stale/warning states. Selectors
 also override DataTables styles loaded after the app stylesheet. Regression tests
 first reproduced the white dialog/light text failure and the paging failure,
 then passed after the corrections. Forest intervals use the chosen text colour

@@ -96,6 +96,7 @@ design_css <- function(design) {
   d <- validate_design(design)
   tokens <- c(ink = d$text, slate = d$text, accent = d$accent,
     background = d$background, panel = d$surface,
+    attention = d$accent, `attention-bg` = design_mix(d$accent, d$surface, .06),
     rule = design_mix(d$text, d$surface, .18), surface = design_mix(d$text, d$surface, .045),
     tint = design_mix(d$accent, d$surface, .06), tabs = design_mix(d$text, d$surface, .08),
     hover = design_mix(d$accent, d$text, .75), button = if (design_contrast(d$accent, "#FFFFFF") >= 4.5) "#FFFFFF" else "#000000")
@@ -122,7 +123,7 @@ design_css <- function(design) {
     '.nav-tabs>li>a:hover,.table>thead>tr>th,.table-striped>tbody>tr:nth-of-type(odd){background:var(--metaui-surface);}\n',
     '.metaui-actions #resetFilters,.metaui-export-actions .btn,.metaui-share .btn{background:var(--metaui-panel);color:var(--metaui-accent);border-color:var(--metaui-rule);}\n',
     '.btn-primary{color:var(--metaui-button);}.btn-primary:hover,.btn-primary:focus{color:var(--metaui-button);background:var(--metaui-hover);border-color:var(--metaui-hover);}\n',
-    '.btn-primary.metaui-needs-run{background:var(--metaui-attention);border-color:var(--metaui-attention);color:white;}\n',
+    '.btn-primary.metaui-needs-run{background:var(--metaui-attention);border-color:var(--metaui-attention);color:var(--metaui-button);}\n',
     '.metaui-help>summary:hover{background:var(--metaui-tint);}.table>tbody>tr>td{border-color:var(--metaui-rule);}\n',
     'body table.dataTable tbody tr{background:var(--metaui-panel);color:var(--metaui-ink);}body .dataTables_wrapper .dataTables_length,body .dataTables_wrapper .dataTables_filter,body .dataTables_wrapper .dataTables_info{color:var(--metaui-ink);}body .dataTables_wrapper input,body .dataTables_wrapper select{background:var(--metaui-panel);color:var(--metaui-ink);border-color:var(--metaui-rule);}\n',
     '.modal-content,.shiny-notification{background:var(--metaui-panel);color:var(--metaui-ink);border-color:var(--metaui-rule);}.modal-header,.modal-footer{border-color:var(--metaui-rule);}.modal .close{color:var(--metaui-ink);opacity:1;text-shadow:none;}\n',

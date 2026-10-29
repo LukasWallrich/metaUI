@@ -57,7 +57,17 @@ async function readable(locator,label,pseudo=null) {
   await page.getByRole('tab',{name:'Forest Plot',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#foreststudies img')?.naturalWidth>0);
   await page.screenshot({path:path.join(evidence,'dark-forest.png')});
-  fs.writeFileSync(path.join(evidence,'dark-result.json'),JSON.stringify({ok:true,modal,sampleHeaders,paging,biasHeaders},null,2));
+  await page.getByRole('tab',{name:'Summary',exact:true}).click();
+  await page.evaluate(()=>{
+    const slider=$('#metaUI__filter_Year');
+    slider.data('ionRangeSlider').update({from:2002}); slider.trigger('change');
+  });
+  await page.waitForFunction(()=>document.querySelector('#apply_state')?.textContent.includes('Filters changed'));
+  const staleNotice=await readable(page.locator('#apply_state_box'),'Stale notice');
+  await readable(page.locator('#metaui_basis'),'Stale results banner');
+  await readable(page.locator('#go'),'Update action');
+  await page.screenshot({path:path.join(evidence,'dark-stale.png')});
+  fs.writeFileSync(path.join(evidence,'dark-result.json'),JSON.stringify({ok:true,modal,sampleHeaders,paging,biasHeaders,staleNotice},null,2));
   console.log('Dark design browser checks passed.');
 })().catch(async error=>{console.error(error);process.exitCode=1;if(page)await page.screenshot({path:path.join(evidence,'dark-failure.png')}).catch(()=>{});})
 .finally(async()=>{if(browser)await browser.close();});
