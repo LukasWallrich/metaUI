@@ -113,7 +113,11 @@ async function settledSample(effects) {
   await page.screenshot({path:path.join(evidence,'uploaded-summary.png')});
   // A single excluded year makes the next result three effects.
   await page.locator('#metaUI__filter_Year_include_NA').uncheck();
+  // This output starts hidden; it must resume when a filter changes.
+  await page.locator('#apply_state_box').waitFor({state:'visible'});
+  await page.waitForFunction(()=>document.querySelector('#apply_state')?.textContent.includes('Filters changed'));
   await page.locator('#go').click(); await settledSample(3);
+  await page.locator('#apply_state_box').waitFor({state:'hidden'});
   await page.locator('#resetFilters').click();
   await page.waitForFunction(()=>document.querySelector('#metaUI__filter_Group').selectedOptions.length===8);
   await page.locator('#go').click(); await settledSample(15);

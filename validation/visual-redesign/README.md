@@ -5,11 +5,13 @@
 At Lukas’s request, Opus 5.5 removed the slogan, three-step welcome, sidebar
 preamble, routine status confirmations and repeated instructions. It shortened
 labels across the app and moved technical explanations into existing disclosures.
-Scientific warnings, provenance and model distinctions remain. The original visual
+Scientific warnings, provenance and model distinctions remain. The browser check
+also verifies that the hidden sidebar notice appears after a filter change and
+disappears after reanalysis. The original visual
 review below describes the preceding revision; it is not a review of these cuts.
 
 Current screenshots: [start](unslop-start.png), [summary](unslop-summary.png),
-[mobile](unslop-mobile.png).
+[mobile](unslop-mobile.png), [changed filters](unslop-stale.png).
 
 
 The generated Shiny interface now separates selecting evidence, running models,
