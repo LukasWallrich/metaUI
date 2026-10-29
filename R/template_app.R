@@ -433,7 +433,7 @@ glue_string <- ('
     df <- df_filtered()
     counts <- attr(df, "metaUI_filter_report")
     paste0(counts$retained_rows, " of ", counts$available_rows, " effects selected",
-      if (filters_changed()) " • Out of date: filters changed" else "")
+      if (filters_changed()) " \\u2022 Out of date: filters changed" else "")
   })
 
   output$selection_status <- renderText({
