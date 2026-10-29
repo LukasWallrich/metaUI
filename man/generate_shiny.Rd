@@ -16,7 +16,8 @@ generate_shiny(
   ...,
   options = list(),
   overwrite = FALSE,
-  bayesian = NULL
+  bayesian = NULL,
+  design = NULL
 )
 }
 \arguments{
@@ -64,6 +65,8 @@ a character vector with all packages to display.}
 \item{overwrite}{Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.}
 
 \item{bayesian}{NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.}
+
+\item{design}{Optional settings from \code{\link[=app_design]{app_design()}}. Use \code{\link[=design_app]{design_app()}} to preview and export them.}
 }
 \value{
 With launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.

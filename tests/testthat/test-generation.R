@@ -28,6 +28,7 @@ test_that("headless app loads and runs the generated server", {
   expect_true(any(grepl("efsd <- sd(metaUI__df$metaUI__effect_size)", server_code, fixed = TRUE)))
   expect_true(file.exists(file.path(path, "www", "metaui.css")))
   shiny::testServer(env$server, {
+    expect_error(capture_filters(), class = "shiny.silent.error")
     z_range <- unlist(metaUI:::metaUI_slider_spec(d$metaUI__es_z, integer = FALSE)[c("min", "max")])
     session$setInputs(outliers_z_scores = z_range)
     expect_identical(output$apply_state, "")

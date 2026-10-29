@@ -81,6 +81,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' `NULL`, declares no primary model, and the app then says that it does not choose between estimators.
 #' @param filter_popups Named list of expandable filter-help content. Plain text is escaped; wrap trusted HTML in [htmltools::HTML()], for example `list(Year = htmltools::HTML("<i>Note:</i> Data collection year."))`.
 #' @param save_to_folder Folder for the generated code and data. Defaults to NA, which uses a temporary folder. A nonempty destination is refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.
+#' @param design Optional settings from [app_design()]. Use [design_app()] to preview and export them.
 #' @param bayesian NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
 #' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.
@@ -106,10 +107,11 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         models = get_model_tibble, primary_model = NULL, filter_popups = list(),
         save_to_folder = NA, launch_app = is.na(save_to_folder), ...,
-        options = list(), overwrite = FALSE, bayesian = NULL) {
+        options = list(), overwrite = FALSE, bayesian = NULL, design = NULL) {
 
   defaults <- list(max_forest_plot_rows = 200, shiny_theme = "yeti", selection_list_threshold = 6)
   opts <- utils::modifyList(defaults, options)
+  opts$design <- if (is.null(design)) NULL else validate_design(design)
   limit <- opts$max_forest_plot_rows
   if (!is.numeric(limit) || length(limit) != 1L || is.na(limit) ||
       !is.finite(limit) || limit < 1 || limit != floor(limit))
@@ -221,6 +223,13 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   for (asset in c("metaui.css", "metaui.js"))
     file.copy(system.file("template_code", asset, package="metaUI"),
               file.path(save_to_folder, "www", asset), overwrite = TRUE)
+  if (!is.null(opts$design)) writeLines(design_css(opts$design), file.path(save_to_folder, "www", "app-design.css"))
+  # Rebuilding without design settings must not retain a previous theme.
+  if (is.null(opts$design) && file.exists(file.path(save_to_folder, "www", "app-design.css")))
+    unlink(file.path(save_to_folder, "www", "app-design.css"))
+  if (!is.null(opts$design)) jsonlite::write_json(opts$design, file.path(save_to_folder, "design.json"), auto_unbox = TRUE, pretty = TRUE)
+  if (is.null(opts$design) && file.exists(file.path(save_to_folder, "design.json")))
+    unlink(file.path(save_to_folder, "design.json"))
   file.copy(system.file("template_code", "dmetar_contributions.R", package="metaUI"),
             file.path(save_to_folder, "dmetar_contributions.R"), overwrite = TRUE)
   if (is.character(models)) {

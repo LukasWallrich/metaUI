@@ -167,3 +167,38 @@ leave a notice and require manual analysis. Uploaded data require the workbook,
 which includes all computation inputs; their session-specific data are not encoded
 in URLs. Schema version 2 adds computation and Bayesian authoring; version 1
 continues to accept the original configuration fields.
+
+### Author design settings
+
+Run `metaUI::design_app()` to choose colours, font stacks, text size,
+spacing and panel corners. The helper previews an illustrative analysis and
+provides R and JSON downloads. Low-contrast choices keep the previous valid
+preview and disable export until corrected.
+
+Copy its R settings, then pass the resulting list to app creation:
+
+```r
+design <- metaUI::app_design(accent = "#69429A", font = "georgia",
+                            spacing = "compact", radius = 4)
+metaUI::generate_shiny(dataset, "My meta-analysis", design = design,
+                      save_to_folder = "my-app", launch_app = FALSE)
+```
+
+For `build_app()`, put the downloaded JSON object in the configuration's `design`
+field. Existing configurations and apps without a design retain their styling
+(`design = NULL`). The helper's default `app_design()` is an explicit
+new design; Reset choices restores the helper's initial settings, not legacy CSS.
+Apps with a design contain an editable `www/app-design.css` and a `design.json`
+record. Editing the record does not restyle an app: rebuild with the settings, or
+edit the CSS. These apps do not need the helper or metaUI installed to run.
+The design changes
+interface styling and the summary-comparison/forest plot colours, not models or
+selections. Fonts come from each reader's device, with explicit fallbacks; no font
+files from
+the author's machine are needed for deployment. System sans uses the device
+interface font. Named fonts such as Georgia may be substituted on other devices.
+These choices do not require font downloads, though the underlying Bootstrap theme
+may still request external stylesheets. Other analytical plots retain
+their plotting packages' styles. The contrast check covers text and accent
+against page, panel and derived tinted backgrounds, not an accessibility audit
+of author-supplied HTML or arbitrary Bootstrap themes.

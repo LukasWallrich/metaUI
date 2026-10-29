@@ -1,5 +1,14 @@
 # metaUI 0.2.0
 
+## Author design helper
+
+- `design_app()` previews colours, fonts, type size, spacing and corners and exports
+  R/JSON settings. `app_design()` validates settings and contrast.
+- `generate_shiny(design = ...)` and the JSON `design` field apply those settings
+  to generated apps. Existing apps/configurations keep their default appearance.
+
+## Other changes
+
 * Add author-defined effect-size computations with explicit scale/variance contracts,
   consistent row selection, comparisons, provenance and workbook restoration.
 * Add opt-in deterministic Bayesian normal-normal analysis, posterior median and

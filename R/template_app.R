@@ -207,6 +207,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
   fluidPage(
     theme = shinythemes::shinytheme("{opts$shiny_theme}"),
     tags$head(tags$link(rel = "stylesheet", href = "metaui.css"), tags$script(src = "metaui.js")),
+    {if (!is.null(opts$design)) \'tags$head(tags$link(rel = "stylesheet", href = "app-design.css")),\' else ""}
     shinyjs::useShinyjs(),
     tags$a(class = "metaui-skip", href = "#metaui_results", "Skip to results"),
     # Application title
@@ -227,7 +228,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
         {generate_ui_filters(data, filter_popups, any_filters, opts = opts)}
         tags$details(class = "metaui-help metaui-advanced", tags$summary("Exclude extreme effects"), div(id = "z_score_filter"), zscore_help)),
         div(class = "metaui-actions",
-          actionButton("go", "Analyze data", class = "btn-primary"),
+          shinyjs::disabled(actionButton("go", "Analyze data", class = "btn-primary")),
           actionButton("resetFilters", "Reset filters")),
         div(id = "apply_state_box", class = "metaui-apply-state", role = "status", `aria-live` = "polite",
           textOutput("apply_state")),
@@ -371,7 +372,12 @@ glue_string <- ('
       })
 
 
+  observe({
+    shinyjs::toggleState("go", condition = length(input[["outliers_z_scores"]]) == 2L)
+  })
+
   capture_filters <- function() {
+    req(length(input[["outliers_z_scores"]]) == 2L)
     filter_selections <- tibble::tibble(id = "outliers_z_scores", selection = input[["outliers_z_scores"]])
     <FILTER>
     for (i in filters) {
@@ -623,17 +629,22 @@ glue_string <- ('
     bound <- tryCatch(chosen_bound(), error = function(e) NULL)
     ggplot2::ggplot(estimates_explo_agg, ggplot2::aes(y = Model, colour = role)) +
       {if (!is.null(bound)) ggplot2::annotate("rect", xmin = -bound, xmax = bound,
-        ymin = -Inf, ymax = Inf, fill = "#dcebf4", alpha = .6)} +
+        ymin = -Inf, ymax = Inf, fill = "<<if (is.null(opts$design)) "#dcebf4" else design_mix(opts$design$accent, opts$design$surface, .06)>>", alpha = <<if (is.null(opts$design)) .6 else 1>>)} +
       ggplot2::geom_vline(xintercept = 0, linetype = 2, colour = "grey55") +
       ggplot2::geom_errorbar(ggplot2::aes(xmin = LCL, xmax = UCL), width = .25, na.rm = TRUE) +
       ggplot2::geom_point(ggplot2::aes(x = es, size = role)) +
-      ggplot2::scale_colour_manual(values = c(primary = "#096b74", exploration = "#506477"), guide = "none") +
+      ggplot2::scale_colour_manual(values = c(primary = "<<if (is.null(opts$design)) "#096b74" else opts$design$accent>>", exploration = "<<if (is.null(opts$design)) "#506477" else opts$design$text>>"), guide = "none") +
       ggplot2::scale_size_manual(values = c(primary = 3.4, exploration = 2.4), guide = "none") +
       ggplot2::labs(x = stringr::str_wrap(x_label, 34), y = NULL) +
       ggplot2::theme_minimal(base_size = 14) +
       ggplot2::scale_y_discrete(limits = rev(unique(estimates_explo_agg$Model))) +
       ggplot2::theme(panel.grid.major.y = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(),
-                     axis.text.y = ggplot2::element_text(colour = "#22303c", hjust = 1, lineheight = .9))
+                     panel.grid.major.x = ggplot2::element_line(colour = "<<if (is.null(opts$design)) "#EBEBEB" else design_mix(opts$design$text, opts$design$surface, .18)>>"),
+                     text = ggplot2::element_text(colour = "<<if (is.null(opts$design)) "#22303c" else opts$design$text>>"),
+                     axis.text = ggplot2::element_text(colour = "<<if (is.null(opts$design)) "#22303c" else opts$design$text>>"),
+                     plot.background = ggplot2::element_rect(fill = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", colour = NA),
+                     panel.background = ggplot2::element_rect(fill = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", colour = NA),
+                     axis.text.y = ggplot2::element_text(colour = "<<if (is.null(opts$design)) "#22303c" else opts$design$text>>", hjust = 1, lineheight = .9))
   }, height = function() 65 + 38 * max(1, sum(estimatesfiltered()$status == "ok"), na.rm = TRUE))
 
   output$primary_estimate <- renderUI({
@@ -983,7 +994,7 @@ glue_string <- ('
       need(nrow(df) <= <<opts$max_forest_plot_rows>>, forest_limit_message))
     metaUI_forest_rows(df, estimatesfiltered(), models_to_run)
   })
-  forest_plot <- reactive(metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1]))
+  forest_plot <- reactive(metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1], accent = "<<if (is.null(opts$design)) "#096b74" else opts$design$accent>>", ink = "<<if (is.null(opts$design)) "#182f46" else opts$design$text>>", background = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", interval_colour = "<<if (is.null(opts$design)) "#52616d" else opts$design$text>>", grid_colour = "<<if (is.null(opts$design)) "#EBEBEB" else design_mix(opts$design$text, opts$design$surface, .18)>>"))
   forest_height <- function() 100 + 23 * nrow(forest_rows())
   output$foreststudies <- renderPlot(print(forest_plot()), height = forest_height, width = function() max(760, session$clientData$output_foreststudies_width))
   output$forest_pdf <- downloadHandler(filename = function() "forest-plot.pdf", content = function(file) {
