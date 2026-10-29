@@ -315,7 +315,7 @@ metaUI_forest_rows <- function(df, estimates, models = NULL) {
   rows
 }
 
-metaUI_forest_plot <- function(rows, scale, accent = "#096b74", ink = "#182f46", background = "#FFFFFF", interval_colour = "#52616d") {
+metaUI_forest_plot <- function(rows, scale, accent = "#096b74", ink = "#182f46", background = "#FFFFFF", interval_colour = "#52616d", grid_colour = "#EBEBEB") {
   ggplot2::ggplot(rows, ggplot2::aes(x = .data$es, y = .data$row)) +
     ggplot2::geom_vline(xintercept = 0, colour = "grey70", linetype = 2) +
     ggplot2::geom_segment(ggplot2::aes(x = .data$LCL, xend = .data$UCL, yend = .data$row), colour = interval_colour) +
@@ -327,7 +327,8 @@ metaUI_forest_plot <- function(rows, scale, accent = "#096b74", ink = "#182f46",
     ggplot2::theme(text = ggplot2::element_text(colour = ink),
       axis.text = ggplot2::element_text(size = 12, colour = ink),
       plot.background = ggplot2::element_rect(fill = background, colour = NA),
-      panel.background = ggplot2::element_rect(fill = background, colour = NA), panel.grid.major.y = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank())
+      panel.background = ggplot2::element_rect(fill = background, colour = NA),
+      panel.grid.major.x = ggplot2::element_line(colour = grid_colour), panel.grid.major.y = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank())
 }
 
 # Descriptive containment of existing intervals, without refitting or assuming

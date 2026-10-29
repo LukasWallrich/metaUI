@@ -70,11 +70,13 @@ test_that("helper refuses invalid exports and recovers after correction", {
 test_that("dark palettes keep the forest labels on the selected surface", {
   d <- app_design(accent = "#90CAF9", text = "#F7F9FC", background = "#131C27", surface = "#202C3A")
   rows <- data.frame(es = .2, LCL = .1, UCL = .3, row = 1, label = "Example", kind = "Selected effect")
-  plot <- metaUI:::metaUI_forest_plot(rows, "SMD", accent = d$accent, ink = d$text, background = d$surface, interval_colour = d$text)
+  plot <- metaUI:::metaUI_forest_plot(rows, "SMD", accent = d$accent, ink = d$text, background = d$surface, interval_colour = d$text, grid_colour = metaUI:::design_mix(d$text, d$surface, .18))
   expect_equal(plot$layers[[2]]$aes_params$colour, d$text)
   expect_gte(metaUI:::design_contrast(plot$layers[[2]]$aes_params$colour, d$surface), 3)
   expect_equal(plot$theme$plot.background$fill, d$surface)
   expect_equal(plot$theme$axis.text$colour, d$text)
+  expect_lt(metaUI:::design_contrast(plot$theme$panel.grid.major.x$colour, d$surface),
+    metaUI:::design_contrast(d$text, d$surface))
   expect_equal(plot$data$es, rows$es)
   expect_true(all(metaUI:::design_contrasts(d) >= 4.5))
 })
@@ -86,4 +88,34 @@ test_that("presets and platform font stacks describe exported settings", {
   expect_identical(metaUI:::design_palette_name(app_design(accent = "#7B3E68")), "custom")
   expect_match(metaUI:::design_fonts()[["system"]], "system-ui", fixed = TRUE)
   expect_type(app_design(text_size = 18L)$text_size, "double")
+})
+
+test_that("generated equivalence bands keep plot marks readable", {
+  find_annotation <- function(expr) {
+    if (missing(expr)) return(NULL)
+    if (!is.call(expr) && !is.expression(expr) && !is.pairlist(expr)) return(NULL)
+    if (is.call(expr) && identical(paste(deparse(expr[[1]]), collapse = ""), "ggplot2::annotate")) return(expr)
+    for (child in as.list(expr)) {
+      found <- find_annotation(child)
+      if (!is.null(found)) return(found)
+    }
+    NULL
+  }
+  dark <- app_design(accent = "#90CAF9", text = "#F7F9FC", background = "#131C27", surface = "#202C3A")
+  for (design in list(NULL, app_design(), dark)) {
+    dest <- tempfile("design-band-")
+    generate_shiny(prepared(), "Band fixture", design = design, save_to_folder = dest, launch_app = FALSE)
+    annotation <- as.list(find_annotation(parse(file.path(dest, "server.R"))))
+    expect_false(is.null(annotation$fill))
+    if (is.null(design)) {
+      expect_identical(annotation$fill, "#dcebf4")
+      expect_equal(annotation$alpha, .6)
+    } else {
+      # Test the emitted plot values, including alpha blending on its panel.
+      band <- metaUI:::design_mix(annotation$fill, design$surface, annotation$alpha)
+      expect_gte(metaUI:::design_contrast(design$accent, band), 3)
+      expect_gte(metaUI:::design_contrast(design$text, band), 3)
+    }
+    unlink(dest, recursive = TRUE)
+  }
 })

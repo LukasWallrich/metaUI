@@ -38,7 +38,8 @@ the interface font selection does not change plot fonts or statistical results.
   invalid contrast, reset, phone preview and mobile document overflow. It also
   fits the generated app's unchanged synthetic primary model (estimate 0.24).
 - `tools/design-dark-smoke.cjs` exercises real dark dialogs, DataTables headers,
-  pagination and sort indicators, selectize and numeric inputs, and forest output.
+  pagination and sort indicators, selectize and numeric inputs, equivalence bands,
+  stale states and forest output.
   `tools/design-browser.cjs` owns the helper/light/dark server lifecycle; CI now
   generates these fixtures and runs both design browser suites.
 - The existing generated-app browser smoke covers exports, workbook round trips,

@@ -627,7 +627,7 @@ glue_string <- ('
     bound <- tryCatch(chosen_bound(), error = function(e) NULL)
     ggplot2::ggplot(estimates_explo_agg, ggplot2::aes(y = Model, colour = role)) +
       {if (!is.null(bound)) ggplot2::annotate("rect", xmin = -bound, xmax = bound,
-        ymin = -Inf, ymax = Inf, fill = "#dcebf4", alpha = .6)} +
+        ymin = -Inf, ymax = Inf, fill = "<<if (is.null(opts$design)) "#dcebf4" else design_mix(opts$design$accent, opts$design$surface, .06)>>", alpha = <<if (is.null(opts$design)) .6 else 1>>)} +
       ggplot2::geom_vline(xintercept = 0, linetype = 2, colour = "grey55") +
       ggplot2::geom_errorbar(ggplot2::aes(xmin = LCL, xmax = UCL), width = .25, na.rm = TRUE) +
       ggplot2::geom_point(ggplot2::aes(x = es, size = role)) +
@@ -637,6 +637,7 @@ glue_string <- ('
       ggplot2::theme_minimal(base_size = 14) +
       ggplot2::scale_y_discrete(limits = rev(unique(estimates_explo_agg$Model))) +
       ggplot2::theme(panel.grid.major.y = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(),
+                     panel.grid.major.x = ggplot2::element_line(colour = "<<if (is.null(opts$design)) "#EBEBEB" else design_mix(opts$design$text, opts$design$surface, .18)>>"),
                      text = ggplot2::element_text(colour = "<<if (is.null(opts$design)) "#22303c" else opts$design$text>>"),
                      axis.text = ggplot2::element_text(colour = "<<if (is.null(opts$design)) "#22303c" else opts$design$text>>"),
                      plot.background = ggplot2::element_rect(fill = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", colour = NA),
@@ -979,7 +980,7 @@ glue_string <- ('
       need(nrow(df) <= <<opts$max_forest_plot_rows>>, forest_limit_message))
     metaUI_forest_rows(df, estimatesfiltered(), models_to_run)
   })
-  forest_plot <- reactive(metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1], accent = "<<if (is.null(opts$design)) "#096b74" else opts$design$accent>>", ink = "<<if (is.null(opts$design)) "#182f46" else opts$design$text>>", background = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", interval_colour = "<<if (is.null(opts$design)) "#52616d" else opts$design$text>>"))
+  forest_plot <- reactive(metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1], accent = "<<if (is.null(opts$design)) "#096b74" else opts$design$accent>>", ink = "<<if (is.null(opts$design)) "#182f46" else opts$design$text>>", background = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", interval_colour = "<<if (is.null(opts$design)) "#52616d" else opts$design$text>>", grid_colour = "<<if (is.null(opts$design)) "#EBEBEB" else design_mix(opts$design$text, opts$design$surface, .18)>>"))
   forest_height <- function() 100 + 23 * nrow(forest_rows())
   output$foreststudies <- renderPlot(print(forest_plot()), height = forest_height, width = function() max(760, session$clientData$output_foreststudies_width))
   output$forest_pdf <- downloadHandler(filename = function() "forest-plot.pdf", content = function(file) {

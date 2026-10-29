@@ -54,6 +54,10 @@ async function readable(locator,label,pseudo=null) {
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.getByText('Assess practical equivalence',{exact:true}).click();
   await readable(page.locator('#sesoi'),'Equivalence input');
+  const beforeBound=await page.locator('#model_comparison img').getAttribute('src');
+  await page.locator('#sesoi').fill('0.3');
+  await page.waitForFunction(before=>{const img=document.querySelector('#model_comparison img');return img?.naturalWidth>0&&img.src!==before;},beforeBound);
+  await page.screenshot({path:path.join(evidence,'dark-equivalence.png')});
   await page.getByRole('tab',{name:'Forest Plot',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#foreststudies img')?.naturalWidth>0);
   await page.screenshot({path:path.join(evidence,'dark-forest.png')});
@@ -66,6 +70,7 @@ async function readable(locator,label,pseudo=null) {
   const staleNotice=await readable(page.locator('#apply_state_box'),'Stale notice');
   await readable(page.locator('#metaui_basis'),'Stale results banner');
   await readable(page.locator('#go'),'Update action');
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('#go')).outlineStyle==='dashed');
   await page.screenshot({path:path.join(evidence,'dark-stale.png')});
   fs.writeFileSync(path.join(evidence,'dark-result.json'),JSON.stringify({ok:true,modal,sampleHeaders,paging,biasHeaders,staleNotice},null,2));
   console.log('Dark design browser checks passed.');

@@ -123,7 +123,7 @@ design_css <- function(design) {
     '.nav-tabs>li>a:hover,.table>thead>tr>th,.table-striped>tbody>tr:nth-of-type(odd){background:var(--metaui-surface);}\n',
     '.metaui-actions #resetFilters,.metaui-export-actions .btn,.metaui-share .btn{background:var(--metaui-panel);color:var(--metaui-accent);border-color:var(--metaui-rule);}\n',
     '.btn-primary{color:var(--metaui-button);}.btn-primary:hover,.btn-primary:focus{color:var(--metaui-button);background:var(--metaui-hover);border-color:var(--metaui-hover);}\n',
-    '.btn-primary.metaui-needs-run{background:var(--metaui-attention);border-color:var(--metaui-attention);color:var(--metaui-button);}\n',
+    '.btn-primary.metaui-needs-run{background:var(--metaui-attention);border-color:var(--metaui-attention);color:var(--metaui-button);outline:2px dashed var(--metaui-accent);outline-offset:3px;}\n',
     '.metaui-help>summary:hover{background:var(--metaui-tint);}.table>tbody>tr>td{border-color:var(--metaui-rule);}\n',
     'body table.dataTable tbody tr{background:var(--metaui-panel);color:var(--metaui-ink);}body .dataTables_wrapper .dataTables_length,body .dataTables_wrapper .dataTables_filter,body .dataTables_wrapper .dataTables_info{color:var(--metaui-ink);}body .dataTables_wrapper input,body .dataTables_wrapper select{background:var(--metaui-panel);color:var(--metaui-ink);border-color:var(--metaui-rule);}\n',
     '.modal-content,.shiny-notification{background:var(--metaui-panel);color:var(--metaui-ink);border-color:var(--metaui-rule);}.modal-header,.modal-footer{border-color:var(--metaui-rule);}.modal .close{color:var(--metaui-ink);opacity:1;text-shadow:none;}\n',
