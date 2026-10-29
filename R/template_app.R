@@ -99,13 +99,15 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
 
     } else if (is.factor(data[[filter_col]])) {
 
-      choices <- levels(data[[filter_col]]) %>% na.omit()
+      # Serialise as R code so levels containing quotes or backslashes stay valid
+      levels_ <- levels(data[[filter_col]]) %>% na.omit() %>% as.character()
+      choices <- paste(deparse(levels_), collapse = "\n")
 
-      out <- glue::glue('{if (length(choices) < opts$selection_list_threshold) "checkboxGroupInput(" else "shinyWidgets::pickerInput(multiple = TRUE, options = list(`actions-box` = TRUE), "} "{filter_col %>% stringr::str_replace_all(" ", "_")}",
+      out <- glue::glue('{if (length(levels_) < opts$selection_list_threshold) "checkboxGroupInput(" else "shinyWidgets::pickerInput(multiple = TRUE, options = list(`actions-box` = TRUE), "} "{filter_col %>% stringr::str_replace_all(" ", "_")}",
       tagList("{stringr::str_remove(filter_col, rm_prefix)}",
       {help}),
-          choices = c("{glue::glue_collapse(choices, sep = \'", "\')}"),
-        selected = c("{glue::glue_collapse(choices, sep = \'", "\')}")
+          choices = {choices},
+        selected = {choices}
         )')
     } else {
       stop("Filter/moderator variables must be numeric or factors. This check failed first for ", filter_col)
@@ -224,7 +226,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
           paste(deparse(metaUI_computations(data)), collapse = "\n"), \', selected = "primary"),\nuiOutput("computation_note"),\') else ""}
         div(id = "filters",
         {generate_ui_filters(data, filter_popups, any_filters, opts = opts)}
-        tags$details(class = "metaui-help metaui-advanced", tags$summary("Exclude extreme effects"), uiOutput("z_score_filter"), zscore_help)),
+        tags$details(class = "metaui-help metaui-advanced", tags$summary("Exclude extreme effects"), div(id = "z_score_filter"), zscore_help)),
         div(class = "metaui-actions",
           shinyjs::disabled(actionButton("go", "Analyze data", class = "btn-primary")),
           actionButton("resetFilters", "Reset filters")),
@@ -796,16 +798,25 @@ glue_string <- ('
     }
 
     if ("URL" %in% names(out)) {
-      out <- out %>% dplyr::mutate(URL = glue::glue("<a href={URL}>{URL}</a>"))
+      out$URL <- vapply(out$URL, function(url) if (is.na(url) || url == "") "" else
+        as.character(tags$a(href = url, target = "_blank", rel = "noopener", url)), character(1))
     }
 
-    out %>% DT::datatable(
+    # Round non-integer numeric columns: effect sizes to 3 decimals, moderators to 2
+    decimals <- names(out)[vapply(out, function(x) is.numeric(x) && any(x != round(x), na.rm = TRUE), logical(1))]
+    decimals <- setdiff(decimals, "Effect size")
+
+    table <- out %>% DT::datatable(
       rownames = FALSE, options = list(scrollX = TRUE),
+      escape = setdiff(names(out), "URL"), # URL holds links built (and escaped) above
       caption = tags$caption(
         style = "caption-side: bottom; text-align: left; margin: 8px 0;",
         glue::glue("Effect size: {metaUI_eff_size_type_label}")
       )
-    )
+    ) %>%
+      DT::formatRound("Effect size", digits = 3)
+    if (length(decimals)) table <- DT::formatRound(table, decimals, digits = 2)
+    table
   })
 
  <FILTER>
@@ -932,7 +943,7 @@ glue_string <- ('
 
     }
 
-    modtable %>% DT::datatable(rownames = FALSE, options = list(dom = "t", scrollX = TRUE, ordering = FALSE), escape = FALSE)
+    modtable %>% DT::datatable(rownames = FALSE, options = list(dom = "t", paging = FALSE, scrollX = TRUE, ordering = FALSE), escape = FALSE)
   })
 
   output$moderation_text <- shiny::renderText({
@@ -952,12 +963,15 @@ glue_string <- ('
       metaUI_code_multilevel, df, function() metaUI_multilevel_fit(df))
 
     het <- metaUI_heterogeneity(metapp_total, df)
+    het[c("study_variance", "effect_variance", "total_variance")] <-
+      lapply(het[c("study_variance", "effect_variance", "total_variance")], round_, digits = 4)
     het$Q <- round(het$Q, 2)
     het$Q_p <- fmt_p(het$Q_p, include_equal = FALSE)
 
-    names(het) <- c("Study-level tau^2", "Effect-level tau^2 (within studies)", "Total tau^2", "Q", "p (Q)", "Variance components")
+    # rma.mv variance components are sigma^2 , not tau^2
+    names(het) <- c("&sigma;<sup>2</sup> between studies", "&sigma;<sup>2</sup> within studies", "Total &sigma;<sup>2</sup>", "Q", "p (Q)", "Variance components")
     het
-  }, digits = 3)
+  }, digits = 2, sanitize.text.function = function(x) x)
 
   # FOREST PLOT FOR ALL INCLUDED STUDIES ------------------------------------
   forest_limit_message <- "Forest plots are limited to <<opts$max_forest_plot_rows>> effects. Narrow the selection, or download the data to plot them elsewhere."
@@ -1000,7 +1014,7 @@ glue_string <- ('
   meta_agg <- reactive({
     df_agg <- df_agg()
 
-    meta::metagen(
+    fit <- tryCatch(meta::metagen(
       TE = metaUI__effect_size,
       seTE = metaUI__se,
       data = df_agg,
@@ -1011,14 +1025,21 @@ glue_string <- ('
       method.random.ci = "HK",
       prediction = TRUE,
       sm = df_agg$metaUI__es_type[1]
-    )
+    ), error = function(e) e)
+    # Build the message only on failure: need() evaluates its message eagerly
+    if (inherits(fit, "error")) {
+      shiny::validate(shiny::need(FALSE, paste(
+        "The random-effects model for the funnel plot and Egger test could not be estimated for this selection:", conditionMessage(fit)
+      )))
+    }
+    fit
   })
 
   output$funnel <- renderPlot({
     meta_agg <- meta_agg()
 
     metafor::funnel(meta_agg, xlab = metaUI_eff_size_type_label, studlab = FALSE, contour = .95, col.contour = "light grey")
-  })
+  }, height = 400) # fixed: after an error the collapsed container would otherwise set the next plot height
 
   output$eggers <- DT::renderDataTable({
     meta_agg <- meta_agg()
@@ -1080,8 +1101,9 @@ glue_string <- ('
   output$violin <- plotly::renderPlotly({
     df <- df_filtered()
 
-    efm <- mean(df$metaUI__effect_size)
-    efsd <- sd(df$metaUI__effect_size)
+    # Standardise against the built dataset, like the z-score filter (metaUI__es_z)
+    efm <- mean(metaUI__df$metaUI__effect_size)
+    efsd <- sd(metaUI__df$metaUI__effect_size)
 
     # Outliers in boxplot are quartiles + 1.5 * IQR - so cutsoffs calculated here to show points with labels
     qs <- quantile(df$metaUI__effect_size, c(.25, .75))
@@ -1114,7 +1136,11 @@ glue_string <- ('
       title = "Standardized effect size (z-score)"
     )
 
-    plotly_plot <- plotly::ggplotly(violinplot, tooltip = c("y", "group")) %>%
+    plotly_plot <- plotly::ggplotly(violinplot, tooltip = c("y", "group"))
+    # Align the z-axis with the effect-size axis rather than letting plotly range it separately
+    ay$range <- (plotly_plot$x$layout$yaxis$range - efm) / efsd
+
+    plotly_plot <- plotly_plot %>%
       plotly::config(modeBarButtons = list(list("toImage")), displaylogo = FALSE) %>%
       plotly::add_lines(
         x = ~1, y = ~ (metaUI__effect_size - efm) / efsd, colors = NULL, yaxis = "y2",

@@ -42,6 +42,8 @@ h4 { font-size: 18px; margin: 22px 0 8px; }
 /* A plot replaced by a "not estimated" message should not keep its blank plot height */
 .shiny-plot-output.shiny-output-error { height: auto !important; min-height: 0; }
 .shiny-spinner-output-container:has(> .shiny-output-error) { min-height: 0 !important; height: auto !important; }
+/* htmlwidgets (DT, plotly) place errors absolutely with zero height, so they overlap the content below */
+.htmlwidgets-error.shiny-output-error { position: static !important; height: auto !important; }
 
 /* Primary analysis declared by the authors */
 .metaui-primary { margin: 4px 0 16px; padding: 12px 16px; border: 1px solid var(--metaui-rule); border-left: 4px solid var(--metaui-accent); border-radius: 3px; max-width: 70ch; }

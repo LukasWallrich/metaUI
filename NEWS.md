@@ -15,6 +15,21 @@
   central credible intervals, disclosed priors and heterogeneity-prior sensitivity.
 * Share applied selections through build-specific validated URLs; uploaded datasets
   remain workbook-only, and restoration waits for browser acknowledgement.
+* Render the z-score slider container as a plain `div` so it is no longer greyed out.
+* In the list of effect sizes, round effect sizes to three decimals and other
+  non-integer numeric columns to two, and render URL/DOI columns as links rather
+  than raw HTML.
+* Write categorical filter levels into the generated `ui.R` as escaped R strings;
+  a level containing a double quote previously stopped the app from starting.
+* Show a clear message when the random-effects model behind the funnel plot and
+  Egger's test does not converge, instead of a raw error. Keep the funnel plot at a
+  fixed height so it recovers after an error, and stop widget error messages
+  overlapping the content below them.
+* Remove the unused helpers `signif_floor()`, `signif_ceiling()` and `allglobal()`.
+* Standardise the outlier violin's z-axis against the built dataset, as the z-score
+  filter does, and align it with the effect-size axis. Show every moderation-table
+  row (paging hid levels beyond the 10th and the kurtosis row). Label heterogeneity
+  variance components as sigma-squared, rounded to four decimals.
 * Extend declarative authoring to schema version 2, retaining version 1 behavior.
 * Make package examples runnable without launching an app and prepare release checks.
 * Optimise p-curve without changing results and reuse compatible fitted objects.
