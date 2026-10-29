@@ -19,6 +19,7 @@ test_that("headless app loads and runs the generated server", {
   expect_s3_class(env$ui, "shiny.tag.list")
   expect_true(file.exists(file.path(path, "www", "metaui.css")))
   shiny::testServer(env$server, {
+    expect_error(capture_filters(), class = "shiny.silent.error")
     z_range <- c(metaUI:::signif_floor(min(d$metaUI__es_z)), metaUI:::signif_ceiling(max(d$metaUI__es_z)))
     session$setInputs(outliers_z_scores = z_range)
     expect_identical(output$apply_state, "")

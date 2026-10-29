@@ -114,3 +114,10 @@
 * Added explicit option to include or exclude NAs on filters and report NA share in Sample descriptives
 * Added `Reset` button to reset all filters
 * Added option to add popups to filter, by specifying `filter_popups` in `generate_shiny()`
+
+## Author design helper
+
+- `design_app()` previews colours, fonts, type size, spacing and corners and exports
+  R/JSON settings. `app_design()` validates settings and contrast.
+- `generate_shiny(design = ...)` and the JSON `design` field apply those settings
+  to generated apps. Existing apps/configurations keep their default appearance.

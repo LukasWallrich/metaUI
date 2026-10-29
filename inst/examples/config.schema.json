@@ -394,6 +394,53 @@
           "maximum": 50
         }
       }
+    },
+    "design": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional app_design() settings for interface styling and summary plot colours.",
+      "properties": {
+        "accent": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "background": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "surface": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "text": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "font": {
+          "enum": [
+            "system",
+            "arial",
+            "verdana",
+            "georgia"
+          ]
+        },
+        "text_size": {
+          "type": "number",
+          "minimum": 14,
+          "maximum": 20
+        },
+        "spacing": {
+          "enum": [
+            "comfortable",
+            "compact"
+          ]
+        },
+        "radius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16
+        }
+      }
     }
   },
   "allOf": [

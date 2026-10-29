@@ -14,7 +14,7 @@ build_app <- function(config) {
     config <- jsonlite::fromJSON(config, simplifyVector = FALSE)
   }
   if (!is.list(config) || is.null(names(config))) stop("Configuration must be a named list or JSON file.")
-  allowed <- c("schema_version", "data", "mapping", "dataset_name", "output", "primary_model", "options", "about", "bayesian")
+  allowed <- c("schema_version", "data", "mapping", "dataset_name", "output", "primary_model", "options", "about", "bayesian", "design")
   unknown <- setdiff(names(config), allowed)
   if (length(unknown)) stop("Unknown configuration fields: ", paste(unknown, collapse = ", "))
   if (length(config$schema_version) != 1L || !is.numeric(config$schema_version) || !config$schema_version %in% c(1, 2)) stop("schema_version must be 1 or 2")
@@ -39,5 +39,5 @@ build_app <- function(config) {
   do.call(generate_shiny, c(list(dataset = dataset, dataset_name = config$dataset_name,
                                 save_to_folder = resolve(config$output), launch_app = FALSE,
                                 primary_model = config$primary_model,
-                                bayesian = config$bayesian, options = if (is.null(config$options)) list() else config$options), about))
+                                bayesian = config$bayesian, design = config$design, options = if (is.null(config$options)) list() else config$options), about))
 }
