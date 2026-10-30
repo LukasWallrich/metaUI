@@ -86,10 +86,14 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' `NULL`, declares no primary model, and the app then says that it does not choose between estimators.
 #' @param filter_popups Named list of expandable filter-help content. Plain text is escaped; wrap trusted HTML in [htmltools::HTML()], for example `list(Year = htmltools::HTML("<i>Note:</i> Data collection year."))`.
 #' @param save_to_folder Folder for the generated code and data. Defaults to NA, which uses a temporary folder. A nonempty destination is refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.
+#' @param static_folder Optional destination folder for a static shinylive site. Requires
+#'   the suggested shinylive package. The app is generated in save_to_folder first
+#'   (a temporary folder when NA), then exported with precomputed results. Must
+#'   be outside save_to_folder. Static generation never launches the app.
 #' @param design Optional settings from [app_design()]. Use [design_app()] to preview and export them.
 #' @param bayesian NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
-#' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.
+#' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA and static_folder is NULL, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.
 #' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
 #'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 200. If more effect sizes are selected, a message is shown instead.
 #'   - `shiny_theme` Character. One of the shinythemes that style the app. Defaults to "yeti", see `?shinythemes::shinythemes` for all options.
@@ -98,7 +102,13 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @inheritParams create_about
 #' @inheritDotParams create_about
 #'
-#' @returns With launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
+#' @details
+#' Use `generate_shiny(static_folder = ...)` to generate and publish static files
+#' in one step. After editing the generated app files, use [export_static()] to
+#' re-export them; regenerating the app would overwrite those edits.
+#'
+#' @returns With static_folder supplied, invisibly returns the static site path.
+#'   Otherwise, with launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
 #' @examples
 #' raw <- data.frame(study = letters[1:6], d = c(.1, .3, -.1, .4, .2, .5),
 #'                   vi = c(.02, .03, .02, .04, .01, .05))
@@ -111,8 +121,14 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 
 generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         models = get_model_tibble, primary_model = NULL, filter_popups = list(),
-        save_to_folder = NA, launch_app = is.na(save_to_folder), ...,
-        options = list(), overwrite = FALSE, bayesian = NULL, design = NULL) {
+        save_to_folder = NA, launch_app = is.na(save_to_folder) && is.null(static_folder), ...,
+        options = list(), overwrite = FALSE, bayesian = NULL, design = NULL,
+        static_folder = NULL) {
+
+  if (!is.null(static_folder)) {
+    validate_static_folder(static_folder, save_to_folder)
+    launch_app <- FALSE
+  }
 
   defaults <- list(max_forest_plot_rows = 200, shiny_theme = "yeti", selection_list_threshold = 6)
   opts <- utils::modifyList(defaults, options)
@@ -280,6 +296,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   writeLines(generate_global.R(eff_size_type_label, bayesian, uses_meta), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
 
+  if (!is.null(static_folder))
+    return(invisible(export_static(save_to_folder, static_folder, overwrite = overwrite)))
   if (!launch_app) return(invisible(normalizePath(save_to_folder)))
   shinyAppDir(save_to_folder)
 }
@@ -438,3 +456,38 @@ generate_models.R <- function(models_to_run) {
              ')
 
 }
+
+
+# Validate before writing any generated files, including destinations not yet created.
+validate_static_folder <- function(static_folder, save_to_folder) {
+  if (!is.character(static_folder) || length(static_folder) != 1L ||
+      is.na(static_folder) || !nzchar(static_folder))
+    stop("static_folder must be a nonempty scalar string.")
+  if (!requireNamespace("shinylive", quietly = TRUE))
+    stop('Static generation requires the shinylive package: install.packages("shinylive").')
+  canonical <- function(path) {
+    path <- path.expand(path)
+    if (file.exists(path)) return(normalizePath(path, winslash = "/", mustWork = TRUE))
+    parent <- dirname(path)
+    if (identical(parent, path)) return(path)
+    parent <- Recall(parent)
+    leaf <- basename(path)
+    if (leaf == "..") return(dirname(parent))
+    if (leaf == ".") return(parent)
+    file.path(parent, leaf)
+  }
+  if (!is.na(save_to_folder)) {
+    source <- canonical(save_to_folder)
+    target <- canonical(static_folder)
+    if (identical(source, target) || startsWith(target, paste0(sub("/+$", "", source), "/")))
+      stop("static_folder must be outside save_to_folder (not equal to or inside it).")
+  }
+}
+
+#' @name export_static
+#' @rdname export_static
+#' @details
+#' Use `generate_shiny(static_folder = ...)` for one-step generation and static
+#' export. After editing the generated app files, call `export_static()` to
+#' re-export the edited app; regenerating would overwrite those edits.
+NULL

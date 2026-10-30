@@ -1,11 +1,16 @@
 #' Build an app from a declarative JSON configuration
 #'
-#' Relative data and output paths resolve against the configuration file. Building
+#' Relative data, output and static_folder paths resolve against the configuration file. Building
 #' never launches or deploys an app. The configuration is deliberately limited to
 #' data mapping, scientific scale/direction, an optional declared primary model,
 #' metadata, and presentation options.
 #' @param config Path to JSON, or a named list with the same schema.
-#' @return Invisibly, the generated app directory.
+#' @details
+#' Set the optional `static_folder` string to generate a static shinylive site
+#' in one step, using the same semantics as [generate_shiny()]. The `output`
+#' folder retains the editable app. After editing it, use [export_static()].
+#' @return Invisibly, the static site directory when static_folder is supplied;
+#'   otherwise the generated app directory.
 #' @export
 build_app <- function(config) {
   base <- getwd()
@@ -14,13 +19,17 @@ build_app <- function(config) {
     config <- jsonlite::fromJSON(config, simplifyVector = FALSE)
   }
   if (!is.list(config) || is.null(names(config))) stop("Configuration must be a named list or JSON file.")
-  allowed <- c("schema_version", "data", "mapping", "dataset_name", "output", "primary_model", "options", "about", "bayesian", "design")
+  allowed <- c("schema_version", "data", "mapping", "dataset_name", "output", "primary_model", "options", "about", "bayesian", "design", "static_folder")
   unknown <- setdiff(names(config), allowed)
   if (length(unknown)) stop("Unknown configuration fields: ", paste(unknown, collapse = ", "))
   if (length(config$schema_version) != 1L || !is.numeric(config$schema_version) || !config$schema_version %in% c(1, 2)) stop("schema_version must be 1 or 2")
   if (config$schema_version == 1 && ("bayesian" %in% names(config) || any(c("alternatives", "primary_label") %in% names(config$mapping)))) stop("New computation/Bayesian fields require schema_version 2")
   for (key in c("data", "dataset_name", "output"))
     if (!is.character(config[[key]]) || length(config[[key]]) != 1L || !nzchar(config[[key]])) stop("Required scalar string: ", key)
+  if ("static_folder" %in% names(config) &&
+      (!is.character(config$static_folder) || length(config$static_folder) != 1L ||
+       is.na(config$static_folder) || !nzchar(config$static_folder)))
+    stop("static_folder must be a nonempty scalar string.")
   resolve <- function(path) if (grepl("^(/|[A-Za-z]:|\\\\)", path)) path else file.path(base, path)
   mapping <- config$mapping
   if (!is.list(mapping) || is.null(names(mapping))) stop("mapping must be an object")
@@ -38,6 +47,7 @@ build_app <- function(config) {
   if (!is.null(about) && (!is.list(about) || (length(about) && (is.null(names(about)) || any(!nzchar(names(about))))) || length(setdiff(names(about), c("date", "citation", "osf_link", "contact"))))) stop("Invalid about fields")
   do.call(generate_shiny, c(list(dataset = dataset, dataset_name = config$dataset_name,
                                 save_to_folder = resolve(config$output), launch_app = FALSE,
+                                static_folder = if (is.null(config$static_folder)) NULL else resolve(config$static_folder),
                                 primary_model = config$primary_model,
                                 bayesian = config$bayesian, design = config$design, options = if (is.null(config$options)) list() else config$options), about))
 }

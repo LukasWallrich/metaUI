@@ -10,11 +10,17 @@ build_app(config)
 \item{config}{Path to JSON, or a named list with the same schema.}
 }
 \value{
-Invisibly, the generated app directory.
+Invisibly, the static site directory when static_folder is supplied;
+otherwise the generated app directory.
 }
 \description{
-Relative data and output paths resolve against the configuration file. Building
+Relative data, output and static_folder paths resolve against the configuration file. Building
 never launches or deploys an app. The configuration is deliberately limited to
 data mapping, scientific scale/direction, an optional declared primary model,
 metadata, and presentation options.
+}
+\details{
+Set the optional \code{static_folder} string to generate a static shinylive site
+in one step, using the same semantics as \code{\link[=generate_shiny]{generate_shiny()}}. The \code{output}
+folder retains the editable app. After editing it, use \code{\link[=export_static]{export_static()}}.
 }

@@ -29,6 +29,27 @@ Outside R Studio, you can run `file.edit(system.file("rmarkdown/templates/create
 
 The [`Getting started` vignette](https://lukaswallrich.github.io/metaUI/articles/getting_started.html) provides a step-by-step example ... or you may want to watch this [video tutorial](https://www.youtube.com/watch?v=iaTMFzWfCe0&ab_channel=ESMARConf) for a step-by-step walk-through.
 
+## Publishing without a server
+
+Generate an editable app and a static website in one step:
+
+```r
+metaUI::generate_shiny(app_data, "My meta-analysis",
+  save_to_folder = "my-app", static_folder = "my-site")
+```
+
+Omit `save_to_folder` to use temporary source files. With JSON configurations,
+add `"static_folder": "my-site"` alongside the editable app's `"output"` folder.
+After editing the generated app files, re-export with
+`metaUI::export_static("my-app", "my-site", overwrite = TRUE)`; regenerating
+would overwrite your edits. Static export requires the suggested `shinylive` package.
+
+Host the site over HTTPS (for example, on GitHub Pages), or serve it from
+localhost to preview it. Opening `index.html` as a file does not work.
+The full dataset and code are sent to every visitor, so publish only material
+that may be shared. Precomputed results appear at once; controls work after
+roughly 20 seconds on a typical laptop, depending on the connection and device.
+
 ## Sources
 
 Much of the package code was based on two previous interactive meta-analyses apps:

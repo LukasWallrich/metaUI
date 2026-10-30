@@ -45,6 +45,11 @@ test_that("export_static() writes a static site with the bridge and notices", {
   expect_true(all(c("metafor", "shiny", "bslib") %in% bundled$package))
   expect_setequal(unique(bundled$location), c("app packages", "webR base library"))
   expect_error(export_static(app, site, subdir = "fixture"), "Destination exists")
+  one_step <- tempfile()
+  on.exit(unlink(c(app, site, one_step), recursive = TRUE), add = TRUE)
+  result <- generate_shiny(prepared(), "One-step static fixture", static_folder = one_step)
+  expect_identical(result, normalizePath(one_step))
+  expect_true(all(file.exists(file.path(result, c("app.json", "index.html", "metaui-preview/provenance.json")))))
 })
 
 test_that("precomputation uses the app server and writes an inert Summary", {

@@ -1,3 +1,8 @@
+# metaUI 0.3.0 (development)
+
+* Add one-step static publishing through `generate_shiny(static_folder = ...)`
+  and the JSON `static_folder` field; use `export_static()` to re-export edited apps.
+
 # metaUI 0.2.0
 
 ## Author design helper
