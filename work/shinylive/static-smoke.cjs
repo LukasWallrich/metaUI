@@ -153,6 +153,20 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
   }
   await page.screenshot({path: path.join(out, 'last-tab.png')});
 
+  // Study details and the copy-reference button, where the app has study information.
+  await app.getByRole('tab', {name: 'Sample', exact: true}).click(); await idle(app);
+  const toggles = app.locator('.metaui-study-toggle');
+  if (await toggles.count()) { await toggles.first().click(); await page.waitForTimeout(500); }
+  const copyButtons = app.locator('.metaui-copy-ref');
+  if (await copyButtons.count()) {
+    await copyButtons.first().scrollIntoViewIfNeeded().catch(() => {});
+    await copyButtons.first().click({force: true});
+    await page.waitForTimeout(500);
+    const status = await app.evaluate(() => [...document.querySelectorAll('.metaui-copy-status')].map(e => e.textContent.trim()).filter(Boolean).join(' | '));
+    notes.push('study details: ' + (await copyButtons.count()) + ' copy buttons; status after click: ' + (status || '(none)'));
+  } else notes.push('study details: none in this app');
+  await app.getByRole('tab', {name: 'Summary', exact: true}).click();
+
   // 5. Reset to full selection, workbook download, upload round trip
   await app.locator('#resetFilters').click();
   // The dynamic z slider has no shinyjs reset snapshot; restore its full bounds.
@@ -165,7 +179,8 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
   await app.waitForFunction(() => !document.querySelector('#go').disabled, null, {timeout:120000});
   await app.locator('#go').click({force:true}); await page.waitForTimeout(300); await idle(app);
   await app.getByRole('tab', {name: 'Summary', exact: true}).click();
-  await app.getByText('Download or upload data', {exact: true}).click();
+  // Panel title differs between metaUI versions; open it by class.
+  await app.locator('details.metaui-data-tools > summary, details:has(#downloadData) > summary').first().click();
   const wb = path.join(out, 'workbook.xlsx');
   try {
     await timed('workbook_download_s', async () => {
@@ -186,6 +201,19 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
     await idle(app);
   });
   notes.push('after upload: ' + (await app.locator('#selection_status').textContent()).replace(/\s+/g, ' '));
+
+  // Reproduction code for the applied selection (R script and Quarto), where the app offers it.
+  for (const [button, ext] of [['downloadCode', 'R'], ['downloadQuarto', 'qmd']]) {
+    if (!(await app.locator('#' + button).count())) { notes.push('code ' + ext + ': not offered'); continue; }
+    try {
+      const ev = page.waitForEvent('download', {timeout: 120000});
+      await app.locator('#' + button).click();
+      const d = await ev; const target = path.join(out, 'reproduction.' + ext); await d.saveAs(target);
+      const text = fs.readFileSync(target, 'utf8');
+      notes.push(`code ${ext}: ${text.length} chars, name=${d.suggestedFilename()}, fits=${text.includes('metaUI_fit_models')}`);
+    } catch (e) { notes.push(`code ${ext}: FAILED ${e.message.split('\n')[0]}`); }
+  }
+
 
   // Mobile viewport; release this webR worker before restoring a fresh link.
   await page.setViewportSize({width: 390, height: 844});
