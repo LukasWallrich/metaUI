@@ -297,7 +297,8 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
 #' @importFrom stats as.formula hat influence ks.test optimize pbinom pchisq pf pnorm pt punif qchisq qf qnorm qt reformulate reorder setNames uniroot
 #'
 
-pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
+# compact = TRUE (narrow, phone-width plots) moves the test results from the legend to notes below the plot.
+pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact = FALSE) {
   # Rename x to metaobject, remove x
   metaobject <- x
   rm(x)
@@ -647,7 +648,7 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
 
   # Make the graph
   x <- c(.01, .02, .03, .04, .05)
-  par(mar = c(6, 5.5, 1.5, 3))
+  par(mar = c(if (compact) 9.5 else 7, 5.5, 1.5, 3))
   moveup <- max(max(blue[2:5]) - 66, 0)
   ylim <- c(0, 105 + moveup)
   legend.top <- 100 + moveup
@@ -679,27 +680,36 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
     percent(power.ci.ub), ")"
   )
   text(tab1, legend.top, adj = 0, cex = .85, bquote("Observed " * italic(p) * "-curve"))
-  text(tab2, legend.top - gap2, adj = 0, cex = .68, text.blue, col = font.col)
+  if (!compact) text(tab2, legend.top - gap2, adj = 0, cex = .68, text.blue, col = font.col)
   text.red <- bquote("Tests for right-skewness: " * italic(p) * ""[Full] ~ .(p.Zppr) * ",  " * italic(p) * ""[Half] ~ .(p.Zppr.half))
   # note: .() within bquote prints the value rather than the variable name
   text(tab1, legend.top - gap1, adj = 0, cex = .85, "Null of no effect")
-  text(tab2, legend.top - gap1 - gap2, adj = 0, cex = .68, text.red, col = font.col)
+  if (!compact) text(tab2, legend.top - gap1 - gap2, adj = 0, cex = .68, text.red, col = font.col)
   text.green <- bquote("Tests for flatness: " * italic(p) * ""[Full] ~ .(p.Zpp33) * ",  " * italic(p) * ""[half] ~ .(p.Zpp33.half) * ",  " * italic(p) * ""[Binomial] ~ .(binom.33))
   text(tab1, legend.top - 2 * gap1, adj = 0, cex = .85, "Null of 33% power")
-  text(tab2, legend.top - 2 * gap1 - gap2, adj = 0, cex = .68, text.green, col = font.col)
+  if (!compact) text(tab2, legend.top - 2 * gap1 - gap2, adj = 0, cex = .68, text.green, col = font.col)
   segments(x0 = tab1 - .005, x1 = tab1 - .001, y0 = legend.top, y1 = legend.top, col = "dodgerblue2", lty = 1, lwd = 1.5)
   segments(x0 = tab1 - .005, x1 = tab1 - .001, y0 = legend.top - gap1, y1 = legend.top - gap1, col = "firebrick2", lty = 3, lwd = 1.5)
   segments(x0 = tab1 - .005, x1 = tab1 - .001, y0 = legend.top - 2 * gap1, y1 = legend.top - 2 * gap1, col = "springgreen4", lty = 2, lwd = 1.5)
-  rect(tab1 - .0065, legend.top - 2 * gap1 - gap2 - 3, tab1 + .032, legend.top + 3, border = "gray85")
-  msgx <- bquote("Note: The observed " * italic(p) * "-curve includes " * .(ksig) *
-    " statistically significant (" * italic(p) * " < .05) results, of which " * .(khalf) *
-    " are " * italic(p) * " < .025.")
-  mtext(msgx, side = 1, line = 4, cex = .65, adj = 0)
+  if (compact) rect(tab1 - .0065, legend.top - 2 * gap1 - 4, tab1 + .017, legend.top + 4, border = "gray85")
+  else rect(tab1 - .0065, legend.top - 2 * gap1 - gap2 - 3, tab1 + .032, legend.top + 3, border = "gray85")
+  # Notes are split over short lines so that they fit narrow (phone) plots.
+  mtext(bquote("Note: The observed " * italic(p) * "-curve includes " * .(ksig) * " statistically significant"),
+    side = 1, line = 3.6, cex = .65, adj = 0)
+  mtext(bquote("(" * italic(p) * " < .05) results, of which " * .(khalf) * " are " * italic(p) * " < .025."), side = 1, line = 4.3, cex = .65, adj = 0)
   kns <- ktot - ksig
-  if (kns == 0) ns_msg <- "There were no non-significant results entered."
-  if (kns == 1) ns_msg <- bquote("There was one additional result entered but excluded from " * italic(p) * "-curve because it was " * italic(p) * " > .05.")
-  if (kns > 1) ns_msg <- bquote("There were " * .(kns) * " additional results entered but excluded from " * italic(p) * "-curve because they were " * italic(p) * " > .05.")
-  mtext(ns_msg, side = 1, line = 4.75, cex = .65, adj = 0)
+  ns_msg <- if (kns == 0) list("There were no non-significant results entered.", NULL)
+    else if (kns == 1) list(bquote("There was one additional result entered but excluded from " * italic(p) * "-curve"),
+      bquote("because it was " * italic(p) * " > .05."))
+    else list(bquote("There were " * .(kns) * " additional results entered but excluded from " * italic(p) * "-curve"),
+      bquote("because they were " * italic(p) * " > .05."))
+  mtext(ns_msg[[1]], side = 1, line = 5, cex = .65, adj = 0)
+  if (!is.null(ns_msg[[2]])) mtext(ns_msg[[2]], side = 1, line = 5.7, cex = .65, adj = 0)
+  if (compact) {
+    mtext(bquote("Observed " * italic(p) * "-curve: " * .(text.blue)), side = 1, line = 6.6, cex = .65, adj = 0)
+    mtext(bquote("Null of no effect, right-skewness: " * italic(p) * ""[Full] ~ .(p.Zppr) * ",  " * italic(p) * ""[Half] ~ .(p.Zppr.half)), side = 1, line = 7.4, cex = .65, adj = 0)
+    mtext(bquote("Null of 33% power, flatness: " * italic(p) * ""[Full] ~ .(p.Zpp33) * ",  " * italic(p) * ""[half] ~ .(p.Zpp33.half) * ",  " * italic(p) * ""[Binomial] ~ .(binom.33)), side = 1, line = 8.2, cex = .65, adj = 0)
+  }
 
 
 

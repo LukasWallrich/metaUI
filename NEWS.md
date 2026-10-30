@@ -9,6 +9,13 @@
   `include_sources = TRUE` bundles the source code of copyleft components for
   archival deposits. Requires the suggested shinylive package. Every visitor
   downloads the full dataset and app code, so publish only shareable material.
+* Generated apps work on phones, on a Shiny server and as static sites. The
+  filters collapse behind a "Show filters" button so that results follow
+  closely; tables with four or more columns become one labelled card per row
+  instead of scrolling sideways; wide plots scale to fit, and the forest plot
+  wraps study labels. Static sites also show the precomputed preview at phone
+  width, including when filters use selection boxes, which previously prevented
+  the preview from being computed.
 * Generated apps use metafor for trim-and-fill, the funnel plot, Egger's test and
   the Dannheim source-reference fit. Results are unchanged. The meta package is
   needed only when author model code uses it.

@@ -126,3 +126,79 @@
     } else report(false);
   });
 })(jQuery);
+
+/* Phones: the filters collapse behind a toggle so that results follow closely, and
+   Analyze data collapses them again and moves to the results. metaui.css hides the
+   toggle and keeps the filters open on wider screens. */
+(function ($) {
+  'use strict';
+  var phone = window.matchMedia('(max-width: 767px)');
+  function setOpen(open) {
+    var toggle = document.querySelector('.metaui-filters-toggle');
+    if (!toggle) return;
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.textContent = open ? 'Hide filters' : 'Show filters';
+    document.getElementById(toggle.getAttribute('aria-controls')).classList.toggle('metaui-open', open);
+  }
+  $(document).on('click', '.metaui-filters-toggle', function () {
+    setOpen(this.getAttribute('aria-expanded') !== 'true');
+  });
+  $(document).on('click', '#go', function () {
+    if (!phone.matches) return;
+    setOpen(false);
+    var results = document.getElementById('metaui_results');
+    if (!results) return;
+    var show = function () { results.scrollIntoView({ block: 'start' }); };
+    setTimeout(show, 50);
+    // Re-rendering outputs briefly shorten the page, which resets the scroll position.
+    // Align again once the analysis has finished, unless the reader has moved meanwhile.
+    var moved = false;
+    var mark = function () { moved = true; };
+    $(window).one('touchstart wheel keydown', mark);
+    $(document).one('shiny:idle', function () {
+      setTimeout(function () { $(window).off('touchstart wheel keydown', mark); if (!moved) show(); }, 150);
+    });
+  });
+})(jQuery);
+
+/* Phones: tables with four or more columns reflow into one card per row (metaui.css).
+   Each cell is labelled with its column heading. Tables whose first column names the
+   row (models, studies) use it as the card title. static_stack_table() in the package
+   applies the same labels to the script-free static preview. */
+(function ($) {
+  'use strict';
+  var numeric = /^[\s\d.,%<>=+\-−[\]()]*$|^NA$/;
+  function stack(table) {
+    var head = table.tHead;
+    if (!head || !head.rows.length || !table.tBodies.length) return;
+    var names = Array.prototype.map.call(head.rows[head.rows.length - 1].cells,
+      function (cell) { return cell.textContent.replace(/\s+/g, ' ').trim(); });
+    if (names.length < 4) return;
+    var rows = [];
+    Array.prototype.forEach.call(table.tBodies, function (body) {
+      Array.prototype.forEach.call(body.rows, function (row) {
+        if (row.cells.length === names.length) rows.push(row); // not child or "no data" rows
+      });
+    });
+    rows.forEach(function (row) {
+      Array.prototype.forEach.call(row.cells, function (cell, i) {
+        cell.setAttribute('data-label', names[i]);
+        cell.toggleAttribute('data-empty', !cell.textContent.trim() && !cell.querySelector('img, svg, button, input'));
+      });
+    });
+    var named = rows.length && rows.every(function (row) { return !numeric.test(row.cells[0].textContent.trim()); });
+    table.classList.add('metaui-stack');
+    table.classList.toggle('metaui-stack-named', named);
+    // DataTables headers stay visible on phones as sort buttons when sorting is useful.
+    table.classList.toggle('metaui-stack-sortable', rows.length > 1 && !!head.querySelector('.sorting, .sorting_asc, .sorting_desc, .dt-orderable-asc, .dt-orderable-desc'));
+  }
+  function stackAll() { document.querySelectorAll('.tab-content table').forEach(stack); }
+  var timer;
+  function schedule() { clearTimeout(timer); timer = setTimeout(stackAll, 30); }
+  $(document).on('draw.dt', function (event, settings) { if (settings && settings.nTable) stack(settings.nTable); });
+  document.addEventListener('DOMContentLoaded', function () {
+    var results = document.querySelector('.tab-content') || document.body;
+    new MutationObserver(schedule).observe(results, { childList: true, subtree: true });
+    schedule();
+  });
+})(jQuery);

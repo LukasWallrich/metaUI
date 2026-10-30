@@ -391,17 +391,28 @@ metaUI_forest_rows <- function(df, estimates, models = NULL) {
   rows
 }
 
-metaUI_forest_plot <- function(rows, scale, accent = "#096b74", ink = "#182f46", background = "#FFFFFF", interval_colour = "#52616d", grid_colour = "#EBEBEB") {
+# label_width (characters) wraps study labels onto at most two lines for narrow (phone)
+# plots. Longer labels lose their middle, so the end (year, effect) still tells rows apart.
+metaUI_forest_plot <- function(rows, scale, accent = "#096b74", ink = "#182f46", background = "#FFFFFF", interval_colour = "#52616d", grid_colour = "#EBEBEB", label_width = NULL) {
+  if (!is.null(label_width)) rows$label <- vapply(rows$label, function(label) {
+    lines <- strwrap(label, label_width)
+    if (length(lines) > 2L) {
+      rest <- paste(lines[-1], collapse = " ")
+      tail <- substring(rest, nchar(rest) - label_width + 2L)
+      lines <- c(lines[1], paste0("\u2026", if (grepl(" ", tail)) sub("^\\S*\\s+", "", tail) else tail))
+    }
+    paste(lines, collapse = "\n")
+  }, character(1), USE.NAMES = FALSE)
   ggplot2::ggplot(rows, ggplot2::aes(x = .data$es, y = .data$row)) +
     ggplot2::geom_vline(xintercept = 0, colour = "grey70", linetype = 2) +
     ggplot2::geom_segment(ggplot2::aes(x = .data$LCL, xend = .data$UCL, yend = .data$row), colour = interval_colour) +
     ggplot2::geom_point(ggplot2::aes(shape = .data$kind), size = 2.8, colour = accent, fill = accent) +
     ggplot2::scale_shape_manual(values = c("Selected effect" = 16, "Model summary" = 23), guide = "none") +
-    ggplot2::scale_y_continuous(breaks = rows$row, labels = rows$label) +
+    ggplot2::scale_y_continuous(breaks = rows$row, labels = rows$label, expand = ggplot2::expansion(add = .8)) +
     ggplot2::labs(x = paste("Effect size (", scale, ")", sep = ""), y = NULL) +
     ggplot2::theme_minimal(base_size = 14) +
     ggplot2::theme(text = ggplot2::element_text(colour = ink),
-      axis.text = ggplot2::element_text(size = 12, colour = ink),
+      axis.text = ggplot2::element_text(size = if (is.null(label_width)) 12 else 11, colour = ink, lineheight = .9),
       plot.background = ggplot2::element_rect(fill = background, colour = NA),
       panel.background = ggplot2::element_rect(fill = background, colour = NA),
       panel.grid.major.x = ggplot2::element_line(colour = grid_colour), panel.grid.major.y = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank())

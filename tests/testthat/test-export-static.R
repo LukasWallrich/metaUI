@@ -109,6 +109,18 @@ test_that("precomputation uses the app server and writes an inert Summary", {
   expect_identical(tools::md5sum(list.files(app, recursive = TRUE, full.names = TRUE)), before)
 })
 
+test_that("precomputation reads picker defaults, which shinyWidgets supplies as raw HTML", {
+  app <- tempfile(); preview <- tempfile()
+  on.exit(unlink(c(app, preview), recursive = TRUE))
+  raw <- fixture()
+  raw$source <- factor(rep(c("a & b", " <c>", paste0("s", 1:6)), each = 2))
+  generate_shiny(prepared(raw, filters = c(Source = "source")), "Picker fixture",
+    save_to_folder = app, launch_app = FALSE)
+  expect_match(paste(readLines(file.path(app, "ui.R")), collapse = "\n"), "pickerInput", fixed = TRUE)
+  rendered <- metaUI:::static_precompute(app, preview)
+  expect_match(rendered$selection_overview, "16 of 16")
+})
+
 test_that("preview opt-out and failed precomputation preserve a working export", {
   skip_if_not_installed("shinylive")
   app <- tempfile(); site <- tempfile()

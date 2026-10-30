@@ -24,13 +24,19 @@ static_precompute <- function(app_dir, dest) {
       if (tag$name == "select" && !is.null(a$id)) {
         options <- list()
         collect <- function(x) {
-          if (inherits(x, "shiny.tag") && x$name == "option") options[[length(options) + 1L]] <<- x
+          if (inherits(x, "shiny.tag") && x$name == "option")
+            options[[length(options) + 1L]] <<- list(value = x$attribs$value, selected = !is.null(x$attribs$selected))
+          # shinyWidgets::pickerInput() supplies its options as one HTML string.
+          else if (is.character(x)) for (o in regmatches(x, gregexpr("<option\\b[^>]*>", x))[[1]])
+            options[[length(options) + 1L]] <<- list(
+              value = static_unescape(sub('.*\\svalue="([^"]*)".*', "\\1", o)),
+              selected = grepl("\\sselected(\\s|=|>)", o))
           else if (is.list(x)) lapply(if (inherits(x, "shiny.tag")) x$children else x, collect)
         }
         collect(tag$children)
-        selected <- Filter(function(x) !is.null(x$attribs$selected), options)
+        selected <- Filter(function(x) x$selected, options)
         if (!length(selected) && is.null(a$multiple)) selected <- utils::head(options, 1)
-        defaults[[a$id]] <<- vapply(selected, function(x) x$attribs$value, character(1))
+        defaults[[a$id]] <<- vapply(selected, function(x) x$value, character(1))
       }
       lapply(tag$children, inputs)
     } else if (is.list(tag)) lapply(tag, inputs)
@@ -41,12 +47,24 @@ static_precompute <- function(app_dir, dest) {
   inputs(env$ui); inputs(z)
   captured <- list()
   session <- output <- NULL # Bound by testServer inside its expression.
+  # Test sessions report every output as 600px wide at 1x. Plots render at 2x for
+  # sharp phone and high-density screens, and phones get a second rendering at their
+  # column width, reusing the cached fits.
+  plot_width <- 600
+  for (accessor in c("$", "[["))
+    registerS3method(accessor, "metaui_preview_clientdata", function(x, name)
+      if (grepl("^output_.+_width$", name)) plot_width else if (identical(name, "pixelratio")) 2 else NextMethod())
   shiny::testServer(env$server, {
+    session$clientData <- structure(session$clientData,
+      class = c("metaui_preview_clientdata", class(session$clientData)))
     do.call(session$setInputs, defaults)
     session$setInputs(go = 1)
     for (id in c("selection_overview", "selection_status", "primary_estimate", "estimate_gaps",
                  "scale_note", "effectestimate", "sample", "model_comparison"))
       captured[[id]] <<- output[[id]]
+    plot_width <<- 360
+    session$setInputs(go = 2)
+    captured$model_comparison_phone <<- output$model_comparison
   })
   if (is.null(captured$primary_estimate) || !nzchar(captured$effectestimate))
     stop("The generated server did not render default results.")
@@ -67,14 +85,17 @@ static_precompute <- function(app_dir, dest) {
       if (!is.null(a$id) && a$id %in% names(captured)) {
         value <- captured[[a$id]]
         if (a$id == "model_comparison") {
-          tag$children <- list(htmltools::tags$img(src = value$src,
-            alt = "Model estimates and 95% intervals for the authors' full dataset",
-            style = "max-width:100%;height:auto"))
+          tag$children <- list(htmltools::tags$picture(
+            htmltools::tags$source(media = "(max-width: 767px)", srcset = captured$model_comparison_phone$src),
+            htmltools::tags$img(src = value$src, width = value$width,
+              alt = "Model estimates and 95% intervals for the authors' full dataset",
+              style = "max-width:100%;height:auto")))
           tag$attribs$style <- "width:100%;height:auto"
         } else {
           if (is.list(value)) value <- value$html
           if (is.null(value)) value <- ""
           if (a$id %in% c("selection_overview", "selection_status")) value <- htmltools::htmlEscape(value)
+          else value <- static_stack_table(value)
           tag$children <- list(htmltools::HTML(value))
         }
       }
@@ -183,4 +204,47 @@ static_preview_files <- function(root) {
     pending <- unique(c(pending, resolve(urls, path)))
   }
   substring(seen, nchar(root) + 2L)
+}
+
+# Attribute value from htmltools-escaped HTML; whitespace is kept as factor levels may carry it.
+static_unescape <- function(x) {
+  x <- gsub("&lt;", "<", gsub("&gt;", ">", gsub("&quot;|&#34;", "\"", gsub("&#39;|&apos;", "'", x))))
+  for (code in unique(regmatches(x, gregexpr("&#x?[0-9A-Fa-f]+;", x))[[1]])) {
+    n <- sub("^&#(x?)([0-9A-Fa-f]+);$", "\\2", code)
+    x <- gsub(code, intToUtf8(if (grepl("^&#x", code)) strtoi(n, 16L) else as.integer(n)), x, fixed = TRUE)
+  }
+  gsub("&amp;", "&", x)
+}
+
+# The preview has no scripts, so tables get the phone card labels that metaui.js adds
+# in the live app: the same rule (four or more columns, named first column) in R.
+static_stack_table <- function(html) {
+  head <- regmatches(html, regexpr("(?s)<thead\\b.*?</thead>", html, perl = TRUE))
+  body_at <- regexpr("(?s)<tbody\\b.*?</tbody>", html, perl = TRUE)
+  if (!length(head) || body_at < 0) return(html)
+  cells <- regmatches(head, gregexpr("(?s)<th\\b[^>]*>.*?</th>", head, perl = TRUE))[[1]]
+  names <- trimws(gsub("[[:space:]]+", " ", static_unescape(gsub("<[^>]+>", "", cells))))
+  if (length(names) < 4L) return(html)
+  body <- regmatches(html, body_at)
+  rows <- regmatches(body, gregexpr("(?s)<tr\\b.*?</tr>", body, perl = TRUE))[[1]]
+  first <- character()
+  labelled <- vapply(rows, function(row) {
+    starts <- gregexpr("<td\\b", row)[[1]]
+    if (length(starts) != length(names) || starts[1] < 0) return(row)
+    parts <- regmatches(row, list(starts))[[1]]
+    first <<- c(first, trimws(static_unescape(gsub("<[^>]+>", "", sub("(?s)^<td\\b[^>]*>(.*?)</td>.*", "\\1",
+      substring(row, starts[1]), perl = TRUE)))))
+    contents <- sub("(?s)^<td\\b[^>]*>(.*?)</td>.*", "\\1", substring(row, starts), perl = TRUE)
+    empty <- !nzchar(trimws(gsub("<[^>]+>", "", contents))) & !grepl("<(img|svg|button|input)\\b", contents)
+    attrs <- paste0('<td data-label="', htmltools::htmlEscape(names, attribute = TRUE), '"',
+      ifelse(empty, " data-empty", ""))
+    regmatches(row, list(starts)) <- list(paste0(attrs, substring(parts, 4L)))
+    row
+  }, character(1), USE.NAMES = FALSE)
+  for (i in seq_along(rows)) body <- sub(rows[i], labelled[i], body, fixed = TRUE)
+  numeric <- grepl("^[[:space:][:digit:].,%<>=+()\\[\\]−-]*$|^NA$", first)
+  class <- paste0("metaui-stack", if (length(first) && !any(numeric)) " metaui-stack-named")
+  html <- paste0(substring(html, 1L, body_at - 1L), body, substring(html, body_at + attr(body_at, "match.length")))
+  sub("<table\\b([^>]*?)class=\"([^\"]*)\"", paste0("<table\\1class=\"\\2 ", class, "\""),
+    if (grepl("<table\\b[^>]*class=", html)) html else sub("<table\\b", "<table class=\"\"", html), perl = TRUE)
 }
