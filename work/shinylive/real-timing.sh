@@ -16,17 +16,23 @@ import sys, pathlib
 d = pathlib.Path(sys.argv[1]); html = (d / "index.html").read_text()
 probe = """<script>
 (function () {
-  var t0 = performance.now(), ready = false, done = false;
+  var t0 = performance.now(), ready = false, done = false, preview = false, takeover = false;
   function report(k) { fetch('/__timing?' + k + '=' + (performance.now() / 1000).toFixed(3) + '&id=' + location.hash.slice(1)).catch(function () {}); }
   var iv = setInterval(function () {
-    var f = document.querySelector('iframe'); if (!f || !f.contentDocument) return;
+    var p = document.querySelector('#metaui-preview');
+    var estimate = p && p.contentDocument && p.contentDocument.querySelector('.metaui-primary-value');
+    if (!preview && estimate && p.contentDocument.readyState === 'complete' && estimate.getBoundingClientRect().height > 0) {
+      preview = true; report('preview');
+    }
+    if (!takeover && document.documentElement.dataset.metauiLive === 'true') { takeover = true; report('takeover'); }
+    var f = document.querySelector('#root iframe'); if (!f || !f.contentDocument) return;
     var w = f.contentWindow, d = f.contentDocument, go = d.querySelector('#go');
     if (!ready && go && !go.disabled && w.Shiny && w.Shiny.shinyapp && w.Shiny.shinyapp.isConnected() &&
         w.Shiny.shinyapp.$inputValues && Array.isArray(w.Shiny.shinyapp.$inputValues.outliers_z_scores)) {
-      ready = true; report('ready'); go.click();
+      ready = true; report('ready'); if (!window.metauiPrecomputed) go.click();
     }
     var t = ready && d.querySelector('#effectestimate');
-    if (t && t.innerText.indexOf('Source-reference') >= 0 && !done) { done = true; report('results'); clearInterval(iv); }
+    if (t && t.innerText.indexOf('Source-reference') >= 0 && !done && (!window.metauiPrecomputed || takeover)) { done = true; report('results'); if (!window.metauiPrecomputed || takeover) clearInterval(iv); }
   }, 100);
 })();
 </script>"""
@@ -41,5 +47,7 @@ for i in $(seq 1 "$runs"); do
   sleep 1; rm -rf "$profile" 2>/dev/null || true
   ready=$(grep -ao "__timing?ready=[0-9.]*&id=$id" "$log" | sed 's/.*ready=\([0-9.]*\).*/\1/' | tail -1)
   results=$(grep -ao "__timing?results=[0-9.]*&id=$id" "$log" | sed 's/.*results=\([0-9.]*\).*/\1/' | tail -1)
-  echo "{\"run\":$i,\"ready_s\":${ready:-null},\"first_results_s\":${results:-null},\"loadavg_1m\":$(cut -d' ' -f1 /proc/loadavg)}"
+  preview=$(grep -ao "__timing?preview=[0-9.]*&id=$id" "$log" | sed 's/.*preview=\([0-9.]*\).*/\1/' | tail -1 || true)
+  takeover=$(grep -ao "__timing?takeover=[0-9.]*&id=$id" "$log" | sed 's/.*takeover=\([0-9.]*\).*/\1/' | tail -1 || true)
+  echo "{\"run\":$i,\"preview_s\":${preview:-null},\"takeover_s\":${takeover:-null},\"ready_s\":${ready:-null},\"first_results_s\":${results:-null},\"loadavg_1m\":$(cut -d' ' -f1 /proc/loadavg)}"
 done
