@@ -26,6 +26,9 @@
 #' @param overwrite Replace an existing app in `dest_dir`/`subdir`?
 #' @param precompute Show precomputed default Summary results while the interactive app loads?
 #'   Failures warn and export the interactive app alone. No browser is required.
+#' @param include_sources Bundle exact copyleft package, R and webR source archives
+#'   in `dest_dir/sources/`? Recommended for archival deposits such as Zenodo.
+#'   Live sites can use the source links in `bundled-packages.csv` instead.
 #' @return The path of the exported app, invisibly.
 #' @export
 #' @examples
@@ -34,7 +37,7 @@
 #' # Preview locally (service workers need https or localhost):
 #' httpuv::runStaticServer("my-app-static")
 #' }
-export_static <- function(app_dir, dest_dir, subdir = "", overwrite = FALSE, precompute = TRUE) {
+export_static <- function(app_dir, dest_dir, subdir = "", overwrite = FALSE, precompute = TRUE, include_sources = FALSE) {
   if (!requireNamespace("shinylive", quietly = TRUE))
     stop("export_static() requires the shinylive package: install.packages(\"shinylive\").")
   if (!all(file.exists(file.path(app_dir, c("global.R", "ui.R", "server.R", "www/metaui.js")))))
@@ -71,8 +74,25 @@ export_static <- function(app_dir, dest_dir, subdir = "", overwrite = FALSE, pre
   shinylive::export(staging, dest_dir, subdir = subdir, wasm_packages = TRUE)
   if (has_preview) static_add_preview(target, file.path(preview_copy, "metaui-preview"))
   bundled <- static_bundled_packages(file.path(dest_dir, "shinylive", "webr"))
+  r_version <- static_r_version(file.path(dest_dir, "shinylive", "webr"))
+  app_json <- file.path(target, "app.json")
+  files <- jsonlite::read_json(app_json)
+  files <- lapply(files, function(f) {
+    if (identical(f$name, "ui.R")) f$content <- static_rewrite_about(f$content, bundled, r_version)
+    f
+  })
+  jsonlite::write_json(files, app_json, auto_unbox = TRUE)
+  if (has_preview) {
+    path <- file.path(target, "metaui-preview", "index.html")
+    writeLines(static_rewrite_about(paste(readLines(path, warn = FALSE), collapse = "\n"),
+      bundled, r_version), path)
+  }
   utils::write.csv(bundled, file.path(target, "bundled-packages.csv"), row.names = FALSE)
-  writeLines(static_notice(bundled), file.path(target, "STATIC-NOTICE.md"))
+  if (isTRUE(include_sources))
+    tryCatch(static_include_sources(bundled, file.path(dest_dir, "shinylive", "webr"),
+      file.path(dest_dir, "sources")), error = function(e)
+        warning("Source collection incomplete: ", conditionMessage(e), call. = FALSE))
+  writeLines(static_notice(bundled, include_sources, if (nzchar(subdir)) "../sources/" else "sources/"), file.path(target, "STATIC-NOTICE.md"))
   invisible(normalizePath(target))
 }
 
@@ -85,10 +105,8 @@ static_bundled_packages <- function(webr_dir) {
   row <- function(lines, location) {
     desc <- read.dcf(textConnection(lines), fields = c("Package", "Version", "License"))
     # Versions ending .8000/.9000 are webR-patched builds, not CRAN releases.
-    patched <- grepl("\\.(8|9)[0-9]{3}$", desc[, "Version"])
     data.frame(package = desc[, "Package"], version = desc[, "Version"], license = desc[, "License"],
-      location = location, source = if (patched) "webR-patched build: source location not yet recorded" else
-        paste0("https://cran.r-project.org/package=", desc[, "Package"]))
+      location = location, source = static_package_source(desc[, "Package"], desc[, "Version"]))
   }
   archives <- list.files(file.path(webr_dir, "packages"), pattern = "\\.tgz$", recursive = TRUE, full.names = TRUE)
   rows <- lapply(archives, function(archive) {
@@ -115,7 +133,7 @@ static_bundled_packages <- function(webr_dir) {
 
 #' Text of STATIC-NOTICE.md
 #' @noRd
-static_notice <- function(bundled) {
+static_notice <- function(bundled, include_sources = FALSE, source_path = "sources/") {
   c("# Static (WebAssembly) metaUI app",
     "",
     "This folder runs a metaUI app entirely in the reader's browser. Serve the export",
@@ -135,9 +153,36 @@ static_notice <- function(bundled) {
       " versions is available from CRAN (current and archived releases) at the listed URL;",
       " webR-patched builds are marked as such."),
     "",
-    "The About tab lists package versions on the authoring computer. The versions that",
-    "run in the browser can differ and are listed in `bundled-packages.csv`.",
+    if (isTRUE(include_sources)) paste0("Corresponding sources are in `", source_path,
+      "` (see its README for origins and licences). Downloads that failed are reported during export.") else
+      "Package sources are linked in `bundled-packages.csv`; use include_sources = TRUE to bundle archives for deposits.",
     "",
     "The app code itself (ui.R, server.R, and the other R files) is part of this export and",
     "carries the licence stated in its COPYRIGHTS file.")
+}
+
+# translations ships with R itself; its version is the runtime version, rather
+# than the R version used to build an arbitrary contributed package.
+static_r_version <- function(webr_dir) {
+  path <- file.path(webr_dir, "vfs", "usr", "lib", "R", "library", "translations", "DESCRIPTION")
+  unname(read.dcf(path, fields = "Version")[1, 1])
+}
+
+# Works on both HTML and the HTML string embedded in generated ui.R.
+static_rewrite_about <- function(text, bundled, r_version) {
+  pattern <- "(?s)<h4>R packages used</h4><div class='metaui-packages'>.*?</div>"
+  if (!grepl(pattern, text, perl = TRUE)) return(text)
+  packages <- bundled[!duplicated(bundled$package), c("package", "version")]
+  packages <- rbind(data.frame(package = "R", version = r_version), packages)
+  rows <- paste0("<tr><td>", htmltools::htmlEscape(packages$package), "</td><td>",
+    htmltools::htmlEscape(packages$version), "</td></tr>")
+  groups <- split(rows, ceiling(seq_along(rows) / ceiling(length(rows) / 3)))
+  tables <- vapply(groups, function(x) paste0("<table><tr><th>Package</th><th>Version</th></tr>",
+    paste(x, collapse = ""), "</table>"), character(1))
+  replacement <- paste0("<h4>R packages used</h4><div class='metaui-packages'>",
+    paste(tables, collapse = ""), "</div>")
+  # Avoid replacement-string escape processing in author code.
+  match <- regexpr(pattern, text, perl = TRUE)
+  regmatches(text, match) <- replacement
+  text
 }

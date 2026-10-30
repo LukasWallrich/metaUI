@@ -46,10 +46,18 @@ metaUI_egger <- function(y, se) {
 
 # Summary-centred normal pseudo-CI; grey p < .05 contours centred on zero.
 # The two centres deliberately differ, as in meta::funnel.meta.
+metaUI_funnel_ticks <- function(se) {
+  upper <- max(se[is.finite(se)], 0)
+  ticks <- pretty(c(0, upper), n = 5)
+  ticks[ticks >= 0 & ticks <= upper]
+}
+
 metaUI_funnel <- function(fit, xlab) {
   centre <- as.numeric(fit$b)
   metafor::funnel(fit, xlab = xlab, refline = centre, level = 95,
-                  shade = "white", back = "white", hlines = NA, lty = 0)
+                  shade = "white", back = "white", hlines = NA, lty = 0, steps = 0)
+  ticks <- metaUI_funnel_ticks(sqrt(fit$vi))
+  graphics::axis(2, at = ticks, labels = ticks)
   bounds <- graphics::par("usr")
   ymax <- max(bounds[3:4]); z <- stats::qnorm(.975)
   graphics::polygon(c(bounds[1], bounds[1], -z * ymax, 0),

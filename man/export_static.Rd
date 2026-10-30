@@ -4,7 +4,14 @@
 \alias{export_static}
 \title{Export a generated app as a static website (experimental)}
 \usage{
-export_static(app_dir, dest_dir, subdir = "", overwrite = FALSE, precompute = TRUE)
+export_static(
+  app_dir,
+  dest_dir,
+  subdir = "",
+  overwrite = FALSE,
+  precompute = TRUE,
+  include_sources = FALSE
+)
 }
 \arguments{
 \item{app_dir}{Folder of a generated metaUI app.}
@@ -16,6 +23,10 @@ apps can share one set of WebAssembly assets.}
 
 \item{precompute}{Show precomputed default Summary results while the interactive app loads?
 Failures warn and export the interactive app alone. No browser is required.}
+
+\item{include_sources}{Bundle exact copyleft package, R and webR source archives
+in \code{dest_dir/sources/}? Recommended for archival deposits such as Zenodo.
+Live sites can use the source links in \code{bundled-packages.csv} instead.}
 
 \item{overwrite}{Replace an existing app in \code{dest_dir}/\code{subdir}?}
 }

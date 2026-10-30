@@ -90,7 +90,10 @@ static_precompute <- function(app_dir, dest) {
     else if (is.list(tag)) tag[] <- lapply(tag, transform)
     tag
   }
-  dir.create(dest, recursive = TRUE, showWarnings = FALSE)
+  final_dest <- dest
+  dest <- tempfile("metaui-preview-assets-")
+  dir.create(dest, recursive = TRUE)
+  on.exit(unlink(dest, recursive = TRUE), add = TRUE)
   file.copy(list.files("www", full.names = TRUE), dest, recursive = TRUE)
   # Shiny resource URLs (not html dependencies), including shinythemes CSS.
   for (name in names(shiny::resourcePaths())) {
@@ -119,6 +122,12 @@ static_precompute <- function(app_dir, dest) {
     "<\\1 disabled", html, perl = TRUE)
   html <- sub("<head>", '<head><meta name="viewport" content="width=device-width, initial-scale=1"/>', html, fixed = TRUE)
   writeLines(html, path)
+  files <- c(static_preview_files(dest), "provenance.json")
+  for (file in files) {
+    to <- file.path(final_dest, file)
+    dir.create(dirname(to), recursive = TRUE, showWarnings = FALSE)
+    file.copy(file.path(dest, file), to, overwrite = TRUE)
+  }
   invisible(captured)
 }
 
@@ -129,4 +138,44 @@ static_add_preview <- function(target, preview) {
   controller <- readLines(system.file("template_code", "metaui-preview.js", package = "metaUI"))
   injection <- paste0('<script>', paste(controller, collapse = "\n"), '</script>')
   writeLines(sub('<body>', paste0('<body>\n', injection), html, fixed = TRUE), path)
+}
+
+# Follow URLs from the document and recursively from stylesheets. Query strings
+# and fragments identify resources within a file, not separate files on disk.
+static_preview_files <- function(root) {
+  root <- normalizePath(root, winslash = "/", mustWork = TRUE)
+  matches <- function(pattern, text) {
+    found <- regmatches(text, gregexpr(pattern, text, perl = TRUE))[[1]]
+    if (!length(found)) return(character())
+    sub(pattern, "\\1", found, perl = TRUE)
+  }
+  resolve <- function(urls, parent) {
+    urls <- trimws(urls)
+    urls <- urls[nzchar(urls) & !grepl("^(data:|#)", urls, ignore.case = TRUE)]
+    if (any(grepl("^([a-z][a-z0-9+.-]*:|//)", urls, ignore.case = TRUE)))
+      stop("Preview assets must be local: ", paste(urls, collapse = ", "))
+    urls <- vapply(urls, function(x) utils::URLdecode(sub("[?#].*$", "", x)), character(1))
+    paths <- normalizePath(file.path(dirname(parent), urls), winslash = "/", mustWork = TRUE)
+    if (any(!startsWith(paths, paste0(root, "/")))) stop("Preview asset escapes its folder")
+    paths
+  }
+  pending <- file.path(root, "index.html")
+  seen <- character()
+  while (length(pending)) {
+    path <- pending[1]; pending <- pending[-1]
+    if (path %in% seen) next
+    seen <- c(seen, path)
+    if (!grepl("\\.(html|css)$", path)) next
+    text <- paste(readLines(path, warn = FALSE), collapse = "\n")
+    # CSS comments may contain example URLs that are not dependencies.
+    text <- gsub("(?s)/\\*.*?\\*/", "", text, perl = TRUE)
+    urls <- matches("url\\(\\s*[\"']?([^\"')]+)[\"']?\\s*\\)", text)
+    if (endsWith(path, ".html"))
+      urls <- c(urls, matches("src=[\"']([^\"']+)[\"']", text),
+        matches("<link\\b[^>]*href=[\"']([^\"']+)[\"']", text))
+    else
+      urls <- c(urls, matches("@import\\s+[\"']([^\"']+)[\"']", text))
+    pending <- unique(c(pending, resolve(urls, path)))
+  }
+  substring(seen, nchar(root) + 2L)
 }
