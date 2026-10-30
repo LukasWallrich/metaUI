@@ -1,6 +1,6 @@
 test_that("generated-app modules match the package's own definitions", {
   # inst/template_code copies run in generated apps; R/ copies run in the package.
-  for (file in c("analysis.R", "helpers.R", "bayesian.R", "computations.R", "selection_links.R")) {
+  for (file in c("analysis.R", "helpers.R", "bayesian.R", "computations.R", "selection_links.R", "code_export.R")) {
     env <- new.env(parent = asNamespace("metaUI"))
     sys.source(system.file("template_code", file, package = "metaUI"), envir = env)
     for (name in ls(env, all.names = TRUE)) {

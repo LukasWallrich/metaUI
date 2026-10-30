@@ -248,6 +248,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
             file.path(save_to_folder, "bayesian.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "selection_links.R", package = "metaUI"),
             file.path(save_to_folder, "selection_links.R"), overwrite = TRUE)
+  file.copy(system.file("template_code", "code_export.R", package = "metaUI"),
+            file.path(save_to_folder, "code_export.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "computations.R", package = "metaUI"),
             file.path(save_to_folder, "computations.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "analysis.R", package = "metaUI"),
@@ -327,6 +329,8 @@ generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL) {
   source(file.path(f, 'analysis.R'), local = TRUE)
   source(file.path(f, 'computations.R'), local = TRUE)
   source(file.path(f, 'selection_links.R'), local = TRUE)
+  source(file.path(f, 'code_export.R'), local = TRUE)
+  metaUI_app_dir <- normalizePath(f) # code export copies models.R and analysis code from here
   source(file.path(f, 'bayesian.R'), local = TRUE)
   source(file.path(f, 'models.R'), local = TRUE)
   source(file.path(f, 'labels_and_options.R'), local = TRUE)
