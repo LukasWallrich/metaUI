@@ -111,8 +111,8 @@ are validated, stored in session state, and clear prior cached results.
 
 [Performance measurements](https://github.com/LukasWallrich/metaUI/blob/main/validation/performance-optimisation.md) distinguish
 faster p-curve calculations/fit reuse from cache hits and first-time fitting costs.
-[Licence audit](https://github.com/LukasWallrich/metaUI/blob/main/validation/licensing-audit.md) records the licensed replacement of
-the former Barroso sample.
+[Licence audit](https://github.com/LukasWallrich/metaUI/blob/main/validation/licensing-audit.md) records the sources and licences of
+bundled code and data.
 
 Downloads preserve the full current input dataset and saved filter selections; the
 summary sheet describes the selected rows. An empty selection stays empty on

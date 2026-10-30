@@ -5,9 +5,9 @@ This release consolidates all changes since 0.1.1, including the unreleased
 
 ## Breaking changes
 
-* `inst/extdata/barroso2021.csv` is removed because its redistribution terms could
-  not be verified. Tutorials and examples now use the attributed CC-BY Dannheim
-  mental-health example (`inst/examples/dannheim`).
+* The example dataset `inst/extdata/barroso2021.csv` is no longer included.
+  Tutorials and examples now use the CC-BY Dannheim mental-health example
+  (`inst/examples/dannheim`).
 * `generate_shiny()` and `build_app()` refuse a nonempty `save_to_folder` unless
   `overwrite = TRUE`, so hand edits to a generated app are not overwritten.
 * Generated apps check their dependencies at startup but no longer install
