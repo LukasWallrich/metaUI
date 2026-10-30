@@ -1,0 +1,85 @@
+"dataset","group","comparison","meta_status","candidate_status","meta_warnings","candidate_warnings","meta_error","candidate_error","warnings_match","status_match"
+"sim-001","simulation","trimfill-direct","NULL","error","Minimal number of three studies for trim-and-fill method","","","Number of parameters to be estimated is larger than the number of observations.",FALSE,FALSE
+"sim-001","simulation","trimfill-FE-then-ML-HK","NULL","ok","Minimal number of three studies for trim-and-fill method","","","",FALSE,FALSE
+"sim-001","simulation","Egger-LM","ok","ok","","NaNs produced","","",FALSE,TRUE
+"sim-005","simulation","trimfill-FE-then-ML-HK","ok","ok","Fisher scoring algorithm may have gotten stuck at a local maximum.
+Setting tau^2 = 0. Check the profile likelihood plot with profile().","","","",FALSE,TRUE
+"sim-035","simulation","trimfill-direct","ok","error","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.; Fisher scoring algorithm may have gotten stuck at a local maximum.
+Setting tau^2 = 0. Check the profile likelihood plot with profile().","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.; Fisher scoring algorithm may have gotten stuck at a local maximum.
+Setting tau^2 = 0. Check the profile likelihood plot with profile().","","Trim and fill algorithm did not converge.",TRUE,FALSE
+"sim-055","simulation","trimfill-direct","ok","error","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.","","Trim and fill algorithm did not converge.",TRUE,FALSE
+"sim-070","simulation","trimfill-direct","ok","error","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.","","Trim and fill algorithm did not converge.",TRUE,FALSE
+"sim-083","simulation","trimfill-direct","NULL","error","Minimal number of three studies for trim-and-fill method","","","Number of parameters to be estimated is larger than the number of observations.",FALSE,FALSE
+"sim-083","simulation","trimfill-FE-then-ML-HK","NULL","ok","Minimal number of three studies for trim-and-fill method","","","",FALSE,FALSE
+"sim-083","simulation","Egger-LM","ok","ok","","NaNs produced","","",FALSE,TRUE
+"sim-101","simulation","trimfill-direct","NULL","error","Minimal number of three studies for trim-and-fill method","","","Number of parameters to be estimated is larger than the number of observations.",FALSE,FALSE
+"sim-101","simulation","trimfill-FE-then-ML-HK","NULL","ok","Minimal number of three studies for trim-and-fill method","","","",FALSE,FALSE
+"sim-101","simulation","Egger-LM","ok","ok","","NaNs produced","","",FALSE,TRUE
+"sim-112","simulation","trimfill-direct","ok","error","","","","Fisher scoring algorithm did not converge. See 'help(rma)' for possible remedies.",TRUE,FALSE
+"sim-130","simulation","trimfill-direct","ok","ok","Fisher scoring algorithm may have gotten stuck at a local maximum.
+Setting tau^2 = 0. Check the profile likelihood plot with profile().","","","",FALSE,TRUE
+"sim-142","simulation","trimfill-direct","NULL","error","Minimal number of three studies for trim-and-fill method","","","Number of parameters to be estimated is larger than the number of observations.",FALSE,FALSE
+"sim-142","simulation","trimfill-FE-then-ML-HK","NULL","ok","Minimal number of three studies for trim-and-fill method","","","",FALSE,FALSE
+"sim-142","simulation","Egger-LM","ok","ok","","NaNs produced","","",FALSE,TRUE
+"sim-151","simulation","trimfill-direct","ok","ok","Fisher scoring algorithm may have gotten stuck at a local maximum.
+Setting tau^2 = 0. Check the profile likelihood plot with profile().","","","",FALSE,TRUE
+"sim-185","simulation","trimfill-direct","ok","ok","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.; Fisher scoring algorithm may have gotten stuck at a local maximum.
+Setting tau^2 = 0. Check the profile likelihood plot with profile().","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.","","",FALSE,TRUE
+"sim-205","simulation","trimfill-direct","ok","ok","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.; Fisher scoring algorithm may have gotten stuck at a local maximum.
+Setting tau^2 = 0. Check the profile likelihood plot with profile().","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.","","",FALSE,TRUE
+"sim-220","simulation","trimfill-direct","ok","error","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.","","Trim and fill algorithm did not converge.",TRUE,FALSE
+"sim-243","simulation","trimfill-direct","NULL","error","Minimal number of three studies for trim-and-fill method","","","Number of parameters to be estimated is larger than the number of observations.",FALSE,FALSE
+"sim-243","simulation","trimfill-FE-then-ML-HK","NULL","ok","Minimal number of three studies for trim-and-fill method","","","",FALSE,FALSE
+"sim-243","simulation","Egger-LM","ok","ok","","NaNs produced","","",FALSE,TRUE
+"sim-250","simulation","trimfill-FE-then-ML-HK","ok","ok","Fisher scoring algorithm may have gotten stuck at a local maximum.
+Setting tau^2 = 0. Check the profile likelihood plot with profile().","","","",FALSE,TRUE
+"sim-280","simulation","trimfill-direct","ok","error","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.","Ratio of largest to smallest sampling variance extremely large. May not be able to obtain stable results.","","Trim and fill algorithm did not converge.",TRUE,FALSE
+"identical-1","edge","REML-HK","ok","ok","","Setting argument test=""z"" since k=1.","","",FALSE,TRUE
+"identical-1","edge","ML-HK","ok","ok","","Setting argument test=""z"" since k=1.","","",FALSE,TRUE
+"identical-1","edge","trimfill-direct","NULL","error","Minimal number of three studies for trim-and-fill method","Setting argument test=""z"" since k=1.","","Stopped because k = 1.",FALSE,FALSE
+"identical-1","edge","trimfill-FE-then-ML-HK","NULL","error","Minimal number of three studies for trim-and-fill method","","","Stopped because k = 1.",FALSE,FALSE
+"identical-1","edge","Egger-LM","ok","error","","Setting argument test=""z"" since k=1.","","Model matrix no longer of full rank after addition of predictor. Cannot fit model.",FALSE,FALSE
+"equal-precision-1","edge","REML-HK","ok","ok","","Setting argument test=""z"" since k=1.","","",FALSE,TRUE
+"equal-precision-1","edge","ML-HK","ok","ok","","Setting argument test=""z"" since k=1.","","",FALSE,TRUE
+"equal-precision-1","edge","trimfill-direct","NULL","error","Minimal number of three studies for trim-and-fill method","Setting argument test=""z"" since k=1.","","Stopped because k = 1.",FALSE,FALSE
+"equal-precision-1","edge","trimfill-FE-then-ML-HK","NULL","error","Minimal number of three studies for trim-and-fill method","","","Stopped because k = 1.",FALSE,FALSE
+"equal-precision-1","edge","Egger-LM","ok","error","","Setting argument test=""z"" since k=1.","","Model matrix no longer of full rank after addition of predictor. Cannot fit model.",FALSE,FALSE
+"identical-2","edge","trimfill-direct","NULL","error","Minimal number of three studies for trim-and-fill method","","","Number of parameters to be estimated is larger than the number of observations.",FALSE,FALSE
+"identical-2","edge","trimfill-FE-then-ML-HK","NULL","ok","Minimal number of three studies for trim-and-fill method","NaNs produced","","",FALSE,FALSE
+"identical-2","edge","Egger-LM","ok","ok","","NaNs produced","","",FALSE,TRUE
+"equal-precision-2","edge","trimfill-direct","NULL","error","Minimal number of three studies for trim-and-fill method","","","missing value where TRUE/FALSE needed",FALSE,FALSE
+"equal-precision-2","edge","trimfill-FE-then-ML-HK","NULL","error","Minimal number of three studies for trim-and-fill method","","","missing value where TRUE/FALSE needed",FALSE,FALSE
+"equal-precision-2","edge","Egger-LM","ok","error","","","","Model matrix no longer of full rank after addition of predictor. Cannot fit model.",TRUE,FALSE
+"identical-3","edge","trimfill-direct","ok","error","","NaNs produced","","Trim and fill algorithm did not converge.",FALSE,FALSE
+"identical-3","edge","trimfill-FE-then-ML-HK","ok","error","","NaNs produced","","Trim and fill algorithm did not converge.",FALSE,FALSE
+"identical-3","edge","Egger-LM","ok","ok","","essentially perfect fit: summary may be unreliable","","",FALSE,TRUE
+"equal-precision-3","edge","trimfill-direct","error","error","","","Test for small-study effects not feasible as all studies have the same precision.","missing value where TRUE/FALSE needed",TRUE,TRUE
+"equal-precision-3","edge","trimfill-FE-then-ML-HK","error","error","","","Test for small-study effects not feasible as all studies have the same precision.","missing value where TRUE/FALSE needed",TRUE,TRUE
+"equal-precision-3","edge","Egger-LM","error","error","","","Test for small-study effects not feasible as all studies have the same precision.","Model matrix no longer of full rank after addition of predictor. Cannot fit model.",TRUE,TRUE
+"identical-5","edge","trimfill-direct","ok","error","","NaNs produced","","Trim and fill algorithm did not converge.",FALSE,FALSE
+"identical-5","edge","trimfill-FE-then-ML-HK","ok","error","","NaNs produced","","Trim and fill algorithm did not converge.",FALSE,FALSE
+"identical-5","edge","Egger-LM","ok","ok","","essentially perfect fit: summary may be unreliable","","",FALSE,TRUE
+"equal-precision-5","edge","trimfill-direct","error","error","","","Test for small-study effects not feasible as all studies have the same precision.","missing value where TRUE/FALSE needed",TRUE,TRUE
+"equal-precision-5","edge","trimfill-FE-then-ML-HK","error","error","","","Test for small-study effects not feasible as all studies have the same precision.","missing value where TRUE/FALSE needed",TRUE,TRUE
+"equal-precision-5","edge","Egger-LM","error","error","","","Test for small-study effects not feasible as all studies have the same precision.","Model matrix no longer of full rank after addition of predictor. Cannot fit model.",TRUE,TRUE
+"identical-20","edge","Egger-LM","ok","ok","","essentially perfect fit: summary may be unreliable","","",FALSE,TRUE
+"equal-precision-20","edge","trimfill-direct","error","error","","","Test for small-study effects not feasible as all studies have the same precision.","missing value where TRUE/FALSE needed",TRUE,TRUE
+"equal-precision-20","edge","trimfill-FE-then-ML-HK","error","error","","","Test for small-study effects not feasible as all studies have the same precision.","missing value where TRUE/FALSE needed",TRUE,TRUE
+"equal-precision-20","edge","Egger-LM","error","error","","","Test for small-study effects not feasible as all studies have the same precision.","Model matrix no longer of full rank after addition of predictor. Cannot fit model.",TRUE,TRUE
+"identical-60","edge","trimfill-direct","ok","ok","","NaNs produced","","",FALSE,TRUE
+"identical-60","edge","trimfill-FE-then-ML-HK","ok","ok","","NaNs produced","","",FALSE,TRUE
+"identical-60","edge","Egger-LM","ok","ok","","essentially perfect fit: summary may be unreliable","","",FALSE,TRUE
+"equal-precision-60","edge","trimfill-direct","error","error","","","Test for small-study effects not feasible as all studies have the same precision.","missing value where TRUE/FALSE needed",TRUE,TRUE
+"equal-precision-60","edge","trimfill-FE-then-ML-HK","error","error","","","Test for small-study effects not feasible as all studies have the same precision.","missing value where TRUE/FALSE needed",TRUE,TRUE
+"equal-precision-60","edge","Egger-LM","error","error","","","Test for small-study effects not feasible as all studies have the same precision.","Model matrix no longer of full rank after addition of predictor. Cannot fit model.",TRUE,TRUE
+"zero-variance","edge","REML-HK","ok","ok","Zero values in seTE replaced by NAs.","There are outcomes with non-positive sampling variances.; Cannot compute Q-test, I^2, or H^2 when there are non-positive sampling variances in the data.","","",FALSE,TRUE
+"zero-variance","edge","ML-HK","ok","ok","Zero values in seTE replaced by NAs.","There are outcomes with non-positive sampling variances.; Cannot compute Q-test, I^2, or H^2 when there are non-positive sampling variances in the data.","","",FALSE,TRUE
+"zero-variance","edge","trimfill-direct","NULL","error","Zero values in seTE replaced by NAs.; 1 observation(s) dropped due to missing values; Minimal number of three studies for trim-and-fill method","There are outcomes with non-positive sampling variances.; Cannot compute Q-test, I^2, or H^2 when there are non-positive sampling variances in the data.","","Division by zero when computing the inverse variance weights.",FALSE,FALSE
+"zero-variance","edge","trimfill-FE-then-ML-HK","NULL","error","Zero values in seTE replaced by NAs.; 1 observation(s) dropped due to missing values; Minimal number of three studies for trim-and-fill method","There are outcomes with non-positive sampling variances.","","Division by zero when computing the inverse variance weights.",FALSE,FALSE
+"zero-variance","edge","Egger-LM","ok","error","Zero values in seTE replaced by NAs.; 1 observation(s) dropped due to missing values","There are outcomes with non-positive sampling variances.; Cannot compute Q-test, I^2, or H^2 when there are non-positive sampling variances in the data.","","NA/NaN/Inf in 'x'",FALSE,FALSE
+"missing","edge","REML-HK","ok","ok","","1 study with NAs omitted from model fitting.","","",FALSE,TRUE
+"missing","edge","ML-HK","ok","ok","","1 study with NAs omitted from model fitting.","","",FALSE,TRUE
+"missing","edge","trimfill-direct","ok","ok","1 observation(s) dropped due to missing values","1 study with NAs omitted from model fitting.","","",FALSE,TRUE
+"missing","edge","trimfill-FE-then-ML-HK","ok","ok","1 observation(s) dropped due to missing values","1 study with NAs omitted from model fitting.","","",FALSE,TRUE
+"missing","edge","Egger-LM","ok","ok","1 observation(s) dropped due to missing values","1 study with NAs omitted from model fitting.","","",FALSE,TRUE
+"forced-nonconvergence","forced","trimfill-FE-then-ML-HK","error","ok","","","Fisher scoring algorithm did not converge. See 'help(rma)' for possible remedies.","",TRUE,FALSE

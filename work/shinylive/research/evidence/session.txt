@@ -1,0 +1,277 @@
+R version 4.6.1 (2026-06-24)
+Platform: x86_64-pc-linux-gnu
+Running under: Ubuntu 24.04.4 LTS
+
+Matrix products: default
+BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+
+locale:
+ [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
+ [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
+ [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
+[10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
+
+time zone: Europe/London
+tzcode source: system (glibc)
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+loaded via a namespace (and not attached):
+[1] compiler_4.6.1
+
+** Settings for meta-analysis method (R package meta, version 8.5-0) **
+
+* General settings *
+- level               = 0.95
+- level.ma            = 0.95
+- common              = TRUE
+- method.common.ci    = "classic"
+- random              = TRUE
+- method.random.ci    = "classic"
+- adhoc.hakn.ci       = ""
+- adhoc.hakn.pi       = ""
+- method.tau          = "REML"
+- method.tau.ci       = NULL
+- level.hetstat       = 0.95
+- tau.common          = FALSE
+- method.I2           = "Q"
+- prediction          = FALSE
+- level.predict       = 0.95
+- method.predict      = "V"
+- test.subgroup       = TRUE
+- prediction.subgroup = FALSE
+- method.bias         = "Egger"
+- tool.rob            = NULL
+- overall.hetstat     = NULL
+- cid                 = NA
+- cid.below.null      = NA
+- cid.above.null      = NA
+- text.common         = "Common effect model"
+- text.random         = "Random effects model"
+- text.predict        = "Prediction interval"
+- text.w.common       = "common"
+- text.w.random       = "random"
+- title               = ""
+- complab             = ""
+- CIbracket           = "["
+- CIseparator         = "; "
+- CIlower.blank       = TRUE
+- CIupper.blank       = TRUE
+- print.subgroup.name = TRUE
+- sep.subgroup        = " = "
+- keepdata            = TRUE
+- keeprma             = FALSE
+- warn                = TRUE
+- warn.deprecated     = TRUE
+- backtransf          = TRUE
+- digits              = 4
+- digits.mean         = 2
+- digits.sd           = 4
+- digits.se           = 4
+- digits.stat         = 2
+- digits.Q            = 2
+- digits.tau2         = 4
+- digits.tau          = 4
+- digits.H            = 2
+- digits.I2           = 1
+- digits.prop         = 4
+- digits.weight       = 1
+- digits.pval         = 4
+- digits.pval.Q       = 4
+- scientific.pval     = FALSE
+- big.mark            = ""
+- zero.pval           = TRUE
+- JAMA.pval           = FALSE
+- digits.df           = 4
+- digits.cid          = 4
+- details             = TRUE
+- print.tau2          = TRUE
+- print.tau2.ci       = TRUE
+- print.tau           = TRUE
+- print.tau.ci        = TRUE
+- print.I2            = TRUE
+- print.I2.ci         = TRUE
+- print.H             = TRUE
+- print.Rb            = FALSE
+- text.tau2           = "tau^2"
+- text.tau            = "tau"
+- text.I2             = "I^2"
+- text.Rb             = "Rb"
+- print.Q             = TRUE
+
+* Default summary measure (argument 'sm' in corresponding function) *
+- metabin():  smbin  = "RR"
+- metacont(): smcont = "MD"
+- metacor():  smcor  = "ZCOR"
+- metainc():  sminc  = "IRR"
+- metamean(): smmean = "MRAW"
+- metaprop(): smprop = "PLOGIT"
+- metarate(): smrate = "IRLN"
+
+* Additional settings for metabin(), metainc(), metaprop(), and metarate() *
+- incr        = 0.5
+- method.incr = "only0"
+
+* Additional settings for metabin() *
+- method      = "MH"
+- allstudies  = FALSE
+- MH.exact    = FALSE
+- RR.Cochrane = FALSE
+- Q.Cochrane  = TRUE
+- model.glmm  = "UM.FS"
+- print.CMH   = FALSE
+
+* Additional settings for metacont() *
+- pooledvar  = FALSE
+- method.smd = "Hedges"
+- sd.glass   = "control"
+- exact.smd  = TRUE
+- method.ci.cont = "z"
+
+* Additional settings for metagen() *
+- transf  = TRUE
+
+* Additional setting for metaprop() *
+- method.ci.prop = "CP"
+
+* Additional setting for metarate() *
+- method.ci.rate = "NAsm"
+
+* Settings for R functions comparing two treatments *
+- label.e     = "Experimental"
+- label.c     = "Control"
+- label.left  = ""
+- label.right = ""
+
+* Settings for forest.meta() *
+- layout                  = "meta"
+- forest.details          = FALSE
+- test.overall            = FALSE
+- test.effect.subgroup    = FALSE
+- digits.forest           = 2
+  (argument 'digits' in forest.meta())
+- digits.TE.forest           = 4
+  (argument 'digits.TE' in forest.meta())
+- lty.common              = 2
+- lty.random              = 3
+- col.common              = "black"
+- col.random              = "black"
+- sort.subgroup           = FALSE
+- pooled.events           = FALSE
+- pooled.times            = FALSE
+- study.results           = TRUE
+- lty.cid                 = 1
+- col.cid                 = "blue"
+- fill.cid                = "transparent"
+- cid.pooled.only         = FALSE
+- fill.equi               = "transparent"
+- fill                    = "transparent"
+- print.tau2.ci.subgroup  = NULL
+- print.tau.ci.subgroup   = NULL
+- leftcols                = NULL
+- rightcols               = NULL
+- leftlabs                = NULL
+- rightlabs               = NULL
+- label.e.attach          = NULL
+- label.c.attach          = NULL
+- bottom.lr               = TRUE
+- lab.NA                  = "."
+- lab.NA.effect           = NULL
+- lab.NA.weight           = "."
+- lwd                     = 1
+- lwd.square              = 1
+- lwd.diamond             = 1
+- arrow.type              = "open"
+- arrow.length            = 0.05
+- type.study              = "square"
+- type.common             = "diamond"
+- col.study               = "black"
+- col.square              = "gray"
+- col.square.lines        = "gray"
+- col.circle              = "royalblue"
+- col.inside              = "white"
+- col.diamond             = "gray"
+- col.diamond.lines       = "black"
+- col.predict             = "red"
+- col.predict.lines       = "black"
+- col.subgroup            = "black"
+- col.label.right         = "black"
+- col.label.left          = "black"
+- col.lines               = "black"
+- col.label               = "black"
+- hetlab                  = "Heterogeneity: "
+- resid.hetstat           = NULL
+- resid.hetlab            = "Residual heterogeneity: "
+- forest.I2               = NULL
+- forest.I2.ci            = FALSE
+- forest.tau2             = NULL
+- forest.tau2.ci          = FALSE
+- forest.tau              = FALSE
+- forest.tau.ci           = FALSE
+- forest.Q                = FALSE
+- forest.pval.Q           = NULL
+- forest.Rb               = FALSE
+- forest.Rb.ci            = FALSE
+- label.n                 = "Total"
+- label.events            = "Events"
+- label.mean              = "Mean"
+- label.sd                = "SD"
+- label.cor               = "Cor"
+- label.time              = "Time"
+- label.pval              = "P-value"
+- label.tau2              = "Tau2"
+- label.tau               = "Tau"
+- label.I2                = "I2"
+- label.cluster           = "Cluster"
+- label.cycles            = "Cycles"
+- text.subgroup.nohet     = "not applicable"
+- LRT                     = FALSE
+- forest.stat             = TRUE
+- forest.Q.subgroup       = TRUE
+- header.line             = FALSE
+- fontsize                = 12
+- fontfamily              = NULL
+- fs.common               = NULL
+- fs.random               = NULL
+- fs.predict              = NULL
+- fs.common.labels        = NULL
+- fs.random.labels        = NULL
+- fs.predict.labels       = NULL
+- fs.hetstat              = NULL
+- fs.test.overall         = NULL
+- fs.test.subgroup        = NULL
+- fs.test.effect.subgroup = NULL
+- fs.addline              = NULL
+- ff.heading              = "bold"
+- ff.common               = NULL
+- ff.random               = NULL
+- ff.predict              = NULL
+- ff.common.labels        = NULL
+- ff.random.labels        = NULL
+- ff.predict.labels       = NULL
+- ff.study                = "plain"
+- ff.hetstat              = NULL
+- ff.test.overall         = NULL
+- ff.test.subgroup        = NULL
+- ff.test.effect.subgroup = NULL
+- ff.addline              = NULL
+- ff.axis                 = "plain"
+- ff.smlab                = "bold"
+- ff.xlab                 = "plain"
+- ff.lr                   = "plain"
+- colgap                  = "2mm"
+- colgap.forest           = "2mm"
+- calcwidth.predict       = FALSE
+- calcwidth.hetstat       = FALSE
+- calcwidth.tests         = FALSE
+- calcwidth.subgroup      = FALSE
+- calcwidth.addline       = FALSE
+- just.studlab            = "left"
+- just.addcols            = "center"
+- spacing                 = 1
+- addrow                  = NULL
+- addrow.overall          = NULL
+- addrow.subgroups        = NULL
+- addrows.below.overall   = NULL
