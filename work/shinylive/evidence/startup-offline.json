@@ -1,0 +1,10 @@
+[
+  {
+    "run": 1,
+    "start_epoch": 1793368764.545,
+    "iframe_s": 40.226,
+    "ready_s": 41.459,
+    "first_analysis_s": 2.472,
+    "heap_MB": 18.02845
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "run": 1,
+    "start_epoch": 1793367352.02,
+    "iframe_s": 39.128,
+    "ready_s": 40.605,
+    "first_analysis_s": 2.622,
+    "heap_MB": 12.48053
+  },
+  {
+    "run": 2,
+    "start_epoch": 1793367395.388,
+    "iframe_s": 41.156,
+    "ready_s": 42.304,
+    "first_analysis_s": 2.562,
+    "heap_MB": 13.963731
+  },
+  {
+    "run": 3,
+    "start_epoch": 1793367440.522,
+    "iframe_s": 40.276,
+    "ready_s": 41.457,
+    "first_analysis_s": 2.42,
+    "heap_MB": 18.995977
+  }
+]

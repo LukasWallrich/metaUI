@@ -8,3 +8,6 @@ docs
 # Local package build artifacts
 metaUI_*.tar.gz
 *.Rcheck/
+
+# shinylive exploration: exported static site (rebuild with export_static())
+work/shinylive/site/
