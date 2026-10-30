@@ -1,0 +1,385 @@
+{
+  "implementation_commit": "364ac06",
+  "baseline_commit": "d767048",
+  "method": "Each comparison alternates baseline and candidate, one visit per timed-run.sh invocation, three visits each, using the shared machine-wide lock. Other workstreams may run between locked visits.",
+  "variant_definitions": {
+    "without_shinyWidgets_check": "Baseline app.json with only the shinyWidgets dependency check disabled; Dannheim has no categorical filter UI.",
+    "nonloading_checks_only": "Baseline app.json with requireNamespace checks changed to nonloading system.file checks; obsolete shinyWidgets dependency check disabled.",
+    "lazy_diagnostic": "Final runtime reductions before the core model preload was added.",
+    "final": "Fresh export of the installed implementation, including model-aware core package preloads."
+  },
+  "comparisons": {
+    "final": {
+      "baseline_runs": [
+        {
+          "run": 1,
+          "start_epoch": 1793374276.857,
+          "loadavg_1m": 6.43,
+          "iframe_s": 64.187,
+          "ready_s": 65.534,
+          "first_analysis_s": 2.448,
+          "first_results_s": 67.982,
+          "heap_MB": 21.243525,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793374661.295,
+          "loadavg_1m": 2.99,
+          "iframe_s": 39.117,
+          "ready_s": 40.341,
+          "first_analysis_s": 2.703,
+          "first_results_s": 43.044,
+          "heap_MB": 21.775884,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793374883.858,
+          "loadavg_1m": 2.79,
+          "iframe_s": 40.239,
+          "ready_s": 41.508,
+          "first_analysis_s": 2.323,
+          "first_results_s": 43.831,
+          "heap_MB": 11.0146,
+          "engine": "chromium"
+        }
+      ],
+      "candidate_runs": [
+        {
+          "run": 1,
+          "start_epoch": 1793374532.913,
+          "loadavg_1m": 2.6,
+          "iframe_s": 36.244,
+          "ready_s": 37.469,
+          "first_analysis_s": 2.291,
+          "first_results_s": 39.76,
+          "heap_MB": 14.725341,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793374754.601,
+          "loadavg_1m": 1.93,
+          "iframe_s": 36.352,
+          "ready_s": 37.603,
+          "first_analysis_s": 2.212,
+          "first_results_s": 39.815,
+          "heap_MB": 16.709717,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793375017.445,
+          "loadavg_1m": 2.62,
+          "iframe_s": 39.46,
+          "ready_s": 40.689,
+          "first_analysis_s": 2.196,
+          "first_results_s": 42.885,
+          "heap_MB": 20.379735,
+          "engine": "chromium"
+        }
+      ],
+      "baseline_median_ready_s": 41.508,
+      "candidate_median_ready_s": 37.603,
+      "baseline_median_first_results_s": 43.831,
+      "candidate_median_first_results_s": 39.815,
+      "first_results_speedup": 1.1008665075976392,
+      "ready_speedup": 1.1038480972262852
+    },
+    "lazy_diagnostic": {
+      "baseline_runs": [
+        {
+          "run": 1,
+          "start_epoch": 1793373348.861,
+          "loadavg_1m": 30.81,
+          "iframe_s": 65.019,
+          "ready_s": 66.382,
+          "first_analysis_s": 2.426,
+          "first_results_s": 68.808,
+          "heap_MB": 15.763992,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793373690.723,
+          "loadavg_1m": 4.86,
+          "iframe_s": 44.6,
+          "ready_s": 45.951,
+          "first_analysis_s": 2.521,
+          "first_results_s": 48.472,
+          "heap_MB": 17.989708,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793373930.108,
+          "loadavg_1m": 3.85,
+          "iframe_s": 42.588,
+          "ready_s": 43.926,
+          "first_analysis_s": 2.499,
+          "first_results_s": 46.425,
+          "heap_MB": 9.745076,
+          "engine": "chromium"
+        }
+      ],
+      "candidate_runs": [
+        {
+          "run": 1,
+          "start_epoch": 1793373533.155,
+          "loadavg_1m": 6.34,
+          "iframe_s": 24.289,
+          "ready_s": 25.847,
+          "first_analysis_s": 33.28,
+          "first_results_s": 59.127,
+          "heap_MB": 11.957193,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793373787.627,
+          "loadavg_1m": 4.05,
+          "iframe_s": 19.814,
+          "ready_s": 21.305,
+          "first_analysis_s": 32.641,
+          "first_results_s": 53.946,
+          "heap_MB": 10.745997,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793374066.926,
+          "loadavg_1m": 5.24,
+          "iframe_s": 19.366,
+          "ready_s": 20.719,
+          "first_analysis_s": 29.047,
+          "first_results_s": 49.766,
+          "heap_MB": 11.470379,
+          "engine": "chromium"
+        }
+      ],
+      "baseline_median_ready_s": 45.951,
+      "candidate_median_ready_s": 21.305,
+      "baseline_median_first_results_s": 48.472,
+      "candidate_median_first_results_s": 53.946,
+      "first_results_speedup": 0.8985281577874171,
+      "ready_speedup": 2.1568176484393335
+    },
+    "without_shinyWidgets_check": {
+      "baseline_runs": [
+        {
+          "run": 1,
+          "start_epoch": 1793374161.887,
+          "loadavg_1m": 3.39,
+          "iframe_s": 42.451,
+          "ready_s": 43.953,
+          "first_analysis_s": 2.74,
+          "first_results_s": 46.693,
+          "heap_MB": 21.333443,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793374795.16,
+          "loadavg_1m": 2.74,
+          "iframe_s": 40.967,
+          "ready_s": 42.109,
+          "first_analysis_s": 2.417,
+          "first_results_s": 44.526,
+          "heap_MB": 11.527112,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793375250.148,
+          "loadavg_1m": 2.63,
+          "iframe_s": 41.136,
+          "ready_s": 42.485,
+          "first_analysis_s": 2.415,
+          "first_results_s": 44.9,
+          "heap_MB": 17.906924,
+          "engine": "chromium"
+        }
+      ],
+      "candidate_runs": [
+        {
+          "run": 1,
+          "start_epoch": 1793374447.565,
+          "loadavg_1m": 3.16,
+          "iframe_s": 37.145,
+          "ready_s": 38.388,
+          "first_analysis_s": 2.525,
+          "first_results_s": 40.913,
+          "heap_MB": 16.615247,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793374928.416,
+          "loadavg_1m": 2.67,
+          "iframe_s": 37.004,
+          "ready_s": 38.161,
+          "first_analysis_s": 2.391,
+          "first_results_s": 40.552,
+          "heap_MB": 18.021293,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793375345.33,
+          "loadavg_1m": 3.67,
+          "iframe_s": 39.824,
+          "ready_s": 41.471,
+          "first_analysis_s": 2.613,
+          "first_results_s": 44.084,
+          "heap_MB": 12.180541,
+          "engine": "chromium"
+        }
+      ],
+      "baseline_median_ready_s": 42.485,
+      "candidate_median_ready_s": 38.388,
+      "baseline_median_first_results_s": 44.9,
+      "candidate_median_first_results_s": 40.913,
+      "first_results_speedup": 1.0974506880453645,
+      "ready_speedup": 1.1067260602271543
+    },
+    "nonloading_checks_only": {
+      "baseline_runs": [
+        {
+          "run": 1,
+          "start_epoch": 1793374573.398,
+          "loadavg_1m": 2.41,
+          "iframe_s": 39.548,
+          "ready_s": 40.87,
+          "first_analysis_s": 2.72,
+          "first_results_s": 43.59,
+          "heap_MB": 17.95396,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793375061.1,
+          "loadavg_1m": 3.79,
+          "iframe_s": 40.705,
+          "ready_s": 41.942,
+          "first_analysis_s": 2.424,
+          "first_results_s": 44.366,
+          "heap_MB": 12.17502,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793375390.42,
+          "loadavg_1m": 4.47,
+          "iframe_s": 44.595,
+          "ready_s": 46.244,
+          "first_analysis_s": 2.51,
+          "first_results_s": 48.754,
+          "heap_MB": 18.193409,
+          "engine": "chromium"
+        }
+      ],
+      "candidate_runs": [
+        {
+          "run": 1,
+          "start_epoch": 1793374705.091,
+          "loadavg_1m": 2.49,
+          "iframe_s": 20.415,
+          "ready_s": 21.57,
+          "first_analysis_s": 27.031,
+          "first_results_s": 48.602,
+          "heap_MB": 11.397995,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793375154.271,
+          "loadavg_1m": 2.11,
+          "iframe_s": 20.575,
+          "ready_s": 21.922,
+          "first_analysis_s": 27.178,
+          "first_results_s": 49.1,
+          "heap_MB": 11.572429,
+          "engine": "chromium"
+        },
+        {
+          "run": 1,
+          "start_epoch": 1793375440.093,
+          "loadavg_1m": 4.44,
+          "iframe_s": 22.648,
+          "ready_s": 24.008,
+          "first_analysis_s": 28.089,
+          "first_results_s": 52.097,
+          "heap_MB": 11.681061,
+          "engine": "chromium"
+        }
+      ],
+      "baseline_median_ready_s": 41.942,
+      "candidate_median_ready_s": 21.922,
+      "baseline_median_first_results_s": 44.366,
+      "candidate_median_first_results_s": 49.1,
+      "first_results_speedup": 0.9035845213849287,
+      "ready_speedup": 1.913237843262476
+    }
+  },
+  "conditional_stringr_saving": {
+    "with_meta_loaded_s": 0,
+    "without_meta_stringr_namespace_load_s": 8.267,
+    "interpretation": "Direct runtime stringr use no longer forces stringi. This namespace cost can be avoided only when no selected model or feature loads stringr transitively; the present Dannheim meta models still do."
+  },
+  "functional": {
+    "js_errors": [],
+    "output_errors": [
+      "P-curve requires explicit effect direction; it is not inferred.",
+      "Z-curve not estimated for this selection; reason below."
+    ],
+    "notes": [
+      "filtered selection: Built dataset (as published with this app). Selected 11 of 12 rows. Excluded 1 by successive filters (z-score range: 1).",
+      "iframe query after filtering: ?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc4247094839171e17d05d%22%2C\u2026",
+      "top-level page URL after filtering: http://127.0.0.1:8963/warm/?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc4247094839171e17d05d%22%2C%22filters%22%3A%5B%7B%22id%22%3A%22outliers_z_scores%22%2C%22selection%22%3A-1.5%7D%2C%7B%22id%22%3A%22outliers_z_scores%22%2C%22selection%22%3A1%7D%5D%2C%22sesoi%22%3Anull%7D",
+      "forest pdf: 5632 bytes, valid=true, name=forest-plot.pdf",
+      "forest png: 44835 bytes, valid=true, name=forest-plot.png",
+      "forest csv: 2368 bytes, valid=true, name=forest-plot-data.csv",
+      "after upload: Uploaded data: workbook.xlsx (12 rows), not the authors' dataset. Descriptive z=(fitting effect-built mean)/built SD; saved scale preserved; supplied z disagreements: 0. Missing-value choices restored (older files: missing values included). Selected 12 of 12 rows. Excluded 0 by successive filters (z-score range: 0).",
+      "selection link opened as: http://127.0.0.1:8963/warm/?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc424709483\u2026",
+      "link page iframe URL: http://127.0.0.1:8963/warm/app_02mnzju0ejma3tnaf4rz/",
+      "link notice: Selection restored from link.",
+      "link selection: Built dataset (as published with this app). Selected 11 of 12 rows. Excluded 1 by successive filters (z-score range: 1)."
+    ],
+    "categorical": {
+      "all_none": true,
+      "workbook_restore": true,
+      "link_restore": true,
+      "moderation_plot": true,
+      "errors": []
+    }
+  },
+  "parity": "                                                   Model      status\n                         Random-Effects Multilevel Model          ok\n                              Robust Variance Estimation          ok\n                                           Trim-and-fill          ok\n                                          P-uniform star unsupported\n                            Hedges-Vevea Selection Model unsupported\n                                   Precision Effect Test          ok\n          Precision Effect Estimate using Standard Error          ok\n Source-reference: REML / Hartung-Knapp (rounded inputs)          ok\n   es_server   es_static max_abs_diff fit_s_server fit_s_static\n -0.38356079 -0.38356079      1.1e-11         0.19         0.77\n -0.38286908 -0.38286908      0.0e+00         0.01         0.03\n -0.38300043 -0.38300043      0.0e+00         0.21         0.51\n          NA          NA           NA         0.00         0.00\n          NA          NA           NA         0.00         0.00\n  0.05177925  0.05177925      4.9e-17         0.00         0.01\n -0.21038191 -0.21038191      1.1e-16         0.00         0.01\n -0.38356080 -0.38356080      0.0e+00         0.04         0.10\n\nstatic primary: g = -0.38356080, CI [-0.68781519, -0.07930642]\n",
+  "package_tests": " \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\nDuration: 148.3 s\n\n\u2500\u2500 Skipped tests (1) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u2022 Set METAUI_TEST_SHINYLIVE=1 to run the shinylive export (1):\n  'test-export-static.R:31:3'\n\n[ FAIL 0 | WARN 0 | SKIP 1 | PASS 1226 ]\n",
+  "namespace_profile": [
+    "preload error:A_STARTUP_NAMES:jsonlite,dplyr,renv,stats,promises,tidyselect,Rcpp,webr,later,jquerylib,yaml,fastmap,mime,base,R6,shinyjs,generics,knitr,htmlwidgets,shinycssloaders,datasets,methods,tibble,shiny,bslib,pillar,rlang,DT,cachem,xfun,httpuv,utils,sass,otel,cli,withr,magrittr,crosstalk,digest,fontawesome,xtable,graphics,lifecycle,vctrs,evaluate,glue,shinythemes,codetools,purrr,grDevices,tools,pkgconfig,htmltools",
+    "preload error:A_LOAD:plotly:3.116",
+    "preload error:A_LOAD:readxl:0.0560000000000009",
+    "preload error:A_LOAD:writexl:0.0710000000000015",
+    "preload error:A_LOAD:zcurve:0.450000000000003",
+    "preload error:A_LOAD:puniform:0.193000000000001",
+    "preload error:A_LOAD:weightr:0.0390000000000015",
+    "preload error:A_LOAD:psych:0.344000000000001",
+    "preload error:A_LOAD:meta:15.009",
+    "preload error:A_STARTUP_NAMES:jsonlite,dplyr,renv,stats,promises,tidyselect,Rcpp,webr,later,jquerylib,yaml,fastmap,mime,base,R6,shinyjs,generics,knitr,htmlwidgets,shinycssloaders,datasets,methods,tibble,shiny,bslib,pillar,rlang,DT,cachem,xfun,httpuv,utils,sass,otel,cli,withr,magrittr,crosstalk,digest,fontawesome,xtable,graphics,lifecycle,vctrs,evaluate,glue,shinythemes,codetools,purrr,grDevices,tools,pkgconfig,htmltools",
+    "preload error:A_LOAD:stringr:8.267",
+    "preload error:A_LOAD:meta:8.305",
+    "preload error:A_LOAD:plotly:0.675999999999995"
+  ],
+  "visible_changes": [
+    "Large categorical filters use base Shiny selectize with Select all/Deselect all buttons.",
+    "Plotly output UI is created when its tab is first shown.",
+    "Plot labels wrap with base strwrap, which may choose different line breaks."
+  ],
+  "limitations": [
+    "sass remains loaded through Shiny/bslib after removing shinyWidgets; DT also loads during UI construction.",
+    "Default models and the Dannheim custom model still import meta and consequently stringr/stringi, lme4, vroom and readr. No model code or statistical method changed.",
+    "The no-meta observation is a namespace observation before core model preloads, with separately instrumented stringr/meta loads. It is not a paired first-analysis measurement of alternative model code.",
+    "Browser profile timings are single diagnostic observations under variable shared-machine load."
+  ]
+}
