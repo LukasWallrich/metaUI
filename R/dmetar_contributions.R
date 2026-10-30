@@ -1022,8 +1022,7 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact 
       "kp0.25" = k.025,
       "dEstimate" = dEstimate,
       "I2" = metaobject$I2,
-      "class.meta.object" = class(metaobject)[1],
-      "notes" = notes
+      "class.meta.object" = class(metaobject)[1]
     )
 
     class(return.list) <- c("pcurve", "effect.estimation")
@@ -1039,13 +1038,13 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact 
       "kAnalyzed" = k.sign,
       "kp0.25" = k.025,
       "I2" = metaobject$I2,
-      "class.meta.object" = class(metaobject)[1],
-      "notes" = notes
+      "class.meta.object" = class(metaobject)[1]
     )
 
     class(return.list) <- c("pcurve", "no.effect.estimation")
   }
 
+  if (compact) return.list$notes <- notes
   cat("  ", "\n")
   invisible(return.list)
   return.list
