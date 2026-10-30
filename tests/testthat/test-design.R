@@ -21,6 +21,7 @@ test_that("design settings reject malformed or unreadable values", {
 })
 
 test_that("design exports survive app generation and JSON builds", {
+  skip_without_app_packages()
   d <- prepared()
   path <- tempfile("metaui-design-")
   on.exit(unlink(path, recursive = TRUE))
@@ -68,6 +69,7 @@ test_that("helper refuses invalid exports and recovers after correction", {
 })
 
 test_that("dark palettes keep the forest labels on the selected surface", {
+  skip_without_app_packages()
   d <- app_design(accent = "#90CAF9", text = "#F7F9FC", background = "#131C27", surface = "#202C3A")
   rows <- data.frame(es = .2, LCL = .1, UCL = .3, row = 1, label = "Example", kind = "Selected effect")
   plot <- metaUI:::metaUI_forest_plot(rows, "SMD", accent = d$accent, ink = d$text, background = d$surface, interval_colour = d$text, grid_colour = metaUI:::design_mix(d$text, d$surface, .18))
@@ -91,6 +93,7 @@ test_that("presets and platform font stacks describe exported settings", {
 })
 
 test_that("generated equivalence bands keep plot marks readable", {
+  skip_without_app_packages()
   find_annotation <- function(expr) {
     if (missing(expr)) return(NULL)
     if (!is.call(expr) && !is.expression(expr) && !is.pairlist(expr)) return(NULL)

@@ -50,7 +50,7 @@ estimated for a reader's selection, the app reports why and does not substitute 
     \item{\code{citation}}{Citation requested by the author. Defaults to an empty string.}
     \item{\code{osf_link}}{Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.}
     \item{\code{contact}}{Contact information, typically email. Defaults to an empty string.}
-    \item{\code{list_packages}}{Should all packages used by the app be listed on the About page? If TRUE, it list the packages
+    \item{\code{list_packages}}{Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 a character vector with all packages to display.}
   }}
@@ -86,6 +86,7 @@ a folder. If saved, that folder will contain all the code and data needed to run
 on that folder, or modified by editing server.R, ui.R, global.R and models.R in the folder.
 }
 \examples{
+\dontshow{if (metaUI:::metaUI_app_ready()) withAutoprint(\{ # examplesIf}
 raw <- data.frame(study = letters[1:6], d = c(.1, .3, -.1, .4, .2, .5),
                   vi = c(.02, .03, .02, .04, .01, .05))
 app_data <- prepare_data(raw, "study", "d", variance = "vi")
@@ -93,4 +94,5 @@ folder <- tempfile("metaui-example-")
 generate_shiny(app_data, dataset_name = "Example", save_to_folder = folder,
                launch_app = FALSE)
 unlink(folder, recursive = TRUE)
+\dontshow{\}) # examplesIf}
 }

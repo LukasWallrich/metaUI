@@ -161,6 +161,8 @@ input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 
 .metaui-data-tools { border-top: 1px solid var(--metaui-rule); padding-top: 17px; margin-top: 17px; }
 .metaui-data-tools > summary { margin-bottom: 15px; }
 .metaui-data-tools .btn { margin-bottom: 12px; }
+.metaui-code-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; }
+.metaui-code-label { width: 100%; margin-bottom: 6px; font-size: 13px; color: var(--metaui-slate); }
 .metaui-basis { background: #e1eff0; border-left: 3px solid var(--metaui-accent); border-radius: 5px; padding: 12px 16px; margin-bottom: 18px; }
 #calculation_status { font-size: 12px; color: var(--metaui-slate); }
 .nav-tabs { border: 0; display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 0; padding: 5px; background: #e1eaf0; border-radius: 8px 8px 0 0; }

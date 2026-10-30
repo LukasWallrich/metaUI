@@ -1,3 +1,5 @@
+skip_without_app_packages()
+
 test_that("alternatives preserve identities and enforce each scale contract", {
   x <- fixture(); x$corrected <- x$yi * .9; x$vc <- x$vi * .81
   args <- list(Corrected = list(es_field="corrected", variance="vc", es_type="SMD", justification="Illustrative correction"))

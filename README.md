@@ -9,7 +9,7 @@ The metaUI package allows users to quickly create powerful and customisable Shin
 
 The motivation for the package came from the fact that meta-analyses are based on rich datasets that can be analyzed in numerous ways, and it is unlikely that authors and readers will always agree on the “best ways” to analyze the data. Whether it comes to the choice of model (e.g., random versus fixed effects), the methods for assessing or adjusting for publication bias (e.g., z-curve, p-curve, PET/PEESE etc), or the moderators to be considered, disagreements are likely to arise. This can lead to the inclusion of lengthy robustness checks and alternative analyses that are time-consuming and difficult to digest. metaUI, as an R package that supports researchers in creating interactive Shiny web apps can help - these apps allow readers (and reviewers) to explore meta-analytic datasets in a variety of different ways. Apart from allowing readers (and reviewers) to assess the robustness and trustworthiness of results more comprehensively, metaUI apps allow users to assess the results that are most relevant to them, such as by filtering the dataset to focus on a specific group of participants, region, outcome variable, or research method. With the opportunity for users to download the dataset used and to upload alternatives, it will also facilitate the updating of meta-analyses.
 
-The idea came from researchers who have created similar web apps for their meta-analyses that have been well received, yet they require substantial time investment and advanced coding skills to create. With metaUI, researchers can get a working app very swiftly – while they still have the flexibility to tailor the display in line with their interests and requirements. This branch is a tested development candidate with scientific and licensing limits documented below; feedback and contributions are welcome.
+The idea came from researchers who have created similar web apps for their meta-analyses that have been well received, yet they require substantial time investment and advanced coding skills to create. With metaUI, researchers can get a working app very swiftly – while they still have the flexibility to tailor the display in line with their interests and requirements. Scientific and licensing limits are documented below; feedback and contributions are welcome.
 
 
 ## Installation
@@ -18,8 +18,10 @@ You can install the development version of metaUI from [GitHub](https://github.c
 
 ``` r
 if (!require(remotes)) install.packages("remotes")
-remotes::install_github("LukasWallrich/metaUI")
+remotes::install_github("LukasWallrich/metaUI", dependencies = TRUE)
 ```
+
+`dependencies = TRUE` also installs the packages that generated apps use (listed under Suggests); `generate_shiny()` names any that are missing.
 
 ## Getting started
 
@@ -44,9 +46,19 @@ verified source licences and attribution in `inst/COPYRIGHTS`.
 
 ## Related projects
 
-- Allbritton et al. created [A General Tool for Living Meta-Analysis](https://dallbrit.shinyapps.io/Meta_regression_app/) to run and update meta-analyses online, which contains similar functionalities. Currently, it seems more feature-rich than metaUI, but more focused on meta-analysts rather than end users of insights - and less customisable. The app is accessible [here](https://dallbrit.shinyapps.io/Meta_regression_app/), more details are in the accompanying paper:
+- Allbritton et al.'s [A General Tool for Living Meta-Analysis](https://dallbrit.shinyapps.io/Meta_regression_app/)
+  ([source](https://github.com/davidallbritton/living-meta-analysis-app),
+  [doi:10.5281/zenodo.21938551](https://doi.org/10.5281/zenodo.21938551)) is the
+  closest related tool. Analysts upload their data or use curated files, select
+  studies by criteria generated from the data's columns, and fit frequentist and
+  Bayesian models; release 1.5.1 adds multilevel models and meta-regression. The
+  app downloads R code that reproduces the displayed analyses, and a copy with a
+  saved selection file reopens with, for example, an article's selections. Its
+  model menu and interface are those of the shared app, whereas metaUI generates
+  a separate app whose models and explanations each author edits. The tool is
+  described in:
 
-Allbritton, D., Gómez, P., Angele, B., Vasilev, M., & Perea, M. (2024). Breathing Life Into Meta-Analytic Methods. *Journal of Cognition*, 7(1).
+Allbritton, D., Gómez, P., Angele, B., Vasilev, M., & Perea, M. (2024). Breathing Life Into Meta-Analytic Methods. *Journal of Cognition*, 7(1), 61. [doi:10.5334/joc.389](https://doi.org/10.5334/joc.389)
 
 
 Other related tools include [Metapsy](https://www.metapsy.org/) (analysis workflow
@@ -87,9 +99,8 @@ models; directional models require explicit direction. COR/ZCOR require explicit
 variance scales. Read the generated validation report before interpreting results.
 The introductory Dannheim data use signed Hedges g, not correlations. No public deployment is automatic.
 
-[PsychOpen CAMA](https://leibniz-psychology.org/en/practices-and-tools-of-open-science/psychopen-cama)
-is another platform for cumulative meta-analysis. metaUI's intended contribution is
-an author-owned app with editable R source. See the bounded
+metaUI's intended contribution, compared with the [related projects](#related-projects),
+is an author-owned app with editable R source. See the bounded
 [publication-readiness assessment](https://github.com/LukasWallrich/metaUI/blob/main/validation/publication-readiness.md).
 
 ### Empirical example and performance
@@ -111,12 +122,31 @@ are validated, stored in session state, and clear prior cached results.
 
 [Performance measurements](https://github.com/LukasWallrich/metaUI/blob/main/validation/performance-optimisation.md) distinguish
 faster p-curve calculations/fit reuse from cache hits and first-time fitting costs.
-[Licence audit](https://github.com/LukasWallrich/metaUI/blob/main/validation/licensing-audit.md) records the licensed replacement of
-the former Barroso sample. This development candidate is not a public release.
+[Licence audit](https://github.com/LukasWallrich/metaUI/blob/main/validation/licensing-audit.md) records the sources and licences of
+bundled code and data.
 
 Downloads preserve the full current input dataset and saved filter selections; the
 summary sheet describes the selected rows. An empty selection stays empty on
 re-upload and reports no eligible rows, while the original inputs remain available.
+
+### Reproduction code
+
+After an analysis, readers can download an R script or a Quarto file that
+reproduces the applied selection (filters, missing-value choices, effect-size
+computation and equivalence bound) and the model rows on the Summary tab. The
+code reads the workbook from the same analysis, so it also works for uploaded
+data, and it runs without metaUI. It copies the app's `models.R`, including
+author-defined models and their helper functions, and the fitting functions that
+the app calls, so it follows the app's own code path. If `models.R` has been
+edited since the app started, the code contains the loaded model table instead
+and says that any helper code is missing. It also records the package
+versions the app used, with a commented-out
+[groundhog](https://groundhogr.com/) call that installs the CRAN versions current
+on the latest release date among them, and ends by comparing every row with the
+values the app reported. It does not reproduce the plots or diagnostic tabs. Author-defined
+models that use random numbers or external state, and other package versions,
+can give different results; the comparison shows where they do.
+See [the validation note](https://github.com/LukasWallrich/metaUI/blob/main/validation/code-export.md).
 
 ### Practical equivalence and forest exports
 
@@ -124,7 +154,8 @@ Summary includes an interval assessment for a reader-chosen symmetric smallest
 effect size of interest, on the displayed SMD or r scale. No bound is assumed.
 The strict containment criterion uses the reported intervals without refitting;
 model assumptions and small-sample limitations are shown beside the assessment.
-Downloads record the bound and classification in an `equivalence` sheet.
+Downloads record the bound and classification in an `equivalence` sheet, and
+uploading the workbook restores the bound, as selection links do.
 
 Forest plots compare observed-effect intervals and available multilevel/RVE
 summary intervals. PDF, PNG and CSV downloads use the same selected rows; the

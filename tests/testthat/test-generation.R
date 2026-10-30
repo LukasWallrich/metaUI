@@ -1,3 +1,5 @@
+skip_without_app_packages()
+
 test_that("headless app loads and runs the generated server", {
   path <- tempfile("metaui-app-")
   on.exit(unlink(path, recursive = TRUE))

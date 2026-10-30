@@ -57,7 +57,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       results_panel <- function(...) tagList(
         conditionalPanel("!(input.go > 0)", div(class = "metaui-empty", role = "status", not_analysed)),
         conditionalPanel("input.go > 0", ...))
-      data_help <- HTML("<p class=\'metaui-help-text\'>The workbook holds all rows (not only the selection), the last applied filters and the last results. With Bayesian models, it waits for two extra prior-sensitivity fits.<br/>Uploads must be workbooks from this app, with the same columns and effect scale; rows may be edited. Saved filters are restored and analysed.</p>")
+      data_help <- HTML("<p class=\'metaui-help-text\'>The workbook holds all rows (not only the selection), the last applied filters and the last results. With Bayesian models, it waits for two extra prior-sensitivity fits.<br/>Uploads must be workbooks from this app, with the same columns and effect scale; rows may be edited. Saved filters and the equivalence bound are restored and analysed.</p><p class=\'metaui-help-text\'>The R script and Quarto file reproduce the applied selection and its model rows from the workbook of the same analysis, without metaUI. They do not reproduce the plots or diagnostic tabs.</p>")
 
 
   ')
@@ -235,10 +235,15 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
           textOutput("apply_state")),
         uiOutput("share_selection"), textOutput("link_notice"),
         tags$details(class = "metaui-help metaui-data-tools",
-        tags$summary("Download or upload data"),
+        tags$summary("Download data or code, upload data"),
         actionButton("downloadData", "Download .xlsx", icon = icon("download")),
+        div(class = "metaui-code-actions", tags$span(class = "metaui-code-label", "Code for the applied selection"),
+          actionButton("downloadCode", "R script", icon = icon("code")),
+          actionButton("downloadQuarto", "Quarto file", icon = icon("file-code"))),
         conditionalPanel("false",
-          downloadButton("executeDownload", "Execute the download")
+          downloadButton("executeDownload", "Execute the download"),
+          downloadButton("executeCodeDownload", "Execute the R script download"),
+          downloadButton("executeQuartoDownload", "Execute the Quarto download")
         ),
       fileInput("uploadData", "Upload a metaUI .xlsx",
                 multiple = FALSE,
@@ -1187,7 +1192,8 @@ glue_string <- ('
       filters = filter_selections,
       computations = if (length(metaUI_computation_specs(metaUI__df)) && nrow(df_filtered())) computations_comparison() else data.frame(computation = "As supplied"),
       bayesian_sensitivity = if (!is.null(bayesian_options) && nrow(df_filtered())) bayesian_sensitivity() else data.frame(status = "not enabled"),
-      equivalence = if (nrow(df_filtered())) interval_assessment() else data.frame(assessment = "Not assessed", reason = "No eligible rows selected"),
+      equivalence = if (nrow(df_filtered())) interval_assessment() else data.frame(assessment = "Not assessed", reason = "No eligible rows selected",
+        bound = if (is.null(bound <- tryCatch(chosen_bound(), error = function(e) NULL))) NA_real_ else bound),
       provenance = data.frame(field = c("uploaded", "file", "z_rule", "primary_model"),
         value = c(as.character(!is.null(upload_info)),
           if (is.null(upload_info)) "built dataset" else upload_info$file,
@@ -1197,9 +1203,11 @@ glue_string <- ('
   })
 
 
+  workbook_name <- function() paste0(Sys.Date(), "-", gsub(" ", "_", dataset_name), "-metaUIdata.xlsx")
+
   output$executeDownload <- downloadHandler(
     filename = function() {
-      paste0(Sys.Date(), "-", gsub(" ", "_", dataset_name), "-metaUIdata.xlsx")
+      workbook_name()
     },
     content = function(file) {
       writexl::write_xlsx(data_list(), file)
@@ -1222,6 +1230,41 @@ glue_string <- ('
 
 }
 )
+
+  # REPRODUCTION CODE -------------------------------------------------------
+  # Script for the applied selection; it reads the workbook of the same analysis.
+  reproduction_code <- function(format) {
+    req(is.null(state_values$pending_upload_filters))
+    df <- df_filtered()
+    metaUI_reproduction_code(format, applied = attr(df, "metaUI_applied_filters"), filters = filters,
+      source = attr(df, "metaUI_source_data"), built = metaUI__df, models = models_to_run,
+      estimates = if (nrow(df)) estimatesfiltered() else NULL,
+      settings = list(dataset_name = dataset_name, workbook = workbook_name(), primary_model = primary_model,
+        correlation = correlation_dependent, aggregation = aggregation_method[1],
+        bound = tryCatch(chosen_bound(), error = function(e) NULL), known_models = known_interval_models,
+        upload = attr(df, "metaUI_upload_info"), selected_rows = nrow(df),
+        exported = format(Sys.time(), "%Y-%m-%d %H:%M %Z")),
+      app_dir = metaUI_app_dir, env = environment(metaUI_fit_models))
+  }
+  code_name <- function(extension) sub("metaUIdata[.]xlsx$", paste0("metaUI-selection.", extension), workbook_name())
+  output$executeCodeDownload <- downloadHandler(filename = function() code_name("R"),
+    content = function(file) writeLines(reproduction_code("R"), file, useBytes = TRUE))
+  output$executeQuartoDownload <- downloadHandler(filename = function() code_name("qmd"),
+    content = function(file) writeLines(reproduction_code("qmd"), file, useBytes = TRUE))
+  outputOptions(output, "executeCodeDownload", suspendWhenHidden = FALSE)
+  outputOptions(output, "executeQuartoDownload", suspendWhenHidden = FALSE)
+  # Same gate as the workbook, which the code needs.
+  request_code <- function(target) {
+    if (!is.null(state_values$pending_upload_filters)) {
+      showModal(modalDialog(title = "Restoring filters", "Wait until the uploaded selection has been analysed."))
+    } else if (isTRUE(state_values$ever_analyzed)) {
+      shinyjs::runjs(paste0("$(\'#", target, "\')[0].click();"))
+    } else {
+      showModal(modalDialog(title = "Not analysed yet", HTML("The code reproduces model results; click <i>Analyze data</i> first.")))
+    }
+  }
+  observeEvent(input$downloadCode, request_code("executeCodeDownload"))
+  observeEvent(input$downloadQuarto, request_code("executeQuartoDownload"))
 
   # UPLOAD ----------------------------------------------------------------
 
@@ -1273,7 +1316,7 @@ glue_string <- ('
         if (length(value) != 1L || is.na(value) || !value %in% metaUI_computations(metaUI__df)) stop("Unknown saved computation.")
         filter_values$computation <- data.frame(selection = value)
       }
-      list(data = df, filters = filter_values)
+      list(data = df, filters = filter_values, bound = metaUI_saved_bound(input$uploadData$datapath, sheets))
     }, error = function(e) e)
     if (inherits(upload, "error")) {
       showModal(modalDialog(title = "Invalid upload", conditionMessage(upload)))
@@ -1288,7 +1331,8 @@ glue_string <- ('
     state_values$upload_info <- list(file = basename(input$uploadData$name), rows = nrow(upload$data), upload_number = upload_number,
       z_rule = derivation$rule, z_disagreements = derivation$supplied_z_disagreements,
       checkbox_note = "Missing-value choices restored (older files: missing values included).")
-    filter_values <- upload$filters
+    # The bound does not refit, so it can be set before the restored analysis.
+    updateNumericInput(session, "sesoi", value = upload$bound)
     restore_filters(upload$filters, upload$data, "upload")
   })
 

@@ -3,7 +3,7 @@ const { chromium } = require(process.env.METAUI_PLAYWRIGHT || 'playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const root = process.env.METAUI_SMOKE_DIR;
 assert(root, 'Set METAUI_SMOKE_DIR to the fresh browser-fixture.R output directory');
 const evidence = path.join(root, 'evidence');
@@ -42,6 +42,24 @@ async function settledSample(effects) {
     const cell=table.querySelector('tbody tr')?.children[column];
     return column >= 0 && cell?.innerText.trim()===String(k) && !document.querySelector('.shiny-busy');
   }, effects, {timeout:60000});
+}
+async function saveDownload(selector, name) {
+  const pending = page.waitForEvent('download');
+  await page.locator(selector).click();
+  const target = path.join(evidence, name);
+  await (await pending).saveAs(target);
+  return target;
+}
+// Exported code runs in a fresh R process against the workbook of the same analysis.
+function reproduce(script, workbook, selected) {
+  const run = spawnSync('Rscript', ['--vanilla', path.basename(script), path.basename(workbook)],
+    {cwd:evidence, env:process.env, encoding:'utf8', timeout:180000});
+  const output = (run.stdout || '') + (run.stderr || '');
+  fs.writeFileSync(script + '.log', output);
+  assert.equal(run.status, 0, 'exported script failed: ' + output);
+  assert(output.includes('Agrees with the app'), 'exported script disagrees with the app: ' + output);
+  assert(output.includes(`Selected ${selected} of`), 'exported script selected other rows: ' + output);
+  assert(!/^Warning/m.test(output), 'exported script warned: ' + output);
 }
 (async()=>{
   await waitServer();
@@ -93,16 +111,27 @@ async function settledSample(effects) {
   for (const column of ['assessment','threshold','bound']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
   assert(await page.locator('#equivalence tbody tr').count() >= 2, 'expected one assessment row per model');
   assert.equal((await page.locator('#apply_state').innerText()).trim(), '');
-  await page.getByText('Download or upload data', {exact:true}).click();
+  await page.getByText('Download data or code, upload data', {exact:true}).click();
   const downloadEvent=page.waitForEvent('download');
   await page.locator('#downloadData').click();
   const download=await downloadEvent;
   await download.saveAs(path.join(evidence,'round-trip.xlsx'));
+  await page.locator('.metaui-data-tools').screenshot({path:path.join(evidence,'data-and-code-downloads.png')});
+  const script = await saveDownload('#downloadCode', 'selection.R');
+  const quarto = await saveDownload('#downloadQuarto', 'selection.qmd');
+  assert(fs.readFileSync(quarto, 'utf8').startsWith('---\ntitle: "Reproduce a metaUI selection'), 'Quarto download lacks its header');
+  assert(fs.readFileSync(script, 'utf8').includes('bound <- 1'), 'R script lost the equivalence bound');
+  reproduce(script, path.join(evidence,'round-trip.xlsx'), 16);
+  // Clear the bound so the upload has to restore it.
+  await page.locator('#sesoi').fill('');
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('No bound chosen'));
   await page.locator('#uploadData').setInputFiles(path.join(evidence,'round-trip.xlsx'));
   await page.waitForFunction(()=>document.querySelector('#uploadData_progress')?.textContent.includes('Upload complete'));
   await page.locator('#executeUpload').click();
   await page.waitForFunction(()=>document.querySelector('#selection_status')?.textContent.includes('Uploaded data:'));
   await settledSample(16);
+  assert.equal(await page.locator('#sesoi').inputValue(), '1', 'upload did not restore the equivalence bound');
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval within bounds'));
   await page.locator('#uploadData').setInputFiles(path.join(root,'upload.xlsx'));
   await page.waitForFunction(()=>document.querySelector('#uploadData_progress')?.textContent.includes('Upload complete'));
   await page.locator('#executeUpload').click(); await settledSample(4);
@@ -111,6 +140,10 @@ async function settledSample(effects) {
   const choices=await page.locator('#metaUI__filter_Group').evaluate(el=>[...el.selectedOptions].map(x=>x.value));
   assert.deepEqual(choices,['G1','G2']);
   await page.screenshot({path:path.join(evidence,'uploaded-summary.png')});
+  const uploadedWorkbook = await saveDownload('#downloadData', 'uploaded.xlsx');
+  const uploadedScript = await saveDownload('#downloadCode', 'uploaded-selection.R');
+  assert(fs.readFileSync(uploadedScript, 'utf8').includes('uploaded data (upload.xlsx'), 'R script does not disclose uploaded data');
+  reproduce(uploadedScript, uploadedWorkbook, 4);
   // A single excluded year makes the next result three effects.
   await page.locator('#metaUI__filter_Year_include_NA').uncheck();
   // This output starts hidden; it must resume when a filter changes.
@@ -129,7 +162,7 @@ async function settledSample(effects) {
   await page.screenshot({path:path.join(evidence,'mobile.png')});
   fs.writeFileSync(path.join(evidence,'result.json'),JSON.stringify({
     ok:true,checks:['standalone startup','analysis','cache disclosure','forest render and PDF/PNG/CSV exports','practical interval assessment',
-      'keyboard inline filter help','sample summary on both tabs','download/upload round trip','picker and missing-value restoration','numeric filtering','reset'],
+      'keyboard inline filter help','sample summary on both tabs','download/upload round trip with equivalence bound','R/Quarto code export reproduced in fresh R (built and uploaded data)','picker and missing-value restoration','numeric filtering','reset'],
     uploaded_selection:selected,js_errors:errors},null,2));
   console.log('Generated-app browser smoke checks passed.');
 })().catch(async error=>{
