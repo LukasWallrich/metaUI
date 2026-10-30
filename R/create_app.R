@@ -5,6 +5,11 @@ declared_imports <- function() {
   imports[nzchar(imports)]
 }
 
+# Inspect trusted author code, including helpers in an author model file.
+models_use_meta <- function(code) {
+  any(grepl("\\bmeta\\s*::|(?:library|require|requireNamespace)\\s*\\(\\s*['\"]?meta(?:['\"]|\\s*[,\\)])", code, perl = TRUE))
+}
+
 #' Create the about text for the app
 #'
 #' This function is generally only called internally by [generate_shiny()].
@@ -32,7 +37,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
           <p>Created with <a href='https://github.com/LukasWallrich/metaUI'>metaUI</a> v{utils::packageVersion('metaUI')}</p>
           ")
 
-  if (list_packages == TRUE) {
+  if (isTRUE(list_packages)) {
     req_packages <- utils::packageDescription("metaUI") %>%
       purrr::pluck("Imports") %>%
       stringr::str_remove_all(stringr::regex("\\(.*?\\)", dotall = TRUE)) %>%
@@ -44,7 +49,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
     list_packages <- TRUE
   }
 
-  if (list_packages == TRUE) {
+  if (isTRUE(list_packages)) {
     package_versions <- purrr::map_chr(req_packages, \(p) utils::packageVersion(p) %>% as.character())
 
     HTML(paste0(
@@ -149,6 +154,16 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     stop("Invalid argument type. models must be a function, a tibble, or a path to a file.")
   }
 
+  uses_meta <- models_use_meta(c(models_to_run$code,
+    if (is.character(models)) readLines(models, warn = FALSE)))
+  if (uses_meta) {
+    if (!requireNamespace("meta", quietly = TRUE) || utils::packageVersion("meta") < "7.0.0")
+      stop("meta >= 7.0-0 is required by the author model code.")
+    about_args <- list(...)
+    if (is.null(about_args$list_packages) || identical(about_args$list_packages, TRUE))
+      about_args$list_packages <- c(declared_imports(), "meta")
+    about <- do.call(create_about, c(list(dataset_name = dataset_name), about_args))
+  }
   bayesian <- metaUI_bayesian_options(bayesian, dataset$metaUI__es_type[1])
   package_models <- identical(models_to_run, get_model_tibble())
   if (!is.null(bayesian)) {
@@ -253,7 +268,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   file.copy(system.file("template_code", "analysis.R", package = "metaUI"),
             file.path(save_to_folder, "analysis.R"), overwrite = TRUE)
   jsonlite::write_json(report, file.path(save_to_folder, "validation.json"), auto_unbox = TRUE, pretty = TRUE, na = "null")
-  dependencies <- sort(unique(c(declared_imports(), "psych", if (!is.null(bayesian)) "bayesmeta")))
+  dependencies <- sort(unique(c(declared_imports(), if (uses_meta) "meta", "psych", if (!is.null(bayesian)) "bayesmeta")))
   versions <- data.frame(package = dependencies,
     version = vapply(dependencies, function(x) as.character(utils::packageVersion(x)), character(1)))
   utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
@@ -262,7 +277,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   writeLines(labels_and_options(dataset_name, correlation, primary_model), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
-  writeLines(generate_global.R(eff_size_type_label, bayesian), file.path(save_to_folder, "global.R"))
+  writeLines(generate_global.R(eff_size_type_label, bayesian, uses_meta), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
 
   if (!launch_app) return(invisible(normalizePath(save_to_folder)))
@@ -276,10 +291,11 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 #'
 #' @noRd
 
-generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL) {
-  req_packages <- c(declared_imports(), if (!is.null(bayesian)) "bayesmeta")
+generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL, uses_meta = FALSE) {
+  req_packages <- c(declared_imports(), if (uses_meta) "meta", if (!is.null(bayesian)) "bayesmeta")
 
 
+  meta_check <- if (uses_meta) "if (utils::packageVersion('meta') < '7.0.0') stop('meta >= 7.0-0 is required; install dependencies before launch.')" else ""
   label_code <- paste(deparse(as.character(metaUI_eff_size_type_label)), collapse = "\n")
   glue::glue("
 
@@ -292,7 +308,7 @@ generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL) {
       if (!requireNamespace(\"{.x}\", quietly = TRUE)) {{
         stop(\"Missing dependency: {.x}. Install dependencies before launching; see dependencies.csv.\")
         }}'))  %>% glue::glue_collapse(sep = '\n')}
-  if (utils::packageVersion('meta') < '7.0.0') stop('meta >= 7.0-0 is required; install dependencies before launch.')
+  {meta_check}
 
   # Ensure component files can be found
    f <- '.'

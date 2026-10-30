@@ -58,3 +58,8 @@ range, while zcurve requires at least 10 there. The app displays the estimator's
 reason rather than constructing a replacement estimate. P-curve likewise requires
 an explicit direction and is not estimated here. These are optional diagnostics;
 the source-reference model remains eligible.
+
+Estimation uses metafor: REML with unmodified Hartung–Knapp intervals for the
+source-reference row; Duval–Tweedie L0 common-effect trimming followed by ML
+and Hartung–Knapp for trim-and-fill. The editable analysis.R preserves meta
+8.5.0 average ranks, rounding and the 50-iteration return rule.

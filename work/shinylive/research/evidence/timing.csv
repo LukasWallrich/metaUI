@@ -1,0 +1,7 @@
+variant,pair,ready_s,first_results_s,loadavg_1m,run
+baseline,1,1376.373,1385.764,37.03,1
+candidate,1,80.24,87.485,16.06,1
+baseline,2,77.592,80.981,12.47,1
+candidate,2,38.709,42.194,9.79,1
+baseline,3,48.57,58.279,9.9,1
+candidate,3,52.268,55.77,16.43,1

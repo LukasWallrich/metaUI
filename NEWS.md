@@ -7,6 +7,18 @@
 - `generate_shiny(design = ...)` and the JSON `design` field apply those settings
   to generated apps. Existing apps/configurations keep their default appearance.
 
+## Metafor estimation in generated apps
+
+- Generated apps use metafor for trim-and-fill, funnel plots, Egger regression,
+  and the Dannheim source-reference fit. Ordinary-data estimates and intervals
+  are identical within numerical tolerance (1e-8). Editable helpers preserve
+  common-effect L0 trimming, average ties, rounding, the 50-iteration return,
+  ML/REML with unmodified Hartung-Knapp intervals, and Egger's three-study guard.
+- meta is optional and checked only when author model code explicitly uses it.
+  Funnel axes and margins differ slightly. Degenerate/invalid inputs can differ
+  in warnings and numerical handling; see work/shinylive/research/README.txt
+  and the complete comparison evidence for the enumerated cases.
+
 ## Other changes
 
 * Add author-defined effect-size computations with explicit scale/variance contracts,

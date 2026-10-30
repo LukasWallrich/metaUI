@@ -1,0 +1,45 @@
+{
+  "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#go')\u001b[22m\n\u001b[2m    - locator resolved to <button id=\"go\" type=\"button\" class=\"btn btn-default action-button btn-primary shinyjs-disabled shiny-bound-input\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n",
+  "timings": {
+    "index_loaded": 1.191,
+    "iframe_created": 93.039,
+    "ui_visible": 94.473,
+    "ready_to_analyse": 95.558,
+    "first_analysis_s": 6.039,
+    "reanalysis_cached_s": 3.288,
+    "filter_change_reanalysis_s": 2.729,
+    "forest_render_s": 6.057,
+    "forest_pdf_s": 2.929,
+    "forest_png_s": 2.127,
+    "forest_csv_s": 0.152,
+    "tab_Publication_Bias_s": 2.233,
+    "tab_Outlier_Diagnostics_s": 5.694,
+    "tab_Sample_s": 5.45
+  },
+  "notes": [
+    "filtered selection: Built dataset (as published with this app). Selected 11 of 12 rows. Excluded 1 by successive filters (z-score range: 1).",
+    "iframe query after filtering: ?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc4247094839171e17d05d%22%2C…",
+    "top-level page URL after filtering: http://127.0.0.1:8972/dannheim/?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc4247094839171e17d05d%22%2C%22filters%22%3A%5B%7B%22id%22%3A%22outliers_z_scores%22%2C%22selection%22%3A-1.5%7D%2C%7B%22id%22%3A%22outliers_z_scores%22%2C%22selection%22%3A1%7D%5D%2C%22sesoi%22%3Anull%7D",
+    "forest pdf: 5632 bytes, valid=true, name=forest-plot.pdf",
+    "forest png: 44835 bytes, valid=true, name=forest-plot.png",
+    "forest csv: 2368 bytes, valid=true, name=forest-plot-data.csv"
+  ],
+  "errors": [],
+  "consoleMsgs": [
+    "Failed to load resource: the server responded with a status of 404 (File not found)",
+    "preload error:",
+    "preload error:Attaching package: ‘dplyr’",
+    "preload error:",
+    "preload error:The following objects are masked from ‘package:stats’:",
+    "preload error:",
+    "preload error:    filter, lag",
+    "preload error:",
+    "preload error:The following objects are masked from ‘package:base’:",
+    "preload error:",
+    "preload error:    intersect, setdiff, setequal, union",
+    "preload error:",
+    "preload error:The current dataset contains not specified sources, 12 study clusters and 12 effects.",
+    "preload error:The current dataset contains not specified sources, 12 study clusters and 12 effects.",
+    "preload error:The current dataset contains not specified sources, 11 study clusters and 11 effects."
+  ]
+}

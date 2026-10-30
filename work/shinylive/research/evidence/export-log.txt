@@ -1,0 +1,20 @@
+ℹ Loading metadata database
+✔ Loading metadata database ... done
+
+Warning messages:
+1: Package version mismatch for readxl, ensure the versions below are compatible.
+! Installed version: 1.6.0, WebAssembly version: 1.5.0.1.
+ℹ Install a package version matching the WebAssembly version to silence this
+  error.
+2: Package version mismatch for mvtnorm, ensure the versions below are compatible.
+! Installed version: 1.4-2, WebAssembly version: 1.2-4.
+ℹ Install a package version matching the WebAssembly version to silence this
+  error.
+3: Package version mismatch for xfun, ensure the versions below are compatible.
+! Installed version: 0.62, WebAssembly version: 0.61.
+ℹ Install a package version matching the WebAssembly version to silence this
+  error.
+4: Package version mismatch for curl, ensure the versions below are compatible.
+! Installed version: 8.1.0, WebAssembly version: 8.0.0.
+ℹ Install a package version matching the WebAssembly version to silence this
+  error.

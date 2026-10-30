@@ -49,6 +49,7 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
     ...(process.env.METAUI_CHROMIUM ? {executablePath: process.env.METAUI_CHROMIUM} : {})});
   const context = await browser.newContext({viewport: {width: 1440, height: 1000}, acceptDownloads: true});
   const page = await context.newPage();
+  page.setDefaultTimeout(120000);
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') consoleMsgs.push(m.text()); });
   await page.goto(url);
@@ -128,7 +129,9 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
 
   // 5. Reset to full selection, workbook download, upload round trip
   await app.locator('#resetFilters').click(); await page.waitForTimeout(300);
-  await app.locator('#go').click(); await page.waitForTimeout(300); await idle(app);
+  await idle(app);
+  await app.waitForFunction(() => !document.querySelector('#go').disabled, null, {timeout:120000});
+  await app.locator('#go').click({force:true}); await page.waitForTimeout(300); await idle(app);
   await app.getByRole('tab', {name: 'Summary', exact: true}).click();
   await app.getByText('Download or upload data', {exact: true}).click();
   const wb = path.join(out, 'workbook.xlsx');

@@ -42,7 +42,7 @@ test_that("export_static() writes a static site with the bridge and notices", {
   js <- Filter(function(f) f$name == "www/metaui.js", files)[[1]]$content
   expect_match(js, "Static hosting (shinylive)", fixed = TRUE)
   bundled <- utils::read.csv(file.path(out, "bundled-packages.csv"))
-  expect_true(all(c("metafor", "meta", "shiny", "bslib") %in% bundled$package))
+  expect_true(all(c("metafor", "shiny", "bslib") %in% bundled$package))
   expect_setequal(unique(bundled$location), c("app packages", "webR base library"))
   expect_error(export_static(app, site, subdir = "fixture"), "Destination exists")
 })

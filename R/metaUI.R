@@ -57,7 +57,6 @@ no_check_warnings <- function() {
 
   # Estimation packages
   metafor::rma.mv()
-  meta::metabias()
   puniform::puniform()
   robumeta::robu()
   weightr::weightfunct()

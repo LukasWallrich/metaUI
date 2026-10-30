@@ -29,7 +29,6 @@ Imports:
     jsonlite,
     forcats,
     psych,
-    meta (>= 7.0-0),
     metafor,
     plotly,
     poibin,
@@ -50,6 +49,7 @@ Imports:
     writexl,
     zcurve
 Suggests: 
+    meta (>= 7.0-0),
     bayesmeta,
     testthat,
     knitr,

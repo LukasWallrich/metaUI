@@ -26,7 +26,7 @@ get_model_tibble <- function() {
         ~name, ~aggregated, ~es, ~LCL, ~UCL, ~k,
             "Random-Effects Multilevel Model", FALSE, "mod$b", "mod$ci.lb", "mod$ci.ub", "mod$k",
             "Robust Variance Estimation", FALSE, "as.numeric(mod$reg_table$b.r)", "mod$reg_table$CI.L", "mod$reg_table$CI.U", "length(mod$k)",
-            "Trim-and-fill", TRUE, "mod$TE.random", "mod$lower.random", "mod$upper.random", "mod$k",
+            "Trim-and-fill", TRUE, "mod$b", "mod$ci.lb", "mod$ci.ub", "mod$k",
             "P-uniform star", TRUE, "mod$est", "mod$ci.lb", "mod$ci.ub", "mod$k",
             "Hedges-Vevea Selection Model", TRUE, "as.numeric(mod$output_adj$par[2])", "mod$ci.lb_adj[2]", "mod$ci.ub_adj[2]", "mod$k",
             #"P-Curve (first value)", FALSE, "mod$dEstimate", NA, NA, "mod$kAnalyzed",
