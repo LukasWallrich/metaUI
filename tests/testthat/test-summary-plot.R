@@ -24,5 +24,10 @@ test_that("Summary plot recovers from startup with webR Shiny error handling", {
     expect_match(changed$src, "^data:image/png;base64,")
     expect_false(identical(image$src, changed$src))
     expect_equal(changed$height, 65 + 38 * max(1, sum(estimatesfiltered()$status == "ok")))
+    # An empty selection blanks the plot; it must redraw once rows are selected again.
+    session$setInputs(outliers_z_scores = c(9, 10), go = 3)
+    expect_error(output$model_comparison, class = "shiny.silent.error")
+    session$setInputs(outliers_z_scores = c(-10, 10), go = 4)
+    expect_match(output$model_comparison$src, "^data:image/png;base64,")
   })
 })
