@@ -645,7 +645,12 @@ glue_string <- ('
                      plot.background = ggplot2::element_rect(fill = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", colour = NA),
                      panel.background = ggplot2::element_rect(fill = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", colour = NA),
                      axis.text.y = ggplot2::element_text(colour = "<<if (is.null(opts$design)) "#22303c" else opts$design$text>>", hjust = 1, lineheight = .9))
-  }, height = function() 65 + 38 * max(1, sum(estimatesfiltered()$status == "ok"), na.rm = TRUE))
+  }, height = function() {
+    # The webR Shiny patch loses invalidation after a silent error in isolated
+    # plot dimensions. Keep startup dimensions valid until Analyze is available.
+    if (!isTruthy(input$go)) return(103)
+    65 + 38 * max(1, sum(estimatesfiltered()$status == "ok"), na.rm = TRUE)
+  })
 
   output$primary_estimate <- renderUI({
     table <- estimatesfiltered()

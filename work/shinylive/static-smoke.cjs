@@ -87,6 +87,8 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
     await app.waitForFunction(() => document.querySelector('#effectestimate')?.innerText.includes('Source-reference'), null, {timeout: 600000});
     await idle(app);
   });
+  await app.waitForFunction(() => document.querySelector('#model_comparison img')?.naturalWidth > 0, null, {timeout: 30000});
+  const initialSummaryPlot = await app.locator('#model_comparison img').getAttribute('src');
   if (await app.locator('[data-metaui-precomputed-plot]').count()) throw Error('Precomputed plot survived a new analysis');
   fs.writeFileSync(path.join(out, 'workbook-first-analysis.xlsx'), await fetchDownload(app, 'executeDownload'));
   const estimates = await app.locator('#effectestimate').innerText();
@@ -98,11 +100,15 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
   await timed('filter_change_reanalysis_s', async () => {
     await app.evaluate(() => {
       const el = $('#outliers_z_scores').data('ionRangeSlider');
-      el.update({from: -1.5, to: el.result.to});
+      el.update({from: -1.5, to: 1});
     });
     await app.waitForFunction(() => document.querySelector('#apply_state')?.textContent.includes('Filters changed'), null, {timeout: 30000});
     await app.locator('#go').click(); await page.waitForTimeout(300); await idle(app);
   });
+  await app.waitForFunction(() => document.querySelector('#model_comparison img')?.naturalWidth > 0, null, {timeout: 30000});
+  await app.waitForFunction(src => document.querySelector('#model_comparison img')?.src !== src, initialSummaryPlot, {timeout: 30000});
+  await page.screenshot({path: path.join(out, 'summary-filtered.png'), fullPage: true});
+  await app.locator('#model_comparison').screenshot({path: path.join(out, 'summary-plot-filtered.png')});
   notes.push('filtered selection: ' + (await app.locator('#selection_status').textContent()).replace(/\s+/g, ' '));
   const filteredQuery = await app.evaluate(() => location.search);
   notes.push('iframe query after filtering: ' + filteredQuery.slice(0, 80) + (filteredQuery.length > 80 ? '…' : ''));
