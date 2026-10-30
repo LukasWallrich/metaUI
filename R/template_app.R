@@ -1070,7 +1070,7 @@ glue_string <- ('
       "p" = ifelse(round(eggers$p.value, 3) == 0, "< .001", round(eggers$p.value, 3)),
       check.names = FALSE
     )
-    eggers_table[1, ] %>% DT::datatable(options = list(dom = "t"), escape = FALSE) %>%
+    eggers_table[1, ] %>% DT::datatable(rownames = FALSE, options = list(dom = "t"), escape = FALSE) %>%
      DT::formatRound(columns = 1:3, digits=3)
 
   })

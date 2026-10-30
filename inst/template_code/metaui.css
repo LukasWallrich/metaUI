@@ -314,6 +314,7 @@ h4.metaui-study-heading { font-size: 14px; font-weight: 600; margin: 12px 0 4px;
   table.metaui-stack-sortable.dataTable > thead > tr { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   table.metaui-stack-sortable.dataTable > thead > tr::before { content: 'Sort by'; font-size: 13px; color: var(--metaui-slate); margin-right: 2px; }
   table.metaui-stack-sortable.dataTable > thead > tr > th { display: block; width: auto !important; min-width: 0 !important; padding: 5px 24px 5px 10px !important; border: 1px solid var(--metaui-rule) !important; border-radius: 15px; background-color: #fff; font-size: 12px; white-space: nowrap; }
+  table.metaui-stack-sortable.dataTable > thead > tr > th[data-empty] { display: none; }
   table.metaui-stack-sortable.dataTable > thead > tr > th.sorting_asc, table.metaui-stack-sortable.dataTable > thead > tr > th.sorting_desc { border-color: var(--metaui-accent) !important; color: var(--metaui-accent); }
   table.dataTable.metaui-stack { margin: 0 !important; }
   table.dataTable.metaui-stack.no-footer { border-bottom: 0; }

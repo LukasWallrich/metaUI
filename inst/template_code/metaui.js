@@ -186,6 +186,10 @@
         cell.toggleAttribute('data-empty', !cell.textContent.trim() && !cell.querySelector('img, svg, button, input'));
       });
     });
+    // Columns empty in every row are hidden on cards, so their sort buttons go too.
+    Array.prototype.forEach.call(head.rows[head.rows.length - 1].cells, function (th, i) {
+      th.toggleAttribute('data-empty', rows.length > 0 && rows.every(function (row) { return row.cells[i].hasAttribute('data-empty'); }));
+    });
     var named = rows.length && rows.every(function (row) { return !numeric.test(row.cells[0].textContent.trim()); });
     table.classList.add('metaui-stack');
     table.classList.toggle('metaui-stack-named', named);
