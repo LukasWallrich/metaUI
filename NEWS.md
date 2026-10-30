@@ -18,6 +18,10 @@
   Funnel axes and margins differ slightly. Degenerate/invalid inputs can differ
   in warnings and numerical handling; see work/shinylive/research/README.txt
   and the complete comparison evidence for the enumerated cases.
+- Trim-and-fill refits the filled data in its original order. On rare borderline
+  data where meta's refit of the sorted data did not converge (3 of 400 simulated
+  datasets in an independent check), the row is now estimated, with the same
+  result as a metafor ML fit, instead of failing.
 
 ## Other changes
 
