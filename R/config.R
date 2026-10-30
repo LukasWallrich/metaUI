@@ -11,9 +11,11 @@
 #' during a build; DOIs already found in the cache are not queried again. The generated
 #' app never queries external services.
 #' @param config Path to JSON, or a named list with the same schema.
+#' @param overwrite Replace generated files in a nonempty output folder, as in
+#'   [generate_shiny()]. Unrelated files are retained. Checked before any lookup.
 #' @return Invisibly, the generated app directory.
 #' @export
-build_app <- function(config) {
+build_app <- function(config, overwrite = FALSE) {
   base <- getwd()
   if (is.character(config) && length(config) == 1L) {
     base <- dirname(normalizePath(config, mustWork = TRUE))
@@ -37,6 +39,10 @@ build_app <- function(config) {
       stop("study_info must be a CSV path or a lookup object {\"cache\": path, \"abstracts\": \"open_licence\"|\"exclude_nc\"|\"none\"|\"all\", \"openalex\": true|false}")
   }
   resolve <- function(path) if (grepl("^(/|[A-Za-z]:|\\\\)", path)) path else file.path(base, path)
+  if (!isTRUE(overwrite) && !isFALSE(overwrite)) stop("overwrite must be TRUE or FALSE")
+  output <- resolve(config$output)
+  if (!overwrite && dir.exists(output) && length(list.files(output, all.files = TRUE, no.. = TRUE)))
+    stop("Destination is not empty. Use a fresh folder to preserve author edits, or build_app(..., overwrite = TRUE).")
   mapping <- config$mapping
   if (!is.list(mapping) || is.null(names(mapping))) stop("mapping must be an object")
   allowed_mapping <- setdiff(names(formals(prepare_data)), "data")
@@ -52,7 +58,7 @@ build_app <- function(config) {
   about <- config$about
   if (!is.null(about) && (!is.list(about) || (length(about) && (is.null(names(about)) || any(!nzchar(names(about))))) || length(setdiff(names(about), c("date", "citation", "osf_link", "contact"))))) stop("Invalid about fields")
   do.call(generate_shiny, c(list(dataset = dataset, dataset_name = config$dataset_name,
-                                save_to_folder = resolve(config$output), launch_app = FALSE,
+                                save_to_folder = output, launch_app = FALSE, overwrite = overwrite,
                                 primary_model = config$primary_model,
                                 bayesian = config$bayesian, design = config$design,
                                 study_info = if (is.null(info)) NULL else if (is.character(info)) resolve(info) else

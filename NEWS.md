@@ -20,6 +20,7 @@
   `abstracts = "all"` keeps every abstract found.
 - In schema version 2 configurations, `study_info` is a CSV path or a lookup object
   (`{"cache": "study-metadata.csv"}`) that `build_app()` runs into that cache.
+- `build_app(overwrite = TRUE)` rebuilds into an existing output folder.
 - Generated apps never query external services, and no package dependencies are
   added. Models and estimates are unchanged.
 

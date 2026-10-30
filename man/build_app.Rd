@@ -4,10 +4,13 @@
 \alias{build_app}
 \title{Build an app from a declarative JSON configuration}
 \usage{
-build_app(config)
+build_app(config, overwrite = FALSE)
 }
 \arguments{
 \item{config}{Path to JSON, or a named list with the same schema.}
+
+\item{overwrite}{Replace generated files in a nonempty output folder, as in
+\code{\link[=generate_shiny]{generate_shiny()}}. Unrelated files are retained. Checked before any lookup.}
 }
 \value{
 Invisibly, the generated app directory.

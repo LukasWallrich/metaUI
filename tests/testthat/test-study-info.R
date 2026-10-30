@@ -230,8 +230,12 @@ test_that("build_app can run the lookup into a cache CSV beside the configuratio
   expect_identical(stored$abstract_licence, "https://creativecommons.org/licenses/by-nc/4.0/") # NC kept by default
   expect_true(file.exists(file.path(dir, "study-metadata.csv")))
   expect_length(calls, 1)
-  rebuild <- function() { unlink(file.path(dir, "app"), recursive = TRUE); suppressMessages(build_app(json)) }
+  expect_error(build_app(json), "Destination is not empty") # refused before any lookup
+  expect_length(calls, 1)
+  rebuild <- function() suppressMessages(build_app(json, overwrite = TRUE))
+  writeLines("kept", file.path(dir, "app", "notes.txt"))
   rebuild()
+  expect_true(file.exists(file.path(dir, "app", "notes.txt")))
   expect_length(calls, 1) # rebuilt from the cache
   config$study_info <- list(cache = "study-metadata.csv", abstracts = "exclude_nc", openalex = FALSE)
   jsonlite::write_json(config, json, auto_unbox = TRUE)

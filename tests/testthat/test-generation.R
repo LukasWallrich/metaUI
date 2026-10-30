@@ -176,6 +176,7 @@ test_that("declarative builder is deterministic and refuses ambiguous config", {
   build_app(path)
   expect_true(file.exists(file.path(root,"app","validation.json")))
   expect_error(build_app(path), "Destination is not empty")
+  expect_true(file.exists(build_app(path, overwrite = TRUE)))
   config$unknown <- TRUE
   expect_error(build_app(config), "Unknown configuration")
   config$unknown <- NULL; config$schema_version <- 99

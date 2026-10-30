@@ -195,7 +195,7 @@ the lookup on the mapped `url` column while building and save the result for rev
 ```
 
 Only `cache` is required. DOIs already found in the cache are not queried again, so
-rebuilds reuse the reviewed CSV.
+rebuilds (`metaUI::build_app("config.json", overwrite = TRUE)`) reuse the reviewed CSV.
 
 Single-DOI lookups are free on both services and need no key. Two optional
 environment variables, best set in `~/.Renviron` so they stay out of scripts:
