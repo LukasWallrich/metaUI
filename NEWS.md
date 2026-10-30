@@ -24,7 +24,9 @@ This release consolidates all changes since 0.1.1, including the unreleased
   missing, with the command to install them.
 * `generate_shiny()` and `build_app()` refuse a nonempty output folder unless
   `overwrite = TRUE`, so hand edits to a generated app are not overwritten by
-  accident.
+  accident. `overwrite = TRUE` replaces all generated files, including the
+  editable `www/metaui.css` and `www/metaui.js`; build into a fresh folder when
+  hand edits must be kept.
 * Generated apps check their dependencies at startup but no longer install
   packages; `dependencies.csv` records the versions used for the build.
 * Correlations must declare their variance scale, and directional bias analyses an

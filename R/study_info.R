@@ -147,7 +147,7 @@ metaUI_crossref_record <- function(doi, mailto, abstracts, today) {
   url <- paste0("https://api.crossref.org/works/", utils::URLencode(doi, reserved = TRUE), query)
   json <- tryCatch(metaUI_http_get(url, c(`User-Agent` = metaUI_agent(mailto))), error = function(e) e)
   if (inherits(json, "error")) {
-    status <- if (grepl("404", conditionMessage(json))) "not_found" else "error"
+    status <- if (metaUI_not_found(json)) "not_found" else "error"
     return(list(status = status))
   }
   metaUI_parse_crossref(jsonlite::fromJSON(json, simplifyVector = FALSE)$message, abstracts, today)
@@ -160,8 +160,11 @@ metaUI_openalex_record <- function(doi, key) {
   headers <- c(`User-Agent` = metaUI_agent(), if (nzchar(key)) c(Authorization = paste("Bearer", key)))
   json <- tryCatch(metaUI_http_get(url, headers), error = function(e) e)
   if (!inherits(json, "error")) jsonlite::fromJSON(json, simplifyVector = FALSE)
-  else if (grepl("404", conditionMessage(json))) list() else NULL
+  else if (metaUI_not_found(json)) list() else NULL
 }
+
+# The HTTP status phrase only; the message also holds the URL, whose DOI may contain "404".
+metaUI_not_found <- function(e) grepl("HTTP status was '404", conditionMessage(e), fixed = TRUE)
 
 # Separate so tests can replace the network call.
 metaUI_http_get <- function(url, headers) {

@@ -215,7 +215,7 @@ metaUI_study_details <- function(info) {
       if (!is.null(get("year"))) paste0("(", esc(get("year")), "). "),
       if (!is.null(get("title"))) paste0("<span class=\"metaui-study-title\">", esc(stop_(get("title"))), "</span> "),
       if (!is.null(get("journal"))) paste0("<i>", esc(get("journal")), "</i>",
-        if (nzchar(venue)) paste0(", ", venue), if (!is.null(pages)) paste0(", ", esc(pages)), ". "),
+        if (length(venue) && nzchar(venue)) paste0(", ", venue), if (!is.null(pages)) paste0(", ", esc(pages)), ". "),
       if (!is.null(link)) as.character(htmltools::tags$a(href = link, target = "_blank", rel = "noopener", link)))
     reference <- paste0("<p class=\"metaui-study-ref\"><span class=\"metaui-study-cite\">", reference, "</span> ",
       "<button type=\"button\" class=\"metaui-copy-ref\" aria-label=\"Copy reference\" title=\"Copy reference\">",

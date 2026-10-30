@@ -248,3 +248,17 @@ test_that("build_app can run the lookup into a cache CSV beside the configuratio
     expect_error(build_app(json), "lookup object")
   }
 })
+
+test_that("a journal without volume or issue still gives a reference", {
+  details <- metaUI:::metaUI_study_details(data.frame(study = "A", title = "T", journal = "Journal of Tests", year = "2020"))
+  expect_match(details, "<i>Journal of Tests</i>. ", fixed = TRUE)
+})
+
+test_that("only an HTTP 404 status counts as not found, not a DOI containing 404", {
+  local_mocked_bindings(metaUI_http_get = function(url, headers) stop("Could not resolve host: ", url))
+  expect_identical(metaUI:::metaUI_crossref_record("10.1234/x404", "", "open_licence", "2026-10-30")$status, "error")
+  expect_null(metaUI:::metaUI_openalex_record("10.1234/x404", ""))
+  local_mocked_bindings(metaUI_http_get = function(url, headers) stop("cannot open URL '", url, "': HTTP status was '404 Not Found'"))
+  expect_identical(metaUI:::metaUI_crossref_record("10.1234/x", "", "open_licence", "2026-10-30")$status, "not_found")
+  expect_identical(metaUI:::metaUI_openalex_record("10.1234/x", ""), list())
+})
