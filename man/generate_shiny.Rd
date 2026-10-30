@@ -17,7 +17,8 @@ generate_shiny(
   options = list(),
   overwrite = FALSE,
   bayesian = NULL,
-  design = NULL
+  design = NULL,
+  study_info = NULL
 )
 }
 \arguments{
@@ -67,6 +68,14 @@ a character vector with all packages to display.}
 \item{bayesian}{NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.}
 
 \item{design}{Optional settings from \code{\link[=app_design]{app_design()}}. Use \code{\link[=design_app]{design_app()}} to preview and export them.}
+
+\item{study_info}{Optional study information shown to readers: a data frame (or CSV path) with one row per
+study and a \code{study} column matching the study IDs, as returned by \code{\link[=fetch_study_metadata]{fetch_study_metadata()}} or written by the
+authors. Recognised columns: \code{doi}, \code{url}, \code{title}, \code{authors} (separated by "; "), \code{year}, \code{journal}, \code{volume},
+\code{issue}, \code{pages}, \code{abstract} (paragraphs separated by blank lines), \code{abstract_licence} (licence URL),
+\code{abstract_note}, \code{metadata_source}, \code{retrieved}, plus \code{status} and \code{abstract_policy} from the lookup. Studies in
+the effect-size list then open a details row. It is stored in the app; the app never fetches metadata. Include
+only abstracts you may republish.}
 }
 \value{
 With launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.

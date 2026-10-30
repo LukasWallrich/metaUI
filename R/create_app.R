@@ -106,6 +106,13 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @param save_to_folder Folder for the generated code and data. Defaults to NA, which uses a temporary folder. A nonempty destination is refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.
 #' @param design Optional settings from [app_design()]. Use [design_app()] to preview and export them.
 #' @param bayesian NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.
+#' @param study_info Optional study information shown to readers: a data frame (or CSV path) with one row per
+#' study and a `study` column matching the study IDs, as returned by [fetch_study_metadata()] or written by the
+#' authors. Recognised columns: `doi`, `url`, `title`, `authors` (separated by "; "), `year`, `journal`, `volume`,
+#' `issue`, `pages`, `abstract` (paragraphs separated by blank lines), `abstract_licence` (licence URL),
+#' `abstract_note`, `metadata_source`, `retrieved`, plus `status` and `abstract_policy` from the lookup. Studies in
+#' the effect-size list then open a details row. It is stored in the app; the app never fetches metadata. Include
+#' only abstracts you may republish.
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
 #' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.
 #' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
@@ -130,7 +137,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         models = get_model_tibble, primary_model = NULL, filter_popups = list(),
         save_to_folder = NA, launch_app = is.na(save_to_folder), ...,
-        options = list(), overwrite = FALSE, bayesian = NULL, design = NULL) {
+        options = list(), overwrite = FALSE, bayesian = NULL, design = NULL, study_info = NULL) {
 
   defaults <- list(max_forest_plot_rows = 200, shiny_theme = "yeti", selection_list_threshold = 6)
   opts <- utils::modifyList(defaults, options)
@@ -151,6 +158,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   if (!is.data.frame(dataset)) stop("Dataset must be a data.frame or tibble")
   check_removed_example(dataset)
   metaUI_validate_prepared(dataset)
+  if (!is.null(study_info)) study_info <- validate_study_info(study_info, dataset)
 
   if (is.na(eff_size_type_label)) {
     eff_size_type_label <- if (dataset$metaUI__es_type[1] == "ZCOR") "Fisher z (model summaries: r)" else dataset$metaUI__es_type[1]
@@ -221,6 +229,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
          direction_exclusions = attr(selected, "direction_exclusions"),
          note = "Normal Wald p-values; N not required for evidential-value plot. Author must justify selection against hypotheses/designs.")
   }, error = function(e) list(status = "unsupported", reason = conditionMessage(e)))
+  report$study_info <- study_info_report(study_info, dataset)
   report$zcurve <- "First effect per study; normal Wald |effect/SE|, not supplied source p-values. Independence across study IDs is an author assumption."
   about <- paste0(about, "<h4>Input and analysis contract</h4><pre>",
                   htmltools::htmlEscape(jsonlite::toJSON(report, auto_unbox = TRUE, pretty = TRUE, na = "null"), attribute = TRUE), "</pre>")
@@ -254,6 +263,9 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   if (!is.null(opts$design)) jsonlite::write_json(opts$design, file.path(save_to_folder, "design.json"), auto_unbox = TRUE, pretty = TRUE)
   if (is.null(opts$design) && file.exists(file.path(save_to_folder, "design.json")))
     unlink(file.path(save_to_folder, "design.json"))
+  if (!is.null(study_info)) saveRDS(study_info, file.path(save_to_folder, "study_info.rds"))
+  if (is.null(study_info) && file.exists(file.path(save_to_folder, "study_info.rds")))
+    unlink(file.path(save_to_folder, "study_info.rds"))
   file.copy(system.file("template_code", "dmetar_contributions.R", package="metaUI"),
             file.path(save_to_folder, "dmetar_contributions.R"), overwrite = TRUE)
   if (is.character(models)) {
@@ -358,6 +370,10 @@ generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL) {
   source(file.path(f, 'bayesian.R'), local = TRUE)
   source(file.path(f, 'models.R'), local = TRUE)
   source(file.path(f, 'labels_and_options.R'), local = TRUE)
+  # Optional study details written at build time (see metaUI::fetch_study_metadata()); never fetched here.
+  metaUI_study_info <- if (file.exists(file.path(f, 'study_info.rds'))) readRDS(file.path(f, 'study_info.rds')) else NULL
+  metaUI_study_details_html <- if (is.null(metaUI_study_info)) character() else metaUI_study_details(metaUI_study_info)
+  metaUI_study_reference_text <- if (is.null(metaUI_study_info)) character() else metaUI_study_reference(metaUI_study_info)
   source(file.path(f, 'dmetar_contributions.R'), local = TRUE)
   server <- source(file.path(f, 'server.R'), local = TRUE) %>% purrr::pluck('value')
   ui <- source(file.path(f, 'ui.R'), local = TRUE)  %>% purrr::pluck('value')

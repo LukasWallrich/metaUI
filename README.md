@@ -165,6 +165,56 @@ Analyze blocks the Shiny server process while fitting. Prior sensitivity runs
 when its tab or download is requested and can require two extra fits.
 See [Röver et al.](https://doi.org/10.1002/jrsm.1475) for the prior rationale.
 
+### Study details
+
+Readers can open a row in the list of effect sizes to see the study's reference
+and, where permitted, its abstract. Authors supply the details as
+`generate_shiny(study_info = ...)` or as a `study_info` CSV in a schema version 2
+configuration: one row per study, with a `study` column matching the study IDs.
+To fill this from DOIs, call `fetch_study_metadata()` while authoring. It queries the
+free Crossref REST API once per DOI, asks OpenAlex for licences and abstracts that
+Crossref lacks, and can cache results in a CSV. The generated app stores the result
+and never contacts either service. Missing, malformed or unknown DOIs are listed and
+left without details; nothing is matched by title.
+
+```r
+data <- metaUI::prepare_data("effects.csv", "study", "d", variance = "vi", url = "doi")
+info <- metaUI::fetch_study_metadata(data, cache = "study-metadata.csv")
+metaUI::generate_shiny(data, "My meta-analysis", study_info = info,
+                      save_to_folder = "my-app", launch_app = FALSE)
+```
+
+In a schema version 2 configuration for `build_app()`, `study_info` can instead run
+the lookup on the mapped `url` column while building and save the result for review:
+
+```json
+"study_info": {"cache": "study-metadata.csv", "abstracts": "open_licence", "openalex": true}
+```
+
+Only `cache` is required. DOIs already found in the cache are not queried again, so
+rebuilds (`metaUI::build_app("config.json", overwrite = TRUE)`) reuse the reviewed CSV.
+
+Single-DOI lookups are free on both services and need no key. Two optional
+environment variables, best set in `~/.Renviron` so they stay out of scripts:
+
+```
+METAUI_MAILTO=you@example.org   # contact address Crossref asks for (its "polite" pool)
+OPENALEX_API_KEY=your-key       # free key: openalex.org, Settings > API key; raises the rate limit
+```
+
+Crossref states that abstracts remain under publisher or author copyright,
+unlike the rest of its metadata. By default, the function therefore keeps an
+abstract only when the article is published under a Creative Commons licence (CC BY,
+with or without SA, ND or NC terms), CC0 or the Public Domain Mark, as recorded by
+Crossref or OpenAlex, and the app shows that licence beside it. All of these allow
+verbatim copies of the work in part. NonCommercial licences cover academic,
+non-commercial apps; for an app used commercially, set `abstracts = "exclude_nc"`.
+`abstracts = "all"` keeps every abstract found; authors who choose it are responsible
+for the right to republish them. Abstracts that authors add to the CSV are likewise
+their responsibility. This rule is a conservative default, not legal advice.
+
+The reference is shown in APA style with a button that copies it.
+
 ### Author design settings
 
 Run `metaUI::design_app()` to choose colours, font stacks, text size,

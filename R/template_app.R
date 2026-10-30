@@ -33,6 +33,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
 
       sample_overview_main <- HTML("<h3>Sample breakdown</h3>")
       sample_table <- HTML("<h3>Effect sizes</h3>")
+      study_details_hint <- HTML("<p class=\'metaui-note\'>Select a study name for its reference and, where the authors could include it, its abstract.</p>")
       sample_moderation_main <- HTML("<h3>Simple tests of moderation (ML)</h3>")
       sample_moderation_notes <- HTML("<p class=\'metaui-note\'><i>Notes:</i> One moderator at a time; correlations between moderators are ignored, so these tests are exploratory. k = number of effects.</p>")
 
@@ -291,6 +292,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             {if (any_filters) "sample_overview_main," else ""}
             {generate_sample_description_ui(data, any_filters)}
             sample_table,
+            if (!is.null(metaUI_study_info)) study_details_hint,
             DT::dataTableOutput("sample_table")
             )
           ),
@@ -787,7 +789,7 @@ glue_string <- ('
     out <- df %>%
       dplyr::select(dplyr::any_of("metaUI__article_label"),
         Study =
-          "metaUI__study_id", N = "metaUI__N",
+          "metaUI__study_id", metaUI__key = "metaUI__study_id", N = "metaUI__N",
         "Effect size" = "metaUI__effect_size", "Source p (primary)" = "metaUI__pvalue",
         dplyr::starts_with("metaUI__filter_"), dplyr::any_of("metaUI__url")
       ) %>%
@@ -807,13 +809,21 @@ glue_string <- ('
         as.character(tags$a(href = url, target = "_blank", rel = "noopener", url)), character(1))
     }
 
+    # Studies with author-supplied information get a disclosure button; metaui.js shows
+    # the hidden details column as a child row. Nothing is fetched while the app runs.
+    cells <- metaUI_study_cells(out$Study, out$metaUI__key, metaUI_study_info, metaUI_study_details_html, metaUI_study_reference_text)
+    out$Study <- cells$label
+    out$metaUI__details <- cells$details
+    out$metaUI__key <- NULL
+
     # Round non-integer numeric columns: effect sizes to 3 decimals, moderators to 2
     decimals <- names(out)[vapply(out, function(x) is.numeric(x) && any(x != round(x), na.rm = TRUE), logical(1))]
     decimals <- setdiff(decimals, "Effect size")
 
     table <- out %>% DT::datatable(
-      rownames = FALSE, options = list(scrollX = TRUE),
-      escape = setdiff(names(out), "URL"), # URL holds links built (and escaped) above
+      rownames = FALSE,
+      options = list(scrollX = TRUE, columnDefs = list(list(targets = ncol(out) - 1, visible = FALSE, searchable = FALSE))),
+      escape = setdiff(names(out), c("URL", "Study", "metaUI__details")), # built (and escaped) above
       caption = tags$caption(
         style = "caption-side: bottom; text-align: left; margin: 8px 0;",
         glue::glue("Effect size: {metaUI_eff_size_type_label}")

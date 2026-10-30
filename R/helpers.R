@@ -168,3 +168,106 @@ escape_quotes <- function(input_str) {
   output_str <- gsub("\"", "&quot;", output_str)
   return(output_str)
 }
+
+# APA-style author list from "Family, Given; ..." (fetch_study_metadata()'s format):
+# initials for given names, "&" before the last author, and 19 + ". . ." + last beyond 20.
+# Names in another format are kept as written.
+metaUI_apa_authors <- function(authors) {
+  names <- strsplit(authors, "; ", fixed = TRUE)[[1]]
+  names <- vapply(names, function(n) {
+    parts <- strsplit(n, ", ", fixed = TRUE)[[1]]
+    if (length(parts) != 2L) return(n)
+    initials <- vapply(strsplit(parts[2], "\\s+")[[1]], function(g) if (grepl(".", g, fixed = TRUE)) g else
+      paste0(substr(strsplit(g, "-", fixed = TRUE)[[1]], 1, 1), ".", collapse = "-"), character(1))
+    paste0(parts[1], ", ", paste(initials, collapse = " "))
+  }, character(1), USE.NAMES = FALSE)
+  n <- length(names)
+  if (n > 20) return(paste0(paste(names[1:19], collapse = ", "), ", . . . ", names[n]))
+  if (n == 1) names else paste0(paste(names[-n], collapse = ", "), ", & ", names[n])
+}
+
+# Family name of the first author ("Family, Given" or an organisation as written).
+metaUI_first_family <- function(authors) {
+  names <- strsplit(authors, "; ", fixed = TRUE)[[1]]
+  family <- sub(",.*$", "", names)
+  if (length(names) == 1) family else if (length(names) == 2) paste(family, collapse = " & ") else paste(family[1], "et al.")
+}
+
+metaUI_copy_icon <- '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><rect x="5.5" y="5.5" width="8.5" height="8.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 5.5V3.5A1.5 1.5 0 0 0 9 2H3.5A1.5 1.5 0 0 0 2 3.5V9a1.5 1.5 0 0 0 1.5 1.5h2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>'
+
+# Reader-facing study details from the authors' study information (see fetch_study_metadata()).
+# Returns HTML strings, one per row of `info`; every value is escaped.
+metaUI_study_details <- function(info) {
+  vapply(seq_len(nrow(info)), function(i) {
+    get <- function(name) {
+      value <- if (name %in% names(info)) info[[name]][i] else NA
+      if (is.na(value) || !nzchar(value)) NULL else as.character(value)
+    }
+    link <- if (!is.null(get("doi"))) paste0("https://doi.org/", get("doi")) else get("url")
+    # APA 7: Authors (year). Title. Journal, volume(issue), pages. DOI link -- punctuation controlled here.
+    esc <- function(x) htmltools::htmlEscape(x)
+    stop_ <- function(x) if (grepl("[.?!]$", x)) x else paste0(x, ".")
+    pages <- if (!is.null(get("pages"))) gsub("([0-9])-([0-9])", "\\1\u2013\\2", get("pages"))
+    venue <- paste0(if (!is.null(get("volume"))) paste0("<i>", esc(get("volume")), "</i>"),
+      if (!is.null(get("issue"))) paste0("(", esc(get("issue")), ")"))
+    reference <- paste0(
+      if (!is.null(get("authors"))) paste0(esc(metaUI_apa_authors(get("authors"))), " "),
+      if (!is.null(get("year"))) paste0("(", esc(get("year")), "). "),
+      if (!is.null(get("title"))) paste0("<span class=\"metaui-study-title\">", esc(stop_(get("title"))), "</span> "),
+      if (!is.null(get("journal"))) paste0("<i>", esc(get("journal")), "</i>",
+        if (length(venue) && nzchar(venue)) paste0(", ", venue), if (!is.null(pages)) paste0(", ", esc(pages)), ". "),
+      if (!is.null(link)) as.character(htmltools::tags$a(href = link, target = "_blank", rel = "noopener", link)))
+    reference <- paste0("<p class=\"metaui-study-ref\"><span class=\"metaui-study-cite\">", reference, "</span> ",
+      "<button type=\"button\" class=\"metaui-copy-ref\" aria-label=\"Copy reference\" title=\"Copy reference\">",
+      metaUI_copy_icon, "</button><span class=\"metaui-copy-status\" role=\"status\"></span></p>")
+    abstract <- get("abstract")
+    licence <- get("abstract_licence")
+    # Crossref gives a licence URL; OpenAlex a code such as "cc-by".
+    licence_label <- if (is.null(licence)) NULL else if (grepl("creativecommons\\.org/licenses/", licence))
+      toupper(gsub("^.*/licenses/([a-z-]+)/([0-9.]+).*$", "CC \\1 \\2", licence))
+      else if (grepl("publicdomain/zero", licence) || licence == "cc0") "CC0"
+      else if (grepl("publicdomain/mark", licence) || licence == "public-domain") "Public Domain"
+      else if (grepl("^cc-", licence)) toupper(sub("^cc-", "CC ", licence)) else licence
+    licence_html <- if (is.null(licence_label)) NULL else if (grepl("^https?://", licence))
+      as.character(htmltools::tags$a(href = licence, target = "_blank", rel = "noopener", licence_label))
+      else paste0(esc(licence_label), " (as recorded by OpenAlex)")
+    sources <- unique(c(get("abstract_source"), get("metadata_source")))
+    source <- if (length(sources) == 2) paste0("abstract from ", sources[1], ", reference from ", sources[2]) else sources
+    source <- paste(c(source, if (!is.null(get("retrieved"))) paste("retrieved", get("retrieved"))), collapse = ", ")
+    body <- if (!is.null(abstract)) paste0(
+      "<h4 class=\"metaui-study-heading\">Abstract</h4>",
+      paste0("<p>", esc(strsplit(abstract, "\n\n", fixed = TRUE)[[1]]), "</p>", collapse = ""),
+      "<p class=\"metaui-note\">",
+      if (!is.null(licence_html)) paste0("Licence: ", licence_html, ". ")
+      else paste0(esc(if (is.null(get("abstract_note"))) "Included by the app authors." else get("abstract_note")), " "),
+      if (nzchar(source)) paste0("Source: ", esc(source), "; formatting removed."), "</p>")
+    else paste0("<p class=\"metaui-note\">", esc(paste(c(get("abstract_note"), if (!is.null(get("metadata_source")))
+      paste0("Reference from ", get("metadata_source"), if (!is.null(get("retrieved"))) paste0(", retrieved ", get("retrieved")), ".")), collapse = " ")), "</p>")
+    paste0("<div class=\"metaui-study-info\">", reference, body, "</div>")
+  }, character(1))
+}
+
+# Plain one-line reference for hover titles: "Family et al. (year). Title. Journal."
+metaUI_study_reference <- function(info) {
+  vapply(seq_len(nrow(info)), function(i) {
+    parts <- vapply(c("authors", "year", "title", "journal"), function(name) {
+      value <- if (name %in% names(info)) info[[name]][i] else NA
+      if (is.na(value)) "" else as.character(value)
+    }, character(1))
+    if (nzchar(parts[["authors"]])) parts[["authors"]] <- metaUI_first_family(parts[["authors"]])
+    parts[["authors"]] <- trimws(paste0(parts[["authors"]], if (nzchar(parts[["year"]])) paste0(" (", parts[["year"]], ")")))
+    parts <- parts[c("authors", "title", "journal")]
+    parts <- parts[nzchar(parts)]
+    paste(ifelse(grepl("[.?!]$", parts), parts, paste0(parts, ".")), collapse = " ")
+  }, character(1))
+}
+
+# Effect-list cells: escaped study labels, as disclosure buttons where study details exist,
+# and the details HTML for the hidden column that metaui.js shows as a child row.
+metaUI_study_cells <- function(labels, ids, info, details_html, reference_text) {
+  index <- match(as.character(ids), info$study)
+  label <- vapply(seq_along(labels), function(i) if (is.na(index[i])) htmltools::htmlEscape(labels[i]) else
+    as.character(htmltools::tags$button(type = "button", class = "metaui-study-toggle", `aria-expanded` = "false",
+      title = reference_text[index[i]], labels[i])), character(1))
+  list(label = label, details = ifelse(is.na(index), "", details_html[index]))
+}
