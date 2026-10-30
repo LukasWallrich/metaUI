@@ -1,7 +1,7 @@
 # Silent startup error in isolated renderPlot dimensions never invalidates in webR
 
 Environment: shinylive assets 0.10.12, webR 0.6.0, bundled Shiny 1.13.0.8000.
-Native Shiny 1.14.0 recovers correctly. No upstream issue has been filed.
+Native Shiny 1.14.0 recovers correctly. Upstream issue: https://github.com/r-wasm/webr/issues/634.
 
 Export this directory with `shinylive::export()` and serve it over localhost.
 Click Analyze: the comparison stays blank with a `shiny.silent.error` / validation
@@ -30,7 +30,7 @@ A context probe records `getDims()` first in `[isolate]`, then in `plotObj`
 with native Shiny; with the patched helper its second call instead runs in
 `eventReactive({ input$go })`.
 Before the fix the regression test fails after Analyze with the same silent error; after the fix
-all six expectations pass. The static smoke test also fails on the original app
+the test verifies plot rendering and updates after changes to the selection. The static smoke test also fails on the original app
 at its explicit `#model_comparison img` natural-width check.
 
 Workarounds verified in the minimal native reproduction with the webR helper:

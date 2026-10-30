@@ -1,15 +1,16 @@
 """Summarise the complete helper audit; retain every mismatch, including NA patterns."""
-import csv, math
+import csv, math, os, sys
 from pathlib import Path
-src = Path('/tmp/shinylive-speed/M/equivalence/all-comparisons.csv')
-out = Path('work/shinylive/research/evidence')
+src = Path(sys.argv[1] if len(sys.argv) > 1 else os.environ.get('METAUI_EQUIVALENCE_OUT', '/tmp/shinylive-speed/W2/equivalence')) / 'all-comparisons.csv'
+out = Path(sys.argv[2] if len(sys.argv) > 2 else os.environ.get('METAUI_SUMMARY_OUT', '/tmp/shinylive-speed/W2/helper-summary'))
+out.mkdir(parents=True, exist_ok=True)
 r = list(csv.DictReader(src.open()))
 def num(x):
     try: return float(x)
     except ValueError: return math.nan
 summary = []
 for kind in sorted({x['comparison'] for x in r}):
-    for q in sorted({x['quantity'] for x in r if x['comparison']==kind}):
+    for q in sorted({x['quantity'] for x in r if x['comparison']==kind and x['group'] in ('simulation','fixture')}):
         rr=[x for x in r if x['comparison']==kind and x['quantity']==q and x['group'] in ('simulation','fixture')]
         diffs=[num(x['difference']) for x in rr if math.isfinite(num(x['difference']))]
         summary.append(dict(comparison=kind,quantity=q,finite_pairs=len(diffs),max_abs_difference=max(diffs,default=math.nan)))

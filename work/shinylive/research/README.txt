@@ -1,7 +1,21 @@
+Requirements and output paths
+Run from the repository root with meta 8.5.0, metafor and the metaUI dependencies
+installed. /tmp/shinylive-explore/lib supplies the frozen meta oracle; do not install
+there. Create /tmp/shinylive-speed/W2/lib and an empty site-library directory at
+/tmp/shinylive-explore/emptysite. Install this branch only into W2/lib.
+metafor-helpers-equivalence.R accepts an output directory as its first argument
+or METAUI_EQUIVALENCE_OUT (default /tmp/shinylive-speed/W2/equivalence).
+summarise-helpers.py accepts that input directory and a summary output directory
+as its first two arguments, or METAUI_EQUIVALENCE_OUT and METAUI_SUMMARY_OUT;
+the summary default is /tmp/shinylive-speed/W2/helper-summary.
+verify-metafor-independent.R accepts an optional CSV output filename as its first
+argument or METAUI_INDEPENDENT_OUT; by default it prints results only.
+The committed evidence below is a point-in-time record; reruns write to scratch.
+
 Metafor app migration — 30 October 2026
 
 Reproduce from the repository root:
-  export R_LIBS_USER=/tmp/shinylive-speed/M/lib:/tmp/shinylive-explore/lib
+  export R_LIBS_USER=/tmp/shinylive-speed/W2/lib:/tmp/shinylive-explore/lib
   export R_LIBS_SITE=/tmp/shinylive-explore/emptysite
   Rscript --vanilla work/shinylive/research/metafor-helpers-equivalence.R
   python3 work/shinylive/research/summarise-helpers.py
@@ -35,14 +49,11 @@ Design
   calls add meta and its >=7.0-0 check. Author model files are inspected including
   their helper definitions. Custom About package lists remain author-controlled.
 
-Ordinary-data maximum absolute differences (308 simulations + fixtures):
-                         estimate       lower CI       upper CI        k / k0
-REML/HK                 6.22e-15       7.11e-15       9.77e-15           0
-ML/HK                   6.66e-15       9.77e-15       1.24e-14           0
-Trim-and-fill           5.33e-15       6.22e-15       5.33e-15           0
-Egger bias 4.27e-14; variance 4.21e-12; t 4.98e-14; p 5.00e-16.
-Finite pairs: 308 ML/REML; 303 trimfill/Egger (five k=2 simulations correctly
-return NULL / an insufficient-k object). Every ordinary warning and status agrees.
+Ordinary-data numerical comparisons (308 simulations + fixtures):
+See evidence/helper-ordinary-summary.csv for the recorded maximum absolute
+differences, finite pair counts and quantities for each model. This file is the
+numeric source of truth; figures are not duplicated here. Five k=2 simulations
+correctly return NULL / an insufficient-k object for trimfill/Egger.
 All side choices agree. See helper-ordinary-summary.csv for tau2 and pair counts.
 
 Remaining accepted deviations (only direct helper calls on invalid inputs)

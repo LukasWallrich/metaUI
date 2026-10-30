@@ -1,0 +1,172 @@
+{
+  "mode": "static",
+  "url": "http://127.0.0.1:8972/dannheim/",
+  "timings": {
+    "index_loaded_s": 0.782,
+    "iframe_s": 60.357,
+    "ui_visible_s": 61.749,
+    "ready_s": 64.033,
+    "first_analysis_s": 3.427,
+    "reanalysis_cached_s": 3.184,
+    "filter_change_reanalysis_s": 3.101,
+    "forest_render_s": 1.146,
+    "forest_pdf_s": 0.923,
+    "forest_png_s": 0.637,
+    "forest_csv_s": 0.078,
+    "tab_Publication_Bias_s": 0.864,
+    "tab_Outlier_Diagnostics_s": 1.858,
+    "tab_Sample_s": 1.936,
+    "workbook_download_s": 0.248,
+    "workbook_upload_s": 3.325,
+    "link_restore_s": 46.856
+  },
+  "notes": [
+    "Precomputed controls disabled; live hand-over completed",
+    "filtered selection: Built dataset (as published with this app). Selected 11 of 12 rows. Excluded 1 by successive filters (z-score range: 1).",
+    "iframe query after filtering: ?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc4247094839171e17d05d%22%2C…",
+    "top-level page URL after filtering: http://127.0.0.1:8972/dannheim/?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc4247094839171e17d05d%22%2C%22filters%22%3A%5B%7B%22id%22%3A%22outliers_z_scores%22%2C%22selection%22%3A-1.5%7D%2C%7B%22id%22%3A%22outliers_z_scores%22%2C%22selection%22%3A1%7D%5D%2C%22sesoi%22%3Anull%7D",
+    "forest pdf: 5632 bytes, valid=true, name=forest-plot.pdf",
+    "forest png: 44835 bytes, valid=true, name=forest-plot.png",
+    "forest csv: 2368 bytes, valid=true, name=forest-plot-data.csv",
+    "study details: none in this app",
+    "after upload: Uploaded data: workbook.xlsx (12 rows), not the authors' dataset. Descriptive z=(fitting effect-built mean)/built SD; saved scale preserved; supplied z disagreements: 0. Missing-value choices restored (older files: missing values included). Selected 12 of 12 rows. Excluded 0 by successive filters (z-score range: 0).",
+    "code R: 29951 chars, name=2026-10-30-Dannheim_et_al._(2025)__mental-health_pool,_source_fit_and_explorations-metaUI-selection.R, fits=true",
+    "code qmd: 29696 chars, name=2026-10-30-Dannheim_et_al._(2025)__mental-health_pool,_source_fit_and_explorations-metaUI-selection.qmd, fits=true",
+    "selection link opened as: http://127.0.0.1:8972/dannheim/?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc42470…",
+    "link page iframe URL: http://127.0.0.1:8972/dannheim/app_plk4lpzkz0bmgtupo4m1/",
+    "link notice: Selection restored from link.",
+    "link selection: Built dataset (as published with this app). Selected 11 of 12 rows. Excluded 1 by successive filters (z-score range: 1)."
+  ],
+  "memory": {
+    "usedJSHeapMB": 23.806748
+  },
+  "startQuery": "?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc4247094839171e17d05d%22%2C%22filters%22%3A%5B%7B%22id%22%3A%22outliers_z_scores%22%2C%22selection%22%3A-2.5%7D%2C%7B%22id%22%3A%22outliers_z_scores%22%2C%22selection%22%3A1%7D%5D%2C%22sesoi%22%3Anull%7D",
+  "js_errors": [],
+  "console_errors": [],
+  "console_info": [
+    {
+      "message": "Failed to load resource: the server responded with a status of 404 (File not found)",
+      "source": "http://127.0.0.1:8972/favicon.ico"
+    },
+    {
+      "message": "preload error:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:Attaching package: ‘dplyr’",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:The following objects are masked from ‘package:stats’:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:    filter, lag",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:The following objects are masked from ‘package:base’:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:    intersect, setdiff, setequal, union",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:The current dataset contains not specified sources, 12 study clusters and 12 effects.",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:The current dataset contains not specified sources, 12 study clusters and 12 effects.",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:The current dataset contains not specified sources, 12 study clusters and 12 effects.",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:The current dataset contains not specified sources, 11 study clusters and 11 effects.",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:The current dataset contains not specified sources, 12 study clusters and 12 effects.",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:The current dataset contains not specified sources, 12 study clusters and 12 effects.",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:Attaching package: ‘dplyr’",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:The following objects are masked from ‘package:stats’:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:    filter, lag",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:The following objects are masked from ‘package:base’:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:    intersect, setdiff, setequal, union",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    },
+    {
+      "message": "preload error:The current dataset contains not specified sources, 11 study clusters and 11 effects.",
+      "source": "http://127.0.0.1:8972/shinylive/shinylive.js"
+    }
+  ],
+  "output_errors": [
+    "P-curve requires explicit effect direction; it is not inferred.",
+    "Z-curve not estimated for this selection; reason below."
+  ]
+}

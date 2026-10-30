@@ -1,17 +1,16 @@
 // Exploration: drive a generated metaUI app either as a shinylive static export
 // (MODE=static, app inside the shinylive iframe) or as a normal Shiny server
 // (MODE=server). Records timings and saves downloads for numerical comparison.
-// Usage: METAUI_PLAYWRIGHT=... URL=... MODE=static|server OUT=dir [BAYES=1] node static-smoke.cjs
+// Usage: METAUI_PLAYWRIGHT=... URL=... MODE=static|server OUT=dir node static-smoke.cjs
 const { chromium } = require(process.env.METAUI_PLAYWRIGHT || 'playwright');
 const fs = require('node:fs');
 const path = require('node:path');
 const url = process.env.URL, mode = process.env.MODE || 'static';
 const out = process.env.OUT; fs.mkdirSync(out, {recursive: true});
-const bayes = process.env.BAYES === '1';
 // Match the UI wait below: a contended machine can take >150 s under CDP.
 const startupPolls = Math.ceil(Number(process.env.METAUI_STARTUP_TIMEOUT || 600000) / 250);
-const timings = {}, notes = [], errors = [], consoleMsgs = [];
-const t0 = Date.now();
+const timings = {}, notes = [], errors = [], consoleMsgs = [], consoleInfo = [];
+let t0 = Date.now();
 const mark = (k) => { timings[k] = (Date.now() - t0) / 1000; console.log(k, timings[k]); };
 
 async function appFrame(page) {
@@ -29,7 +28,9 @@ const idle = (app, timeout = 600000) => app.waitForFunction(() => {
     [...document.querySelectorAll('.recalculating')].some(el => el.offsetParent !== null);
   if (busy) { window.__idleSince = null; return false; }
   window.__idleSince = window.__idleSince || Date.now();
-  return Date.now() - window.__idleSince > 500;
+  if (Date.now() - window.__idleSince <= 500) return false;
+  window.__idleSince = null;
+  return true;
 }, null, {timeout, polling: 100});
 // Fetch a download handler's URL from inside the app frame (through the service
 // worker in shinylive). Used when the browser download path is not captured.
@@ -53,9 +54,18 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
   const page = await context.newPage();
   page.setDefaultTimeout(120000);
   page.on('pageerror', e => errors.push(e.message));
-  page.on('console', m => { if (m.type() === 'error') consoleMsgs.push(m.text()); });
+  const recordConsole = m => {
+    if (m.type() !== 'error') return;
+    const message = m.text(), source = m.location().url;
+    if (message.startsWith('preload error:') ||
+        (/404/.test(message) && /\/favicon\.ico(?:[?#]|$)/.test(source)))
+      consoleInfo.push({message, source});
+    else consoleMsgs.push({message, source});
+  };
+  page.on('console', recordConsole);
+  t0 = Date.now();
   await page.goto(url);
-  mark('index_loaded');
+  mark('index_loaded_s');
   const precomputed = await page.locator('#metaui-preview').count();
   if (precomputed) {
     const preview = page.frameLocator('#metaui-preview');
@@ -68,13 +78,13 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
     await page.setViewportSize({width: 1440, height: 1000});
   }
   const app = await appFrame(page);
-  mark('iframe_created');
+  mark('iframe_s');
   await app.locator('#go').waitFor({timeout: 600000});
-  mark('ui_visible');
+  mark('ui_visible_s');
   await app.waitForFunction(() => Array.isArray(window.Shiny?.shinyapp?.$inputValues?.outliers_z_scores) &&
     !document.querySelector('#go').disabled, null, {timeout: 600000});
-  mark('ready_to_analyse');
-  if (precomputed) {
+  mark('ready_s');
+  if (mode === 'static') {
     await page.waitForFunction(() => document.documentElement.dataset.metauiLive === 'true', null, {timeout: 600000});
     await page.screenshot({path: path.join(out, 'handover.png')});
     notes.push('Precomputed controls disabled; live hand-over completed');
@@ -124,6 +134,7 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
   for (const [id, ext] of [['forest_pdf', 'pdf'], ['forest_png', 'png'], ['forest_csv', 'csv']]) {
     try {
       const pending = page.waitForEvent('download', {timeout: 120000});
+      pending.catch(() => {});
       const s = Date.now();
       await app.locator('#' + id).click();
       const d = await pending; const target = path.join(out, 'forest.' + ext); await d.saveAs(target);
@@ -131,6 +142,7 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
       const bytes = fs.readFileSync(target);
       const ok = ext === 'pdf' ? bytes.subarray(0, 5).toString() === '%PDF-' :
         ext === 'png' ? bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a' : bytes.toString().includes('Selected effect');
+      if (!ok) throw Error('Invalid forest ' + ext + ' download');
       notes.push(`forest ${ext}: ${bytes.length} bytes, valid=${ok}, name=${d.suggestedFilename()}`);
     } catch (e) {
       notes.push(`forest ${ext}: browser download FAILED ${e.message.split('\n')[0]}`);
@@ -140,8 +152,9 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
         fs.writeFileSync(path.join(out, 'forest-fetched.' + ext), bytes);
         const ok = ext === 'pdf' ? bytes.subarray(0, 5).toString() === '%PDF-' :
           ext === 'png' ? bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a' : bytes.toString().includes('Selected effect');
+        if (!ok) throw Error('Invalid forest ' + ext + ' fallback download');
         notes.push(`forest ${ext} via in-frame fetch: ${bytes.length} bytes, valid=${ok}`);
-      } catch (e2) { notes.push(`forest ${ext} via in-frame fetch: FAILED ${e2.message.split('\n')[0]}`); }
+      } catch (e2) { throw Error(`forest ${ext} download failed: ${e2.message}`); }
     }
   }
   await page.screenshot({path: path.join(out, 'forest.png')});
@@ -177,7 +190,7 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
   await page.waitForTimeout(300);
   await idle(app);
   await app.waitForFunction(() => !document.querySelector('#go').disabled, null, {timeout:120000});
-  await app.locator('#go').click({force:true}); await page.waitForTimeout(300); await idle(app);
+  await app.locator('#go').click(); await page.waitForTimeout(300); await idle(app);
   await app.getByRole('tab', {name: 'Summary', exact: true}).click();
   // Panel title differs between metaUI versions; open it by class.
   await app.locator('details.metaui-data-tools > summary, details:has(#downloadData) > summary').first().click();
@@ -185,6 +198,7 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
   try {
     await timed('workbook_download_s', async () => {
       const ev = page.waitForEvent('download', {timeout: 300000});
+      ev.catch(() => {});
       await app.locator('#downloadData').click();
       const d = await ev; await d.saveAs(wb);
     });
@@ -207,6 +221,7 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
     if (!(await app.locator('#' + button).count())) { notes.push('code ' + ext + ': not offered'); continue; }
     try {
       const ev = page.waitForEvent('download', {timeout: 120000});
+      ev.catch(() => {});
       await app.locator('#' + button).click();
       const d = await ev; const target = path.join(out, 'reproduction.' + ext); await d.saveAs(target);
       const text = fs.readFileSync(target, 'utf8');
@@ -225,8 +240,10 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
   await page.close();
 
   // 6. Selection link restore in a fresh page
+  if (!share) throw Error('Selection share link missing');
   if (share) {
     const linkPage = await context.newPage();
+    linkPage.on('console', recordConsole);
     linkPage.on('pageerror', e => errors.push('link page: ' + e.message));
     const linkUrl = new URL(share, mode === 'server' ? url : url).toString();
     notes.push('selection link opened as: ' + linkUrl.slice(0, 90) + '…');
@@ -236,23 +253,26 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
     let la;
     if (mode === 'server') la = linkPage.mainFrame();
     else { for (let i = 0; i < startupPolls && !la; i++) { la = linkPage.frames().find(fr => fr !== linkPage.mainFrame() && /app_/.test(fr.url())); if (!la) await linkPage.waitForTimeout(250); } }
+    if (!la) throw Error('Selection link app iframe not found');
     notes.push('link page iframe URL: ' + la.url().slice(0, 120));
-    try {
-      await la.waitForFunction(() => /restored|not applied/i.test(document.querySelector('#link_notice')?.textContent || '') ||
-        /Selected/.test(document.querySelector('#selection_status')?.textContent || ''), null, {timeout: 300000});
-      await la.waitForFunction(() => document.querySelector('#effectestimate')?.innerText.includes('Source-reference'), null, {timeout: 300000});
-      await idle(la);
-      notes.push('link notice: ' + (await la.locator('#link_notice').innerText().catch(() => '(none)')));
-      notes.push('link selection: ' + (await la.locator('#selection_status').textContent().catch(() => '')).replace(/\s+/g, ' '));
-    } catch (e) { notes.push('selection link: FAILED ' + e.message.split('\n')[0]); }
+    await la.waitForFunction(() => {
+      const notice = document.querySelector('#link_notice')?.textContent || '';
+      return /restored/i.test(notice) && !/not restored|not applied/i.test(notice) &&
+        /Selected 11 of 12/.test(document.querySelector('#selection_status')?.textContent || '');
+    }, null, {timeout: 300000});
+    await la.waitForFunction(() => document.querySelector('#effectestimate')?.innerText.includes('Source-reference'), null, {timeout: 300000});
+    await idle(la);
+    notes.push('link notice: ' + await la.locator('#link_notice').innerText());
+    notes.push('link selection: ' + (await la.locator('#selection_status').textContent()).replace(/\s+/g, ' '));
     timings.link_restore_s = (Date.now() - s) / 1000;
     await linkPage.screenshot({path: path.join(out, 'link-restore.png')});
     await linkPage.close();
   }
 
 
+  if (errors.length || consoleMsgs.length) throw Error('Unexpected browser errors: ' + JSON.stringify({page: errors, console: consoleMsgs}));
   fs.writeFileSync(path.join(out, 'result.json'), JSON.stringify({mode, url, timings, notes, memory,
-    startQuery, js_errors: errors, console_errors: consoleMsgs.slice(0, 40),
+    startQuery, js_errors: errors, console_errors: consoleMsgs, console_info: consoleInfo,
     output_errors: outputErrors}, null, 2));
   console.log(JSON.stringify({timings, notes}, null, 2));
   await browser.close();

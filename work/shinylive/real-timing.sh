@@ -10,7 +10,7 @@
 #   APP_URL: URL of that folder; SERVER_LOG: stderr log of work/shinylive/serve.py
 set -euo pipefail
 app_dir="$1"; app_url="$2"; log="$3"; runs="${4:-3}"
-chrome="${METAUI_CHROMIUM:-/home/lukas/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome}"
+chrome="${METAUI_CHROMIUM:?Set METAUI_CHROMIUM to an existing Chromium executable}"
 python3 - "$app_dir" <<'PY'
 import sys, pathlib
 d = pathlib.Path(sys.argv[1]); html = (d / "index.html").read_text()
@@ -39,15 +39,15 @@ probe = """<script>
 (d / "timing.html").write_text(html.replace("</body>", probe + "\n</body>"))
 PY
 for i in $(seq 1 "$runs"); do
-  id="r$(date +%s%N)"; profile="$(mktemp -d)"
-  flock /tmp/shinylive-speed-timing.lock bash -c '
+  id="r$(date +%s%N)"; profile="$(mktemp -d "${TMPDIR:-/tmp/shinylive-speed/W2}/timing.XXXXXX")"
+  flock "${TMPDIR:-/tmp/shinylive-speed/W2}/timing.lock" bash -c '
     "$1" --headless=new --no-sandbox --disable-gpu --no-first-run --user-data-dir="$2" "$3/timing.html#$4" >/dev/null 2>&1 & pid=$!
     for s in $(seq 1 600); do grep -aq "__timing?results=.*id=$4" "$5" && break; sleep 0.5; done
     kill $pid 2>/dev/null; wait $pid 2>/dev/null || true' _ "$chrome" "$profile" "$app_url" "$id" "$log"
   sleep 1; rm -rf "$profile" 2>/dev/null || true
-  ready=$(grep -ao "__timing?ready=[0-9.]*&id=$id" "$log" | sed 's/.*ready=\([0-9.]*\).*/\1/' | tail -1)
-  results=$(grep -ao "__timing?results=[0-9.]*&id=$id" "$log" | sed 's/.*results=\([0-9.]*\).*/\1/' | tail -1)
+  ready=$(grep -ao "__timing?ready=[0-9.]*&id=$id" "$log" | sed 's/.*ready=\([0-9.]*\).*/\1/' | tail -1 || true)
+  results=$(grep -ao "__timing?results=[0-9.]*&id=$id" "$log" | sed 's/.*results=\([0-9.]*\).*/\1/' | tail -1 || true)
   preview=$(grep -ao "__timing?preview=[0-9.]*&id=$id" "$log" | sed 's/.*preview=\([0-9.]*\).*/\1/' | tail -1 || true)
   takeover=$(grep -ao "__timing?takeover=[0-9.]*&id=$id" "$log" | sed 's/.*takeover=\([0-9.]*\).*/\1/' | tail -1 || true)
-  echo "{\"run\":$i,\"preview_s\":${preview:-null},\"takeover_s\":${takeover:-null},\"ready_s\":${ready:-null},\"first_results_s\":${results:-null},\"loadavg_1m\":$(cut -d' ' -f1 /proc/loadavg)}"
+  echo "{\"run\":$((${RUN_INDEX:-1} + i - 1)),\"preview_s\":${preview:-null},\"takeover_s\":${takeover:-null},\"ready_s\":${ready:-null},\"first_results_s\":${results:-null},\"loadavg_1m\":$(cut -d' ' -f1 /proc/loadavg)}"
 done

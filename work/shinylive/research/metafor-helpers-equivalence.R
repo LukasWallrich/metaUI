@@ -1,7 +1,8 @@
 # Reproduce from repository root. All generated evidence stays in the M scratch area.
-# R_LIBS_USER=/tmp/shinylive-speed/M/lib:/tmp/shinylive-explore/lib \
-# R_LIBS_SITE=/tmp/shinylive-explore/emptysite Rscript --vanilla work/shinylive/research/meta-equivalence.R
-out <- '/tmp/shinylive-speed/M/equivalence'
+# R_LIBS_USER=/tmp/shinylive-speed/W2/lib:/tmp/shinylive-explore/lib \
+# R_LIBS_SITE=/tmp/shinylive-explore/emptysite Rscript --vanilla work/shinylive/research/metafor-helpers-equivalence.R
+args <- commandArgs(TRUE)
+out <- if (length(args)) args[1] else Sys.getenv('METAUI_EQUIVALENCE_OUT', '/tmp/shinylive-speed/W2/equivalence')
 dir.create(out, recursive=TRUE, showWarnings=FALSE)
 stopifnot(requireNamespace('meta'), requireNamespace('metafor'))
 stopifnot(as.character(utils::packageVersion('meta')) == '8.5.0')
