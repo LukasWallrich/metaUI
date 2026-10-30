@@ -123,6 +123,7 @@ test_that("changing the practical bound does not refit or change applied filters
   generate_shiny(prepared(), "Bound change", save_to_folder = path, launch_app = FALSE)
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  file <- tempfile(fileext = ".xlsx"); on.exit(unlink(file), add = TRUE)
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
     original <- estimatesreactive()
@@ -132,7 +133,7 @@ test_that("changing the practical bound does not refit or change applied filters
     expect_false(filters_changed())
     expect_equal(data_list()$equivalence$bound, rep(1, 7))
     expect_true(any(interval_assessment()$assessment == "Interval within bounds"))
-    file <- tempfile(fileext = ".xlsx"); writexl::write_xlsx(data_list(), file)
+    writexl::write_xlsx(data_list(), file)
     expect_identical(metaUI:::metaUI_saved_bound(file), 1)
     session$setInputs(sesoi = -1)
     expect_match(interval_assessment()$reason, "positive finite")
@@ -146,6 +147,6 @@ test_that("changing the practical bound does not refit or change applied filters
     writexl::write_xlsx(data_list(), file)
     expect_identical(metaUI:::metaUI_saved_bound(file), NA_real_)
     writexl::write_xlsx(data_list()[c("dataset", "filters")], file)
-    expect_null(metaUI:::metaUI_saved_bound(file))
+    expect_identical(metaUI:::metaUI_saved_bound(file), NA_real_)  # no equivalence sheet
   })
 })

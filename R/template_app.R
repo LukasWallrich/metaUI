@@ -1322,7 +1322,7 @@ glue_string <- ('
       z_rule = derivation$rule, z_disagreements = derivation$supplied_z_disagreements,
       checkbox_note = "Missing-value choices restored (older files: missing values included).")
     # The bound does not refit, so it can be set before the restored analysis.
-    if (!is.null(upload$bound)) updateNumericInput(session, "sesoi", value = upload$bound)
+    updateNumericInput(session, "sesoi", value = upload$bound)
     restore_filters(upload$filters, upload$data, "upload")
   })
 

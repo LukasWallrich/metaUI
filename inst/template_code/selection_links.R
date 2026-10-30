@@ -59,10 +59,9 @@ metaUI_parse_selection <- function(query, dataset_key, built, filters = list()) 
   list(filters = saved, sesoi = bound)
 }
 
-# Equivalence bound saved in a workbook: NULL if the workbook has no equivalence
-# sheet, NA if no bound was chosen.
+# Equivalence bound saved in a workbook; NA if none was chosen or recorded.
 metaUI_saved_bound <- function(path, sheets = readxl::excel_sheets(path)) {
-  if (!"equivalence" %in% sheets) return(NULL)
+  if (!"equivalence" %in% sheets) return(NA_real_)
   saved <- unique(suppressWarnings(as.numeric(readxl::read_xlsx(path, "equivalence")[["bound"]])))
   if (length(saved) == 1L && is.finite(saved)) saved else NA_real_
 }
