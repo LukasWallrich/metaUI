@@ -308,7 +308,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             "Publication Bias", results_panel(qrppb_main, funnel_main, plotOutput("funnel", width = "100%") %>% shinycssloaders::withSpinner(),
             eggers_main, DT::dataTableOutput("eggers") %>% shinycssloaders::withSpinner(),
             firstvalues,
-            pcurve_main, div(class = "metaui-scroll", plotOutput("pcurve", height = "auto") %>% shinycssloaders::withSpinner()),
+            pcurve_main, div(class = "metaui-scroll", plotOutput("pcurve", height = "auto") %>% shinycssloaders::withSpinner()), uiOutput("pcurve_notes"),
             zcurve_main, div(class = "metaui-scroll", plotOutput("zcurve", height = "auto") %>% shinycssloaders::withSpinner()),
             div(class = "metaui-reason", textOutput("zcurve_warnings")))
           ),
@@ -1078,7 +1078,14 @@ glue_string <- ('
 
   # PCURVE ------------------------------------------------------------------
 
+  # Phone-width p-curves show their notes and test results as text below the plot.
+  pcurve_notes <- reactiveVal(NULL)
+  output$pcurve_notes <- renderUI({
+    notes <- pcurve_notes()
+    if (length(notes)) p(class = "metaui-note metaui-pcurve-notes", HTML(paste(notes, collapse = "<br>")))
+  })
   output$pcurve <- renderPlot({
+    pcurve_notes(NULL)
     df <- df_filtered()
     selected <- tryCatch(metaUI_pcurve_data(df), error = function(e) e)
     validate(need(!inherits(selected, "error"), if (inherits(selected, "error")) conditionMessage(selected) else ""))
@@ -1086,9 +1093,10 @@ glue_string <- ('
     compact <- isTRUE(session$clientData$output_pcurve_width < 600)
     result <- tryCatch(pcurve(selected, effect.estimation = FALSE, compact = compact), error = function(e) e)
     validate(need(!inherits(result, "error"), if (inherits(result, "error")) conditionMessage(result) else ""))
+    if (compact) pcurve_notes(result$notes)
     graphics::mtext(paste("Direction-contrary exclusions:", attr(selected, "direction_exclusions")), side = 3, line = 0)
   }, width = function() metaUI_plot_width(session$clientData$output_pcurve_width, 680),
-    height = function() if (isTRUE(session$clientData$output_pcurve_width < 600)) 580 else 520, res = 96)
+    height = function() if (isTRUE(session$clientData$output_pcurve_width < 600)) 460 else 520, res = 96)
 
 
   # ZCURVE ------------------------------------------------------------------

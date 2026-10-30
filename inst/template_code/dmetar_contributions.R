@@ -297,7 +297,8 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
 #' @importFrom stats as.formula hat influence ks.test optimize pbinom pchisq pf pnorm pt punif qchisq qf qnorm qt reformulate reorder setNames uniroot
 #'
 
-# compact = TRUE (narrow, phone-width plots) moves the test results from the legend to notes below the plot.
+# compact = TRUE (narrow, phone-width plots) leaves the test results and notes out of the plot;
+# they are returned as HTML lines in `notes` for display beside it.
 pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact = FALSE) {
   # Rename x to metaobject, remove x
   metaobject <- x
@@ -648,7 +649,7 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact 
 
   # Make the graph
   x <- c(.01, .02, .03, .04, .05)
-  par(mar = c(if (compact) 9.5 else 7, 5.5, 1.5, 3))
+  par(mar = c(if (compact) 4.5 else 7, 5.5, 1.5, 3))
   moveup <- max(max(blue[2:5]) - 66, 0)
   ylim <- c(0, 105 + moveup)
   legend.top <- 100 + moveup
@@ -693,22 +694,30 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact 
   segments(x0 = tab1 - .005, x1 = tab1 - .001, y0 = legend.top - 2 * gap1, y1 = legend.top - 2 * gap1, col = "springgreen4", lty = 2, lwd = 1.5)
   if (compact) rect(tab1 - .0065, legend.top - 2 * gap1 - 4, tab1 + .017, legend.top + 4, border = "gray85")
   else rect(tab1 - .0065, legend.top - 2 * gap1 - gap2 - 3, tab1 + .032, legend.top + 3, border = "gray85")
-  # Notes are split over short lines so that they fit narrow (phone) plots.
-  mtext(bquote("Note: The observed " * italic(p) * "-curve includes " * .(ksig) * " statistically significant"),
-    side = 1, line = 3.6, cex = .65, adj = 0)
-  mtext(bquote("(" * italic(p) * " < .05) results, of which " * .(khalf) * " are " * italic(p) * " < .025."), side = 1, line = 4.3, cex = .65, adj = 0)
   kns <- ktot - ksig
-  ns_msg <- if (kns == 0) list("There were no non-significant results entered.", NULL)
-    else if (kns == 1) list(bquote("There was one additional result entered but excluded from " * italic(p) * "-curve"),
-      bquote("because it was " * italic(p) * " > .05."))
-    else list(bquote("There were " * .(kns) * " additional results entered but excluded from " * italic(p) * "-curve"),
-      bquote("because they were " * italic(p) * " > .05."))
-  mtext(ns_msg[[1]], side = 1, line = 5, cex = .65, adj = 0)
-  if (!is.null(ns_msg[[2]])) mtext(ns_msg[[2]], side = 1, line = 5.7, cex = .65, adj = 0)
-  if (compact) {
-    mtext(bquote("Observed " * italic(p) * "-curve: " * .(text.blue)), side = 1, line = 6.6, cex = .65, adj = 0)
-    mtext(bquote("Null of no effect, right-skewness: " * italic(p) * ""[Full] ~ .(p.Zppr) * ",  " * italic(p) * ""[Half] ~ .(p.Zppr.half)), side = 1, line = 7.4, cex = .65, adj = 0)
-    mtext(bquote("Null of 33% power, flatness: " * italic(p) * ""[Full] ~ .(p.Zpp33) * ",  " * italic(p) * ""[half] ~ .(p.Zpp33.half) * ",  " * italic(p) * ""[Binomial] ~ .(binom.33)), side = 1, line = 8.2, cex = .65, adj = 0)
+  esc <- function(x) gsub(">", "&gt;", gsub("<", "&lt;", gsub("&", "&amp;", x)))
+  notes <- c(
+    paste0("Note: The observed <i>p</i>-curve includes ", ksig, " statistically significant (<i>p</i> &lt; .05) results, of which ",
+      khalf, " are <i>p</i> &lt; .025."),
+    if (kns == 0) "There were no non-significant results entered."
+    else if (kns == 1) "There was one additional result entered but excluded from <i>p</i>-curve because it was <i>p</i> &gt; .05."
+    else paste0("There were ", kns, " additional results entered but excluded from <i>p</i>-curve because they were <i>p</i> &gt; .05."),
+    if (compact) c(paste0("Observed <i>p</i>-curve: ", esc(text.blue), "."),
+      paste0("Null of no effect, tests for right-skewness: <i>p</i><sub>Full</sub> ", esc(p.Zppr), ", <i>p</i><sub>Half</sub> ", esc(p.Zppr.half), "."),
+      paste0("Null of 33% power, tests for flatness: <i>p</i><sub>Full</sub> ", esc(p.Zpp33), ", <i>p</i><sub>half</sub> ", esc(p.Zpp33.half),
+        ", <i>p</i><sub>Binomial</sub> ", esc(binom.33), ".")))
+  if (!compact) {
+    # Notes are split over short lines so that they fit narrower plots.
+    mtext(bquote("Note: The observed " * italic(p) * "-curve includes " * .(ksig) * " statistically significant"),
+      side = 1, line = 3.6, cex = .65, adj = 0)
+    mtext(bquote("(" * italic(p) * " < .05) results, of which " * .(khalf) * " are " * italic(p) * " < .025."), side = 1, line = 4.3, cex = .65, adj = 0)
+    ns_msg <- if (kns == 0) list("There were no non-significant results entered.", NULL)
+      else if (kns == 1) list(bquote("There was one additional result entered but excluded from " * italic(p) * "-curve"),
+        bquote("because it was " * italic(p) * " > .05."))
+      else list(bquote("There were " * .(kns) * " additional results entered but excluded from " * italic(p) * "-curve"),
+        bquote("because they were " * italic(p) * " > .05."))
+    mtext(ns_msg[[1]], side = 1, line = 5, cex = .65, adj = 0)
+    if (!is.null(ns_msg[[2]])) mtext(ns_msg[[2]], side = 1, line = 5.7, cex = .65, adj = 0)
   }
 
 
@@ -1013,7 +1022,8 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact 
       "kp0.25" = k.025,
       "dEstimate" = dEstimate,
       "I2" = metaobject$I2,
-      "class.meta.object" = class(metaobject)[1]
+      "class.meta.object" = class(metaobject)[1],
+      "notes" = notes
     )
 
     class(return.list) <- c("pcurve", "effect.estimation")
@@ -1029,7 +1039,8 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact 
       "kAnalyzed" = k.sign,
       "kp0.25" = k.025,
       "I2" = metaobject$I2,
-      "class.meta.object" = class(metaobject)[1]
+      "class.meta.object" = class(metaobject)[1],
+      "notes" = notes
     )
 
     class(return.list) <- c("pcurve", "no.effect.estimation")
