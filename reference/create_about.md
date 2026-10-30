@@ -13,7 +13,8 @@ create_about(
   osf_link = "",
   contact = "",
   list_packages = TRUE,
-  bayesian = FALSE
+  bayesian = FALSE,
+  meta = FALSE
 )
 ```
 
@@ -51,6 +52,10 @@ create_about(
 
   Is the optional Bayesian model enabled? If so, the default list
   includes bayesmeta.
+
+- meta:
+
+  Does author model code use meta? If so, the default list includes it.
 
 ## Value
 

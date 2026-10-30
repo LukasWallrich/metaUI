@@ -2,6 +2,22 @@
 
 ## metaUI (development version)
 
+- Publish apps without a Shiny server.
+  `generate_shiny(static_folder = ...)` and the JSON `static_folder`
+  field write a static website that runs R in the reader’s browser
+  (shinylive/webR);
+  [`export_static()`](https://lukaswallrich.github.io/metaUI/reference/export_static.md)
+  re-exports an app after hand edits in the editable app folder. With
+  `overwrite = TRUE`, the existing static site folder is deleted
+  entirely and rewritten. Readers see the authors’ full-data results at
+  once while R loads. Selection links, downloads and the Summary plot
+  work in the static site, and `include_sources = TRUE` bundles the
+  source code of copyleft components for archival deposits. Requires the
+  suggested shinylive package. Every visitor downloads the full dataset
+  and app code, so publish only shareable material.
+- Generated apps use metafor for trim-and-fill, the funnel plot, Egger’s
+  test and the Dannheim source-reference fit. Results are unchanged. The
+  meta package is needed only when author model code uses it.
 - Generated apps can download an R script or Quarto file that reproduces
   the applied selection (filters, missing-value choices, effect-size
   computation and equivalence bound) and its model rows from the

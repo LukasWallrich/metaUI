@@ -19,13 +19,14 @@ generate_shiny(
   primary_model = NULL,
   filter_popups = list(),
   save_to_folder = NA,
-  launch_app = is.na(save_to_folder),
+  launch_app = is.na(save_to_folder) && is.null(static_folder),
   ...,
   options = list(),
   overwrite = FALSE,
   bayesian = NULL,
   design = NULL,
-  study_info = NULL
+  study_info = NULL,
+  static_folder = NULL
 )
 ```
 
@@ -81,10 +82,10 @@ generate_shiny(
 
 - launch_app:
 
-  Should the app be launched? Defaults to TRUE if save_to_folder is NA,
-  FALSE otherwise. Interactive auto-printing of the returned app
-  launches it and blocks the R console until the app stops. Use
-  launch_app = FALSE to build without launching, then run
+  Should the app be launched? Defaults to TRUE if save_to_folder is NA
+  and static_folder is NULL, FALSE otherwise. Interactive auto-printing
+  of the returned app launches it and blocks the R console until the app
+  stops. Use launch_app = FALSE to build without launching, then run
   shiny::runApp() separately when ready.
 
 - ...:
@@ -115,6 +116,11 @@ generate_shiny(
       If TRUE, it lists the packages used in the default configuration.
       To display different packages (e.g., because you added/removed
       models), pass a character vector with all packages to display.
+
+  `meta`
+
+  :   Does author model code use meta? If so, the default list includes
+      it.
 
 - options:
 
@@ -175,11 +181,31 @@ generate_shiny(
   in the app; the app never fetches metadata. Include only abstracts you
   may republish.
 
+- static_folder:
+
+  Optional destination folder for a static shinylive site. Requires the
+  suggested shinylive package. The app is generated in save_to_folder
+  first (a temporary folder when NA), then exported with precomputed
+  results. Must be outside save_to_folder. Static generation never
+  launches the app.
+
 ## Value
 
-With launch_app = FALSE, invisibly returns the generated app folder
-path. With launch_app = TRUE, returns a Shiny app object; printing it
-launches the app and blocks the console until it stops.
+With static_folder supplied, invisibly returns the static site path.
+Otherwise, with launch_app = FALSE, invisibly returns the generated app
+folder path. With launch_app = TRUE, returns a Shiny app object;
+printing it launches the app and blocks the console until it stops.
+
+## Details
+
+Use `generate_shiny(static_folder = ...)` to generate and publish static
+files in one step. After editing the generated app files, use
+[`export_static()`](https://lukaswallrich.github.io/metaUI/reference/export_static.md)
+to re-export them; regenerating the app would overwrite those edits.
+With `overwrite = TRUE`, the existing static site folder is deleted
+entirely and rewritten, including unrelated files. Keep hand edits in
+the editable app folder and re-export it with
+[`export_static()`](https://lukaswallrich.github.io/metaUI/reference/export_static.md).
 
 ## Examples
 

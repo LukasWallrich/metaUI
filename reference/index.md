@@ -11,6 +11,9 @@
 - [`design_app()`](https://lukaswallrich.github.io/metaUI/reference/design_app.md)
   : Preview and export an app design
 
+- [`export_static()`](https://lukaswallrich.github.io/metaUI/reference/export_static.md)
+  : Export a generated app as a static website (experimental)
+
 - [`fetch_study_metadata()`](https://lukaswallrich.github.io/metaUI/reference/fetch_study_metadata.md)
   : Look up study metadata from DOIs at build time
 
