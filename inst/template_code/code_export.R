@@ -154,6 +154,7 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
 
   columns <- names(source)
   types <- vapply(source, function(x) if (is.numeric(x)) "numeric" else if (is.logical(x)) "logical" else "text", character(1))
+  factors <- Filter(is.factor, source)
   numeric_filters <- vapply(Filter(function(x) x$type == "numeric", filters), function(x) x$col, character(1))
   data_code <- c(
     paste0("workbook <- ", metaUI_code_string(settings$workbook)),
@@ -168,16 +169,19 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
     paste0("column_types <- ", metaUI_code_string(unname(types))),
     "if (!identical(names(readxl::read_xlsx(workbook, sheet = \"dataset\", n_max = 0)), columns))",
     "  stop(\"The workbook's dataset sheet does not have the app's columns.\")",
-    "data <- as.data.frame(readxl::read_xlsx(workbook, sheet = \"dataset\", col_types = column_types))",
+    "data <- as.data.frame(readxl::read_xlsx(workbook, sheet = \"dataset\", col_types = column_types, trim_ws = FALSE))",
+    if (length(factors)) c("# Factor columns keep the app's level order, which model formulas can depend on.",
+      unlist(lapply(names(factors), function(col) paste0("data[[", metaUI_code_string(col), "]] <- factor(data[[", metaUI_code_string(col),
+        "]], levels = ", metaUI_code_string(levels(factors[[col]])), if (is.ordered(factors[[col]])) ", ordered = TRUE", ")")))),
     paste0("if (nrow(data) != ", nrow(source), ") warning(\"The workbook has \", nrow(data), \" rows; the app's data had ", nrow(source), ".\")"),
     "# The filters sheet records the selection behind the workbook's results.",
-    "saved_filters <- as.data.frame(readxl::read_xlsx(workbook, sheet = \"filters\", col_types = \"text\"))",
+    "saved_filters <- as.data.frame(readxl::read_xlsx(workbook, sheet = \"filters\", col_types = \"text\", trim_ws = FALSE))",
     paste0("applied_filters <- data.frame(id = ", metaUI_code_string(applied$id), ",\n  selection = ",
       metaUI_code_string(applied$selection), ")"),
     "if (!identical(saved_filters$id, applied_filters$id) || !identical(saved_filters$selection, applied_filters$selection))",
     "  warning(\"The workbook's saved filters differ from this file's selection; it may come from another analysis.\")")
   data_section <- section("Data",
-    paste("The column types are those of the app's data, so identifiers keep their exact text.",
+    paste("The column types and factor levels are those of the app's data, so identifiers and categories keep their exact text.",
       "The app's z-scores are descriptive, standardised against the built data."), data_code, "data")
 
   # Applied selection, in the app's order: filters, z-score range, computation.

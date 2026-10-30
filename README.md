@@ -135,7 +135,9 @@ computation and equivalence bound) and the model rows on the Summary tab. The
 code reads the workbook from the same analysis, so it also works for uploaded
 data, and it runs without metaUI. It copies the app's `models.R`, including
 author-defined models and their helper functions, and the fitting functions that
-the app calls, so it follows the app's own code path. It also records the package
+the app calls, so it follows the app's own code path. If `models.R` has been
+edited since the app started, the code contains the loaded model table instead
+and says that any helper code is missing. It also records the package
 versions the app used, with a commented-out
 [groundhog](https://groundhogr.com/) call that installs the CRAN versions current
 on the latest release date among them, and ends by comparing every row with the

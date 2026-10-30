@@ -10,12 +10,15 @@ once, and restorations must have finished.
 The code reads the `dataset` sheet of the workbook from the same analysis, which
 holds every row of the built or uploaded data, with explicit column types so that
 identifiers keep their text. It checks that the workbook's `filters` sheet matches
-the selection written into the code. It then applies the filters in the app's
+the selection written into the code. It reads cells without trimming
+whitespace and restores the app's factor levels, whose order model formulas can
+depend on. It then applies the filters in the app's
 order, the descriptive z-score range and the chosen computation. The model step
 calls `metaUI_fit_models()`, the function the app calls. The code copies the app's
 `models.R` unchanged, including author-defined rows, helper functions and
-constants, and the definitions it reaches from `analysis.R`, `bayesian.R` and
-(only when a p-curve model is configured) `dmetar_contributions.R`. The script
+constants, and the definitions it reaches from `helpers.R`, `analysis.R`,
+`computations.R`, `bayesian.R` and (only when a p-curve model is configured)
+`dmetar_contributions.R`. The script
 therefore follows the app's input checks, sign handling for directional models,
 aggregation and back-transformation without needing metaUI. If `models.R` can no
 longer be read or no longer yields the loaded specifications, the code contains
@@ -47,9 +50,11 @@ the downloaded workbook and code. That process does not load metaUI.
 
 - `tests/testthat/test-code-export.R` (85 expectations; the fresh-process runs are skipped on CRAN):
   - A synthetic app with a numeric filter with a missing value (missing values
-    excluded), a categorical filter (three of four groups), an alternative
+    excluded), a categorical filter (three of four groups, with non-alphabetical
+    levels and one level ending in a space), an alternative
     computation, a negative declared direction (p-uniform* is fitted on reflected
-    effects), an author `models.R` with a helper function and a constant, and a
+    effects), an author `models.R` with a helper function, a constant and a
+    moderator model whose intercept depends on the factor level order, and a
     declared primary author row. The script selects the app's 9 of 16 effects and
     reproduces every row's status, estimate, interval, fitting-scale estimate and k
     within 1e-8. The same holds after replacing the data with an edited upload,

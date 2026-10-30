@@ -41,9 +41,13 @@ test_that("exported code reproduces filtered, alternative, uploaded and empty se
     "  \"Random-Effects Multilevel Model\", FALSE, \"mod$b\", \"mod$ci.lb\", \"mod$ci.ub\", \"mod$k\", \"metaUI_multilevel_fit(df)\",",
     "  \"P-uniform star\", TRUE, \"mod$est\", \"mod$ci.lb\", \"mod$ci.ub\", \"mod$k\",",
     "    'puniform::puni_star(yi = df$metaUI__effect_size, vi = df$metaUI__variance, alpha = .05, side = \"right\", method = \"ML\", boot = FALSE)',",
-    "  \"Fixed effect (author helper)\", TRUE, \"mod$b\", \"mod$ci.lb\", \"mod$ci.ub\", \"mod$k\", \"fixed_effect_fit(df)\")"), models)
+    "  \"Fixed effect (author helper)\", TRUE, \"mod$b\", \"mod$ci.lb\", \"mod$ci.ub\", \"mod$k\", \"fixed_effect_fit(df)\",",
+    "  # The intercept is the first factor level's mean, so it depends on the level order.",
+    "  \"Reference group (author)\", FALSE, \"mod$b[1]\", \"mod$ci.lb[1]\", \"mod$ci.ub[1]\", \"mod$k\",",
+    "    \"metafor::rma(df$metaUI__effect_size, df$metaUI__variance, mods = ~ factor(df$metaUI__filter_Group))\")"), models)
   x <- fixture(); x$yi <- -x$yi; x$alt <- x$yi * .9
-  x$year <- c(NA, 2002:2016); x$group <- factor(rep(paste0("G", 1:4), 4))
+  # Non-alphabetical levels and a trailing space must survive the workbook.
+  x$year <- c(NA, 2002:2016); x$group <- factor(rep(c("G1", "G2", "G3", "G4 "), 4), levels = c("G3", "G1", "G2", "G4 "))
   d <- prepared(x, filters = c(Year = "year", Group = "group"), direction = "negative",
     alternatives = list(Corrected = list(es_field = "alt", variance = "vi", es_type = "SMD", justification = "Illustrative correction")))
   app_dir <- file.path(root, "app")
@@ -54,11 +58,11 @@ test_that("exported code reproduces filtered, alternative, uploaded and empty se
   runs <- file.path(root, c("filtered", "uploaded", "empty")); for (r in runs) dir.create(r)
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-1.8, 2.2), metaUI__filter_Year = c(2003, 2014),
-      metaUI__filter_Year_include_NA = FALSE, metaUI__filter_Group = c("G1", "G2", "G3"),
+      metaUI__filter_Year_include_NA = FALSE, metaUI__filter_Group = c("G1", "G3", "G4 "),
       computation = "alt1", sesoi = .3, go = 1)
     app <- estimatesfiltered()
     expect_equal(nrow(df_filtered()), 9)
-    expect_identical(app$status, c("ok", "ok", "ok"))
+    expect_identical(app$status, c("ok", "ok", "ok", "ok"))
     expect_true(app$reflected[2])
     script <- copy_download(output$executeCodeDownload, runs[1], "selection.R")
     code <- paste(readLines(script), collapse = "\n")
