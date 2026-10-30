@@ -1,3 +1,5 @@
+skip_without_app_packages()
+
 test_that("generated sample tabs share values without duplicate output bindings", {
   path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
   d <- prepared()
