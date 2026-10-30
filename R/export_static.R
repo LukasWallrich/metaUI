@@ -12,8 +12,10 @@
 #' writes `STATIC-NOTICE.md` and `bundled-packages.csv` with the versions and
 #' licences of the bundled software.
 #'
-#' Readers download about 140 MB and wait roughly 40 seconds before the app is
-#' ready (measured on a 2017 quad-core laptop); models fit several times
+#' By default, the generated server computes the initial Summary at export time.
+#' Readers see these results with disabled controls while the interactive app loads.
+#' Selection links skip the preview. Export provenance is stored in
+#' `metaui-preview/provenance.json`. Readers download about 140 MB; models fit
 #' more slowly than on a server. The dataset is shipped to every reader, so only
 #' export data that may be published.
 #'
@@ -22,6 +24,8 @@
 #' @param subdir Optional subfolder of `dest_dir` for this app, so that several
 #'   apps can share one set of WebAssembly assets.
 #' @param overwrite Replace an existing app in `dest_dir`/`subdir`?
+#' @param precompute Show precomputed default Summary results while the interactive app loads?
+#'   Failures warn and export the interactive app alone. No browser is required.
 #' @return The path of the exported app, invisibly.
 #' @export
 #' @examples
@@ -30,7 +34,7 @@
 #' # Preview locally (service workers need https or localhost):
 #' httpuv::runStaticServer("my-app-static")
 #' }
-export_static <- function(app_dir, dest_dir, subdir = "", overwrite = FALSE) {
+export_static <- function(app_dir, dest_dir, subdir = "", overwrite = FALSE, precompute = TRUE) {
   if (!requireNamespace("shinylive", quietly = TRUE))
     stop("export_static() requires the shinylive package: install.packages(\"shinylive\").")
   if (!all(file.exists(file.path(app_dir, c("global.R", "ui.R", "server.R", "www/metaui.js")))))
@@ -48,7 +52,24 @@ export_static <- function(app_dir, dest_dir, subdir = "", overwrite = FALSE) {
   bridge <- readLines(system.file("template_code", "metaui-static.js", package = "metaUI"))
   cat(c("", bridge), file = file.path(staging, "www", "metaui.js"), sep = "\n", append = TRUE)
 
+  preview <- file.path(staging, "metaui-preview")
+  if (isTRUE(precompute)) {
+    tryCatch(static_precompute(staging, preview), error = function(e) {
+      unlink(preview, recursive = TRUE)
+      warning("Precomputation failed; exporting without a preview: ", conditionMessage(e), call. = FALSE)
+    })
+  }
+  # Preview assets are website files, not files for webR's virtual filesystem.
+  preview_copy <- tempfile("metaui-preview-")
+  dir.create(preview_copy)
+  on.exit(unlink(preview_copy, recursive = TRUE), add = TRUE)
+  has_preview <- dir.exists(preview)
+  if (has_preview) {
+    file.copy(preview, preview_copy, recursive = TRUE)
+    unlink(preview, recursive = TRUE)
+  }
   shinylive::export(staging, dest_dir, subdir = subdir, wasm_packages = TRUE)
+  if (has_preview) static_add_preview(target, file.path(preview_copy, "metaui-preview"))
   bundled <- static_bundled_packages(file.path(dest_dir, "shinylive", "webr"))
   utils::write.csv(bundled, file.path(target, "bundled-packages.csv"), row.names = FALSE)
   writeLines(static_notice(bundled), file.path(target, "STATIC-NOTICE.md"))

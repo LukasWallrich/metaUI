@@ -4,7 +4,7 @@
 \alias{export_static}
 \title{Export a generated app as a static website (experimental)}
 \usage{
-export_static(app_dir, dest_dir, subdir = "", overwrite = FALSE)
+export_static(app_dir, dest_dir, subdir = "", overwrite = FALSE, precompute = TRUE)
 }
 \arguments{
 \item{app_dir}{Folder of a generated metaUI app.}
@@ -13,6 +13,9 @@ export_static(app_dir, dest_dir, subdir = "", overwrite = FALSE)
 
 \item{subdir}{Optional subfolder of \code{dest_dir} for this app, so that several
 apps can share one set of WebAssembly assets.}
+
+\item{precompute}{Show precomputed default Summary results while the interactive app loads?
+Failures warn and export the interactive app alone. No browser is required.}
 
 \item{overwrite}{Replace an existing app in \code{dest_dir}/\code{subdir}?}
 }
@@ -33,8 +36,10 @@ shinylive frame, bundles WebAssembly builds of all required R packages, and
 writes \code{STATIC-NOTICE.md} and \code{bundled-packages.csv} with the versions and
 licences of the bundled software.
 
-Readers download about 140 MB and wait roughly 40 seconds before the app is
-ready (measured on a 2017 quad-core laptop); models fit several times
+By default, the generated server computes the initial Summary at export time.
+Readers see these results with disabled controls while the interactive app loads.
+Selection links skip the preview. Export provenance is stored in
+\code{metaui-preview/provenance.json}. Readers download about 140 MB; models fit
 more slowly than on a server. The dataset is shipped to every reader, so only
 export data that may be published.
 }

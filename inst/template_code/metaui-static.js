@@ -47,3 +47,33 @@
     new MutationObserver(fixLinks).observe(document.body, {childList: true, subtree: true});
   });
 })();
+
+// Complete the initial analysis behind the export-time Summary before hand-over.
+(function () {
+  if (window.parent === window || !/\/app_[^/]+\/$/.test(location.pathname)) return;
+  try { if (!window.parent.metauiPrecomputed) return; } catch (e) { return; }
+  var touched = false, started = false;
+  ['pointerdown', 'keydown', 'input', 'change'].forEach(function (type) {
+    document.addEventListener(type, function (event) { if (event.isTrusted) touched = true; }, true);
+  });
+  var timer = setInterval(function () {
+    var app = window.Shiny && Shiny.shinyapp, go = document.getElementById('go');
+    if (!app || !app.isConnected() || !go || go.disabled ||
+        !app.$inputValues || !Array.isArray(app.$inputValues.outliers_z_scores)) return;
+    var selection = new URLSearchParams(location.search);
+    if (!started) {
+      started = true;
+      if (touched || app.$inputValues.uploadData || (app.$inputValues.go || app.$inputValues['go:shiny.action']) > 0 ||
+          (selection.get('metaui') === '1' && selection.has('selection'))) {
+        clearInterval(timer); window.parent.postMessage('metaui-live-ready', location.origin); return;
+      }
+      go.click();
+    }
+    var table = document.getElementById('effectestimate');
+    var primary = document.getElementById('primary_estimate');
+    if (table && table.textContent.trim() && primary && primary.textContent.trim() &&
+        !document.documentElement.classList.contains('shiny-busy')) {
+      clearInterval(timer); window.parent.postMessage('metaui-live-ready', location.origin);
+    }
+  }, 100);
+})();

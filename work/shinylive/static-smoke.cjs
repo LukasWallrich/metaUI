@@ -8,13 +8,15 @@ const path = require('node:path');
 const url = process.env.URL, mode = process.env.MODE || 'static';
 const out = process.env.OUT; fs.mkdirSync(out, {recursive: true});
 const bayes = process.env.BAYES === '1';
+// Match the UI wait below: a contended machine can take >150 s under CDP.
+const startupPolls = Math.ceil(Number(process.env.METAUI_STARTUP_TIMEOUT || 600000) / 250);
 const timings = {}, notes = [], errors = [], consoleMsgs = [];
 const t0 = Date.now();
 const mark = (k) => { timings[k] = (Date.now() - t0) / 1000; console.log(k, timings[k]); };
 
 async function appFrame(page) {
   if (mode === 'server') return page.mainFrame();
-  for (let i = 0; i < 600; i++) {
+  for (let i = 0; i < startupPolls; i++) {
     const f = page.frames().find(fr => fr !== page.mainFrame() && /app_/.test(fr.url()));
     if (f) return f;
     await page.waitForTimeout(250);
@@ -53,6 +55,17 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
   page.on('console', m => { if (m.type() === 'error') consoleMsgs.push(m.text()); });
   await page.goto(url);
   mark('index_loaded');
+  const precomputed = await page.locator('#metaui-preview').count();
+  if (precomputed) {
+    const preview = page.frameLocator('#metaui-preview');
+    await preview.locator('.metaui-primary').waitFor({timeout: 30000});
+    if (await preview.locator('input:not(:disabled), button:not(:disabled), select:not(:disabled)').count())
+      throw Error('Preview contains enabled controls');
+    await page.screenshot({path: path.join(out, 'preview-desktop.png')});
+    await page.setViewportSize({width: 390, height: 844});
+    await page.screenshot({path: path.join(out, 'preview-mobile.png')});
+    await page.setViewportSize({width: 1440, height: 1000});
+  }
   const app = await appFrame(page);
   mark('iframe_created');
   await app.locator('#go').waitFor({timeout: 600000});
@@ -60,6 +73,11 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
   await app.waitForFunction(() => Array.isArray(window.Shiny?.shinyapp?.$inputValues?.outliers_z_scores) &&
     !document.querySelector('#go').disabled, null, {timeout: 600000});
   mark('ready_to_analyse');
+  if (precomputed) {
+    await page.waitForFunction(() => document.documentElement.dataset.metauiLive === 'true', null, {timeout: 600000});
+    await page.screenshot({path: path.join(out, 'handover.png')});
+    notes.push('Precomputed controls disabled; live hand-over completed');
+  }
   const startQuery = await app.evaluate(() => location.search);
 
   // 1. Full analysis
@@ -68,6 +86,8 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
     await app.waitForFunction(() => document.querySelector('#effectestimate')?.innerText.includes('Source-reference'), null, {timeout: 600000});
     await idle(app);
   });
+  if (await app.locator('[data-metaui-precomputed-plot]').count()) throw Error('Precomputed plot survived a new analysis');
+  fs.writeFileSync(path.join(out, 'workbook-first-analysis.xlsx'), await fetchDownload(app, 'executeDownload'));
   const estimates = await app.locator('#effectestimate').innerText();
   fs.writeFileSync(path.join(out, 'estimates.txt'), estimates);
   await page.screenshot({path: path.join(out, 'summary.png')});
@@ -127,7 +147,13 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
   await page.screenshot({path: path.join(out, 'last-tab.png')});
 
   // 5. Reset to full selection, workbook download, upload round trip
-  await app.locator('#resetFilters').click(); await page.waitForTimeout(300);
+  await app.locator('#resetFilters').click();
+  // The dynamic z slider has no shinyjs reset snapshot; restore its full bounds.
+  await app.evaluate(() => {
+    const slider = $('#outliers_z_scores').data('ionRangeSlider');
+    slider.update({from: slider.options.min, to: slider.options.max});
+  });
+  await page.waitForTimeout(300);
   await app.locator('#go').click(); await page.waitForTimeout(300); await idle(app);
   await app.getByRole('tab', {name: 'Summary', exact: true}).click();
   await app.getByText('Download or upload data', {exact: true}).click();
@@ -152,6 +178,15 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
   });
   notes.push('after upload: ' + (await app.locator('#selection_status').textContent()).replace(/\s+/g, ' '));
 
+  // Mobile viewport; release this webR worker before restoring a fresh link.
+  await page.setViewportSize({width: 390, height: 844});
+  await page.waitForTimeout(1000);
+  await page.screenshot({path: path.join(out, 'mobile.png')});
+  const memory = await app.evaluate(() => performance.memory ? {usedJSHeapMB: performance.memory.usedJSHeapSize / 1e6} : null).catch(() => null);
+
+  const outputErrors = await app.locator('.shiny-output-error').allInnerTexts();
+  await page.close();
+
   // 6. Selection link restore in a fresh page
   if (share) {
     const linkPage = await context.newPage();
@@ -160,14 +195,16 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
     notes.push('selection link opened as: ' + linkUrl.slice(0, 90) + '…');
     const s = Date.now();
     await linkPage.goto(linkUrl);
+    if (await linkPage.locator('#metaui-preview').count()) throw Error('Full-data preview shown for a selection link');
     let la;
     if (mode === 'server') la = linkPage.mainFrame();
-    else { for (let i = 0; i < 600 && !la; i++) { la = linkPage.frames().find(fr => fr !== linkPage.mainFrame() && /app_/.test(fr.url())); if (!la) await linkPage.waitForTimeout(250); } }
+    else { for (let i = 0; i < startupPolls && !la; i++) { la = linkPage.frames().find(fr => fr !== linkPage.mainFrame() && /app_/.test(fr.url())); if (!la) await linkPage.waitForTimeout(250); } }
     notes.push('link page iframe URL: ' + la.url().slice(0, 120));
     try {
       await la.waitForFunction(() => /restored|not applied/i.test(document.querySelector('#link_notice')?.textContent || '') ||
         /Selected/.test(document.querySelector('#selection_status')?.textContent || ''), null, {timeout: 300000});
-      await linkPage.waitForTimeout(2000);
+      await la.waitForFunction(() => document.querySelector('#effectestimate')?.innerText.includes('Source-reference'), null, {timeout: 300000});
+      await idle(la);
       notes.push('link notice: ' + (await la.locator('#link_notice').innerText().catch(() => '(none)')));
       notes.push('link selection: ' + (await la.locator('#selection_status').textContent().catch(() => '')).replace(/\s+/g, ' '));
     } catch (e) { notes.push('selection link: FAILED ' + e.message.split('\n')[0]); }
@@ -176,15 +213,10 @@ async function timed(name, fn) { const s = Date.now(); await fn(); timings[name]
     await linkPage.close();
   }
 
-  // 7. Mobile viewport
-  await page.setViewportSize({width: 390, height: 844});
-  await page.waitForTimeout(1000);
-  await page.screenshot({path: path.join(out, 'mobile.png')});
-  const memory = await app.evaluate(() => performance.memory ? {usedJSHeapMB: performance.memory.usedJSHeapSize / 1e6} : null).catch(() => null);
 
   fs.writeFileSync(path.join(out, 'result.json'), JSON.stringify({mode, url, timings, notes, memory,
     startQuery, js_errors: errors, console_errors: consoleMsgs.slice(0, 40),
-    output_errors: await app.locator('.shiny-output-error').allInnerTexts()}, null, 2));
+    output_errors: outputErrors}, null, 2));
   console.log(JSON.stringify({timings, notes}, null, 2));
   await browser.close();
 })().catch(e => { console.error(e); fs.writeFileSync(path.join(out, 'failure.json'), JSON.stringify({error: e.message, timings, notes, errors, consoleMsgs}, null, 2)); process.exitCode = 1; process.exit(1); });
