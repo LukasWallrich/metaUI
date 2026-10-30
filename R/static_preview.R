@@ -29,7 +29,7 @@ static_precompute <- function(app_dir, dest) {
         }
         collect(tag$children)
         selected <- Filter(function(x) !is.null(x$attribs$selected), options)
-        if (!length(selected) && is.null(a$multiple)) selected <- head(options, 1)
+        if (!length(selected) && is.null(a$multiple)) selected <- utils::head(options, 1)
         defaults[[a$id]] <<- vapply(selected, function(x) x$attribs$value, character(1))
       }
       lapply(tag$children, inputs)
@@ -77,7 +77,7 @@ static_precompute <- function(app_dir, dest) {
         }
       }
       if (identical(a$id, "go")) {
-        tag$children <- list("Loading…")
+        tag$children <- list("Loading\u2026")
         tag$attribs$`aria-busy` <- "true"
         tag$attribs$`aria-disabled` <- "true"
       }

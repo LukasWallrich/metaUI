@@ -40,7 +40,7 @@ metaUI_egger <- function(y, se) {
   base <- suppressWarnings(metafor::rma.uni(y, sei = se, method = "DL", test = "t"))
   fit <- suppressWarnings(metafor::regtest(base, model = "lm", ret.fit = TRUE))
   stats <- suppressWarnings(summary(fit$fit))
-  list(estimate = c(bias = unname(coef(fit$fit)[2]), se.bias = stats$coefficients[2, 2]),
+  list(estimate = c(bias = unname(stats::coef(fit$fit)[2]), se.bias = stats$coefficients[2, 2]),
        tau = stats$sigma, statistic = fit$zval, p.value = fit$pval)
 }
 
