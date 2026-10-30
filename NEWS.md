@@ -10,6 +10,8 @@
   with the app's. Plots and diagnostic tabs are not reproduced.
 * Uploading a workbook now restores its equivalence bound, as selection links
   already did. Workbooks from empty selections also record the bound.
+* metaUI no longer depends on forcats, and generated apps no longer need psych;
+  base R replaces both.
 
 # metaUI 0.2.0
 

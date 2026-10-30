@@ -51,10 +51,10 @@ my_data <- my_data %>% mutate(
   # Maybe calculate the standard error from the variance
   se = sqrt(var), 
   # Turn categorical moderators/filters into factors
-  continent = factor(continent) %>% 
-  # ... and make sure they have clear labels  
-    forcats::fct_recode("North America" = "1", "South America" = "2", "Europe" = "3",
-                        "Asia" = "4", "Africa" = "5", "Oceania" = "6", "NA" = "-999")
+  # ... and make sure they have clear labels (codes not listed, such as -999, become missing)
+  continent = factor(continent, levels = 1:6,
+                     labels = c("North America", "South America", "Europe",
+                                "Asia", "Africa", "Oceania"))
 )
 
 ```
