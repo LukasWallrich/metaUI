@@ -11,3 +11,4 @@ metaUI_*.tar.gz
 
 # shinylive exploration: exported static site (rebuild with export_static())
 work/shinylive/site/
+work/shinylive/*.log
