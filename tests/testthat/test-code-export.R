@@ -31,6 +31,7 @@ expect_reproduces <- function(result, app) {
 
 test_that("exported code reproduces filtered, alternative, uploaded and empty selections", {
   skip_on_cran()
+  skip_without_app_packages()
   root <- tempfile(); dir.create(root); on.exit(unlink(root, recursive = TRUE))
   models <- file.path(root, "author-models.R")
   writeLines(c("# Author helper and constant, as models.R allows.",
@@ -107,6 +108,7 @@ test_that("exported code reproduces filtered, alternative, uploaded and empty se
 
 test_that("exported Quarto file has the same analysis and renders to the same rows", {
   skip_on_cran()
+  skip_without_app_packages()
   root <- tempfile(); dir.create(root); on.exit(unlink(root, recursive = TRUE))
   x <- fixture(); x$r <- x$yi / 2; x$vr <- x$vi / 4
   x$z <- atanh(x$r); x$vz <- x$vr / (1 - x$r^2)^2
@@ -146,6 +148,7 @@ test_that("exported Quarto file has the same analysis and renders to the same ro
 
 test_that("Dannheim export reproduces the source reference and a filtered selection", {
   skip_on_cran()
+  skip_without_app_packages()
   source <- system.file("examples", "dannheim", package = "metaUI")
   root <- tempfile(); dir.create(root); on.exit(unlink(root, recursive = TRUE))
   file.copy(list.files(source, full.names = TRUE), root)
