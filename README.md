@@ -175,26 +175,38 @@ and, where permitted, its abstract. Authors supply the details as
 `generate_shiny(study_info = ...)` or as a `study_info` CSV in a schema version 2
 configuration: one row per study, with a `study` column matching the study IDs.
 To fill this from DOIs, call `fetch_study_metadata()` while authoring. It queries the
-free Crossref REST API once per DOI and can cache results in a CSV. The generated app
-stores the result and never contacts Crossref. Missing, malformed or unknown DOIs
-are listed and left without details; nothing is matched by title.
+free Crossref REST API once per DOI, asks OpenAlex for licences and abstracts that
+Crossref lacks, and can cache results in a CSV. The generated app stores the result
+and never contacts either service. Missing, malformed or unknown DOIs are listed and
+left without details; nothing is matched by title.
 
 ```r
 data <- metaUI::prepare_data("effects.csv", "study", "d", variance = "vi", url = "doi")
-Sys.setenv(METAUI_MAILTO = "you@example.org") # optional: Crossref's polite pool
 info <- metaUI::fetch_study_metadata(data, cache = "study-metadata.csv")
 metaUI::generate_shiny(data, "My meta-analysis", study_info = info,
                       save_to_folder = "my-app", launch_app = FALSE)
 ```
 
+Single-DOI lookups are free on both services and need no key. Two optional
+environment variables, best set in `~/.Renviron` so they stay out of scripts:
+
+```
+METAUI_MAILTO=you@example.org   # contact address Crossref asks for (its "polite" pool)
+OPENALEX_API_KEY=your-key       # free key: openalex.org, Settings > API key; raises the rate limit
+```
+
 Crossref states that abstracts remain under publisher or author copyright,
 unlike the rest of its metadata. By default, the function therefore keeps an
-abstract only when the Crossref record declares a CC BY, CC BY-SA, CC0 or
-public-domain-mark licence for the published version, and the app shows that
-licence beside it. `abstracts = "all"` keeps every deposited abstract; authors who
-choose it are responsible for the right to republish them. Abstracts that authors
-add to the CSV are likewise their responsibility. This rule is a conservative
-default, not legal advice.
+abstract only when the article is published under CC BY, CC BY-SA, CC BY-ND, CC0 or
+the Public Domain Mark, as recorded by Crossref or OpenAlex, and the app shows that
+licence beside it. All of these allow verbatim copies of the work in part.
+`abstracts = "noncommercial"` also accepts NonCommercial licences; choose it only if
+the app is not primarily intended for commercial advantage or monetary compensation.
+`abstracts = "all"` keeps every abstract found; authors who choose it are responsible
+for the right to republish them. Abstracts that authors add to the CSV are likewise
+their responsibility. This rule is a conservative default, not legal advice.
+
+The reference is shown in APA style with a button that copies it.
 
 ### Author design settings
 

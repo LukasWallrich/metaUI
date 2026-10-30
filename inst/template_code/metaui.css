@@ -252,5 +252,9 @@ table.dataTable td.metaui-study-child { background: var(--metaui-surface); borde
 .metaui-study-info { position: sticky; left: 16px; max-width: min(75ch, calc(100vw - 80px)); font-size: 14px; line-height: 1.55; }
 .metaui-study-info p { margin: 0 0 8px; overflow-wrap: anywhere; }
 .metaui-study-title { font-weight: 600; }
+.metaui-copy-ref { border: 0; padding: 2px 4px; margin-left: 2px; background: none; color: var(--metaui-slate); vertical-align: -2px; cursor: pointer; border-radius: 3px; }
+.metaui-copy-ref:hover { color: var(--metaui-accent); background: var(--metaui-rule); }
+.metaui-copy-ref:focus-visible { outline: 3px solid var(--metaui-accent); outline-offset: 1px; }
+.metaui-copy-status { margin-left: 4px; color: var(--metaui-slate); font-size: 13px; }
 h4.metaui-study-heading { font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
 @media (max-width: 767px) { .metaui-study-info { left: 0; max-width: calc(100vw - 100px); } }

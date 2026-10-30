@@ -9,7 +9,9 @@ fetch_study_metadata(
   study = "study",
   doi = "doi",
   mailto = Sys.getenv("METAUI_MAILTO"),
-  abstracts = c("open_licence", "none", "all"),
+  abstracts = c("open_licence", "noncommercial", "none", "all"),
+  openalex = TRUE,
+  openalex_key = Sys.getenv("OPENALEX_API_KEY"),
   cache = NULL,
   pause = 0.2
 )
@@ -24,35 +26,57 @@ with the columns named by \code{study} and \code{doi}.}
 the "polite" pool. Defaults to the \code{METAUI_MAILTO} environment variable;
 leave it unset to query anonymously.}
 
-\item{abstracts}{\code{"open_licence"} (default), \code{"none"}, or \code{"all"}; see Details.}
+\item{abstracts}{\code{"open_licence"} (default), \code{"noncommercial"}, \code{"none"}, or
+\code{"all"}; see Details.}
+
+\item{openalex}{Use OpenAlex for licences and abstracts that Crossref lacks.}
+
+\item{openalex_key}{Optional OpenAlex API key. Defaults to the
+\code{OPENALEX_API_KEY} environment variable.}
 
 \item{cache}{Optional CSV path. Rows already retrieved under the same abstract
 policy are reused and only the remaining DOIs are queried; the result is
 written back. Review or edit it like any other input file.}
 
-\item{pause}{Seconds between requests (Crossref's public pool allows a few per second).}
+\item{pause}{Seconds between requests (both services allow several per second).}
 }
 \value{
 A data frame with one row per study: \code{study}, \code{doi}, \code{status}
 (\code{found}, \code{no_doi}, \code{invalid_doi}, \code{not_found}, \code{conflicting_dois} or \code{error}),
-\code{title}, \code{authors}, \code{year}, \code{journal}, \code{volume}, \code{issue}, \code{pages}, \code{abstract},
-\code{abstract_licence}, \code{abstract_note}, \code{metadata_source}, \code{abstract_policy} and \code{retrieved}.
+\code{title}, \code{authors} (\code{"Family, Given; ..."}), \code{year}, \code{journal}, \code{volume},
+\code{issue}, \code{pages}, \code{abstract}, \code{abstract_licence} (a licence URL from Crossref
+or a licence code from OpenAlex), \code{abstract_source}, \code{abstract_note},
+\code{metadata_source}, \code{abstract_policy} and \code{retrieved}.
 }
 \description{
 Queries the free Crossref REST API once per distinct DOI and returns one row
 per study for \code{generate_shiny(study_info = ...)}. Run this while authoring:
-generated apps read the stored result and never contact Crossref. DOIs that are
-missing, malformed, unknown to Crossref or unreachable are reported in the
-\code{status} column and a message; nothing is guessed or matched by title.
+generated apps read the stored result and never contact external services. DOIs
+that are missing, malformed, unknown to Crossref or unreachable are reported in
+the \code{status} column and a message; nothing is guessed or matched by title.
 }
 \details{
-Bibliographic fields are always kept. Crossref abstracts are deposited by
-publishers and are not covered by Crossref's open metadata terms, so with the
-default \code{abstracts = "open_licence"} an abstract is kept only when its Crossref
-record declares a CC BY, CC BY-SA, CC0 or public-domain-mark licence for the version of
-record (or an unspecified version) that has started by the lookup date.
-\code{abstracts = "all"} keeps every deposited abstract: the app authors then take
-responsibility for the right to republish them, and the app says so.
+Bibliographic fields are always kept. Abstracts are not covered by Crossref's
+open metadata terms, so with the default \code{abstracts = "open_licence"} an abstract
+is kept only when the article is published under CC BY, CC BY-SA, CC BY-ND, CC0
+or the Public Domain Mark. The licence is taken from the Crossref record (for the
+version of record, or an unspecified version, that has started by the lookup
+date) or, failing that, from the published-version locations that OpenAlex
+records. When Crossref has no abstract, OpenAlex's abstract is used. OpenAlex
+is asked only when Crossref leaves the abstract or its licence open.
+
+\code{abstracts = "noncommercial"} also accepts licences with NonCommercial terms
+(CC BY-NC, BY-NC-SA, BY-NC-ND). Choose it only if the app is not primarily
+intended for commercial advantage or monetary compensation. \code{abstracts = "all"}
+keeps every abstract found: the app authors then take responsibility for the
+right to republish them, and the app says so.
+
+Single-work lookups by DOI are free on both services and need no key. Crossref
+asks for a contact address: set \code{METAUI_MAILTO} (e.g. in \verb{~/.Renviron}). An
+OpenAlex key is optional and only raises the rate limit; create a free account
+at \url{https://openalex.org}, copy the key from Settings > API key and set
+\code{OPENALEX_API_KEY}. The key is sent
+as a request header and is not stored in the result or the app.
 }
 \examples{
 \dontrun{
