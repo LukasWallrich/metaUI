@@ -30,7 +30,7 @@ async function readable(locator,label,pseudo=null) {
   page.on('pageerror',error=>pageErrors.push(error.message));
   await page.goto(process.env.METAUI_DESIGN_DARK_URL || 'http://127.0.0.1:18803');
   await page.waitForFunction(()=>window.Shiny?.shinyapp?.$socket?.readyState===1&&Array.isArray(window.Shiny.shinyapp.$inputValues.outliers_z_scores));
-  await page.getByText('Download or upload data',{exact:true}).click();
+  await page.getByText('Download data or code, upload data',{exact:true}).click();
   await page.locator('#executeUpload').click();
   await page.getByRole('heading',{name:'No file selected',exact:true}).waitFor();
   await page.waitForFunction(()=>{const m=document.querySelector('.modal'),d=document.querySelector('.modal-dialog');return m&&d&&getComputedStyle(m).opacity==='1'&&['none','matrix(1, 0, 0, 1, 0, 0)'].includes(getComputedStyle(d).transform);});

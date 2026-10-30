@@ -140,7 +140,7 @@ design_preview <- function(d) {
         shiny::div(class = "checkbox", shiny::tags$label(shiny::tags$input(type = "checkbox", checked = NA), "Community")),
         shiny::div(class = "metaui-actions", shiny::tags$button(type = "button", id = "go", class = "btn btn-primary", "Analyze data"),
           shiny::tags$button(type = "reset", id = "resetFilters", class = "btn btn-default", "Reset filters")),
-        shiny::tags$details(class = "metaui-help metaui-data-tools", shiny::tags$summary("Download or upload data"), shiny::p("The workbook includes all rows, filters and results.")))),
+        shiny::tags$details(class = "metaui-help metaui-data-tools", shiny::tags$summary("Download data or code, upload data"), shiny::p("The workbook includes all rows, filters and results.")))),
       shiny::div(class = "col-sm-9",
         shiny::div(class = "metaui-basis", shiny::div(id = "selection_overview", "16 of 16 effects selected")),
         shiny::tags$ul(class = "nav nav-tabs", shiny::tags$li(class = "active", shiny::tags$a(href = "#", "Summary")), shiny::tags$li(shiny::tags$a(href = "#", "Sample")), shiny::tags$li(shiny::tags$a(href = "#", "Forest Plot"))),
