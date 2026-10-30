@@ -212,3 +212,16 @@ metaUI_render_plotly <- function(expr, env = parent.frame()) {
     renderer(...)
   })
 }
+
+# Preload core fitting packages actually named by the chosen models. Loading
+# these during startup avoids the extra first-reactive cost of loading them on
+# Analyze. Optional models and hidden-tab outputs retain loading on first use.
+metaUI_startup_packages <- function(models) {
+  code <- paste(models$code, collapse = "\n")
+  referenced <- function(package) grepl(paste0("(^|[^[:alnum:]_.])", package, "::"), code)
+  needed <- c(meta = referenced("meta"),
+    metafor = referenced("metafor") || grepl("metaUI_multilevel_fit", code, fixed = TRUE),
+    robumeta = referenced("robumeta") || grepl("metaUI_rve_fit", code, fixed = TRUE),
+    ggplot2 = TRUE)
+  names(needed)[needed]
+}

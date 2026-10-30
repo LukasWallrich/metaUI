@@ -21,3 +21,21 @@ test_that("runtime string operations preserve generated-app label and p-value ha
   expect_identical(metaUI:::metaUI_locate("=", c("t(10)=2", "none", NA)), c(6L, NA_integer_, NA_integer_))
   expect_identical(metaUI:::fmt_p(c(.001, .05, .5, .999, NA)), c("= .001", "= .050", "= .500", "> .99", NA_character_))
 })
+
+test_that("deferred Plotly renderers retain their server session environment", {
+  shiny::testServer(function(input, output, session) {
+    local_data <- shiny::reactive(1:3)
+    output$plot <- metaUI:::metaUI_render_plotly({
+      plotly::plot_ly(x = local_data(), y = local_data(), type = "scatter", mode = "markers")
+    })
+  }, {
+    expect_match(output$plot, '"x":[1,2,3]', fixed = TRUE)
+  })
+})
+
+test_that("core preloading follows selected model code without confusing bayesmeta with meta", {
+  packages <- function(code) metaUI:::metaUI_startup_packages(data.frame(code = code))
+  expect_identical(packages(c("meta::metagen(x)", "metaUI_multilevel_fit(df)", "metaUI_rve_fit(df)")), c("meta", "metafor", "robumeta", "ggplot2"))
+  expect_identical(packages("bayesmeta::bayesmeta(x)"), "ggplot2")
+  expect_identical(packages("metafor::rma(x)"), c("metafor", "ggplot2"))
+})

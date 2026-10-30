@@ -334,6 +334,8 @@ generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL) {
   metaUI_eff_size_type_label <- {label_code}
   metaUI__df <- readRDS(file.path(f, 'dataset.rds'))
   metaUI_dataset_key <- unname(tools::md5sum(file.path(f, 'dataset.rds')))
+  # Core packages needed for the initial fits and summary; optional features stay lazy.
+  invisible(lapply(metaUI_startup_packages(models_to_run), loadNamespace))
 ")
 }
 
