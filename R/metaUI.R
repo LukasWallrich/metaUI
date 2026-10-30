@@ -44,7 +44,6 @@ no_check_warnings <- function() {
   htmltools::htmlEscape()
   jsonlite::write_json()
   tools::md5sum()
-  forcats::fct_drop()
   metafor::rma.mv()
 }
 

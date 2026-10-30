@@ -125,12 +125,10 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   # Set NA level for categorical filters ...
   for (i in seq_along(filters)) {
     if(is.factor(data[[filters[i]]])) {
-      data[[filters[i]]] <- data[[filters[i]]] %>%
-       forcats::fct_na_value_to_level("(Missing)")
+      data[[filters[i]]] <- na_to_level(data[[filters[i]]], "(Missing)")
       # ... if there are any NA
       if (!keep_missing_level) {
-        data[[filters[i]]] <- data[[filters[i]]] %>%
-          forcats::fct_drop()
+        data[[filters[i]]] <- droplevels(data[[filters[i]]])
       }
     }
   }
@@ -299,3 +297,11 @@ check_removed_example <- function(data) {
   invisible(data)
 }
 
+
+# Recode missing values (and an explicit NA level) to a named last level
+na_to_level <- function(f, level) {
+  if (anyNA(levels(f))) levels(f)[is.na(levels(f))] <- level
+  if (!level %in% levels(f)) levels(f) <- c(levels(f), level)
+  f[is.na(f)] <- level
+  f
+}

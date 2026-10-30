@@ -853,7 +853,7 @@ glue_string <- ('
         ggplot2::geom_smooth(data = df, ggplot2::aes(y = metaUI__effect_size, x = mod, color = NULL), formula = y ~ x, method = "lm") +
         ggplot2::geom_hline(yintercept = 0, linetype = "dashed")
     } else {
-      p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = forcats::fct_rev(mod))) +
+      p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = factor(mod, levels = rev(levels(as.factor(mod)))))) +
         ggplot2::geom_violin(fill = NA) +
         ggplot2::theme_bw() +
         ggplot2::geom_jitter(width = .1, alpha = .25) +
@@ -928,17 +928,13 @@ glue_string <- ('
     model <- moderator_model()
     df <- df_filtered()
     if (is.numeric(df[[input$moderator]])) {
-      modtable <- psych::describe(df[input$moderator] %>% as.data.frame(), fast = TRUE) # [c(2:5, 8, 9)]
-      k_moderator <- modtable$n
-      modtable[, 2:6] <- round_(as.data.frame(modtable)[, 2:6], digits = 2)
-      modtable <- modtable %>% dplyr::rename(k = n)
-      modtable$k <- k_moderator
+      x <- df[[input$moderator]]
+      modtable <- data.frame(k = sum(!is.na(x)),
+                             round_(data.frame(mean = mean(x, na.rm = TRUE), sd = stats::sd(x, na.rm = TRUE),
+                                               min = min(x, na.rm = TRUE), max = max(x, na.rm = TRUE)), digits = 2))
       # Three significant digits: a per-unit slope such as -0.0027 must not read as -0.00
       modtable$Intercept <- format(signif(model$b[1], 3), scientific = FALSE)
       modtable$`&beta;` <- format(signif(model$b[2], 3), scientific = FALSE)
-      modtable$vars <- NULL
-      modtable$range <- NULL
-      modtable$se <- NULL
 
       modtable <- modtable %>% dplyr::mutate(Moderator = input$moderator %>% stringr::str_remove("metaUI__filter_"),
                                             dplyr::across(dplyr::everything(), as.character))  %>%

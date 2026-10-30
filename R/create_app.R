@@ -6,7 +6,7 @@ declared_imports <- function() {
 }
 
 # Used only inside generated apps and the model fits they run; listed in Suggests.
-metaUI_app_suggests <- c("DT", "ggplot2", "meta", "plotly", "psych", "puniform", "readxl",
+metaUI_app_suggests <- c("DT", "ggplot2", "meta", "plotly", "puniform", "readxl",
   "robumeta", "shinycssloaders", "shinyjs", "weightr", "writexl", "zcurve")
 
 app_dependencies <- function(bayesian = FALSE) {
