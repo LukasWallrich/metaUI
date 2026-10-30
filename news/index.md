@@ -28,10 +28,13 @@ unreleased 0.1.2 development versions.
   [`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
   names any that are missing, with the command to install them.
 - [`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
-  refuses a nonempty `save_to_folder` unless `overwrite = TRUE`, and
+  and
   [`build_app()`](https://lukaswallrich.github.io/metaUI/reference/build_app.md)
-  always requires a fresh output folder, so hand edits to a generated
-  app are not overwritten.
+  refuse a nonempty output folder unless `overwrite = TRUE`, so hand
+  edits to a generated app are not overwritten by accident.
+  `overwrite = TRUE` replaces all generated files, including the
+  editable `www/metaui.css` and `www/metaui.js`; build into a fresh
+  folder when hand edits must be kept.
 - Generated apps check their dependencies at startup but no longer
   install packages; `dependencies.csv` records the versions used for the
   build.
@@ -45,6 +48,22 @@ unreleased 0.1.2 development versions.
   inline help and the waffle chart became a categorical count bar chart.
 
 ### New features
+
+- Study details in the list of effect sizes.
+  `generate_shiny(study_info = ...)` adds a disclosure button to each
+  study; it opens a row with an APA-style reference, a button that
+  copies it, the DOI link and, where permitted, the abstract.
+  [`fetch_study_metadata()`](https://lukaswallrich.github.io/metaUI/reference/fetch_study_metadata.md)
+  looks up DOIs in Crossref while authoring, uses OpenAlex for licences
+  and abstracts that Crossref lacks, reports DOIs it could not match and
+  can cache results. Abstracts are kept when the article is published
+  under a Creative Commons licence (including ND and NC terms), CC0 or
+  the Public Domain Mark; `abstracts = "exclude_nc"` drops NC licences
+  for commercial apps, and `abstracts = "all"` keeps every abstract
+  found. In schema version 2 configurations, `study_info` is a CSV path
+  or a lookup object (`{"cache": "study-metadata.csv"}`) that
+  [`build_app()`](https://lukaswallrich.github.io/metaUI/reference/build_app.md)
+  runs into that cache. Generated apps never query external services.
 
 - The bundled Coles et al. (2019) facial-feedback data
   (`inst/extdata/coles2019.csv`) include the source’s outcome-type

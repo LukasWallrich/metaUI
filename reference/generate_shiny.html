@@ -62,7 +62,8 @@ on that folder, or modified by editing server.R, ui.R, global.R and models.R in 
 <span>  options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  bayesian <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  design <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  design <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  study_info <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -147,6 +148,16 @@ a character vector with all packages to display.</p></dd>
 
 <dt id="arg-design">design<a class="anchor" aria-label="anchor" href="#arg-design"></a></dt>
 <dd><p>Optional settings from <code><a href="app_design.html">app_design()</a></code>. Use <code><a href="design_app.html">design_app()</a></code> to preview and export them.</p></dd>
+
+
+<dt id="arg-study-info">study_info<a class="anchor" aria-label="anchor" href="#arg-study-info"></a></dt>
+<dd><p>Optional study information shown to readers: a data frame (or CSV path) with one row per
+study and a <code>study</code> column matching the study IDs, as returned by <code><a href="fetch_study_metadata.html">fetch_study_metadata()</a></code> or written by the
+authors. Recognised columns: <code>doi</code>, <code>url</code>, <code>title</code>, <code>authors</code> (separated by "; "), <code>year</code>, <code>journal</code>, <code>volume</code>,
+<code>issue</code>, <code>pages</code>, <code>abstract</code> (paragraphs separated by blank lines), <code>abstract_licence</code> (licence URL),
+<code>abstract_note</code>, <code>metadata_source</code>, <code>retrieved</code>, plus <code>status</code> and <code>abstract_policy</code> from the lookup. Studies in
+the effect-size list then open a details row. It is stored in the app; the app never fetches metadata. Include
+only abstracts you may republish.</p></dd>
 
 </dl></div>
     <div class="section level2">

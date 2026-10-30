@@ -24,7 +24,8 @@ generate_shiny(
   options = list(),
   overwrite = FALSE,
   bayesian = NULL,
-  design = NULL
+  design = NULL,
+  study_info = NULL
 )
 ```
 
@@ -158,6 +159,21 @@ generate_shiny(
   Use
   [`design_app()`](https://lukaswallrich.github.io/metaUI/reference/design_app.md)
   to preview and export them.
+
+- study_info:
+
+  Optional study information shown to readers: a data frame (or CSV
+  path) with one row per study and a `study` column matching the study
+  IDs, as returned by
+  [`fetch_study_metadata()`](https://lukaswallrich.github.io/metaUI/reference/fetch_study_metadata.md)
+  or written by the authors. Recognised columns: `doi`, `url`, `title`,
+  `authors` (separated by "; "), `year`, `journal`, `volume`, `issue`,
+  `pages`, `abstract` (paragraphs separated by blank lines),
+  `abstract_licence` (licence URL), `abstract_note`, `metadata_source`,
+  `retrieved`, plus `status` and `abstract_policy` from the lookup.
+  Studies in the effect-size list then open a details row. It is stored
+  in the app; the app never fetches metadata. Include only abstracts you
+  may republish.
 
 ## Value
 

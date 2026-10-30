@@ -11,6 +11,9 @@
 - [`design_app()`](https://lukaswallrich.github.io/metaUI/reference/design_app.md)
   : Preview and export an app design
 
+- [`fetch_study_metadata()`](https://lukaswallrich.github.io/metaUI/reference/fetch_study_metadata.md)
+  : Look up study metadata from DOIs at build time
+
 - [`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
   : Generate Shiny app
 
