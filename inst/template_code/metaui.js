@@ -67,3 +67,30 @@
     }
   });
 })(jQuery);
+
+/* Study details from the authors' build-time study information, shown as a
+   DataTables child row under the effect. The toggle is a native button; DT selects
+   rows on mousedown, so that event is stopped (in the capture phase) for the toggle. */
+(function ($) {
+  'use strict';
+  var counter = 0;
+  document.addEventListener('mousedown', function (event) {
+    if (event.target.closest && event.target.closest('.metaui-study-toggle')) event.stopPropagation();
+  }, true);
+  $(document).on('click', '.metaui-study-toggle', function () {
+    var button = this;
+    var tr = $(button).closest('tr');
+    var row = tr.closest('table').DataTable().row(tr);
+    if (row.child.isShown()) {
+      row.child.hide();
+      button.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    var data = row.data();
+    var id = button.getAttribute('aria-controls') || 'metaui-study-' + (++counter);
+    row.child('<div id="' + id + '" role="region" aria-label="Study details">' + data[data.length - 1] + '</div>',
+      'metaui-study-child').show();
+    button.setAttribute('aria-controls', id);
+    button.setAttribute('aria-expanded', 'true');
+  });
+})(jQuery);

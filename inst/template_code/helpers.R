@@ -168,3 +168,75 @@ escape_quotes <- function(input_str) {
   output_str <- gsub("\"", "&quot;", output_str)
   return(output_str)
 }
+
+# Reader-facing study details from the authors' study information (see fetch_study_metadata()).
+# Returns HTML strings, one per row of `info`, built with htmltools so every value is escaped.
+metaUI_study_details <- function(info) {
+  vapply(seq_len(nrow(info)), function(i) {
+    get <- function(name) {
+      value <- if (name %in% names(info)) info[[name]][i] else NA
+      if (is.na(value) || !nzchar(value)) NULL else as.character(value)
+    }
+    link <- if (!is.null(get("doi"))) paste0("https://doi.org/", get("doi")) else get("url")
+    authors <- get("authors")
+    if (!is.null(authors)) {
+      names <- strsplit(authors, "; ", fixed = TRUE)[[1]]
+      if (length(names) > 10) authors <- paste0(paste(names[1:10], collapse = "; "), "; and ", length(names) - 10, " more")
+    }
+    # Authors (year). Title. Journal, volume(issue), pages. DOI link -- values escaped, punctuation controlled here.
+    esc <- function(x) htmltools::htmlEscape(x)
+    stop_ <- function(x) if (grepl("[.?!]$", x)) x else paste0(x, ".")
+    venue <- paste0(get("volume"), if (!is.null(get("issue"))) paste0("(", get("issue"), ")"))
+    reference <- paste0(
+      if (!is.null(authors)) paste0(esc(authors), " "),
+      if (!is.null(get("year"))) paste0("(", esc(get("year")), "). "),
+      if (!is.null(get("title"))) paste0("<span class=\"metaui-study-title\">", esc(stop_(get("title"))), "</span> "),
+      if (!is.null(get("journal"))) paste0("<i>", esc(get("journal")), "</i>",
+        if (nzchar(venue)) paste0(", ", esc(venue)), if (!is.null(get("pages"))) paste0(", ", esc(get("pages"))), ". "),
+      if (!is.null(link)) as.character(htmltools::tags$a(href = link, target = "_blank", rel = "noopener", link)))
+    reference <- htmltools::tags$p(class = "metaui-study-ref", htmltools::HTML(reference))
+    abstract <- get("abstract")
+    licence <- get("abstract_licence")
+    licence_label <- if (is.null(licence)) NULL else if (grepl("creativecommons\\.org/licenses/", licence))
+      toupper(gsub("^.*/licenses/([a-z-]+)/([0-9.]+).*$", "CC \\1 \\2", licence))
+      else if (grepl("publicdomain/zero", licence)) "CC0" else if (grepl("publicdomain/mark", licence)) "Public Domain Mark" else licence
+    source <- paste(c(get("metadata_source"), if (!is.null(get("retrieved"))) paste("retrieved", get("retrieved"))), collapse = ", ")
+    source <- if (nzchar(source)) paste0("Source: ", esc(source), "; formatting removed.") else ""
+    body <- if (!is.null(abstract)) paste0(
+      "<h4 class=\"metaui-study-heading\">Abstract</h4>",
+      paste0("<p>", esc(strsplit(abstract, "\n\n", fixed = TRUE)[[1]]), "</p>", collapse = ""),
+      "<p class=\"metaui-note\">",
+      if (!is.null(licence_label)) paste0("Licence: ", as.character(htmltools::tags$a(href = licence, target = "_blank", rel = "noopener", licence_label)), ". ")
+      else paste0(esc(if (is.null(get("abstract_note"))) "Included by the app authors." else get("abstract_note")), " "),
+      source, "</p>")
+    else paste0("<p class=\"metaui-note\">", esc(paste(c(get("abstract_note"), if (!is.null(get("metadata_source")))
+      paste0("Reference from ", get("metadata_source"), if (!is.null(get("retrieved"))) paste0(", retrieved ", get("retrieved")), ".")), collapse = " ")), "</p>")
+    body <- htmltools::HTML(body)
+    as.character(htmltools::tags$div(class = "metaui-study-info", reference, body))
+  }, character(1))
+}
+
+# Plain one-line reference for hover titles.
+metaUI_study_reference <- function(info) {
+  vapply(seq_len(nrow(info)), function(i) {
+    parts <- vapply(c("authors", "year", "title", "journal"), function(name) {
+      value <- if (name %in% names(info)) info[[name]][i] else NA
+      if (is.na(value)) "" else as.character(value)
+    }, character(1))
+    if (nzchar(parts[["authors"]])) parts[["authors"]] <- sub("^([^;]+);[^;]+;.*$", "\\1 et al.", parts[["authors"]])
+    parts[["authors"]] <- trimws(paste0(parts[["authors"]], if (nzchar(parts[["year"]])) paste0(" (", parts[["year"]], ")")))
+    parts <- parts[c("authors", "title", "journal")]
+    parts <- parts[nzchar(parts)]
+    paste(ifelse(grepl("[.?!]$", parts), parts, paste0(parts, ".")), collapse = " ")
+  }, character(1))
+}
+
+# Effect-list cells: escaped study labels, as disclosure buttons where study details exist,
+# and the details HTML for the hidden column that metaui.js shows as a child row.
+metaUI_study_cells <- function(labels, ids, info, details_html, reference_text) {
+  index <- match(as.character(ids), info$study)
+  label <- vapply(seq_along(labels), function(i) if (is.na(index[i])) htmltools::htmlEscape(labels[i]) else
+    as.character(htmltools::tags$button(type = "button", class = "metaui-study-toggle", `aria-expanded` = "false",
+      title = reference_text[index[i]], labels[i])), character(1))
+  list(label = label, details = ifelse(is.na(index), "", details_html[index]))
+}

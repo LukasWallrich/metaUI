@@ -16,5 +16,6 @@ Invisibly, the generated app directory.
 Relative data and output paths resolve against the configuration file. Building
 never launches or deploys an app. The configuration is deliberately limited to
 data mapping, scientific scale/direction, an optional declared primary model,
-metadata, and presentation options.
+metadata, presentation options, and an optional \code{study_info} CSV of study details
+(schema version 2; see \code{\link[=fetch_study_metadata]{fetch_study_metadata()}}). Building never queries external services.
 }

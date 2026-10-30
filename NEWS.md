@@ -1,3 +1,14 @@
+# metaUI (development version)
+
+* Show study details in the list of effect sizes. `generate_shiny(study_info = ...)`
+  (or a `study_info` CSV in a schema version 2 configuration) adds a disclosure
+  button to each study with details. It opens a row with the reference, DOI link
+  and, where permitted, the abstract. The new `fetch_study_metadata()` looks up DOIs
+  in Crossref while authoring, reports DOIs it could not match and can cache results. Abstracts are kept only when
+  Crossref records a CC BY, CC BY-SA, CC0 or public-domain-mark licence, unless
+  authors opt in with `abstracts = "all"`. Generated apps never query external
+  services, and no package dependencies are added. Models and estimates are unchanged.
+
 # metaUI 0.2.0
 
 ## Author design helper

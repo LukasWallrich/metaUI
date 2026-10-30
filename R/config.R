@@ -3,7 +3,8 @@
 #' Relative data and output paths resolve against the configuration file. Building
 #' never launches or deploys an app. The configuration is deliberately limited to
 #' data mapping, scientific scale/direction, an optional declared primary model,
-#' metadata, and presentation options.
+#' metadata, presentation options, and an optional `study_info` CSV of study details
+#' (schema version 2; see [fetch_study_metadata()]). Building never queries external services.
 #' @param config Path to JSON, or a named list with the same schema.
 #' @return Invisibly, the generated app directory.
 #' @export
@@ -14,13 +15,15 @@ build_app <- function(config) {
     config <- jsonlite::fromJSON(config, simplifyVector = FALSE)
   }
   if (!is.list(config) || is.null(names(config))) stop("Configuration must be a named list or JSON file.")
-  allowed <- c("schema_version", "data", "mapping", "dataset_name", "output", "primary_model", "options", "about", "bayesian", "design")
+  allowed <- c("schema_version", "data", "mapping", "dataset_name", "output", "primary_model", "options", "about", "bayesian", "design", "study_info")
   unknown <- setdiff(names(config), allowed)
   if (length(unknown)) stop("Unknown configuration fields: ", paste(unknown, collapse = ", "))
   if (length(config$schema_version) != 1L || !is.numeric(config$schema_version) || !config$schema_version %in% c(1, 2)) stop("schema_version must be 1 or 2")
-  if (config$schema_version == 1 && ("bayesian" %in% names(config) || any(c("alternatives", "primary_label") %in% names(config$mapping)))) stop("New computation/Bayesian fields require schema_version 2")
+  if (config$schema_version == 1 && (any(c("bayesian", "study_info") %in% names(config)) || any(c("alternatives", "primary_label") %in% names(config$mapping)))) stop("New computation/Bayesian/study_info fields require schema_version 2")
   for (key in c("data", "dataset_name", "output"))
     if (!is.character(config[[key]]) || length(config[[key]]) != 1L || !nzchar(config[[key]])) stop("Required scalar string: ", key)
+  if (!is.null(config$study_info) && (!is.character(config$study_info) || length(config$study_info) != 1L || !nzchar(config$study_info)))
+    stop("study_info must be the path to a CSV file")
   resolve <- function(path) if (grepl("^(/|[A-Za-z]:|\\\\)", path)) path else file.path(base, path)
   mapping <- config$mapping
   if (!is.list(mapping) || is.null(names(mapping))) stop("mapping must be an object")
@@ -39,5 +42,6 @@ build_app <- function(config) {
   do.call(generate_shiny, c(list(dataset = dataset, dataset_name = config$dataset_name,
                                 save_to_folder = resolve(config$output), launch_app = FALSE,
                                 primary_model = config$primary_model,
-                                bayesian = config$bayesian, design = config$design, options = if (is.null(config$options)) list() else config$options), about))
+                                bayesian = config$bayesian, design = config$design,
+                                study_info = if (is.null(config$study_info)) NULL else resolve(config$study_info), options = if (is.null(config$options)) list() else config$options), about))
 }

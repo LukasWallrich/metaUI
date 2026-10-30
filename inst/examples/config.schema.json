@@ -441,6 +441,11 @@
           "maximum": 16
         }
       }
+    },
+    "study_info": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Schema version 2. Optional CSV of study details (one row per study; `study` column matching study IDs), e.g. written from fetch_study_metadata(). Shown in the effect-size list; the app never fetches metadata."
     }
   },
   "allOf": [
@@ -458,6 +463,11 @@
             {
               "required": [
                 "bayesian"
+              ]
+            },
+            {
+              "required": [
+                "study_info"
               ]
             },
             {

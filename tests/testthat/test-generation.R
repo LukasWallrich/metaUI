@@ -334,8 +334,8 @@ test_that("filters with quoted levels and URL columns generate a working app", {
   server_code <- readLines(file.path(path, "server.R"))
   # dom = "t" hides the pager, so paging would silently drop levels beyond the 10th
   expect_true(any(grepl('dom = "t", paging = FALSE', server_code, fixed = TRUE)))
-  # URL cells hold links (built with htmltools, so they are escaped) and must not be re-escaped
-  expect_true(any(grepl('escape = setdiff(names(out), "URL")', server_code, fixed = TRUE)))
+  # URL and Study cells are built (and escaped) with htmltools and must not be re-escaped
+  expect_true(any(grepl('escape = setdiff(names(out), c("URL", "Study", "metaUI__details"))', server_code, fixed = TRUE)))
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
   env <- new.env(parent = globalenv())
   sys.source("global.R", env) # fails to parse if a level is written unescaped
