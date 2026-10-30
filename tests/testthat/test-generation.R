@@ -97,7 +97,7 @@ test_that("uploaded data persist and invalidate session results", {
   })
 })
 
-test_that("uploads retain extreme/missing numeric inputs and restored picker selections", {
+test_that("uploads retain extreme/missing numeric inputs and restored selectize selections", {
   root <- tempfile(); on.exit(unlink(root, recursive = TRUE))
   x <- fixture(); x$year <- 2001:2016; x$group <- factor(rep(paste0("G", 1:8), each = 2))
   d <- prepare_data(x, "study", "yi", variance = "vi", es_id = "id",
@@ -116,6 +116,9 @@ test_that("uploads retain extreme/missing numeric inputs and restored picker sel
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   ui_code <- paste(readLines("ui.R"), collapse = "\n")
   expect_match(ui_code, "metaUI__filter_Year_include_NA")
+  expect_match(ui_code, "metaUI_selectize_input(", fixed = TRUE)
+  expect_false(grepl("shinyWidgets", paste(readLines("global.R"), readLines("server.R"), ui_code, collapse = "\n")))
+  expect_match(paste(readLines("server.R"), collapse = "\n"), "shiny::updateSelectizeInput", fixed = TRUE)
   # Integer filters get whole-number bounds, steps and an integer grid.
   expect_match(ui_code, "spec = list(min = 2000, max = 2016, step = 1, ticks = 8)", fixed = TRUE)
   shiny::testServer(env$server, {

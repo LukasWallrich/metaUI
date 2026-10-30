@@ -103,7 +103,7 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
       levels_ <- levels(data[[filter_col]]) %>% na.omit() %>% as.character()
       choices <- paste(deparse(levels_), collapse = "\n")
 
-      out <- glue::glue('{if (length(levels_) < opts$selection_list_threshold) "checkboxGroupInput(" else "shinyWidgets::pickerInput(multiple = TRUE, options = list(`actions-box` = TRUE), "} "{filter_col %>% stringr::str_replace_all(" ", "_")}",
+      out <- glue::glue('{if (length(levels_) < opts$selection_list_threshold) "checkboxGroupInput(" else "metaUI_selectize_input("} "{filter_col %>% stringr::str_replace_all(" ", "_")}",
       tagList("{stringr::str_remove(filter_col, rm_prefix)}",
       {help}),
           choices = {choices},
@@ -188,7 +188,7 @@ generate_mod_tab <- function(data, any_filters) {
       {generate_moderator_selection(data)},
       fluidRow(
         div(column(5, DT::dataTableOutput("moderation_table"), shiny::htmlOutput("moderation_text")),
-            column(7, shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot"))))
+            column(7, shinycssloaders::withSpinner(shiny::uiOutput("moderation_plot_container"))))
       ),
       sample_moderation_notes
       )
@@ -305,7 +305,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             "Outlier Diagnostics",
             results_panel(
             diagnostics_main,
-            plotly::plotlyOutput("violin", height = 500) %>% shinycssloaders::withSpinner(),
+            shiny::uiOutput("violin_container") %>% shinycssloaders::withSpinner(),
             diagnostics_het,
             div(class = "metaui-scroll", tableOutput("heterogeneity") %>% shinycssloaders::withSpinner()))
           ),
@@ -622,7 +622,7 @@ glue_string <- ('
     estimates_explo_agg <- table[display_order(table), , drop = FALSE] %>% dplyr::filter(status == "ok")
     validate(need(nrow(estimates_explo_agg) > 0, "No model could be estimated for this selection; reasons are in the table below."))
     estimates_explo_agg$Model <- ifelse(estimates_explo_agg$role == "primary",
-      paste0(stringr::str_wrap(estimates_explo_agg$Model, 26), "\\n(primary)"), stringr::str_wrap(estimates_explo_agg$Model, 26))
+      paste0(metaUI_wrap(estimates_explo_agg$Model, 26), "\\n(primary)"), metaUI_wrap(estimates_explo_agg$Model, 26))
     # Summary rows are back-transformed to r for correlations; say so on the axis.
     x_label <- if (metaUI__df$metaUI__es_type[1] == "ZCOR") "Correlation r (back-transformed from Fisher z)" else metaUI_eff_size_type_label
 
@@ -635,7 +635,7 @@ glue_string <- ('
       ggplot2::geom_point(ggplot2::aes(x = es, size = role)) +
       ggplot2::scale_colour_manual(values = c(primary = "<<if (is.null(opts$design)) "#096b74" else opts$design$accent>>", exploration = "<<if (is.null(opts$design)) "#506477" else opts$design$text>>"), guide = "none") +
       ggplot2::scale_size_manual(values = c(primary = 3.4, exploration = 2.4), guide = "none") +
-      ggplot2::labs(x = stringr::str_wrap(x_label, 34), y = NULL) +
+      ggplot2::labs(x = metaUI_wrap(x_label, 34), y = NULL) +
       ggplot2::theme_minimal(base_size = 14) +
       ggplot2::scale_y_discrete(limits = rev(unique(estimates_explo_agg$Model))) +
       ggplot2::theme(panel.grid.major.y = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(),
@@ -739,7 +739,7 @@ glue_string <- ('
         glue::glue("
     output$`summary_{f$id}_table` <- renderTable({{ # {{ escapes the glue syntax
     df <- df_filtered()
-    summarise_numeric(df[[\'{f$col}\']], \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\')
+    summarise_numeric(df[[\'{f$col}\']], \'{f$col  %>% metaUI_remove(\'metaUI__filter_\')}\')
   }})
 
   output$`summary_{f$id}_plot` <- renderPlot({{
@@ -748,22 +748,22 @@ glue_string <- ('
       ggplot2::geom_density(na.rm = TRUE) +
       ggplot2::geom_rug(alpha = .1, na.rm = TRUE) +
       ggplot2::theme_light(base_size = 14) +
-      ggplot2::xlab(\'{f$col %>% stringr::str_remove(\'metaUI__filter_\')}\')
+      ggplot2::xlab(\'{f$col %>% metaUI_remove(\'metaUI__filter_\')}\')
   }})
   ")
       } else {
         glue::glue("
           output$`summary_{f$id}_table` <- renderTable({{
     df <- df_filtered()
-    summarise_categorical(df[[\'{f$col}\']], \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\')
+    summarise_categorical(df[[\'{f$col}\']], \'{f$col  %>% metaUI_remove(\'metaUI__filter_\')}\')
   }})
 
   output$`summary_{f$id}_plot` <- renderPlot({{
     df <- df_filtered()
 
-    counts <- summarise_categorical(df[[\'{f$col}\']], \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\')
+    counts <- summarise_categorical(df[[\'{f$col}\']], \'{f$col  %>% metaUI_remove(\'metaUI__filter_\')}\')
 
-    ggplot2::ggplot(counts, ggplot2::aes(x = reorder(.data[[\'{f$col %>% stringr::str_remove(\'metaUI__filter_\')}\']], Count), y = Count)) +
+    ggplot2::ggplot(counts, ggplot2::aes(x = reorder(.data[[\'{f$col %>% metaUI_remove(\'metaUI__filter_\')}\']], Count), y = Count)) +
       ggplot2::geom_col(fill = \'#337ab7\') + ggplot2::coord_flip() +
       ggplot2::labs(x = NULL, y = \'Effects\') + ggplot2::theme_minimal(base_size = 14)
 
@@ -786,15 +786,15 @@ glue_string <- ('
         "Effect size" = "metaUI__effect_size", "Source p (primary)" = "metaUI__pvalue",
         dplyr::starts_with("metaUI__filter_"), dplyr::any_of("metaUI__url")
       ) %>%
-      dplyr::rename_with(~ stringr::str_replace(.x, "metaUI__filter_", "") %>%
-        stringr::str_replace("metaUI__article_label", "Source") %>%
-        stringr::str_replace("metaUI__url", "URL")) %>%
+      dplyr::rename_with(~ metaUI_replace(.x, "metaUI__filter_", "") %>%
+        metaUI_replace("metaUI__article_label", "Source") %>%
+        metaUI_replace("metaUI__url", "URL")) %>%
       dplyr::mutate(`Source p (primary)` = fmt_p(.data[["Source p (primary)"]], include_equal = FALSE)) %>%
       dplyr::arrange(.data$Study)
 
     if ("Source" %in% names(out)) {
-      out <- out %>% dplyr::mutate(Study = stringr::str_remove(Study, Source) %>%
-        stringr::str_remove("^[[:punct:] ]+"))
+      out <- out %>% dplyr::mutate(Study = metaUI_remove(Study, Source) %>%
+        metaUI_remove("^[[:punct:] ]+"))
     }
 
     if ("URL" %in% names(out)) {
@@ -824,7 +824,8 @@ glue_string <- ('
   # Moderators  -----------------------------------------------------------
 
 
-  output$moderation_plot <- plotly::renderPlotly({
+  output$moderation_plot_container <- shiny::renderUI(plotly::plotlyOutput("moderation_plot"))
+  output$moderation_plot <- metaUI_render_plotly({
     df <- df_filtered()
     mod <- df[[input$moderator]]
     df$mod <- df[[input$moderator]]
@@ -833,7 +834,7 @@ glue_string <- ('
       p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = mod)) +
         ggplot2::geom_point() +
         ggplot2::theme_bw() +
-        ggplot2::xlab(input$moderator %>% stringr::str_remove("metaUI__filter_")) +
+        ggplot2::xlab(input$moderator %>% metaUI_remove("metaUI__filter_")) +
         ggplot2::ylab(metaUI_eff_size_type_label) +
         ggplot2::geom_smooth(data = df, ggplot2::aes(y = metaUI__effect_size, x = mod, color = NULL), formula = y ~ x, method = "lm") +
         ggplot2::geom_hline(yintercept = 0, linetype = "dashed")
@@ -869,7 +870,7 @@ glue_string <- ('
         sparse = TRUE
       )
      moderation_text <-     HTML(glue::glue(
-      \'<br><br>The {ifelse(is.numeric(df[[input$moderator]]), "linear ", "")}relationship between <b>{input$moderator  %>% stringr::str_remove("metaUI__filter_")}</b> \',
+      \'<br><br>The {ifelse(is.numeric(df[[input$moderator]]), "linear ", "")}relationship between <b>{input$moderator  %>% metaUI_remove("metaUI__filter_")}</b> \',
       \'and the observed effect sizes <b>is {ifelse(model[["QMp"]] < .05, "", "not ")}significant </b> at the 5% level. \',
      \' Test of moderators: <i>F</i>({model[["QMdf"]][1]}, {model[["QMdf"]][2]}) = {round(model[["QM"]], digits = 2)}, \',
       \'<i>p</i> {fmt_p(model[["QMp"]])}.\'
@@ -898,7 +899,7 @@ glue_string <- ('
       )
 
      moderation_text <-     HTML(glue::glue(
-      \'<br><br>The {ifelse(is.numeric(df[[input$moderator]]), "linear ", "")}relationship between <b>{input$moderator  %>% stringr::str_remove("metaUI__filter_")}</b> \',
+      \'<br><br>The {ifelse(is.numeric(df[[input$moderator]]), "linear ", "")}relationship between <b>{input$moderator  %>% metaUI_remove("metaUI__filter_")}</b> \',
       \'and the observed effect sizes <b>is {ifelse(model_sig[["QMp"]] < .05, "", "not ")}significant</b> at the 5% level. \',
      \' Test of moderators: <i>F</i>({model_sig[["QMdf"]][1]}, {model_sig[["QMdf"]][2]}) = {round(model_sig[["QM"]], digits = 2)}, \',
       \'<i>p</i> {fmt_p(model_sig[["QMp"]])}.\'
@@ -925,15 +926,15 @@ glue_string <- ('
       modtable$range <- NULL
       modtable$se <- NULL
 
-      modtable <- modtable %>% dplyr::mutate(Moderator = input$moderator %>% stringr::str_remove("metaUI__filter_"),
+      modtable <- modtable %>% dplyr::mutate(Moderator = input$moderator %>% metaUI_remove("metaUI__filter_"),
                                             dplyr::across(dplyr::everything(), as.character))  %>%
                                dplyr::select("Moderator", Intercept, "&beta;", "k", dplyr::everything()) %>%
     tidyr::pivot_longer(dplyr::everything(), names_to = "Statistic", values_to = "Value")
 
     } else {
       modtable <- data.frame(
-        "Moderator Levels" = rownames(model$b) %>% stringr::str_remove(input$moderator) %>%
-        stringr::str_remove_all("`"), #Needed to support spaces in moderator names
+        "Moderator Levels" = rownames(model$b) %>% metaUI_remove(input$moderator) %>%
+        metaUI_remove_all("`"), #Needed to support spaces in moderator names
         "Effect size" = round(model$b, digits = 3),
         "95% CI" = fmt_ci(model$ci.lb, model$ci.ub, digits = 3), check.names = FALSE
       )
@@ -1098,7 +1099,8 @@ glue_string <- ('
   }, width = function() max(680, session$clientData$output_zcurve_width), height = 480, res = 96)
 
   # VIOLIN PLOTLY -------------------------------------------------------------
-  output$violin <- plotly::renderPlotly({
+  output$violin_container <- shiny::renderUI(plotly::plotlyOutput("violin", height = 500))
+  output$violin <- metaUI_render_plotly({
     df <- df_filtered()
 
     # Standardise against the built dataset, like the z-score filter (metaUI__es_z)
@@ -1299,7 +1301,7 @@ glue_string <- ('
           step = step, value = selection)
       } else {
         if (length(levels(metaUI__df[[i$col]])) >= <<opts$selection_list_threshold>>) {
-          shinyWidgets::updatePickerInput(session, inputId = i$id, selected = filter_values[[i$id]]$selection)
+          shiny::updateSelectizeInput(session, inputId = i$id, selected = filter_values[[i$id]]$selection)
         } else {
           updateCheckboxGroupInput(inputId = i$id, selected = filter_values[[i$id]]$selection)
         }

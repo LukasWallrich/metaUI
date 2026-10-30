@@ -425,10 +425,10 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1) {
   # family: f,c        converting t-->f and z-->c
 
   # Find comma,parentheses,equal sign
-  par1 <- stringr::str_locate(raw, "\\(")[, 1]
-  par2 <- stringr::str_locate(raw, "\\)")[, 1]
-  comma <- stringr::str_locate(raw, ",")[, 1]
-  eq <- stringr::str_locate(raw, "=")[, 1]
+  par1 <- metaUI_locate("\\(", raw)
+  par2 <- metaUI_locate("\\)", raw)
+  comma <- metaUI_locate(",", raw)
+  eq <- metaUI_locate("=", raw)
 
   # DF for t-tests
   df <- as.numeric(ifelse(test == "t", substring(raw, par1 + 1, par2 - 1), NA))

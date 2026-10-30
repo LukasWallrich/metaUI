@@ -67,3 +67,10 @@
     }
   });
 })(jQuery);
+
+// Base Shiny selectize filters retain the picker's bulk-selection actions.
+jQuery(document).on('click', '[data-metaui-select]', function () {
+  var el = document.getElementById(this.dataset.metauiSelect);
+  if (!el || !el.selectize) return;
+  el.selectize.setValue(this.dataset.selectAll === 'true' ? Object.keys(el.selectize.options) : []);
+});

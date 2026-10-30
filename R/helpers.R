@@ -58,14 +58,14 @@ fmt_p <- function(p_value, digits = 3, include_equal = TRUE) {
   fmt <- paste0("%.", digits, "f")
   fmt_p <- function(x, include_equal) {
     paste0(ifelse(include_equal, "= ", ""), sprintf(fmt, x)) %>%
-      stringr::str_replace(" 0.", " .")
+      metaUI_replace(" 0.", " .")
   }
   exact <- !(p_value < 10^(-digits) | p_value > .99)
   exact[is.na(exact)] <- TRUE
   out <- p_value
   out[exact] <- purrr::map_chr(out[exact], fmt_p, include_equal)
   out[!exact] <- paste("<", sprintf(paste0("%.", digits, "f"), 10^(-digits)) %>%
-                         stringr::str_replace("0.", "."))
+                         metaUI_replace("0.", "."))
   large <- p_value > .99
   out[large] <- "> .99"
   out[p_value > 1] <- "> 1 (!!)"
@@ -167,4 +167,48 @@ escape_quotes <- function(input_str) {
   output_str <- gsub("'", "&apos;", input_str)
   output_str <- gsub("\"", "&quot;", output_str)
   return(output_str)
+}
+
+# Small runtime string operations, without loading stringr/stringi.
+# Patterns may be vectors (e.g. each study's source label).
+metaUI_replace <- function(x, pattern, replacement) {
+  if (!length(x) || !length(pattern)) return(character())
+  n <- max(length(x), length(pattern), length(replacement))
+  x <- rep_len(x, n); pattern <- rep_len(pattern, n); replacement <- rep_len(replacement, n)
+  vapply(seq_len(n), function(i) {
+    if (is.na(x[i]) || is.na(pattern[i]) || is.na(replacement[i])) return(NA_character_)
+    sub(pattern[i], replacement[i], x[i], perl = TRUE)
+  }, character(1), USE.NAMES = FALSE)
+}
+metaUI_remove <- function(x, pattern) metaUI_replace(x, pattern, "")
+metaUI_remove_all <- function(x, pattern) gsub(pattern, "", x, perl = TRUE)
+metaUI_wrap <- function(x, width) vapply(x, function(s) {
+  if (is.na(s)) return(NA_character_)
+  paste(strwrap(s, width = width), collapse = "\n")
+}, character(1), USE.NAMES = FALSE)
+
+metaUI_selectize_input <- function(inputId, label, choices, selected) {
+  shiny::tagList(
+    shiny::selectizeInput(inputId, label, choices = choices, selected = selected, multiple = TRUE),
+    shiny::tags$div(class = "metaui-select-actions",
+      shiny::tags$button(type = "button", class = "btn btn-default btn-xs", `data-metaui-select` = inputId, `data-select-all` = "true", "Select all"),
+      shiny::tags$button(type = "button", class = "btn btn-default btn-xs", `data-metaui-select` = inputId, `data-select-all` = "false", "Deselect all")))
+}
+
+metaUI_locate <- function(pattern, x) {
+  pos <- as.integer(regexpr(pattern, x, perl = TRUE))
+  pos[pos < 0] <- NA_integer_
+  pos
+}
+
+# Construct the real renderer only when Shiny first runs this output. Hidden
+# tab outputs remain suspended, just like ordinary renderPlotly outputs.
+metaUI_render_plotly <- function(expr, env = parent.frame()) {
+  expr <- substitute(expr)
+  force(env)
+  renderer <- NULL
+  shiny::markRenderFunction(function(...) plotly::plotlyOutput(...), function(...) {
+    if (is.null(renderer)) renderer <<- plotly::renderPlotly(expr, env = env, quoted = TRUE)
+    renderer(...)
+  })
 }
