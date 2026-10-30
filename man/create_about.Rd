@@ -11,7 +11,8 @@ create_about(
   osf_link = "",
   contact = "",
   list_packages = TRUE,
-  bayesian = FALSE
+  bayesian = FALSE,
+  meta = FALSE
 )
 }
 \arguments{
@@ -30,6 +31,8 @@ used in the default configuration. To display different packages (e.g., because 
 a character vector with all packages to display.}
 
 \item{bayesian}{Is the optional Bayesian model enabled? If so, the default list includes bayesmeta.}
+
+\item{meta}{Does author model code use meta? If so, the default list includes it.}
 }
 \value{
 HTML code for the \code{About} panel of the Shiny app

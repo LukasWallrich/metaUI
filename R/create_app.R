@@ -5,26 +5,53 @@ declared_imports <- function() {
   imports[nzchar(imports)]
 }
 
-# Used only inside generated apps and the model fits they run; listed in Suggests.
-metaUI_app_suggests <- c("DT", "ggplot2", "meta", "plotly", "puniform", "readxl",
-  "robumeta", "shinycssloaders", "shinyjs", "weightr", "writexl", "zcurve")
-
-app_dependencies <- function(bayesian = FALSE) {
-  sort(unique(c(declared_imports(), metaUI_app_suggests, if (bayesian) "bayesmeta")))
+# Inspect trusted author code, including helpers in an author model file.
+models_use_meta <- function(code) {
+  parsed <- tryCatch(parse(text = code, keep.source = TRUE), error = function(e) NULL)
+  if (is.null(parsed))
+    return(any(grepl("\\bmeta\\s*::|(?:library|require|requireNamespace)\\s*\\(\\s*['\"]?meta(?:['\"]|\\s*[,\\)])", code, perl = TRUE)))
+  tokens <- utils::getParseData(parsed)
+  if (any(tokens$token == "SYMBOL_PACKAGE" & tokens$text == "meta")) return(TRUE)
+  uses <- function(expr) {
+    if (!is.call(expr) && !is.expression(expr)) return(FALSE)
+    if (is.call(expr)) {
+      fun <- expr[[1]]
+      if (is.call(fun) && identical(fun[[1]], as.name("::"))) fun <- fun[[3]]
+      if (is.symbol(fun) && as.character(fun) %in% c("library", "require", "requireNamespace")) {
+        args <- as.list(expr)[-1L]
+        pkg <- if ("package" %in% names(args)) args$package else if (length(args)) args[[1]] else NULL
+        if ((is.symbol(pkg) || is.character(pkg)) && identical(as.character(pkg), "meta")) return(TRUE)
+      }
+    }
+    any(vapply(as.list(expr), function(x) {
+      if (identical(x, quote(expr = ))) FALSE else uses(x)
+    }, logical(1)))
+  }
+  uses(parsed)
 }
 
-missing_app_packages <- function(bayesian = FALSE) {
-  pkgs <- app_dependencies(bayesian)
+# Used only inside generated apps and the model fits they run; listed in Suggests.
+# meta is added only when author model code uses it.
+metaUI_app_suggests <- c("DT", "ggplot2", "plotly", "puniform", "readxl",
+  "robumeta", "shinycssloaders", "shinyjs", "weightr", "writexl", "zcurve")
+
+app_dependencies <- function(bayesian = FALSE, meta = FALSE) {
+  sort(unique(c(declared_imports(), metaUI_app_suggests, if (bayesian) "bayesmeta", if (meta) "meta")))
+}
+
+missing_app_packages <- function(bayesian = FALSE, meta = FALSE) {
+  pkgs <- app_dependencies(bayesian, meta)
   missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
-  if (!"meta" %in% missing && utils::packageVersion("meta") < "7.0.0") missing <- c(missing, "meta")
+  if (meta && !"meta" %in% missing && utils::packageVersion("meta") < "7.0.0") missing <- c(missing, "meta")
   missing
 }
 
 metaUI_app_ready <- function() !length(missing_app_packages())
 
-check_app_packages <- function(bayesian = FALSE) {
-  missing <- missing_app_packages(bayesian)
-  if (length(missing)) stop("Generated apps need packages that are not installed (meta must be >= 7.0-0): ",
+check_app_packages <- function(bayesian = FALSE, meta = FALSE) {
+  missing <- missing_app_packages(bayesian, meta)
+  if (length(missing)) stop("Generated apps need packages that are not installed",
+    if (meta) " (meta must be >= 7.0-0)", ": ",
     paste(missing, collapse = ", "), ". Install them with install.packages(c(",
     paste0('"', missing, '"', collapse = ", "), ")).", call. = FALSE)
   invisible(TRUE)
@@ -43,6 +70,7 @@ check_app_packages <- function(bayesian = FALSE) {
 #' used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 #' a character vector with all packages to display.
 #' @param bayesian Is the optional Bayesian model enabled? If so, the default list includes bayesmeta.
+#' @param meta Does author model code use meta? If so, the default list includes it.
 #'
 #' @returns HTML code for the `About` panel of the Shiny app
 #'
@@ -50,7 +78,7 @@ check_app_packages <- function(bayesian = FALSE) {
 
 
 create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE,
-                         bayesian = FALSE) {
+                         bayesian = FALSE, meta = FALSE) {
   out <- glue::glue("<h3>Interactive multiverse meta-analysis of {dataset_name}</h3>
           <p><b>Last update:</b> {date}</p>
           {if (citation != '') glue::glue('<p><b>Citation:</b> {citation}</p>') else ''}
@@ -60,7 +88,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
           ")
 
   if (list_packages == TRUE) {
-    req_packages <- app_dependencies(bayesian)
+    req_packages <- app_dependencies(bayesian, meta)
   } else if (is.character(list_packages)) {
     req_packages <- list_packages
     list_packages <- TRUE
@@ -104,6 +132,10 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' `NULL`, declares no primary model, and the app then says that it does not choose between estimators.
 #' @param filter_popups Named list of expandable filter-help content. Plain text is escaped; wrap trusted HTML in [htmltools::HTML()], for example `list(Year = htmltools::HTML("<i>Note:</i> Data collection year."))`.
 #' @param save_to_folder Folder for the generated code and data. Defaults to NA, which uses a temporary folder. A nonempty destination is refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.
+#' @param static_folder Optional destination folder for a static shinylive site. Requires
+#'   the suggested shinylive package. The app is generated in save_to_folder first
+#'   (a temporary folder when NA), then exported with precomputed results. Must
+#'   be outside save_to_folder. Static generation never launches the app.
 #' @param design Optional settings from [app_design()]. Use [design_app()] to preview and export them.
 #' @param bayesian NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.
 #' @param study_info Optional study information shown to readers: a data frame (or CSV path) with one row per
@@ -114,7 +146,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' the effect-size list then open a details row. It is stored in the app; the app never fetches metadata. Include
 #' only abstracts you may republish.
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
-#' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.
+#' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA and static_folder is NULL, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.
 #' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
 #'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 200. If more effect sizes are selected, a message is shown instead.
 #'   - `shiny_theme` Character. One of the shinythemes that style the app. Defaults to "yeti", see `?shinythemes::shinythemes` for all options.
@@ -123,7 +155,16 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @inheritParams create_about
 #' @inheritDotParams create_about
 #'
-#' @returns With launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
+#' @details
+#' Use `generate_shiny(static_folder = ...)` to generate and publish static files
+#' in one step. After editing the generated app files, use [export_static()] to
+#' re-export them; regenerating the app would overwrite those edits.
+#' With `overwrite = TRUE`, the existing static site folder is deleted entirely
+#' and rewritten, including unrelated files. Keep hand edits in the editable app
+#' folder and re-export it with [export_static()].
+#'
+#' @returns With static_folder supplied, invisibly returns the static site path.
+#'   Otherwise, with launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
 #' @examplesIf metaUI:::metaUI_app_ready()
 #' raw <- data.frame(study = letters[1:6], d = c(.1, .3, -.1, .4, .2, .5),
 #'                   vi = c(.02, .03, .02, .04, .01, .05))
@@ -136,8 +177,14 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 
 generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         models = get_model_tibble, primary_model = NULL, filter_popups = list(),
-        save_to_folder = NA, launch_app = is.na(save_to_folder), ...,
-        options = list(), overwrite = FALSE, bayesian = NULL, design = NULL, study_info = NULL) {
+        save_to_folder = NA, launch_app = is.na(save_to_folder) && is.null(static_folder), ...,
+        options = list(), overwrite = FALSE, bayesian = NULL, design = NULL, study_info = NULL,
+        static_folder = NULL) {
+
+  if (!is.null(static_folder)) {
+    validate_static_folder(static_folder, save_to_folder, overwrite)
+    launch_app <- FALSE
+  }
 
   defaults <- list(max_forest_plot_rows = 200, shiny_theme = "yeti", selection_list_threshold = 6)
   opts <- utils::modifyList(defaults, options)
@@ -149,7 +196,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 
    # Evaluate so that it is TRUE when save_to_folder is NA initially
    launch_app <- launch_app
-   about <- create_about(dataset_name, ..., bayesian = !is.null(bayesian))
+   about_args <- list(...)
+   about_args$meta <- NULL
 
   if (is.na(save_to_folder)) {
     save_to_folder <- tempfile()
@@ -181,6 +229,10 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     stop("Invalid argument type. models must be a function, a tibble, or a path to a file.")
   }
 
+  uses_meta <- models_use_meta(c(models_to_run$code,
+    if (is.character(models)) readLines(models, warn = FALSE)))
+  about <- do.call(create_about, c(list(dataset_name = dataset_name,
+    bayesian = !is.null(bayesian), meta = uses_meta), about_args))
   bayesian <- metaUI_bayesian_options(bayesian, dataset$metaUI__es_type[1])
   package_models <- identical(models_to_run, get_model_tibble())
   if (!is.null(bayesian)) {
@@ -188,7 +240,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     models_to_run <- dplyr::bind_rows(models_to_run, metaUI_bayesian_spec(bayesian))
   }
   opts$bayesian <- bayesian
-  check_app_packages(!is.null(bayesian))
+  check_app_packages(!is.null(bayesian), uses_meta)
   if (!is.null(primary_model) && (!is.character(primary_model) || length(primary_model) != 1L ||
       sum(models_to_run$name == primary_model) != 1L))
     stop("primary_model must name exactly one model in models_to_run: ", paste(models_to_run$name, collapse = "; "))
@@ -291,7 +343,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   file.copy(system.file("template_code", "analysis.R", package = "metaUI"),
             file.path(save_to_folder, "analysis.R"), overwrite = TRUE)
   jsonlite::write_json(report, file.path(save_to_folder, "validation.json"), auto_unbox = TRUE, pretty = TRUE, na = "null")
-  dependencies <- app_dependencies(!is.null(bayesian))
+  dependencies <- app_dependencies(!is.null(bayesian), uses_meta)
   versions <- data.frame(package = dependencies,
     version = vapply(dependencies, function(x) as.character(utils::packageVersion(x)), character(1)))
   utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
@@ -300,9 +352,11 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   writeLines(labels_and_options(dataset_name, correlation, primary_model), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
-  writeLines(generate_global.R(eff_size_type_label, bayesian), file.path(save_to_folder, "global.R"))
+  writeLines(generate_global.R(eff_size_type_label, bayesian, uses_meta), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
 
+  if (!is.null(static_folder))
+    return(invisible(export_static(save_to_folder, static_folder, overwrite = overwrite)))
   if (!launch_app) return(invisible(normalizePath(save_to_folder)))
   shinyAppDir(save_to_folder)
 }
@@ -314,10 +368,11 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 #'
 #' @noRd
 
-generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL) {
-  req_packages <- app_dependencies(!is.null(bayesian))
+generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL, uses_meta = FALSE) {
+  req_packages <- app_dependencies(!is.null(bayesian), uses_meta)
 
 
+  meta_check <- if (uses_meta) "if (utils::packageVersion('meta') < '7.0.0') stop('meta >= 7.0-0 is required; install dependencies before launch.')" else ""
   label_code <- paste(deparse(as.character(metaUI_eff_size_type_label)), collapse = "\n")
   glue::glue("
 
@@ -330,7 +385,7 @@ generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL) {
       if (!requireNamespace(\"{.x}\", quietly = TRUE)) {{
         stop(\"Missing dependency: {.x}. Install dependencies before launching; see dependencies.csv.\")
         }}'))  %>% glue::glue_collapse(sep = '\n')}
-  if (utils::packageVersion('meta') < '7.0.0') stop('meta >= 7.0-0 is required; install dependencies before launch.')
+  {meta_check}
 
   # Ensure component files can be found
    f <- '.'
@@ -466,3 +521,43 @@ generate_models.R <- function(models_to_run) {
              ')
 
 }
+
+
+# Validate before writing any generated files, including destinations not yet created.
+validate_static_folder <- function(static_folder, save_to_folder, overwrite = FALSE) {
+  if (!is.character(static_folder) || length(static_folder) != 1L ||
+      is.na(static_folder) || !nzchar(static_folder))
+    stop("static_folder must be a nonempty scalar string.")
+  if (!requireNamespace("shinylive", quietly = TRUE))
+    stop('Static generation requires the shinylive package: install.packages("shinylive").')
+  if (!is.na(save_to_folder) && metaUI_paths_overlap(save_to_folder, static_folder))
+    stop("static_folder must be separate from save_to_folder (not equal to, inside or containing it).")
+  validate_static_destination(static_folder, overwrite)
+}
+
+# Absolute path with symlinks resolved, also for paths that do not exist yet.
+metaUI_canonical_path <- function(path) {
+  path <- path.expand(path)
+  if (file.exists(path)) return(normalizePath(path, winslash = "/", mustWork = TRUE))
+  parent <- dirname(path)
+  if (identical(parent, path)) return(path)
+  parent <- metaUI_canonical_path(parent)
+  leaf <- basename(path)
+  if (leaf == "..") return(dirname(parent))
+  if (leaf == ".") return(parent)
+  file.path(parent, leaf)
+}
+
+# TRUE if two folders are the same or one contains the other.
+metaUI_paths_overlap <- function(a, b) {
+  a <- sub("/+$", "", metaUI_canonical_path(a)); b <- sub("/+$", "", metaUI_canonical_path(b))
+  identical(a, b) || startsWith(a, paste0(b, "/")) || startsWith(b, paste0(a, "/"))
+}
+
+#' @name export_static
+#' @rdname export_static
+#' @details
+#' Use `generate_shiny(static_folder = ...)` for one-step generation and static
+#' export. After editing the generated app files, call `export_static()` to
+#' re-export the edited app; regenerating would overwrite those edits.
+NULL

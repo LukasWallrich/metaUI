@@ -1,0 +1,20 @@
+                                                   Model      status
+                         Random-Effects Multilevel Model          ok
+                              Robust Variance Estimation          ok
+                                           Trim-and-fill          ok
+                                          P-uniform star unsupported
+                            Hedges-Vevea Selection Model unsupported
+                                   Precision Effect Test          ok
+          Precision Effect Estimate using Standard Error          ok
+ Source-reference: REML / Hartung-Knapp (rounded inputs)          ok
+   es_server   es_static max_abs_diff fit_s_server fit_s_static
+ -0.38356079 -0.38356079      0.0e+00         0.19         1.14
+ -0.38286908 -0.38286908      0.0e+00         0.01         0.03
+ -0.38300043 -0.38300043      1.1e-16         0.21         0.14
+          NA          NA           NA         0.00         0.00
+          NA          NA           NA         0.00         0.00
+  0.05177925  0.05177925      0.0e+00         0.00         0.02
+ -0.21038191 -0.21038191      0.0e+00         0.00         0.01
+ -0.38356080 -0.38356080      1.1e-16         0.04         0.05
+
+static primary: g = -0.38356080, CI [-0.68781519, -0.07930642]

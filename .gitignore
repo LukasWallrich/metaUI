@@ -10,3 +10,7 @@ metaUI_*.tar.gz
 *.Rcheck/
 tests/testthat/testthat-problems.rds
 tests/testthat/_problems/
+
+# shinylive exploration: exported static site (rebuild with export_static())
+work/shinylive/site/
+work/shinylive/*.log

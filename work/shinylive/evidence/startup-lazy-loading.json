@@ -1,0 +1,18 @@
+[
+  {
+    "run": 1,
+    "start_epoch": 1793367863.581,
+    "iframe_s": 21.288,
+    "ready_s": 22.643,
+    "first_analysis_s": 27.373,
+    "heap_MB": 11.592053
+  },
+  {
+    "run": 2,
+    "start_epoch": 1793367913.882,
+    "iframe_s": 21.605,
+    "ready_s": 22.826,
+    "first_analysis_s": 27.709,
+    "heap_MB": 10.956387
+  }
+]

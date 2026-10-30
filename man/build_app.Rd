@@ -13,10 +13,11 @@ build_app(config, overwrite = FALSE)
 \code{\link[=generate_shiny]{generate_shiny()}}. Unrelated files are retained. Checked before any lookup.}
 }
 \value{
-Invisibly, the generated app directory.
+Invisibly, the static site directory when static_folder is supplied;
+otherwise the generated app directory.
 }
 \description{
-Relative data and output paths resolve against the configuration file. Building
+Relative data, output and static_folder paths resolve against the configuration file. Building
 never launches or deploys an app. The configuration is deliberately limited to
 data mapping, scientific scale/direction, an optional declared primary model,
 metadata, presentation options, and optional study details (schema version 2).
@@ -26,4 +27,12 @@ which runs \code{\link[=fetch_study_metadata]{fetch_study_metadata()}} on the ma
 to the cache CSV. Only the cache is required. The lookup is the only network access
 during a build; DOIs already found in the cache are not queried again. The generated
 app never queries external services.
+}
+\details{
+Set the optional \code{static_folder} string to generate a static shinylive site
+in one step, using the same semantics as \code{\link[=generate_shiny]{generate_shiny()}}. The \code{output}
+folder retains the editable app. With \code{overwrite = TRUE}, the existing static
+site folder is deleted entirely and rewritten, including unrelated files.
+Keep hand edits in the editable app folder and use \code{\link[=export_static]{export_static()}} after
+editing; regenerating the app replaces edits to its generated files.
 }

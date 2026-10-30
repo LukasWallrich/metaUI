@@ -29,6 +29,11 @@
       "type": "string",
       "minLength": 1
     },
+    "static_folder": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional static site destination outside output; relative to the configuration file."
+    },
     "primary_model": {
       "type": "string",
       "minLength": 1,

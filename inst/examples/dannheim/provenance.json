@@ -118,5 +118,6 @@
       "row_uid": "10_5271_sjweh_4219__r12",
       "midpoint_minus_g": 0.0049999999999999906
     }
-  ]
+  ],
+  "estimator_implementation": "metafor REML with unmodified Hartung-Knapp; trim-and-fill: meta 8.5.0 compatible common-effect L0 then metafor ML/Hartung-Knapp"
 }

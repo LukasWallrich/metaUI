@@ -12,13 +12,14 @@ generate_shiny(
   primary_model = NULL,
   filter_popups = list(),
   save_to_folder = NA,
-  launch_app = is.na(save_to_folder),
+  launch_app = is.na(save_to_folder) && is.null(static_folder),
   ...,
   options = list(),
   overwrite = FALSE,
   bayesian = NULL,
   design = NULL,
-  study_info = NULL
+  study_info = NULL,
+  static_folder = NULL
 )
 }
 \arguments{
@@ -41,7 +42,7 @@ estimated for a reader's selection, the app reports why and does not substitute 
 
 \item{save_to_folder}{Folder for the generated code and data. Defaults to NA, which uses a temporary folder. A nonempty destination is refused unless overwrite = TRUE. Prefer a fresh destination to preserve manual edits.}
 
-\item{launch_app}{Should the app be launched? Defaults to TRUE if save_to_folder is NA, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.}
+\item{launch_app}{Should the app be launched? Defaults to TRUE if save_to_folder is NA and static_folder is NULL, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.}
 
 \item{...}{
   Arguments passed on to \code{\link{create_about}}
@@ -53,6 +54,7 @@ estimated for a reader's selection, the app reports why and does not substitute 
     \item{\code{list_packages}}{Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 a character vector with all packages to display.}
+    \item{\code{meta}}{Does author model code use meta? If so, the default list includes it.}
   }}
 
 \item{options}{List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
@@ -76,14 +78,28 @@ authors. Recognised columns: \code{doi}, \code{url}, \code{title}, \code{authors
 \code{abstract_note}, \code{metadata_source}, \code{retrieved}, plus \code{status} and \code{abstract_policy} from the lookup. Studies in
 the effect-size list then open a details row. It is stored in the app; the app never fetches metadata. Include
 only abstracts you may republish.}
+
+\item{static_folder}{Optional destination folder for a static shinylive site. Requires
+the suggested shinylive package. The app is generated in save_to_folder first
+(a temporary folder when NA), then exported with precomputed results. Must
+be outside save_to_folder. Static generation never launches the app.}
 }
 \value{
-With launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
+With static_folder supplied, invisibly returns the static site path.
+Otherwise, with launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
 }
 \description{
 This function generates the Shiny app. It is the main function of the package. The app can either be launched directly, or saved to
 a folder. If saved, that folder will contain all the code and data needed to run the app. The app can then be launched using \code{shiny::shinyAppDir()}
 on that folder, or modified by editing server.R, ui.R, global.R and models.R in the folder.
+}
+\details{
+Use \code{generate_shiny(static_folder = ...)} to generate and publish static files
+in one step. After editing the generated app files, use \code{\link[=export_static]{export_static()}} to
+re-export them; regenerating the app would overwrite those edits.
+With \code{overwrite = TRUE}, the existing static site folder is deleted entirely
+and rewritten, including unrelated files. Keep hand edits in the editable app
+folder and re-export it with \code{\link[=export_static]{export_static()}}.
 }
 \examples{
 \dontshow{if (metaUI:::metaUI_app_ready()) withAutoprint(\{ # examplesIf}

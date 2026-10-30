@@ -68,3 +68,15 @@ Example code is GPL-3-or-later. The example is a reanalysis, not author endorsem
 
 inst/examples/correlations: original synthetic data and code by metaUI,
 GPL-3-or-later; no empirical article data or prose redistributed.
+
+metaUI_trimfill in analysis.R adapts the L0 iteration and rank estimator from
+meta 8.5.0 trimfill.meta and estimate.missing, copyright Guido Schwarzer
+and meta contributors, GPL (>= 2). Source: https://github.com/guido-s/meta
+The editable adaptation is distributed under metaUI's GPL-3-or-later licence.
+
+tests/testthat/fixtures/webr-hybrid-chain.R: copied error-handling code from
+webR's patched Shiny 1.13.0.8000.
+Source: https://github.com/r-wasm/shiny/tree/v1.13.0.8000
+Copyright (c) 2012-2025 Posit Software, PBC. MIT License.
+The complete MIT permission, inclusion condition and warranty disclaimer above
+also apply to this fixture, with this copyright holder.

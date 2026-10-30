@@ -1,0 +1,47 @@
+{
+  "mode": "server",
+  "url": "http://127.0.0.1:8971",
+  "timings": {
+    "index_loaded": 8.137,
+    "iframe_created": 8.141,
+    "ui_visible": 8.398,
+    "ready_to_analyse": 555.535,
+    "first_analysis_s": 22.966,
+    "reanalysis_cached_s": 5.294,
+    "filter_change_reanalysis_s": 3.943,
+    "forest_render_s": 3.285,
+    "forest_pdf_s": 2.596,
+    "forest_png_fetch_s": 31.968,
+    "forest_csv_s": 0.633,
+    "tab_Publication_Bias_s": 3.488,
+    "tab_Outlier_Diagnostics_s": 9.263,
+    "tab_Sample_s": 2.211,
+    "workbook_download_s": 2.516,
+    "workbook_upload_s": 4.838,
+    "link_restore_s": 94.558
+  },
+  "notes": [
+    "filtered selection: Built dataset (as published with this app). Selected 11 of 12 rows. Excluded 1 by successive filters (z-score range: 1).",
+    "iframe query after filtering: ?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc4247094839171e17d05d%22%2C\u2026",
+    "top-level page URL after filtering: http://127.0.0.1:8971/?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc4247094839171e17d05d%22%2C%22filters%22%3A%5B%7B%22id%22%3A%22outliers_z_scores%22%2C%22selection%22%3A-1.5%7D%2C%7B%22id%22%3A%22outliers_z_scores%22%2C%22selection%22%3A1%7D%5D%2C%22sesoi%22%3Anull%7D",
+    "forest pdf: 5632 bytes, valid=true, name=forest-plot.pdf",
+    "forest png: browser download FAILED locator.click: Timeout 30000ms exceeded.",
+    "forest png via in-frame fetch: 49345 bytes, valid=true",
+    "forest csv: 2368 bytes, valid=true, name=forest-plot-data.csv",
+    "after upload: Uploaded data: workbook.xlsx (12 rows), not the authors' dataset. Descriptive z=(fitting effect-built mean)/built SD; saved scale preserved; supplied z disagreements: 0. Missing-value choices restored (older files: missing values included). Selected 12 of 12 rows. Excluded 0 by successive filters (z-score range: 0).",
+    "selection link opened as: http://127.0.0.1:8971/?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc4247094839171e\u2026",
+    "link page iframe URL: http://127.0.0.1:8971/?metaui=1&selection=%7B%22dataset%22%3A%2221fa8aa543dc4247094839171e17d05d%22%2C%22filters%22%3A%5",
+    "link notice: Linked selection not restored: check the filters and click Analyze data.",
+    "link selection: No analysis yet."
+  ],
+  "memory": {
+    "usedJSHeapMB": 16.169896
+  },
+  "startQuery": "",
+  "js_errors": [],
+  "console_errors": [],
+  "output_errors": [
+    "P-curve requires explicit effect direction; it is not inferred.",
+    "Z-curve not estimated for this selection; reason below."
+  ]
+}

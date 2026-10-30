@@ -6,18 +6,7 @@ metaUI_code_rve <- "metaUI_rve_fit(df)"
 # Default estimator code. Renamed models are recognised by this exact code
 # (ignoring whitespace), so their input checks and sign handling still apply.
 metaUI_default_code <- c(
-  "Trim-and-fill" = 'meta::trimfill(meta::metagen(
-                                            TE = metaUI__effect_size,
-                                            seTE = metaUI__se,
-                                            data = df,
-                                            studlab = df$metaUI__study_id,
-                                            common = FALSE,
-                                            random = TRUE,
-                                            method.tau = "ML", # as recommended by  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4950030/
-                                            method.random.ci = "HK",
-                                            prediction = TRUE,
-                                            sm = df$metaUI__es_type[1]
-                                        ))',
+  "Trim-and-fill" = 'metaUI_trimfill(df)',
   "P-uniform star" = 'puniform::puni_star(
                     yi = df$metaUI__effect_size, vi = df$metaUI__variance,
                     alpha = .05,
@@ -30,6 +19,93 @@ metaUI_default_code <- c(
   "Precision Effect Test" = 'lm(metaUI__effect_size ~ sqrt(metaUI__variance), data = df, weights = 1 / metaUI__variance)',
   "Precision Effect Estimate using Standard Error" = 'lm(metaUI__effect_size ~ metaUI__variance, data = df, weights = 1 / metaUI__variance)'
 )
+
+
+# ML/REML with unmodified Hartung-Knapp intervals (no ad hoc correction).
+metaUI_univariate <- function(y, se, method = "ML", control = list()) {
+  fit <- metafor::rma.uni(yi = y, sei = se, method = method,
+    test = if (sum(!is.na(y) & !is.na(se)) == 1L) "z" else "knha", control = control)
+  if (fit$k == 1L) fit$tau2 <- NA_real_
+  fit
+}
+
+# Egger's multiplicative-dispersion regression, matching meta's k.min = 3.
+metaUI_egger <- function(y, se) {
+  keep <- !is.na(y) & !is.na(se)
+  if (any(!keep)) warning(sum(!keep), " observation(s) dropped due to missing values")
+  y <- y[keep]; se <- se[keep]
+  if (length(y) < 3L) return(list(k = length(y), k.min = 3))
+  if (length(unique(se)) == 1L)
+    stop("Test for small-study effects not feasible as all studies have the same precision.", call. = FALSE)
+  base <- suppressWarnings(metafor::rma.uni(y, sei = se, method = "DL", test = "t"))
+  fit <- suppressWarnings(metafor::regtest(base, model = "lm", ret.fit = TRUE))
+  stats <- suppressWarnings(summary(fit$fit))
+  list(estimate = c(bias = unname(stats::coef(fit$fit)[2]), se.bias = stats$coefficients[2, 2]),
+       tau = stats$sigma, statistic = fit$zval, p.value = fit$pval)
+}
+
+# Summary-centred normal pseudo-CI; grey p < .05 contours centred on zero.
+# The two centres deliberately differ, as in meta::funnel.meta.
+metaUI_funnel_ticks <- function(se) {
+  upper <- max(se[is.finite(se)], 0)
+  ticks <- pretty(c(0, upper), n = 5)
+  ticks[ticks >= 0 & ticks <= upper]
+}
+
+metaUI_funnel <- function(fit, xlab) {
+  centre <- as.numeric(fit$b)
+  metafor::funnel(fit, xlab = xlab, refline = centre, level = 95,
+                  shade = "white", back = "white", hlines = NA, lty = 0, steps = 0)
+  ticks <- metaUI_funnel_ticks(sqrt(fit$vi))
+  graphics::axis(2, at = ticks, labels = ticks)
+  bounds <- graphics::par("usr")
+  ymax <- max(bounds[3:4]); z <- stats::qnorm(.975)
+  graphics::polygon(c(bounds[1], bounds[1], -z * ymax, 0),
+                    c(0, ymax, ymax, 0), col = "light grey", border = NA)
+  graphics::polygon(c(bounds[2], bounds[2], z * ymax, 0),
+                    c(0, ymax, ymax, 0), col = "light grey", border = NA)
+  graphics::abline(v = centre, lty = 9)
+  graphics::lines(centre + c(-z * ymax, 0, z * ymax), c(ymax, 0, ymax), lty = 9)
+  graphics::points(fit$yi, sqrt(fit$vi), pch = 21, bg = "darkgray")
+}
+
+# Duval-Tweedie L0, adapted from meta 8.5.0 trimfill.meta and estimate.missing
+# (Guido Schwarzer et al., GPL >= 2). Common-effect trimming, average-rank ties,
+# floor(L0 + .5), and return the current solution after 50 iterations.
+# Estimation uses metafor; the rank/trim iteration stays explicit.
+metaUI_trimfill <- function(df, control = list(), n.iter.max = 50L) {
+  y <- df$metaUI__effect_size; se <- df$metaUI__se
+  # Keep meta's initial ML fit so its warnings and failures are also reported.
+  initial <- metaUI_univariate(y, se, control = control)
+  keep <- !is.na(y) & !is.na(se)
+  if (any(!keep)) warning(sum(!keep), " observation(s) dropped due to missing values")
+  y <- y[keep]; se <- se[keep]; k <- length(y)
+  if (k <= 2L) {
+    warning("Minimal number of three studies for trim-and-fill method")
+    return(NULL)
+  }
+  left <- sign(metaUI_egger(y, se)$estimate[1]) == 1
+  if (!left) y <- -y
+  ord <- order(y); y <- y[ord]; se <- se[ord]
+  centre <- stats::weighted.mean(y, 1 / se^2)
+  k0 <- 0L; last <- -1L; iteration <- 0L
+  while (last != k0 && k0 <= k - 1L && iteration < n.iter.max) {
+    iteration <- iteration + 1L; last <- k0
+    sel <- seq_len(k - k0)
+    centre <- stats::weighted.mean(y[sel], 1 / se[sel]^2)
+    ranks <- rank(abs(y - centre)) * sign(y - centre)
+    l0 <- (4 * sum(ranks[ranks > 0]) - k * (k + 1)) / (2 * k - 1)
+    k0 <- floor(max(0, l0 + .5))
+  }
+  k0 <- min(k0, k - 1L)
+  filled <- if (k0 > 0L) seq.int(k - k0 + 1L, k) else integer()
+  yy <- c(y[order(ord)], 2 * centre - y[filled])
+  ss <- c(se[order(ord)], se[filled])
+  if (!left) yy <- -yy
+  fit <- metaUI_univariate(yy, ss, control = control)
+  fit$k0 <- k0; fit$left <- unname(left); fit$n.iter <- iteration
+  fit
+}
 
 metaUI_multilevel_fit <- function(df) {
   metafor::rma.mv(df$metaUI__effect_size, V = df$metaUI__variance,

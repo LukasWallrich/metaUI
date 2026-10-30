@@ -1,0 +1,67 @@
+Validation — metafor app migration
+
+Installed into /tmp/shinylive-speed/M/lib, using only the prescribed M/explore
+library paths and Rscript --vanilla. Full installed-package suite:
+  NOT_CRAN=true Rscript --vanilla -e 'library(testthat); library(metaUI); test_dir("tests/testthat", package = "metaUI", load_package = "installed")'
+FAIL 0, WARN 0, SKIP 1 (opt-in shinylive export), PASS 1242.
+Includes the correlations example, fixtures, author meta dependency detection,
+tied effects, minimum-k guards and n.iter.max=1/50 compatibility. The new author
+meta test caught create_about's vector-length bug; it was fixed before the final
+passing run. See evidence/test-results.txt and session.txt.
+
+Dannheim build.R: successful in /tmp/shinylive-speed/M/example.
+Shiny server: 127.0.0.1:8971. Static server: 127.0.0.1:8972/dannheim.
+metaUI::export_static: successful after retrying remote download timeout/SSL
+failures. Retained nonfatal native/webR version notices: readxl 1.6.0/1.5.0.1,
+mvtnorm 1.4-2/1.2-4, xfun .62/.61, curl 8.1.0/8.0.0. Analysis source in the
+export was refreshed to the final one-study helper revision before static smoke.
+Bundled packages: 127 -> 110; no added packages. Removed meta, lme4, readr, vroom,
+metabook, CompQuadForm, MASS, bit, bit64, boot, clipr, hms, minqa, nloptr,
+reformulas, tzdb and xml2. See evidence/bundled-packages.csv.
+
+Server static-smoke.cjs: completed. No JavaScript or console errors; expected
+unsupported P-curve / failed sparse Z-curve messages remain. Downloads (forest
+PDF, PNG, CSV and workbook) and workbook upload succeeded. Link restoration in
+this server run reported 'Linked selection not restored: check the filters and
+click Analyze data.' The full package's link tests pass; no bridge or export
+files were edited because that work belongs to the concurrent first-view task.
+
+Server workbook vs work/shinylive/evidence/workbook-server.xlsx, using the
+requested compare-workbooks.R: all models, statuses and warnings identical;
+max absolute estimate/CI difference 1.11e-16. Primary g=-.38356080,
+CI [-.68781519,-.07930642]. Workbook and comparison are retained in evidence/.
+
+Reader-facing timing: ONLY real-timing.sh, plain headless Chromium, three paired
+alternating baseline/candidate runs. URL/log for baseline are exactly those in
+the task. Other agents also held the shared timing lock between some runs.
+The six raw observations and end-of-run load averages are in evidence/timing.csv.
+                        ready median (s)   first-results median (s)   median load
+Existing site                 77.592                  80.981              12.47
+Metafor replacement           52.268                  55.770              16.06
+Baseline loads: 37.03,12.47,9.90. Replacement loads: 16.06,9.79,16.43.
+The first baseline was an extreme outlier (1376.373/1385.764 s). Median times
+were lower by 32.6%/31.1%, but loads changed substantially and pair 3 slightly
+favoured baseline; these observations do not isolate a causal speedup magnitude.
+Playwright's smoke timings are retained only as functional-run diagnostics and
+are not used to estimate reader startup.
+
+Static smoke: the first canonical run completed analysis, all tabs and forest
+PDF/PNG/CSV exports, then timed out waiting for Playwright to scroll/stabilise
+#go after reset. The retry used an explicit idle/enabled wait and force click
+only after that assertion, plus a 120 s action timeout. This tested harness
+change is retained in work/shinylive/static-smoke.cjs; scientific assertions and
+input values are unchanged. The retry completed analysis, filtering, all tabs,
+forest exports, workbook download/upload and mobile screenshot. Static reported filters restored but no automatic analysis; server reported
+the linked selection not restored. This is a remaining
+browser integration issue for the concurrent bridge work; package link tests pass.
+See smoke-static.json and smoke-static-initial-failure.json for complete details.
+Static console messages include Shiny/R preload informational output and an
+HTTP 404; there are no page JavaScript errors. The only rendered output errors
+are the expected unsupported P-curve and sparse-data Z-curve diagnostics.
+
+Static workbook vs the reference: identical model names, statuses and warnings;
+maximum estimate/CI difference 1.1e-11 (unchanged multilevel row, native/webR
+numerics). Trimfill and source-reference differences are 1.11e-16. All numeric
+differences asserted <=1e-8. Primary g=-.38356080, CI [-.68781519,-.07930642].
+See workbook-static-parity.txt and workbook-static.xlsx. Both owned servers were
+stopped after validation. No push or PR was made.

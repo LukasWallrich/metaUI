@@ -3,10 +3,14 @@ test_that("every generated-app package is declared in Suggests", {
   expect_true(all(metaUI:::metaUI_app_suggests %in% suggests))
   expect_false(any(metaUI:::metaUI_app_suggests %in% metaUI:::declared_imports()))
   expect_true(all(c(metaUI:::declared_imports(), metaUI:::metaUI_app_suggests) %in% metaUI:::app_dependencies()))
+  # meta is optional: listed in Suggests, required only when author model code uses it.
+  expect_true("meta" %in% suggests)
+  expect_false("meta" %in% metaUI:::app_dependencies())
+  expect_true("meta" %in% metaUI:::app_dependencies(meta = TRUE))
 })
 
 test_that("missing generated-app packages are named with an install command", {
-  local_mocked_bindings(missing_app_packages = function(bayesian = FALSE) c("weightr", "zcurve"))
+  local_mocked_bindings(missing_app_packages = function(bayesian = FALSE, meta = FALSE) c("weightr", "zcurve"))
   expect_error(metaUI:::check_app_packages(), 'install.packages\\(c\\("weightr", "zcurve"\\)\\)')
 })
 
@@ -23,7 +27,9 @@ test_that("the removed-example check matches only the stub", {
 
 test_that("the About page lists the packages the generated app uses", {
   about <- metaUI:::create_about("Fixture")
-  for (p in c("metafor", "ggplot2", "meta", "DT")) expect_match(about, paste0("<td>", p, "</td>"), fixed = TRUE)
+  for (p in c("metafor", "ggplot2", "DT")) expect_match(about, paste0("<td>", p, "</td>"), fixed = TRUE)
   expect_false(grepl("<td>bayesmeta</td>", about, fixed = TRUE))
+  expect_false(grepl("<td>meta</td>", about, fixed = TRUE))
+  expect_match(metaUI:::create_about("Fixture", meta = TRUE), "<td>meta</td>", fixed = TRUE)
   expect_match(metaUI:::create_about("Fixture", bayesian = TRUE), "<td>bayesmeta</td>", fixed = TRUE)
 })

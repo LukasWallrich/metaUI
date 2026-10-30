@@ -26,7 +26,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       model_help <- HTML("<details class=\'metaui-help\'><summary>Default models</summary><dl>
         <dt>Random-Effects Multilevel Model</dt><dd>metafor::rma.mv with REML, random effects for studies and for effects within studies, independent sampling errors and t-based intervals. Uses every selected effect.</dd>
         <dt>Robust Variance Estimation</dt><dd>robumeta::robu with correlated-effects weights (rho = .8) and no small-sample correction, so intervals can be too narrow with few studies.</dd>
-        <dt>Trim-and-fill</dt><dd>meta::trimfill on study-level effects (random effects, ML tau-squared, Hartung-Knapp intervals). k includes imputed effects.</dd>
+        <dt>Trim-and-fill</dt><dd>Duval-Tweedie L0 common-effect trimming followed by metafor ML/Hartung-Knapp on study-level effects (random effects, ML tau-squared, Hartung-Knapp intervals). k includes imputed effects.</dd>
         <dt>P-uniform star; Hedges-Vevea Selection Model</dt><dd>Selection models on study-level effects. They need a declared expected direction and are reported as unsupported without one.</dd>
         <dt>Precision Effect Test (PET); PEESE</dt><dd>Weighted regressions of study-level effects on their standard error (PET) or variance (PEESE); the intercept is reported.</dd>
         </dl><p>Rows added by the authors are described on the About tab.</p></details>")
@@ -652,7 +652,12 @@ glue_string <- ('
                      plot.background = ggplot2::element_rect(fill = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", colour = NA),
                      panel.background = ggplot2::element_rect(fill = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", colour = NA),
                      axis.text.y = ggplot2::element_text(colour = "<<if (is.null(opts$design)) "#22303c" else opts$design$text>>", hjust = 1, lineheight = .9))
-  }, height = function() 65 + 38 * max(1, sum(estimatesfiltered()$status == "ok"), na.rm = TRUE))
+  }, height = function() {
+    # The webR Shiny patch loses invalidation after a silent error in isolated
+    # plot dimensions. Keep startup dimensions valid until Analyze is available.
+    if (!isTruthy(input$go)) return(103)
+    65 + 38 * max(1, sum(estimatesfiltered()$status == "ok"), na.rm = TRUE)
+  })
 
   output$primary_estimate <- renderUI({
     table <- estimatesfiltered()
@@ -1025,18 +1030,7 @@ glue_string <- ('
   meta_agg <- reactive({
     df_agg <- df_agg()
 
-    fit <- tryCatch(meta::metagen(
-      TE = metaUI__effect_size,
-      seTE = metaUI__se,
-      data = df_agg,
-      studlab = df_agg$metaUI__study_id,
-      common = FALSE,
-      random = TRUE,
-      method.tau = "ML", # as recommended by  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4950030/
-      method.random.ci = "HK",
-      prediction = TRUE,
-      sm = df_agg$metaUI__es_type[1]
-    ), error = function(e) e)
+    fit <- tryCatch(metaUI_univariate(df_agg$metaUI__effect_size, df_agg$metaUI__se), error = function(e) e)
     # Build the message only on failure: need() evaluates its message eagerly
     if (inherits(fit, "error")) {
       shiny::validate(shiny::need(FALSE, paste(
@@ -1049,13 +1043,15 @@ glue_string <- ('
   output$funnel <- renderPlot({
     meta_agg <- meta_agg()
 
-    metafor::funnel(meta_agg, xlab = metaUI_eff_size_type_label, studlab = FALSE, contour = .95, col.contour = "light grey")
+    metaUI_funnel(meta_agg, xlab = metaUI_eff_size_type_label)
   }, height = 400) # fixed: after an error the collapsed container would otherwise set the next plot height
 
   output$eggers <- DT::renderDataTable({
     meta_agg <- meta_agg()
 
-    eggers <- meta::metabias(meta_agg, k.min = 3, method.bias = "Egger")
+    eggers <- metaUI_egger(as.numeric(meta_agg$yi), sqrt(meta_agg$vi))
+    shiny::validate(shiny::need(!is.null(eggers$estimate),
+      "Egger test requires at least three studies."))
     eggers_table <- data.frame(
       "Intercept" = eggers$estimate, "Residual variance (tau<sup>2</sup>)" = eggers$tau^2,
       "t" = eggers$statistic,

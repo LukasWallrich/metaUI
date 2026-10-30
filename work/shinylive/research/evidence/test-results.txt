@@ -1,0 +1,13 @@
+⠇ |         29 | template-sync
+⠙ |         42 | template-sync
+⠹ |         63 | template-sync
+✔ |         79 | template-sync
+
+══ Results ═════════════════════════════════════════════════════════════════════
+Duration: 244.2 s
+
+── Skipped tests (1) ───────────────────────────────────────────────────────────
+• Set METAUI_TEST_SHINYLIVE=1 to run the shinylive export (1):
+  'test-export-static.R:31:3'
+
+[ FAIL 0 | WARN 0 | SKIP 1 | PASS 1242 ]
