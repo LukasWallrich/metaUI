@@ -49,7 +49,7 @@ estimated for a reader's selection, the app reports why and does not substitute 
     \item{\code{citation}}{Citation requested by the author. Defaults to an empty string.}
     \item{\code{osf_link}}{Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.}
     \item{\code{contact}}{Contact information, typically email. Defaults to an empty string.}
-    \item{\code{list_packages}}{Should all packages used by the app be listed on the About page? If TRUE, it list the packages
+    \item{\code{list_packages}}{Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 a character vector with all packages to display.}
   }}

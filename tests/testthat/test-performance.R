@@ -1,5 +1,3 @@
-skip_without_app_packages()
-
 test_that("p-curve optimisation preserves complete baseline results and process options", {
   reference <- readRDS(test_path("fixtures", "pcurve-before.rds"))
   png(tempfile()); on.exit(dev.off(), add = TRUE)

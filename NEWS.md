@@ -9,8 +9,9 @@ This release consolidates all changes since 0.1.1, including the unreleased
   puniform, readxl, robumeta, shinycssloaders, shinyjs, weightr, writexl and
   zcurve) moved from Imports to Suggests. `generate_shiny()` names any that are
   missing, with the command to install them.
-* `generate_shiny()` and `build_app()` refuse a nonempty `save_to_folder` unless
-  `overwrite = TRUE`, so hand edits to a generated app are not overwritten.
+* `generate_shiny()` refuses a nonempty `save_to_folder` unless
+  `overwrite = TRUE`, and `build_app()` always requires a fresh output folder, so
+  hand edits to a generated app are not overwritten.
 * Generated apps check their dependencies at startup but no longer install
   packages; `dependencies.csv` records the versions used for the build.
 * Correlations must declare their variance scale, and directional bias analyses an
@@ -103,7 +104,8 @@ This release consolidates all changes since 0.1.1, including the unreleased
 * Compatible multilevel/RVE fits are reused across diagnostics, and a session-local
   three-entry cache speeds repeated selections. Custom models default to no
   caching; `options$fit_cache_entries = 0` disables it. Measurements are in
-  `validation/performance-optimisation.md`.
+  [validation/performance-optimisation.md](https://github.com/LukasWallrich/metaUI/blob/main/validation/performance-optimisation.md)
+  in the source repository.
 
 ## Testing
 

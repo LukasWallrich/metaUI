@@ -293,7 +293,8 @@ metaUI_data_fingerprint <- function(data) {
 # Older tutorials read inst/extdata/barroso2021.csv. That file is now a stub
 # whose single row explains the removal, so stop with that message.
 check_removed_example <- function(data) {
-  if (is.data.frame(data) && "metaUI_removed_dataset" %in% names(data))
+  if (is.data.frame(data) && identical(names(data), c("metaUI_removed_dataset", "message")) &&
+      nrow(data) == 1L && identical(as.character(data$metaUI_removed_dataset), "barroso2021"))
     stop(as.character(data$message[1]), call. = FALSE)
   invisible(data)
 }

@@ -39,16 +39,18 @@ check_app_packages <- function(bayesian = FALSE) {
 #' @param citation Citation requested by the author. Defaults to an empty string.
 #' @param osf_link Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.
 #' @param contact Contact information, typically email. Defaults to an empty string.
-#' @param list_packages Should all packages used by the app be listed on the About page? If TRUE, it list the packages
+#' @param list_packages Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 #' used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 #' a character vector with all packages to display.
+#' @param bayesian Is the optional Bayesian model enabled? If so, the default list includes bayesmeta.
 #'
 #' @returns HTML code for the `About` panel of the Shiny app
 #'
 #' @keywords internal
 
 
-create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE) {
+create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE,
+                         bayesian = FALSE) {
   out <- glue::glue("<h3>Interactive multiverse meta-analysis of {dataset_name}</h3>
           <p><b>Last update:</b> {date}</p>
           {if (citation != '') glue::glue('<p><b>Citation:</b> {citation}</p>') else ''}
@@ -58,19 +60,15 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
           ")
 
   if (list_packages == TRUE) {
-    req_packages <- utils::packageDescription("metaUI") %>%
-      purrr::pluck("Imports") %>%
-      stringr::str_remove_all(stringr::regex("\\(.*?\\)", dotall = TRUE)) %>%
-      stringr::str_split_1(",|\n") %>%
-      stringr::str_trim() %>%
-      stringr::str_subset(".+")
+    req_packages <- app_dependencies(bayesian)
   } else if (is.character(list_packages)) {
     req_packages <- list_packages
     list_packages <- TRUE
   }
 
   if (list_packages == TRUE) {
-    package_versions <- purrr::map_chr(req_packages, \(p) utils::packageVersion(p) %>% as.character())
+    # generate_shiny() checks installation later and names any missing package.
+    package_versions <- purrr::map_chr(req_packages, \(p) tryCatch(as.character(utils::packageVersion(p)), error = function(e) "not installed"))
 
     HTML(paste0(
       out, "<h4>R packages used</h4><div class='metaui-packages'>",
@@ -144,7 +142,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 
    # Evaluate so that it is TRUE when save_to_folder is NA initially
    launch_app <- launch_app
-   about <- create_about(dataset_name, ...)
+   about <- create_about(dataset_name, ..., bayesian = !is.null(bayesian))
 
   if (is.na(save_to_folder)) {
     save_to_folder <- tempfile()

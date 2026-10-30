@@ -15,3 +15,15 @@ test_that("the removed Barroso example stops with a pointer to the bundled examp
   expect_error(prepare_data(read.csv(path), "study", "yi", variance = "vi"), "no longer bundled.*coles2019")
   expect_error(prepare_data(path, "study", "yi", variance = "vi"), "no longer bundled")
 })
+
+test_that("the removed-example check matches only the stub", {
+  unrelated <- data.frame(metaUI_removed_dataset = 1:2, message = "x", yi = 1:2)
+  expect_identical(metaUI:::check_removed_example(unrelated), unrelated)
+})
+
+test_that("the About page lists the packages the generated app uses", {
+  about <- metaUI:::create_about("Fixture")
+  for (p in c("metafor", "ggplot2", "meta", "DT")) expect_match(about, paste0("<td>", p, "</td>"), fixed = TRUE)
+  expect_false(grepl("<td>bayesmeta</td>", about, fixed = TRUE))
+  expect_match(metaUI:::create_about("Fixture", bayesian = TRUE), "<td>bayesmeta</td>", fixed = TRUE)
+})
