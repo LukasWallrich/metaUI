@@ -148,16 +148,27 @@
     setOpen(false);
     var results = document.getElementById('metaui_results');
     if (!results) return;
+    // Re-rendering outputs briefly collapse the results, and the browser then resets the
+    // scroll position. Hold their height and keep them in view until the analysis has
+    // settled, unless the reader moves first.
+    results.style.minHeight = Math.max(results.offsetHeight, window.innerHeight) + 'px';
     var show = function () { results.scrollIntoView({ block: 'start' }); };
+    var done = false;
+    var watch = function () {
+      if (!done && Math.abs(results.getBoundingClientRect().top) > 40) window.requestAnimationFrame(show);
+    };
+    var finish = function () {
+      if (done) return;
+      done = true;
+      results.style.minHeight = '';
+      $(window).off('scroll', watch).off('touchstart wheel keydown', finish);
+    };
+    $(window).on('scroll', watch).one('touchstart wheel keydown', finish);
     setTimeout(show, 50);
-    // Re-rendering outputs briefly shorten the page, which resets the scroll position.
-    // Align again once the analysis has finished, unless the reader has moved meanwhile.
-    var moved = false;
-    var mark = function () { moved = true; };
-    $(window).one('touchstart wheel keydown', mark);
     $(document).one('shiny:idle', function () {
-      setTimeout(function () { $(window).off('touchstart wheel keydown', mark); if (!moved) show(); }, 150);
+      setTimeout(function () { if (!done) show(); setTimeout(finish, 300); }, 150);
     });
+    setTimeout(finish, 20000);
   });
 })(jQuery);
 
