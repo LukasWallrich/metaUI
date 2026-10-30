@@ -49,7 +49,8 @@
 <span>  citation <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  osf_link <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  contact <span class="op">=</span> <span class="st">""</span>,</span>
-<span>  list_packages <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  list_packages <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  bayesian <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -78,9 +79,13 @@
 
 
 <dt id="arg-list-packages">list_packages<a class="anchor" aria-label="anchor" href="#arg-list-packages"></a></dt>
-<dd><p>Should all packages used by the app be listed on the About page? If TRUE, it list the packages
+<dd><p>Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 a character vector with all packages to display.</p></dd>
+
+
+<dt id="arg-bayesian">bayesian<a class="anchor" aria-label="anchor" href="#arg-bayesian"></a></dt>
+<dd><p>Is the optional Bayesian model enabled? If so, the default list includes bayesmeta.</p></dd>
 
 </dl></div>
     <div class="section level2">

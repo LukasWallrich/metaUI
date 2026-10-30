@@ -111,7 +111,7 @@ generate_shiny(
   `list_packages`
 
   :   Should all packages used by the app be listed on the About page?
-      If TRUE, it list the packages used in the default configuration.
+      If TRUE, it lists the packages used in the default configuration.
       To display different packages (e.g., because you added/removed
       models), pass a character vector with all packages to display.
 

@@ -12,7 +12,8 @@ create_about(
   citation = "",
   osf_link = "",
   contact = "",
-  list_packages = TRUE
+  list_packages = TRUE,
+  bayesian = FALSE
 )
 ```
 
@@ -42,9 +43,14 @@ create_about(
 - list_packages:
 
   Should all packages used by the app be listed on the About page? If
-  TRUE, it list the packages used in the default configuration. To
+  TRUE, it lists the packages used in the default configuration. To
   display different packages (e.g., because you added/removed models),
   pass a character vector with all packages to display.
+
+- bayesian:
+
+  Is the optional Bayesian model enabled? If so, the default list
+  includes bayesmeta.
 
 ## Value
 

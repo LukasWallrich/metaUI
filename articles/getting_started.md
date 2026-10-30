@@ -8,7 +8,7 @@ installed, and then load it.
 
 # Paste the following two lines to your Console and remove the # to install the package
 # if (!require(remotes)) install.packages("remotes")
-# remotes::install_github("LukasWallrich/metaUI")
+# remotes::install_github("LukasWallrich/metaUI", dependencies = TRUE)
 
 library(metaUI)
 library(dplyr)

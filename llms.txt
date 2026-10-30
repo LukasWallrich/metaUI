@@ -31,9 +31,8 @@ their meta-analyses that have been well received, yet they require
 substantial time investment and advanced coding skills to create. With
 metaUI, researchers can get a working app very swiftly – while they
 still have the flexibility to tailor the display in line with their
-interests and requirements. This branch is a tested development
-candidate with scientific and licensing limits documented below;
-feedback and contributions are welcome.
+interests and requirements. Scientific and licensing limits are
+documented below; feedback and contributions are welcome.
 
 ## Installation
 
@@ -43,8 +42,13 @@ You can install the development version of metaUI from
 ``` r
 
 if (!require(remotes)) install.packages("remotes")
-remotes::install_github("LukasWallrich/metaUI")
+remotes::install_github("LukasWallrich/metaUI", dependencies = TRUE)
 ```
+
+`dependencies = TRUE` also installs the packages that generated apps use
+(listed under Suggests);
+[`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
+names any that are missing.
 
 ## Getting started
 
@@ -204,8 +208,7 @@ measurements](https://github.com/LukasWallrich/metaUI/blob/main/validation/perfo
 distinguish faster p-curve calculations/fit reuse from cache hits and
 first-time fitting costs. [Licence
 audit](https://github.com/LukasWallrich/metaUI/blob/main/validation/licensing-audit.md)
-records the licensed replacement of the former Barroso sample. This
-development candidate is not a public release.
+records the sources and licences of bundled code and data.
 
 Downloads preserve the full current input dataset and saved filter
 selections; the summary sheet describes the selected rows. An empty
