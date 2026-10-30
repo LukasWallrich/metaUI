@@ -3,8 +3,13 @@
 #' Relative data and output paths resolve against the configuration file. Building
 #' never launches or deploys an app. The configuration is deliberately limited to
 #' data mapping, scientific scale/direction, an optional declared primary model,
-#' metadata, presentation options, and an optional `study_info` CSV of study details
-#' (schema version 2; see [fetch_study_metadata()]). Building never queries external services.
+#' metadata, presentation options, and optional study details (schema version 2).
+#' `study_info` is either the path to a CSV of study details or a lookup object,
+#' `{"cache": "study-metadata.csv", "abstracts": "open_licence", "openalex": true}`,
+#' which runs [fetch_study_metadata()] on the mapped `url` column and writes its result
+#' to the cache CSV. Only the cache is required. The lookup is the only network access
+#' during a build; DOIs already found in the cache are not queried again. The generated
+#' app never queries external services.
 #' @param config Path to JSON, or a named list with the same schema.
 #' @return Invisibly, the generated app directory.
 #' @export
@@ -22,8 +27,15 @@ build_app <- function(config) {
   if (config$schema_version == 1 && (any(c("bayesian", "study_info") %in% names(config)) || any(c("alternatives", "primary_label") %in% names(config$mapping)))) stop("New computation/Bayesian/study_info fields require schema_version 2")
   for (key in c("data", "dataset_name", "output"))
     if (!is.character(config[[key]]) || length(config[[key]]) != 1L || !nzchar(config[[key]])) stop("Required scalar string: ", key)
-  if (!is.null(config$study_info) && (!is.character(config$study_info) || length(config$study_info) != 1L || !nzchar(config$study_info)))
-    stop("study_info must be the path to a CSV file")
+  info <- config$study_info
+  scalar <- function(x, check) length(x) == 1L && check(x) && !is.na(x)
+  if (!is.null(info) && !(scalar(info, is.character) && nzchar(info))) {
+    if (!is.list(info) || is.null(names(info)) || length(setdiff(names(info), c("cache", "abstracts", "openalex"))) ||
+        !scalar(info$cache, is.character) || !nzchar(info$cache) ||
+        (!is.null(info$abstracts) && !(scalar(info$abstracts, is.character) && info$abstracts %in% c("open_licence", "exclude_nc", "none", "all"))) ||
+        (!is.null(info$openalex) && !scalar(info$openalex, is.logical)))
+      stop("study_info must be a CSV path or a lookup object {\"cache\": path, \"abstracts\": \"open_licence\"|\"exclude_nc\"|\"none\"|\"all\", \"openalex\": true|false}")
+  }
   resolve <- function(path) if (grepl("^(/|[A-Za-z]:|\\\\)", path)) path else file.path(base, path)
   mapping <- config$mapping
   if (!is.list(mapping) || is.null(names(mapping))) stop("mapping must be an object")
@@ -43,5 +55,8 @@ build_app <- function(config) {
                                 save_to_folder = resolve(config$output), launch_app = FALSE,
                                 primary_model = config$primary_model,
                                 bayesian = config$bayesian, design = config$design,
-                                study_info = if (is.null(config$study_info)) NULL else resolve(config$study_info), options = if (is.null(config$options)) list() else config$options), about))
+                                study_info = if (is.null(info)) NULL else if (is.character(info)) resolve(info) else
+                                  fetch_study_metadata(dataset, cache = resolve(info$cache),
+                                    abstracts = if (is.null(info$abstracts)) "open_licence" else info$abstracts,
+                                    openalex = !isFALSE(info$openalex)), options = if (is.null(config$options)) list() else config$options), about))
 }

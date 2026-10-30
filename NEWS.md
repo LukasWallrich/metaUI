@@ -1,17 +1,3 @@
-# metaUI (development version)
-
-* Show study details in the list of effect sizes. `generate_shiny(study_info = ...)`
-  (or a `study_info` CSV in a schema version 2 configuration) adds a disclosure
-  button to each study with details. It opens a row with an APA-style reference, a
-  button that copies it, the DOI link and, where permitted, the abstract. The new
-  `fetch_study_metadata()` looks up DOIs in Crossref while authoring, uses OpenAlex
-  for licences and abstracts that Crossref lacks, reports DOIs it could not match and
-  can cache results. Abstracts are kept when the article is published under CC BY,
-  BY-SA, BY-ND, CC0 or the Public Domain Mark; `abstracts = "noncommercial"` adds
-  NonCommercial licences and `abstracts = "all"` keeps every abstract found.
-  Generated apps never query external services, and no package dependencies are
-  added. Models and estimates are unchanged.
-
 # metaUI 0.2.0
 
 ## Author design helper
@@ -20,6 +6,22 @@
   R/JSON settings. `app_design()` validates settings and contrast.
 - `generate_shiny(design = ...)` and the JSON `design` field apply those settings
   to generated apps. Existing apps/configurations keep their default appearance.
+
+## Study details
+
+- `generate_shiny(study_info = ...)` adds a disclosure button to each study in the
+  list of effect sizes. It opens a row with an APA-style reference, a button that
+  copies it, the DOI link and, where permitted, the abstract.
+- `fetch_study_metadata()` looks up DOIs in Crossref while authoring, uses OpenAlex
+  for licences and abstracts that Crossref lacks, reports DOIs it could not match and
+  can cache results. Abstracts are kept when the article is published under a
+  Creative Commons licence (including ND and NC terms), CC0 or the Public Domain
+  Mark. `abstracts = "exclude_nc"` drops NC licences for commercial apps, and
+  `abstracts = "all"` keeps every abstract found.
+- In schema version 2 configurations, `study_info` is a CSV path or a lookup object
+  (`{"cache": "study-metadata.csv"}`) that `build_app()` runs into that cache.
+- Generated apps never query external services, and no package dependencies are
+  added. Models and estimates are unchanged.
 
 ## Other changes
 

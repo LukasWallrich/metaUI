@@ -9,7 +9,7 @@ fetch_study_metadata(
   study = "study",
   doi = "doi",
   mailto = Sys.getenv("METAUI_MAILTO"),
-  abstracts = c("open_licence", "noncommercial", "none", "all"),
+  abstracts = c("open_licence", "exclude_nc", "none", "all"),
   openalex = TRUE,
   openalex_key = Sys.getenv("OPENALEX_API_KEY"),
   cache = NULL,
@@ -26,7 +26,7 @@ with the columns named by \code{study} and \code{doi}.}
 the "polite" pool. Defaults to the \code{METAUI_MAILTO} environment variable;
 leave it unset to query anonymously.}
 
-\item{abstracts}{\code{"open_licence"} (default), \code{"noncommercial"}, \code{"none"}, or
+\item{abstracts}{\code{"open_licence"} (default), \code{"exclude_nc"}, \code{"none"}, or
 \code{"all"}; see Details.}
 
 \item{openalex}{Use OpenAlex for licences and abstracts that Crossref lacks.}
@@ -58,16 +58,16 @@ the \code{status} column and a message; nothing is guessed or matched by title.
 \details{
 Bibliographic fields are always kept. Abstracts are not covered by Crossref's
 open metadata terms, so with the default \code{abstracts = "open_licence"} an abstract
-is kept only when the article is published under CC BY, CC BY-SA, CC BY-ND, CC0
-or the Public Domain Mark. The licence is taken from the Crossref record (for the
+is kept only when the article is published under a Creative Commons licence (CC
+BY, with or without SA, ND or NC terms), CC0 or the Public Domain Mark. The licence is taken from the Crossref record (for the
 version of record, or an unspecified version, that has started by the lookup
 date) or, failing that, from the published-version locations that OpenAlex
 records. When Crossref has no abstract, OpenAlex's abstract is used. OpenAlex
 is asked only when Crossref leaves the abstract or its licence open.
 
-\code{abstracts = "noncommercial"} also accepts licences with NonCommercial terms
-(CC BY-NC, BY-NC-SA, BY-NC-ND). Choose it only if the app is not primarily
-intended for commercial advantage or monetary compensation. \code{abstracts = "all"}
+NonCommercial (NC) licences permit use that is not primarily intended for
+commercial advantage or monetary compensation, which covers academic apps. If
+the app is used commercially, set \code{abstracts = "exclude_nc"} to drop them. \code{abstracts = "all"}
 keeps every abstract found: the app authors then take responsibility for the
 right to republish them, and the app says so.
 

@@ -27,13 +27,13 @@ test_that("Crossref records become plain-text metadata; abstracts follow the lic
   expect_identical(open$abstract, "First <para>.\n\nSecond para – end.")
   expect_identical(c(open$abstract_licence, open$abstract_source), c("http://creativecommons.org/licenses/by/4.0/", "Crossref"))
   expect_true(is.na(open$abstract_note))
-  # ND, ShareAlike, CC0 and the Public Domain Mark allow verbatim sharing.
+  # ND, NC, ShareAlike, CC0 and the Public Domain Mark allow verbatim sharing for non-commercial use.
   for (url in c("https://creativecommons.org/licenses/by-nd/4.0/", "https://creativecommons.org/licenses/by-sa/3.0/",
+                "https://creativecommons.org/licenses/by-nc-nd/4.0/",
                 "https://creativecommons.org/publicdomain/zero/1.0/", "https://creativecommons.org/publicdomain/mark/1.0/"))
     expect_false(is.na(decide(licence = url)$abstract))
-  # Withheld: no licence, a publisher/TDM licence, NC terms, an embargo, or a licence for another version.
+  # Withheld: no licence, a publisher/TDM licence, an embargo, or a licence for another version.
   for (args in list(list(), list(licence = "https://www.elsevier.com/tdm/userlicense/1.0/"),
-                    list(licence = "https://creativecommons.org/licenses/by-nc-nd/4.0/"),
                     list(licence = "https://creativecommons.org/licenses/by/4.0/", start = "2030-01-01T00:00:00Z"),
                     list(licence = "https://creativecommons.org/licenses/by/4.0/", version = "tdm"),
                     list(abstract = FALSE, licence = "https://creativecommons.org/licenses/by/4.0/"))) {
@@ -42,8 +42,10 @@ test_that("Crossref records become plain-text metadata; abstracts follow the lic
     expect_identical(closed$abstract_note, "No openly licensed abstract found.")
     expect_identical(closed$title, "A tidy title & more")
   }
-  nc <- decide(licence = "https://creativecommons.org/licenses/by-nc-nd/4.0/", abstracts = "noncommercial")
-  expect_identical(nc$abstract_licence, "https://creativecommons.org/licenses/by-nc-nd/4.0/")
+  # Commercial apps can exclude NC licences.
+  nc <- decide(licence = "https://creativecommons.org/licenses/by-nc-nd/4.0/", abstracts = "exclude_nc")
+  expect_true(is.na(nc$abstract))
+  expect_identical(nc$abstract_note, "No openly licensed abstract found.")
   all <- decide(abstracts = "all")
   expect_false(is.na(all$abstract))
   expect_identical(all$abstract_note, "Included by the app authors.")
@@ -59,8 +61,8 @@ test_that("OpenAlex fills a missing licence from published versions and a missin
   filled <- add(record, work())
   expect_identical(filled[c("abstract", "abstract_licence", "abstract_source")], list(abstract = "From Crossref.", abstract_licence = "cc-by", abstract_source = "Crossref"))
   expect_true(is.na(add(record, work(version = "acceptedVersion"))$abstract_licence))
-  expect_true(is.na(add(record, work(licence = "cc-by-nc"))$abstract_licence))
-  expect_identical(add(record, work(licence = "cc-by-nc"), "noncommercial")$abstract_licence, "cc-by-nc")
+  expect_identical(add(record, work(licence = "cc-by-nc"))$abstract_licence, "cc-by-nc")
+  expect_true(is.na(add(record, work(licence = "cc-by-nc"), "exclude_nc")$abstract_licence))
   expect_true(is.na(add(record, work(licence = "publisher-specific-oa"))$abstract_licence))
   rebuilt <- add(modifyList(record, list(abstract = NA_character_, abstract_source = NA_character_)), work())
   expect_identical(rebuilt$abstract, "Words from OpenAlex Words p<.05.")
@@ -205,4 +207,40 @@ test_that("build_app accepts a study_info CSV under schema version 2", {
   config$schema_version <- 1
   jsonlite::write_json(config, json, auto_unbox = TRUE)
   expect_error(build_app(json), "schema_version 2")
+})
+
+test_that("build_app can run the lookup into a cache CSV beside the configuration", {
+  dir <- tempfile("metaui-config-"); dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE))
+  calls <- character()
+  local_mocked_bindings(metaUI_http_get = function(url, headers) {
+    calls <<- c(calls, url)
+    crossref_json("10.1234/a", licence = "https://creativecommons.org/licenses/by-nc/4.0/")
+  })
+  x <- fixture(); x$doi <- ifelse(x$study == "B", "10.1234/a", NA)
+  utils::write.csv(x, file.path(dir, "data.csv"), row.names = FALSE)
+  config <- list(schema_version = 2, data = "data.csv", dataset_name = "Config", output = "app",
+    study_info = list(cache = "study-metadata.csv"),
+    mapping = list(study_label = "study", es_field = "yi", variance = "vi", es_id = "id", es_type = "SMD", url = "doi"))
+  json <- file.path(dir, "config.json")
+  jsonlite::write_json(config, json, auto_unbox = TRUE)
+  suppressMessages(build_app(json))
+  stored <- readRDS(file.path(dir, "app", "study_info.rds"))
+  expect_identical(stored$study, "B")
+  expect_identical(stored$abstract_licence, "https://creativecommons.org/licenses/by-nc/4.0/") # NC kept by default
+  expect_true(file.exists(file.path(dir, "study-metadata.csv")))
+  expect_length(calls, 1)
+  rebuild <- function() { unlink(file.path(dir, "app"), recursive = TRUE); suppressMessages(build_app(json)) }
+  rebuild()
+  expect_length(calls, 1) # rebuilt from the cache
+  config$study_info <- list(cache = "study-metadata.csv", abstracts = "exclude_nc", openalex = FALSE)
+  jsonlite::write_json(config, json, auto_unbox = TRUE)
+  rebuild()
+  expect_length(calls, 2)
+  expect_true(is.na(readRDS(file.path(dir, "app", "study_info.rds"))$abstract))
+  for (bad in list(list(abstracts = "open_licence"), list(cache = "x.csv", abstracts = "some"), list(cache = "x.csv", colour = "red"))) {
+    config$study_info <- bad
+    jsonlite::write_json(config, json, auto_unbox = TRUE)
+    expect_error(build_app(json), "lookup object")
+  }
 })

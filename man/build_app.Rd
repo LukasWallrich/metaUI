@@ -16,6 +16,11 @@ Invisibly, the generated app directory.
 Relative data and output paths resolve against the configuration file. Building
 never launches or deploys an app. The configuration is deliberately limited to
 data mapping, scientific scale/direction, an optional declared primary model,
-metadata, presentation options, and an optional \code{study_info} CSV of study details
-(schema version 2; see \code{\link[=fetch_study_metadata]{fetch_study_metadata()}}). Building never queries external services.
+metadata, presentation options, and optional study details (schema version 2).
+\code{study_info} is either the path to a CSV of study details or a lookup object,
+\verb{\{"cache": "study-metadata.csv", "abstracts": "open_licence", "openalex": true\}},
+which runs \code{\link[=fetch_study_metadata]{fetch_study_metadata()}} on the mapped \code{url} column and writes its result
+to the cache CSV. Only the cache is required. The lookup is the only network access
+during a build; DOIs already found in the cache are not queried again. The generated
+app never queries external services.
 }

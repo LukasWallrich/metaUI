@@ -23,7 +23,9 @@ build the app; generated apps never contact external services.
   (base `utils::download.file()` plus `jsonlite`). Results can be cached in an
   editable CSV. Missing, malformed, unknown (HTTP 404), unreachable and conflicting
   DOIs are reported by status. They receive no metadata, and nothing is matched by
-  title. Authors can also write the CSV themselves.
+  title. Authors can also write the CSV themselves. In a schema version 2
+  configuration, `study_info: {"cache": "study-metadata.csv"}` makes `build_app()`
+  run the lookup into that CSV; found DOIs are reused on rebuilds.
 - **Abstracts.** Crossref states that its metadata is mostly CC0 facts, "with the
   exception of abstracts which are subject to publisher or author copyright"
   ([Crossref, retrieving metadata](https://www.crossref.org/documentation/retrieve-metadata/)).
@@ -32,8 +34,9 @@ build the app; generated apps never contact external services.
   republication" ([I4OA](https://i4oa.org/)). OpenAlex does not ship plain-text
   abstracts "for legal reasons", only a word index
   ([OpenAlex work attributes](https://help.openalex.org/data/works/attributes/)).
-  An abstract is therefore kept when the article is published under CC BY, CC BY-SA,
-  CC BY-ND, CC0 or the Public Domain Mark. The licence comes from Crossref (version
+  An abstract is therefore kept when the article is published under a Creative
+  Commons licence (CC BY, with or without SA, ND or NC terms), CC0 or the Public
+  Domain Mark. The licence comes from Crossref (version
   of record or unspecified, already started) or, failing that, from an OpenAlex
   location for the published version. ND licences qualify: CC BY-ND 4.0 grants the
   right to "reproduce and Share the Licensed Material, in whole or in part", and
@@ -42,10 +45,11 @@ build the app; generated apps never contact external services.
   Creative Commons adds that an unaltered excerpt is generally not an adaptation
   ([FAQ](https://creativecommons.org/faq/#can-i-reuse-an-excerpt-of-a-larger-work-that-is-licensed-with-the-noderivs-restriction)).
   Removing markup is a technical modification that "never produces Adapted
-  Material" (section 2(a)(4)). NonCommercial licences require use "not primarily
-  intended for or directed towards commercial advantage or monetary compensation",
-  which depends on the app, so they are an author opt-in (`abstracts =
-  "noncommercial"`). `abstracts = "all"` keeps every abstract found, and the app
+  Material" (section 2(a)(4)). NonCommercial licences permit use "not primarily
+  intended for or directed towards commercial advantage or monetary compensation"
+  ([BY-NC 4.0 legal code](https://creativecommons.org/licenses/by-nc/4.0/legalcode.en)),
+  which covers academic apps; authors of a commercial app opt out with
+  `abstracts = "exclude_nc"`. `abstracts = "all"` keeps every abstract found, and the app
   then attributes the inclusion to the app authors. The app shows the licence and
   source beside each abstract and notes that formatting was removed; otherwise it
   says "No openly licensed abstract found." This is a design rule, not legal advice.

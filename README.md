@@ -187,6 +187,16 @@ metaUI::generate_shiny(data, "My meta-analysis", study_info = info,
                       save_to_folder = "my-app", launch_app = FALSE)
 ```
 
+In a schema version 2 configuration for `build_app()`, `study_info` can instead run
+the lookup on the mapped `url` column while building and save the result for review:
+
+```json
+"study_info": {"cache": "study-metadata.csv", "abstracts": "open_licence", "openalex": true}
+```
+
+Only `cache` is required. DOIs already found in the cache are not queried again, so
+rebuilds reuse the reviewed CSV.
+
 Single-DOI lookups are free on both services and need no key. Two optional
 environment variables, best set in `~/.Renviron` so they stay out of scripts:
 
@@ -197,11 +207,11 @@ OPENALEX_API_KEY=your-key       # free key: openalex.org, Settings > API key; ra
 
 Crossref states that abstracts remain under publisher or author copyright,
 unlike the rest of its metadata. By default, the function therefore keeps an
-abstract only when the article is published under CC BY, CC BY-SA, CC BY-ND, CC0 or
-the Public Domain Mark, as recorded by Crossref or OpenAlex, and the app shows that
-licence beside it. All of these allow verbatim copies of the work in part.
-`abstracts = "noncommercial"` also accepts NonCommercial licences; choose it only if
-the app is not primarily intended for commercial advantage or monetary compensation.
+abstract only when the article is published under a Creative Commons licence (CC BY,
+with or without SA, ND or NC terms), CC0 or the Public Domain Mark, as recorded by
+Crossref or OpenAlex, and the app shows that licence beside it. All of these allow
+verbatim copies of the work in part. NonCommercial licences cover academic,
+non-commercial apps; for an app used commercially, set `abstracts = "exclude_nc"`.
 `abstracts = "all"` keeps every abstract found; authors who choose it are responsible
 for the right to republish them. Abstracts that authors add to the CSV are likewise
 their responsibility. This rule is a conservative default, not legal advice.
