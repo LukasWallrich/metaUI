@@ -12,10 +12,9 @@ subfolder, if any). Opening index.html as a file does not work.
 - shinylive web assets (Posit, PBC; MIT licence): https://github.com/posit-dev/shinylive
 - webR, a WebAssembly build of R (webR binaries: GNU GPL version 3; R: GNU GPL 2 or 3):
   https://github.com/r-wasm/webr
-- 128 R packages built for WebAssembly by https://repo.r-wasm.org, listed with versions and licences in `bundled-packages.csv`. Source code for CRAN versions is available from CRAN (current and archived releases) at the listed URL; webR-patched builds are marked as such.
+- 106 R packages built for WebAssembly by https://repo.r-wasm.org, listed with versions and licences in `bundled-packages.csv`. Source code for CRAN versions is available from CRAN (current and archived releases) at the listed URL; webR-patched builds are marked as such.
 
-The About tab lists package versions on the authoring computer. The versions that
-run in the browser can differ and are listed in `bundled-packages.csv`.
+Package sources are linked in `bundled-packages.csv`; use include_sources = TRUE to bundle archives for deposits.
 
 The app code itself (ui.R, server.R, and the other R files) is part of this export and
 carries the licence stated in its COPYRIGHTS file.

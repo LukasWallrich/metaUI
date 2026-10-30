@@ -17,7 +17,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def log_request(self, code="-", size="-"):
         path = self.translate_path(self.path)
-        nbytes = os.path.getsize(path) if str(code) == "200" and os.path.isfile(path) else 0
+        if os.path.isdir(path):
+            path = os.path.join(path, "index.html")
+        try:
+            success = int(code) == 200
+        except (TypeError, ValueError):
+            success = False
+        nbytes = os.path.getsize(path) if success and os.path.isfile(path) else 0
         sys.stderr.write(f"{time.time():.3f}\t{code}\t{nbytes}\t{self.path}\n")
         sys.stderr.flush()
 

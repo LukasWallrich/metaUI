@@ -1,13 +1,14 @@
 // Exploration: time shinylive startup, cold then warm (same browser context), and
 // mark each phase so server-side request logs can be aligned.
 // Usage: METAUI_PLAYWRIGHT=... URL=... RUNS=2 OUT=file.json node startup.cjs
+if (!process.env.OUT) throw Error('OUT must be set to a results JSON filename');
 const pw = require(process.env.METAUI_PLAYWRIGHT || 'playwright');
 const engine = process.env.BROWSER || 'chromium';
 const fs = require('node:fs');
 const os = require('node:os');
 const url = process.env.URL, runs = Number(process.env.RUNS || 2);
 (async () => {
-  const browser = await pw[engine].launch({headless: true, args: process.env.CHROMIUM_ARGS ? [process.env.CHROMIUM_ARGS] : [],
+  const browser = await pw[engine].launch({headless: true, args: process.env.CHROMIUM_ARGS ? process.env.CHROMIUM_ARGS.trim().split(/\s+/).filter(Boolean) : [],
     ...(engine === 'chromium' && process.env.METAUI_CHROMIUM ? {executablePath: process.env.METAUI_CHROMIUM} : {})});
   const context = await browser.newContext({viewport: {width: 1440, height: 1000}});
   const results = [];
@@ -16,7 +17,9 @@ const url = process.env.URL, runs = Number(process.env.RUNS || 2);
     const t0 = Date.now(), res = {run: r + 1, start_epoch: t0 / 1000, loadavg_1m: os.loadavg()[0]};
     await page.goto(url);
     let app;
-    while (!app) { app = page.frames().find(f => f !== page.mainFrame() && /app_/.test(f.url())); if (!app) await page.waitForTimeout(100); }
+    const deadline = Date.now() + Number(process.env.METAUI_STARTUP_TIMEOUT || 600000);
+    while (!app && Date.now() < deadline) { app = page.frames().find(f => f !== page.mainFrame() && /app_/.test(f.url())); if (!app) await page.waitForTimeout(100); }
+    if (!app) throw Error('Timed out waiting for shinylive app iframe at ' + url);
     res.iframe_s = (Date.now() - t0) / 1000;
     await app.waitForFunction(() => window.Shiny?.shinyapp?.isConnected?.() &&
       Array.isArray(window.Shiny.shinyapp.$inputValues?.outliers_z_scores) && !document.querySelector('#go').disabled,
