@@ -9,7 +9,8 @@ export_static(
   dest_dir,
   subdir = "",
   overwrite = FALSE,
-  precompute = TRUE
+  precompute = TRUE,
+  include_sources = FALSE
 )
 }
 \arguments{
@@ -24,6 +25,10 @@ apps can share one set of WebAssembly assets.}
 
 \item{precompute}{Show precomputed default Summary results while the interactive app loads?
 Failures warn and export the interactive app alone. No browser is required.}
+
+\item{include_sources}{Bundle exact copyleft package, R and webR source archives
+in \verb{dest_dir/sources/}? Recommended for archival deposits such as Zenodo.
+Live sites can use the source links in \code{bundled-packages.csv} instead.}
 }
 \value{
 The path of the exported app, invisibly.
