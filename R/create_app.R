@@ -7,7 +7,27 @@ declared_imports <- function() {
 
 # Inspect trusted author code, including helpers in an author model file.
 models_use_meta <- function(code) {
-  any(grepl("\\bmeta\\s*::|(?:library|require|requireNamespace)\\s*\\(\\s*['\"]?meta(?:['\"]|\\s*[,\\)])", code, perl = TRUE))
+  parsed <- tryCatch(parse(text = code, keep.source = TRUE), error = function(e) NULL)
+  if (is.null(parsed))
+    return(any(grepl("\\bmeta\\s*::|(?:library|require|requireNamespace)\\s*\\(\\s*['\"]?meta(?:['\"]|\\s*[,\\)])", code, perl = TRUE)))
+  tokens <- utils::getParseData(parsed)
+  if (any(tokens$token == "SYMBOL_PACKAGE" & tokens$text == "meta")) return(TRUE)
+  uses <- function(expr) {
+    if (!is.call(expr) && !is.expression(expr)) return(FALSE)
+    if (is.call(expr)) {
+      fun <- expr[[1]]
+      if (is.call(fun) && identical(fun[[1]], as.name("::"))) fun <- fun[[3]]
+      if (is.symbol(fun) && as.character(fun) %in% c("library", "require", "requireNamespace")) {
+        args <- as.list(expr)[-1L]
+        pkg <- if ("package" %in% names(args)) args$package else if (length(args)) args[[1]] else NULL
+        if ((is.symbol(pkg) || is.character(pkg)) && identical(as.character(pkg), "meta")) return(TRUE)
+      }
+    }
+    any(vapply(as.list(expr), function(x) {
+      if (identical(x, quote(expr = ))) FALSE else uses(x)
+    }, logical(1)))
+  }
+  uses(parsed)
 }
 
 # Used only inside generated apps and the model fits they run; listed in Suggests.
@@ -139,6 +159,9 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' Use `generate_shiny(static_folder = ...)` to generate and publish static files
 #' in one step. After editing the generated app files, use [export_static()] to
 #' re-export them; regenerating the app would overwrite those edits.
+#' With `overwrite = TRUE`, the existing static site folder is deleted entirely
+#' and rewritten, including unrelated files. Keep hand edits in the editable app
+#' folder and re-export it with [export_static()].
 #'
 #' @returns With static_folder supplied, invisibly returns the static site path.
 #'   Otherwise, with launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
@@ -159,7 +182,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         static_folder = NULL) {
 
   if (!is.null(static_folder)) {
-    validate_static_folder(static_folder, save_to_folder)
+    validate_static_folder(static_folder, save_to_folder, overwrite)
     launch_app <- FALSE
   }
 
@@ -173,7 +196,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 
    # Evaluate so that it is TRUE when save_to_folder is NA initially
    launch_app <- launch_app
-   about <- create_about(dataset_name, ..., bayesian = !is.null(bayesian))
+   about_args <- list(...)
+   about_args$meta <- NULL
 
   if (is.na(save_to_folder)) {
     save_to_folder <- tempfile()
@@ -207,7 +231,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 
   uses_meta <- models_use_meta(c(models_to_run$code,
     if (is.character(models)) readLines(models, warn = FALSE)))
-  if (uses_meta) about <- create_about(dataset_name, ..., bayesian = !is.null(bayesian), meta = TRUE)
+  about <- do.call(create_about, c(list(dataset_name = dataset_name,
+    bayesian = !is.null(bayesian), meta = uses_meta), about_args))
   bayesian <- metaUI_bayesian_options(bayesian, dataset$metaUI__es_type[1])
   package_models <- identical(models_to_run, get_model_tibble())
   if (!is.null(bayesian)) {
@@ -499,7 +524,7 @@ generate_models.R <- function(models_to_run) {
 
 
 # Validate before writing any generated files, including destinations not yet created.
-validate_static_folder <- function(static_folder, save_to_folder) {
+validate_static_folder <- function(static_folder, save_to_folder, overwrite = FALSE) {
   if (!is.character(static_folder) || length(static_folder) != 1L ||
       is.na(static_folder) || !nzchar(static_folder))
     stop("static_folder must be a nonempty scalar string.")
@@ -507,6 +532,7 @@ validate_static_folder <- function(static_folder, save_to_folder) {
     stop('Static generation requires the shinylive package: install.packages("shinylive").')
   if (!is.na(save_to_folder) && metaUI_paths_overlap(save_to_folder, static_folder))
     stop("static_folder must be separate from save_to_folder (not equal to, inside or containing it).")
+  validate_static_destination(static_folder, overwrite)
 }
 
 # Absolute path with symlinks resolved, also for paths that do not exist yet.

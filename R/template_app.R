@@ -1050,6 +1050,8 @@ glue_string <- ('
     meta_agg <- meta_agg()
 
     eggers <- metaUI_egger(as.numeric(meta_agg$yi), sqrt(meta_agg$vi))
+    shiny::validate(shiny::need(!is.null(eggers$estimate),
+      "Egger test requires at least three studies."))
     eggers_table <- data.frame(
       "Intercept" = eggers$estimate, "Residual variance (tau<sup>2</sup>)" = eggers$tau^2,
       "t" = eggers$statistic,

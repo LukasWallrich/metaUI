@@ -36,9 +36,10 @@ we neither combine other outcomes nor reconstruct unreported covariances.
 Independence across those studies follows the source pooling contract. GLS
 aggregation has no effect on singleton studies, whatever its correlation setting.
 
-The **last row**, source-reference REML/Hartung–Knapp, uses the existing `meta`
-estimator with no ad hoc HK adjustment. Its g/interval match a direct `metafor`
-REML/Knapp–Hartung fit on these inputs. This approximately reproduces the printed
+The **last row**, source-reference REML/Hartung–Knapp, uses the metafor-based
+helper: REML with Hartung–Knapp via `metafor::rma(..., test = "knha")`,
+with no ad hoc HK adjustment. Its g/interval match meta's `metagen` result
+on these inputs. This approximately reproduces the printed
 result g=-0.38, CI [-0.69,-0.08]; it does not claim access to unrounded source data.
 That model rejects repeated study IDs, including uploads. `models.R` contains
 standalone editable R specifications, without requiring metaUI at app startup.

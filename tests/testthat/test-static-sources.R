@@ -37,4 +37,13 @@ test_that("source collection retries archives, preserves downloads and warns on 
   calls <- character()
   suppressWarnings(metaUI:::static_include_sources(bundled, root, sources, download))
   expect_false(any(grepl("alpha|R-4.6.0|webr-0.6.0", calls)))
+  expect_equal(sum(startsWith(readLines(file.path(sources, "README.md")), "alpha_1.0.tar.gz | ")), 1)
+})
+
+
+test_that("source plans retain each bundled package version", {
+  bundled <- data.frame(package = rep("example", 3), version = c("1.0", "2.0", "1.0"), license = "GPL-3")
+  plan <- metaUI:::static_source_plan(bundled, "4.6.0", "0.6.0")
+  expect_identical(vapply(plan[1:2], `[[`, "", "file"), c("example_1.0.tar.gz", "example_2.0.tar.gz"))
+  expect_length(plan, 4L)
 })

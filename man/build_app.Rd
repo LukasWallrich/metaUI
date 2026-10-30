@@ -31,5 +31,8 @@ app never queries external services.
 \details{
 Set the optional \code{static_folder} string to generate a static shinylive site
 in one step, using the same semantics as \code{\link[=generate_shiny]{generate_shiny()}}. The \code{output}
-folder retains the editable app. After editing it, use \code{\link[=export_static]{export_static()}}.
+folder retains the editable app. With \code{overwrite = TRUE}, the existing static
+site folder is deleted entirely and rewritten, including unrelated files.
+Keep hand edits in the editable app folder and use \code{\link[=export_static]{export_static()}} after
+editing; regenerating the app replaces edits to its generated files.
 }

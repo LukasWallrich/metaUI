@@ -1,4 +1,6 @@
 # Error-handling implementation from webR 0.6.0, Shiny 1.13.0.8000.
+# Source: https://github.com/r-wasm/shiny/tree/v1.13.0.8000
+# Copyright (c) 2012-2025 Posit Software, PBC. MIT licence; see inst/COPYRIGHTS.
 # Keep this fixture to exercise its calling-handler semantics on native R.
 webr_hybrid_chain <- function (expr, ..., catch = NULL, finally = NULL, domain = NULL, 
     replace = FALSE) 

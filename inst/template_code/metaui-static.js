@@ -33,11 +33,16 @@
     fetch(link.href).then(function (response) {
       if (!response.ok) throw new Error('HTTP ' + response.status);
       var header = response.headers.get('Content-Disposition') || '';
-      var match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(header);
+      var extended = /filename\*=UTF-8''"?([^";]+)"?/i.exec(header);
+      var match = extended || /filename="?([^";]+)"?/i.exec(header);
+      var filename = match ? match[1] : 'download';
+      if (extended) {
+        try { filename = decodeURIComponent(filename); } catch (e) { /* Keep the raw name. */ }
+      }
       return response.blob().then(function (blob) {
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = match ? decodeURIComponent(match[1]) : 'download';
+        a.download = filename;
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 60000);
       });
@@ -52,7 +57,18 @@
 (function () {
   if (window.parent === window || !/\/app_[^/]+\/$/.test(location.pathname)) return;
   try { if (!window.parent.metauiPrecomputed) return; } catch (e) { return; }
-  var touched = false, started = false;
+  var touched = false, started = false, connected = false;
+  var timeout = Number(document.documentElement.dataset.metauiStartupTimeout) || 180000;
+  try { timeout = Number(window.parent.document.documentElement.dataset.metauiStartupTimeout) || timeout; } catch (e) {}
+  function handover() {
+    clearInterval(timer); clearTimeout(deadline);
+    window.parent.postMessage('metaui-live-ready', location.origin);
+  }
+  var deadline = setTimeout(function () {
+    clearInterval(timer);
+    if (connected) handover();
+    else window.parent.postMessage('metaui-startup-failed', location.origin);
+  }, timeout);
   ['pointerdown', 'keydown', 'input', 'change'].forEach(function (type) {
     document.addEventListener(type, function (event) { if (event.isTrusted) touched = true; }, true);
   });
@@ -60,20 +76,23 @@
     var app = window.Shiny && Shiny.shinyapp, go = document.getElementById('go');
     if (!app || !app.isConnected() || !go || go.disabled ||
         !app.$inputValues || !Array.isArray(app.$inputValues.outliers_z_scores)) return;
+    connected = true;
     var selection = new URLSearchParams(location.search);
     if (!started) {
       started = true;
       if (touched || app.$inputValues.uploadData || (app.$inputValues.go || app.$inputValues['go:shiny.action']) > 0 ||
           (selection.get('metaui') === '1' && selection.has('selection'))) {
-        clearInterval(timer); window.parent.postMessage('metaui-live-ready', location.origin); return;
+        handover(); return;
       }
       go.click();
     }
+    if (document.querySelector('.shiny-output-error') &&
+        !document.documentElement.classList.contains('shiny-busy')) { handover(); return; }
     var table = document.getElementById('effectestimate');
     var primary = document.getElementById('primary_estimate');
     if (table && table.textContent.trim() && primary && primary.textContent.trim() &&
         !document.documentElement.classList.contains('shiny-busy')) {
-      clearInterval(timer); window.parent.postMessage('metaui-live-ready', location.origin);
+      handover();
     }
   }, 100);
 })();

@@ -255,6 +255,7 @@ of author-supplied HTML or arbitrary Bootstrap themes.
 Generate an editable app and a static website in one step:
 
 ```r
+app_data <- metaUI::prepare_data("effects.csv", "study", "d", variance = "vi")
 metaUI::generate_shiny(app_data, "My meta-analysis",
   save_to_folder = "my-app", static_folder = "my-site")
 ```

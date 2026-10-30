@@ -1,4 +1,5 @@
 test_that("Summary plot recovers from startup with webR Shiny error handling", {
+  skip_without_app_packages()
   fixture_env <- new.env()
   sys.source(test_path("fixtures", "webr-hybrid-chain.R"), fixture_env)
   hybrid <- fixture_env$webr_hybrid_chain
@@ -29,5 +30,19 @@ test_that("Summary plot recovers from startup with webR Shiny error handling", {
     expect_error(output$model_comparison, class = "shiny.silent.error")
     session$setInputs(outliers_z_scores = c(-10, 10), go = 4)
     expect_match(output$model_comparison$src, "^data:image/png;base64,")
+  })
+})
+
+
+test_that("Egger panel explains selections with fewer than three studies", {
+  skip_without_app_packages()
+  path <- tempfile(); old <- getwd()
+  on.exit({setwd(old); unlink(path, recursive = TRUE)})
+  generate_shiny(prepared(fixture()[1:2, ]), "Two studies", save_to_folder = path, launch_app = FALSE)
+  setwd(path)
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
+    expect_error(output$eggers, "Egger test requires at least three studies", class = "shiny.silent.error")
   })
 })

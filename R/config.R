@@ -16,7 +16,10 @@
 #' @details
 #' Set the optional `static_folder` string to generate a static shinylive site
 #' in one step, using the same semantics as [generate_shiny()]. The `output`
-#' folder retains the editable app. After editing it, use [export_static()].
+#' folder retains the editable app. With `overwrite = TRUE`, the existing static
+#' site folder is deleted entirely and rewritten, including unrelated files.
+#' Keep hand edits in the editable app folder and use [export_static()] after
+#' editing; regenerating the app replaces edits to its generated files.
 #' @return Invisibly, the static site directory when static_folder is supplied;
 #'   otherwise the generated app directory.
 #' @export
@@ -52,6 +55,10 @@ build_app <- function(config, overwrite = FALSE) {
   output <- resolve(config$output)
   if (!overwrite && dir.exists(output) && length(list.files(output, all.files = TRUE, no.. = TRUE)))
     stop("Destination is not empty. Use a fresh folder to preserve author edits, or build_app(..., overwrite = TRUE).")
+  if (!is.null(config$static_folder)) {
+    site <- resolve(config$static_folder)
+    validate_static_folder(site, output, overwrite)
+  }
   mapping <- config$mapping
   if (!is.list(mapping) || is.null(names(mapping))) stop("mapping must be an object")
   allowed_mapping <- setdiff(names(formals(prepare_data)), "data")

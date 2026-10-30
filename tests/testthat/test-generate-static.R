@@ -45,11 +45,6 @@ test_that("static generation validates before writing sources", {
       static_folder = site), "separate from save_to_folder")
     expect_false(dir.exists(app))
   }
-  dir.create(app)
-  link <- file.path(root, "alias")
-  if (file.symlink(app, link))
-    expect_error(generate_shiny(NULL, "Static", save_to_folder = app,
-      static_folder = file.path(link, "site")), "separate from save_to_folder")
   for (site in list(NA_character_, "", c("a", "b"), 1, FALSE))
     expect_error(generate_shiny(NULL, "Static", static_folder = site), "nonempty scalar string")
 })
@@ -63,7 +58,7 @@ test_that("JSON static_folder resolves relative to the config in both schema ver
     mapping = list(study_label = "study", es_field = "yi", variance = "vi", es_type = "SMD"))
   local_mocked_bindings(requireNamespace = function(...) TRUE, .package = "base")
   local_mocked_bindings(export_static = function(app_dir, dest_dir, overwrite) {
-      expect_identical(app_dir, file.path(root, "app"))
+      expect_identical(metaUI:::metaUI_canonical_path(app_dir), metaUI:::metaUI_canonical_path(file.path(root, "app")))
       expect_true(file.exists(file.path(app_dir, "server.R")))
       expect_false(overwrite)
       dest_dir
@@ -72,7 +67,7 @@ test_that("JSON static_folder resolves relative to the config in both schema ver
     cfg$schema_version <- version
     jsonlite::write_json(cfg, file.path(root, "config.json"), auto_unbox = TRUE)
     result <- withVisible(build_app(file.path(root, "config.json")))
-    expect_identical(result$value, file.path(root, "site"))
+    expect_identical(metaUI:::metaUI_canonical_path(result$value), metaUI:::metaUI_canonical_path(file.path(root, "site")))
     expect_false(result$visible)
     unlink(file.path(root, "app"), recursive = TRUE)
   }
@@ -80,4 +75,41 @@ test_that("JSON static_folder resolves relative to the config in both schema ver
     cfg["static_folder"] <- list(site)
     expect_error(build_app(cfg), "nonempty scalar string")
   }
+})
+
+
+test_that("static generation rejects symlink aliases", {
+  skip_on_os("windows")
+  root <- tempfile(); app <- file.path(root, "app"); link <- file.path(root, "alias")
+  dir.create(app, recursive = TRUE)
+  on.exit({unlink(link); unlink(root, recursive = TRUE)})
+  if (!file.symlink(app, link)) skip("symlinks are unavailable")
+  local_mocked_bindings(requireNamespace = function(...) TRUE, .package = "base")
+  expect_error(generate_shiny(NULL, "Static", save_to_folder = app,
+    static_folder = file.path(link, "site")), "separate from save_to_folder")
+})
+
+test_that("build_app validates static destinations before lookup or writes", {
+  root <- tempfile(); dir.create(root)
+  on.exit(unlink(root, recursive = TRUE))
+  app <- file.path(root, "app"); site <- file.path(root, "site")
+  cfg <- list(schema_version = 2, data = "does-not-exist.csv", output = app,
+    dataset_name = "Early validation", static_folder = site,
+    study_info = list(cache = file.path(root, "cache.csv")))
+  local_mocked_bindings(fetch_study_metadata = function(...) stop("lookup ran"), .package = "metaUI")
+  local_mocked_bindings(requireNamespace = function(...) FALSE, .package = "base")
+  expect_error(build_app(cfg), "requires the shinylive package")
+  expect_length(list.files(root), 0)
+  local_mocked_bindings(requireNamespace = function(...) TRUE, .package = "base")
+  cfg$static_folder <- file.path(app, "site")
+  expect_error(build_app(cfg), "separate from save_to_folder")
+  expect_length(list.files(root), 0)
+  cfg$static_folder <- root
+  expect_error(build_app(cfg, overwrite = TRUE), "separate from save_to_folder")
+  expect_length(list.files(root), 0)
+  cfg$static_folder <- site
+  dir.create(site); writeLines("keep", file.path(site, "keep.txt"))
+  expect_error(build_app(cfg), "Destination exists")
+  expect_error(build_app(cfg, overwrite = TRUE), "empty or previous-export folder")
+  expect_identical(list.files(root, recursive = TRUE), "site/keep.txt")
 })

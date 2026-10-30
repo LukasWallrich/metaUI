@@ -21,7 +21,12 @@ export_static(
 \item{subdir}{Optional subfolder of \code{dest_dir} for this app, so that several
 apps can share one set of WebAssembly assets.}
 
-\item{overwrite}{Replace an existing app in \code{dest_dir}/\code{subdir}?}
+\item{overwrite}{Replace an existing app in \code{dest_dir}/\code{subdir}? A nonempty
+target must contain \code{shinylive-sw.js}, or both \code{app.json} and \code{index.html},
+identifying a previous export. Otherwise use an empty folder. Replacement
+deletes the entire target, including hand edits and unrelated files. With
+\code{subdir}, only that app subfolder is deleted; without it, all of \code{dest_dir}
+is deleted and rewritten. Keep hand edits in the editable app folder.}
 
 \item{precompute}{Show precomputed default Summary results while the interactive app loads?
 Failures warn and export the interactive app alone. No browser is required.}
@@ -57,6 +62,12 @@ Selection links skip the preview. Export provenance is stored in
 \code{metaui-preview/provenance.json}. Readers download about 140 MB; models fit
 more slowly than on a server. The dataset is shipped to every reader, so only
 export data that may be published.
+
+When apps share \code{dest_dir}, their package inventories, notices and About
+tables describe the shared runtime: they can include packages used only by
+another app. They are inventories of available software, not proof that each
+app uses every package. \code{include_sources} collects the union of copyleft
+packages in the shared runtime, preserving earlier source archives.
 }
 \examples{
 \dontrun{

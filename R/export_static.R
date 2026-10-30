@@ -19,11 +19,22 @@
 #' more slowly than on a server. The dataset is shipped to every reader, so only
 #' export data that may be published.
 #'
+#' When apps share `dest_dir`, their package inventories, notices and About
+#' tables describe the shared runtime: they can include packages used only by
+#' another app. They are inventories of available software, not proof that each
+#' app uses every package. `include_sources` collects the union of copyleft
+#' packages in the shared runtime, preserving earlier source archives.
+#'
 #' @param app_dir Folder of a generated metaUI app.
 #' @param dest_dir Folder for the static site. Must not exist unless `overwrite = TRUE`.
 #' @param subdir Optional subfolder of `dest_dir` for this app, so that several
 #'   apps can share one set of WebAssembly assets.
-#' @param overwrite Replace an existing app in `dest_dir`/`subdir`?
+#' @param overwrite Replace an existing app in `dest_dir`/`subdir`? A nonempty
+#'   target must contain `shinylive-sw.js`, or both `app.json` and `index.html`,
+#'   identifying a previous export. Otherwise use an empty folder. Replacement
+#'   deletes the entire target, including hand edits and unrelated files. With
+#'   `subdir`, only that app subfolder is deleted; without it, all of `dest_dir`
+#'   is deleted and rewritten. Keep hand edits in the editable app folder.
 #' @param precompute Show precomputed default Summary results while the interactive app loads?
 #'   Failures warn and export the interactive app alone. No browser is required.
 #' @param include_sources Bundle exact copyleft package, R and webR source archives
@@ -42,15 +53,24 @@ export_static <- function(app_dir, dest_dir, subdir = "", overwrite = FALSE, pre
     stop("export_static() requires the shinylive package: install.packages(\"shinylive\").")
   if (!all(file.exists(file.path(app_dir, c("global.R", "ui.R", "server.R", "www/metaui.js")))))
     stop("app_dir must be a folder created by generate_shiny() or build_app().")
-  target <- if (nzchar(subdir)) file.path(dest_dir, subdir) else dest_dir
+  if (!is.character(subdir) || length(subdir) != 1L || is.na(subdir))
+    stop("subdir must be a scalar string.")
+  dest_dir <- metaUI_canonical_path(dest_dir)
+  target <- metaUI_canonical_path(if (nzchar(subdir)) file.path(dest_dir, subdir) else dest_dir)
+  if (nzchar(subdir) &&
+      (grepl("^(/|[A-Za-z]:|\\\\)", subdir) || identical(target, dest_dir) ||
+       !metaUI_paths_overlap(dest_dir, target) ||
+       !startsWith(target, paste0(sub("/+$", "", dest_dir), "/"))))
+    stop("subdir must identify a folder strictly inside dest_dir.")
+  # Pass the validated canonical destination to shinylive as well.
+  subdir <- if (nzchar(subdir)) substring(target, nchar(sub("/+$", "", dest_dir)) + 2L) else ""
   # Never delete or write into the source app: reject overlapping folders first.
   if (metaUI_paths_overlap(app_dir, target) ||
       startsWith(paste0(metaUI_canonical_path(dest_dir), "/"), paste0(sub("/+$", "", metaUI_canonical_path(app_dir)), "/")))
     stop("dest_dir (and subdir) must be separate from app_dir: not equal to, inside or containing it.")
-  if (dir.exists(target) && length(list.files(target))) {
-    if (!overwrite) stop("Destination exists: ", target, ". Use overwrite = TRUE to replace it.")
+  validate_static_destination(target, overwrite)
+  if (dir.exists(target) && length(list.files(target, all.files = TRUE, no.. = TRUE)))
     unlink(target, recursive = TRUE)
-  }
 
   staging <- tempfile("metaui-static-")
   dir.create(staging)
@@ -96,7 +116,7 @@ export_static <- function(app_dir, dest_dir, subdir = "", overwrite = FALSE, pre
     tryCatch(static_include_sources(bundled, file.path(dest_dir, "shinylive", "webr"),
       file.path(dest_dir, "sources")), error = function(e)
         warning("Source collection incomplete: ", conditionMessage(e), call. = FALSE))
-  writeLines(static_notice(bundled, include_sources, if (nzchar(subdir)) "../sources/" else "sources/"), file.path(target, "STATIC-NOTICE.md"))
+  writeLines(static_notice(bundled, include_sources, static_sources_path(subdir)), file.path(target, "STATIC-NOTICE.md"))
   invisible(normalizePath(target))
 }
 
@@ -149,6 +169,10 @@ static_notice <- function(bundled, include_sources = FALSE, source_path = "sourc
     "",
     "## Bundled third-party software",
     "",
+    "The inventory and About package table describe the shared runtime. When several apps",
+    "share this export folder, they can include packages used only by another app.",
+    "Bundled sources cover the union of copyleft packages in the shared runtime.",
+    "",
     "- shinylive web assets (Posit, PBC; MIT licence): https://github.com/posit-dev/shinylive",
     "- webR, a WebAssembly build of R (webR binaries: GNU GPL version 3; R: GNU GPL 2 or 3):",
     "  https://github.com/r-wasm/webr",
@@ -184,9 +208,28 @@ static_rewrite_about <- function(text, bundled, r_version) {
   tables <- vapply(groups, function(x) paste0("<table><tr><th>Package</th><th>Version</th></tr>",
     paste(x, collapse = ""), "</table>"), character(1))
   replacement <- paste0("<h4>R packages used</h4><div class='metaui-packages'>",
+    "<p>Packages available in the bundled runtime; shared exports can include packages used only by another app.</p>",
     paste(tables, collapse = ""), "</div>")
   # Avoid replacement-string escape processing in author code.
   match <- regexpr(pattern, text, perl = TRUE)
   regmatches(text, match) <- replacement
   text
+}
+
+# target has already been canonicalised to a strict descendant of dest_dir.
+static_sources_path <- function(subdir) {
+  depth <- if (nzchar(subdir)) length(strsplit(subdir, "/", fixed = TRUE)[[1]]) else 0L
+  paste0(paste(rep("../", depth), collapse = ""), "sources/")
+}
+
+# Run before generating sources or removing any existing site.
+validate_static_destination <- function(target, overwrite) {
+  if (!dir.exists(target) || !length(list.files(target, all.files = TRUE, no.. = TRUE)))
+    return(invisible(NULL))
+  if (!overwrite) stop("Destination exists: ", target, ". Use overwrite = TRUE to replace it.")
+  previous_export <- file.exists(file.path(target, "shinylive-sw.js")) ||
+    all(file.exists(file.path(target, c("app.json", "index.html"))))
+  if (!previous_export)
+    stop("Use an empty or previous-export folder for static output; refusing to delete: ", target)
+  invisible(NULL)
 }

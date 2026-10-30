@@ -97,6 +97,9 @@ on that folder, or modified by editing server.R, ui.R, global.R and models.R in 
 Use \code{generate_shiny(static_folder = ...)} to generate and publish static files
 in one step. After editing the generated app files, use \code{\link[=export_static]{export_static()}} to
 re-export them; regenerating the app would overwrite those edits.
+With \code{overwrite = TRUE}, the existing static site folder is deleted entirely
+and rewritten, including unrelated files. Keep hand edits in the editable app
+folder and re-export it with \code{\link[=export_static]{export_static()}}.
 }
 \examples{
 \dontshow{if (metaUI:::metaUI_app_ready()) withAutoprint(\{ # examplesIf}

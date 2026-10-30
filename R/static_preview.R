@@ -40,6 +40,7 @@ static_precompute <- function(app_dir, dest) {
     env$metaUI_slider_spec(env$metaUI__df$metaUI__es_z, integer = FALSE))
   inputs(env$ui); inputs(z)
   captured <- list()
+  session <- output <- NULL # Bound by testServer inside its expression.
   shiny::testServer(env$server, {
     do.call(session$setInputs, defaults)
     session$setInputs(go = 1)
@@ -54,8 +55,9 @@ static_precompute <- function(app_dir, dest) {
       a <- tag$attribs
       if (tag$name == "script") return(NULL)
       if (!is.null(a$class)) {
-        if (grepl("shiny-spinner-placeholder|load-container", a$class)) return(NULL)
-        tag$attribs$class <- gsub("shiny-spinner-hideui", "", a$class, fixed = TRUE)
+        classes <- strsplit(a$class, "[[:space:]]+")[[1]]
+        if (any(classes %in% c("shiny-spinner-placeholder", "load-container"))) return(NULL)
+        tag$attribs$class <- paste(classes[classes != "shiny-spinner-hideui"], collapse = " ")
       }
       if (!is.null(a$`data-display-if`)) {
         if (a$`data-display-if` %in% c("!(input.go > 0)", "false")) return(NULL)
@@ -155,7 +157,10 @@ static_preview_files <- function(root) {
     if (any(grepl("^([a-z][a-z0-9+.-]*:|//)", urls, ignore.case = TRUE)))
       stop("Preview assets must be local: ", paste(urls, collapse = ", "))
     urls <- vapply(urls, function(x) utils::URLdecode(sub("[?#].*$", "", x)), character(1))
-    paths <- normalizePath(file.path(dirname(parent), urls), winslash = "/", mustWork = TRUE)
+    referenced <- file.path(dirname(parent), urls)
+    if (any(!file.exists(referenced)))
+      stop("Missing preview asset: ", paste(urls[!file.exists(referenced)], collapse = ", "))
+    paths <- normalizePath(referenced, winslash = "/", mustWork = TRUE)
     if (any(!startsWith(paths, paste0(root, "/")))) stop("Preview asset escapes its folder")
     paths
   }

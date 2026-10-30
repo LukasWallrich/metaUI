@@ -27,8 +27,6 @@ NULL
 utils::globalVariables(".")
 # Declare models_to_run as global variable, since it can be created as such by user
 utils::globalVariables(c("models_to_run", "n", "Count"))
-# shiny::testServer() provides session and output inside its expression (static_precompute()).
-utils::globalVariables(c("session", "output"))
 
 my_assign <- function(name, value, envir = 1L) assign(name, value, pos = envir)
 

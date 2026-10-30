@@ -24,7 +24,7 @@ static_webr_version <- function(webr_dir) {
 
 static_source_plan <- function(bundled, r_version, webr_version) {
   copyleft <- grepl("GPL|MPL", bundled$license, ignore.case = TRUE)
-  packages <- bundled[copyleft & !duplicated(bundled$package), , drop = FALSE]
+  packages <- bundled[copyleft & !duplicated(bundled[c("package", "version")]), , drop = FALSE]
   plan <- lapply(seq_len(nrow(packages)), function(i) {
     p <- packages[i, ]
     filename <- paste0(p$package, "_", p$version, ".tar.gz")

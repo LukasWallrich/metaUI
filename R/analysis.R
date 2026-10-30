@@ -75,6 +75,7 @@ metaUI_funnel <- function(fit, xlab) {
 # Estimation uses metafor; the rank/trim iteration stays explicit.
 metaUI_trimfill <- function(df, control = list(), n.iter.max = 50L) {
   y <- df$metaUI__effect_size; se <- df$metaUI__se
+  # Keep meta's initial ML fit so its warnings and failures are also reported.
   initial <- metaUI_univariate(y, se, control = control)
   keep <- !is.na(y) & !is.na(se)
   if (any(!keep)) warning(sum(!keep), " observation(s) dropped due to missing values")
@@ -86,6 +87,7 @@ metaUI_trimfill <- function(df, control = list(), n.iter.max = 50L) {
   left <- sign(metaUI_egger(y, se)$estimate[1]) == 1
   if (!left) y <- -y
   ord <- order(y); y <- y[ord]; se <- se[ord]
+  centre <- stats::weighted.mean(y, 1 / se^2)
   k0 <- 0L; last <- -1L; iteration <- 0L
   while (last != k0 && k0 <= k - 1L && iteration < n.iter.max) {
     iteration <- iteration + 1L; last <- k0
