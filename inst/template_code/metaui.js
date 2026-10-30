@@ -67,3 +67,62 @@
     }
   });
 })(jQuery);
+
+/* Study details from the authors' build-time study information, shown as a
+   DataTables child row under the effect. The toggle is a native button; DT selects
+   rows on mousedown, so that event is stopped (in the capture phase) for the toggle. */
+(function ($) {
+  'use strict';
+  var counter = 0;
+  // DataTables selects rows on mousedown; study toggles and the details below them must not.
+  document.addEventListener('mousedown', function (event) {
+    if (event.target.closest && event.target.closest('.metaui-study-toggle, .metaui-study-child')) event.stopPropagation();
+  }, true);
+  $(document).on('click', '.metaui-study-toggle', function () {
+    var button = this;
+    var tr = $(button).closest('tr');
+    var row = tr.closest('table').DataTable().row(tr);
+    if (row.child.isShown()) {
+      row.child.hide();
+      button.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    var data = row.data();
+    var id = button.getAttribute('aria-controls') || 'metaui-study-' + (++counter);
+    row.child('<div id="' + id + '" role="region" aria-label="Study details">' + data[data.length - 1] + '</div>',
+      'metaui-study-child').show();
+    button.setAttribute('aria-controls', id);
+    button.setAttribute('aria-expanded', 'true');
+  });
+
+  // Copies the reference as rich text (italics, link) with a plain-text alternative. The copy
+  // event works without a secure context, which the async clipboard API requires.
+  function copyReference(html, text) {
+    var copied = false;
+    var listener = function (event) {
+      event.clipboardData.setData('text/html', html);
+      event.clipboardData.setData('text/plain', text);
+      event.preventDefault();
+      copied = true;
+    };
+    document.addEventListener('copy', listener);
+    try { document.execCommand('copy'); } catch (error) {}
+    document.removeEventListener('copy', listener);
+    return copied;
+  }
+  $(document).on('click', '.metaui-copy-ref', function () {
+    var button = this;
+    var cite = $(button).closest('.metaui-study-ref').find('.metaui-study-cite')[0];
+    var status = $(button).siblings('.metaui-copy-status')[0];
+    var text = cite.textContent.replace(/\s+/g, ' ').trim();
+    var report = function (ok) {
+      status.textContent = ok ? 'Reference copied' : 'Could not copy; select the reference instead';
+      clearTimeout(button.metauiCopyTimer);
+      button.metauiCopyTimer = setTimeout(function () { status.textContent = ''; }, 3000);
+    };
+    if (copyReference(cite.innerHTML, text)) return report(true);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { report(true); }, function () { report(false); });
+    } else report(false);
+  });
+})(jQuery);

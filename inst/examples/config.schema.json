@@ -441,6 +441,43 @@
           "maximum": 16
         }
       }
+    },
+    "study_info": {
+      "description": "Schema version 2. Either the path to a CSV of study details (one row per study; `study` column matching study IDs), or a lookup object that runs fetch_study_metadata() on the mapped `url` column while building and writes the result to `cache`. Shown in the effect-size list; the generated app never fetches metadata.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cache"
+          ],
+          "properties": {
+            "cache": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CSV written by the lookup; found DOIs are reused on later builds. Relative to the configuration file."
+            },
+            "abstracts": {
+              "enum": [
+                "open_licence",
+                "exclude_nc",
+                "none",
+                "all"
+              ],
+              "default": "open_licence"
+            },
+            "openalex": {
+              "type": "boolean",
+              "default": true,
+              "description": "Use OpenAlex for licences and abstracts that Crossref lacks."
+            }
+          }
+        }
+      ]
     }
   },
   "allOf": [
@@ -458,6 +495,11 @@
             {
               "required": [
                 "bayesian"
+              ]
+            },
+            {
+              "required": [
+                "study_info"
               ]
             },
             {
