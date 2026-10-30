@@ -37,9 +37,9 @@
 <p class="sub">Feasibility of static, browser-only metaUI apps with shinylive (WebAssembly R). Exploration on branch <code>explore/shinylive-static-apps</code>, from <code>main</code> at 82168af (metaUI 0.2.0). 30 October 2026.</p>
 
 <div class="verdict">
-<p><b>Verdict: feasible, with a real cost in loading time.</b> The Dannheim example app runs entirely in the browser after a plain static-file export. Every model, filter, plot, download, workbook upload, selection link and the opt-in Bayesian model worked in Chromium once a 49-line bridge script was added. Results match the server app: the source-reference model gives g&nbsp;=&nbsp;−0.38356080, 95% CI [−0.68781519, −0.07930642], identical to eight decimals, and no model differs by more than 1.1&nbsp;×&nbsp;10<sup>−11</sup>.</p>
-<p>The price is paid by every reader on every visit: about <b>136&nbsp;MB</b> of downloads and about <b>20–24&nbsp;s</b> until the app can be used, with first results about 2&nbsp;s later (measured without browser automation on a 2017 quad-core laptop CPU). Analyses take roughly 2–5 times as long as on a server (2.4–3.3&nbsp;s rather than 1.3&nbsp;s for the eight default rows; 21&nbsp;s rather than 4.7&nbsp;s for the Bayesian fit, measured under automation).</p>
-<p>Startup measured through Playwright is about twice as long (around 41&nbsp;s), because an attached DevTools session makes every caught JavaScript exception expensive and webR throws thousands of them while loading package code. Section 6 explains this and what limits further speed-ups.</p>
+<p><b>Verdict: feasible, and readers see results at once.</b> The Dannheim example app runs entirely in the browser after a plain static-file export. Every model, filter, plot, download, workbook upload, selection link and the opt-in Bayesian model worked in Chromium once a 49-line bridge script was added. Results match the server app: the source-reference model gives g&nbsp;=&nbsp;−0.38356080, 95% CI [−0.68781519, −0.07930642], identical to eight decimals, and no model differs by more than 1.1&nbsp;×&nbsp;10<sup>−11</sup>.</p>
+<p>The export now shows the authors’ full-data results, computed at export time by the app’s own code, <b>0.15&nbsp;s</b> after the page opens, against 21–26&nbsp;s for a live first analysis before. The interactive app takes over after <b>17–21&nbsp;s</b>, once R has loaded in the browser and recomputed the same analysis (measured without browser automation on a 2017 quad-core laptop CPU). Each visit downloads about <b>128&nbsp;MB</b>. Analyses then take roughly 2–5 times as long as on a server (2.4–3.3&nbsp;s rather than 1.3&nbsp;s for the eight default rows; 21&nbsp;s rather than 4.7&nbsp;s for the Bayesian fit, measured under automation).</p>
+<p>Startup measured through Playwright is about twice as long (around 41&nbsp;s), because an attached DevTools session makes every caught JavaScript exception expensive and webR throws thousands of them while loading package code. Section 6 explains this and the speed work.</p>
 <p>I recommend offering static export as an opt-in, archival route (<code>export_static()</code>, prototyped on this branch) next to server hosting, not as a replacement. It does address the MetaLab problem: a static bundle keeps working without anyone maintaining a server, and it freezes the exact R and package versions.</p>
 </div>
 
@@ -48,11 +48,11 @@
 <ol>
 <li><b>Pursue it as a feature?</b> I recommend an opt-in <code>export_static()</code> step for 0.3 and the RSM Software Focus article, presented with the loading cost stated plainly. Alternative: keep it as documentation only (“you can run shinylive yourself”), which avoids maintenance but leaves selection links and downloads broken.</li>
 <li><b>API shape.</b> I prototyped a separate step, <code>export_static(app_dir, dest_dir)</code>, rather than <code>generate_shiny(static = TRUE)</code>, so that authors edit the generated app and then re-export it. Confirm, or ask for a flag as well.</li>
-<li><b>A 2× faster start needs results shown before R has loaded.</b> Without automation, first results take about 22–24&nbsp;s, and a Shiny app with only the core meta-analysis packages already needs 15–20&nbsp;s, so trimming the app cannot halve the time (section 6). The remaining option is to compute the default full-data results at export time with the same app code and show them at once, labelled as such, while the interactive version loads. Decide whether that is acceptable for a reproducibility tool; I would label it clearly and keep it optional.</li>
-<li><b>Changes from the speed work.</b> Replacing <code>shinyWidgets</code> with Shiny’s <code>selectizeInput</code> and loading optional packages lazily (branch <code>t3/shrink-generated-app-startup-loads</code>) keeps every result identical but gives no measurable gain for real readers, so I would not merge it for speed alone. <code>meta</code> cannot be replaced by <code>metafor</code> for trim-and-fill without changing results (211 of 324 test datasets differed).</li>
+<li><b>Review two accepted deviations from replacing <code>meta</code>.</b> Results are identical on ordinary data (section 6). On 3 of 400 borderline simulated datasets, meta’s trim-and-fill failed to converge where the new helper returns an estimate; the funnel plot shows the same content with slightly different axes. Both are recorded in NEWS.</li>
+<li><b>Report the webR bug upstream?</b> The missing Summary plot came from webR’s patched Shiny error handling. A minimal reproduction and draft note are in <code>work/shinylive/repro-summary-plot/</code>; filing it would be a public action, so I have not.</li>
 <li><b>Licence obligations before any public deposit.</b> The bundle redistributes R (GPL), webR binaries (GPL-3) and 128 R packages. <code>export_static()</code> now writes a notice and a package/licence table. Six packages are webR-patched builds whose source location I could not confirm (shiny, httpuv, later, sass, nloptr, vroom). Decide whether to bundle their sources, link the r-wasm project, or ask the webR maintainers.</li>
 <li><b>A manual check I cannot do here:</b> please open the private preview (link below) in Safari and Firefox on your Mac and on a phone. Playwright’s Firefox build failed even on a minimal shinylive app, and WebKit could not run on the box.</li>
-<li><b>Public demo.</b> Nothing has been published. A GitHub Pages demo needs your approval. Note that GitHub Pages has a soft bandwidth limit of 100&nbsp;GB per month (<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits">GitHub docs</a>), which is roughly 700 visits at 136&nbsp;MB each.</li>
+<li><b>Public demo.</b> Nothing has been published. A GitHub Pages demo needs your approval. Note that GitHub Pages has a soft bandwidth limit of 100&nbsp;GB per month (<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits">GitHub docs</a>), which is roughly 780 visits at 128&nbsp;MB each.</li>
 </ol>
 </div>
 
@@ -62,7 +62,7 @@
 <li>Same app with the opt-in Bayesian model: <a href="https://box.tail8f7293.ts.net:8446/site/dannheim-bayes/">https://box.tail8f7293.ts.net:8446/site/dannheim-bayes/</a></li>
 <li>This report: <a href="https://box.tail8f7293.ts.net:8446/report.html">https://box.tail8f7293.ts.net:8446/report.html</a></li>
 </ul>
-<p class="note">Served by a plain Python file server (<code>work/shinylive/serve.py</code>) behind <code>tailscale serve</code> on port 8446; no R process is involved. Expect a blank page for about 20–25&nbsp;seconds while R loads.</p>
+<p class="note">Served by a plain Python file server (<code>work/shinylive/serve.py</code>) behind <code>tailscale serve</code> on port 8446; no R process is involved. Results appear at once; the controls become active after about 20&nbsp;seconds, when R has loaded.</p>
 
 <h2>1. The package and its alternatives</h2>
 <p><b>shinylive is the right package.</b> The R package <code>shinylive</code> (0.5.0 on CRAN, MIT) exports a Shiny for R app folder into static files that run R through webR. The export used shinylive web assets 0.10.12, which ship webR 0.6.0 with R 4.6.0. The generated app does not need metaUI at runtime, so metaUI itself never has to be compiled for WebAssembly.</p>
@@ -85,10 +85,12 @@
 <table>
 <tr><th>Measure</th><th class="num">Static (shinylive)</th><th class="num">Server</th></tr>
 <tr><td>Export time (<code>shinylive::export</code>, packages cached)</td><td class="num">≈ 60 s</td><td class="num">–</td></tr>
-<tr><td>Bundle on disk (two apps sharing assets)</td><td class="num">157 MB</td><td class="num">244 kB app folder</td></tr>
-<tr><td>Downloaded per visit</td><td class="num">136 MB</td><td class="num">&lt; 2 MB</td></tr>
-<tr><td>Page opened → ready to analyse (6 runs without automation, load average 2–5)</td><td class="num">19.4–24.2 s</td><td class="num">0.9 s</td></tr>
-<tr><td>Page opened → first results, Analyze clicked when ready (same runs)</td><td class="num">21.7–27.0 s</td><td class="num">2.2 s</td></tr>
+<tr><td>Bundle on disk (two apps sharing assets; each app’s preview folder adds 20 MB, of which 0.6 MB is used)</td><td class="num">186 MB</td><td class="num">244 kB app folder</td></tr>
+<tr><td>Downloaded per visit</td><td class="num">128 MB</td><td class="num">&lt; 2 MB</td></tr>
+<tr><td>Page opened → precomputed results visible (3 runs without automation, load average 1.8–3.3)</td><td class="num">0.15 s</td><td class="num">–</td></tr>
+<tr><td>Page opened → interactive app ready (same runs)</td><td class="num">17.3–17.9 s</td><td class="num">0.9 s</td></tr>
+<tr><td>Page opened → live app’s own first results (same runs)</td><td class="num">19.7–20.6 s</td><td class="num">2.2 s</td></tr>
+<tr><td>Same three measures before the speed work (alternating runs)</td><td class="num">– / 19.0–23.5 / 21.3–25.9 s</td><td class="num">–</td></tr>
 <tr><td>First analysis, 8 default rows</td><td class="num">2.4–3.3 s</td><td class="num">1.3 s</td></tr>
 <tr><td>Re-analysis after a z-score filter change</td><td class="num">2.5–2.6 s</td><td class="num">1.7 s</td></tr>
 <tr><td>Forest plot render</td><td class="num">2.4 s</td><td class="num">0.4 s</td></tr>
@@ -101,7 +103,7 @@
 </table>
 
 <h3>Where the startup time goes</h3>
-<p>Timestamps from an instrumented copy of the app, reported back to the server log rather than read through DevTools, from a run with first results at 25&nbsp;s (load average 3.4):</p>
+<p>Timestamps from an instrumented copy of the app before the speed work, reported back to the server log rather than read through DevTools, from a run with first results at 25&nbsp;s (load average 3.4):</p>
 <table>
 <tr><th>Phase</th><th class="num">Elapsed</th></tr>
 <tr><td>Page, service worker, webR runtime (R.wasm, base library) and R startup</td><td class="num">0 → 4.1 s</td></tr>
@@ -111,7 +113,7 @@
 <tr><td>Sourcing the app’s R files, then interface rendered and connected</td><td class="num">20.9 → 23.0 s</td></tr>
 <tr><td>First analysis</td><td class="num">23.0 → 25.1 s</td></tr>
 </table>
-<p>The slowest namespaces were <code>Matrix</code> 2.1&nbsp;s, <code>meta</code> 1.5&nbsp;s, <code>lme4</code> 1.1&nbsp;s, <code>vroom</code> 1.0&nbsp;s and <code>plotly</code> 0.5&nbsp;s; everything else took under 0.4&nbsp;s. On localhost the mount phase is limited by processing, not downloading: fetching all package images in parallel while webR boots (they all arrived by 1.5&nbsp;s and the later mounts made no requests) did not shorten startup. Over a real connection, parallel fetching would hide part of the 136&nbsp;MB download.</p>
+<p>The slowest namespaces were <code>Matrix</code> 2.1&nbsp;s, <code>meta</code> 1.5&nbsp;s, <code>lme4</code> 1.1&nbsp;s, <code>vroom</code> 1.0&nbsp;s and <code>plotly</code> 0.5&nbsp;s; everything else took under 0.4&nbsp;s. On localhost the mount phase is limited by processing, not downloading: fetching all package images in parallel while webR boots (they all arrived by 1.5&nbsp;s and the later mounts made no requests) did not shorten startup. Over a real connection, parallel fetching would hide part of the download. Removing <code>meta</code> later took 17 packages out of the bundle and shortened live startup by about 2&nbsp;s.</p>
 <p><b>Repeat visits are not faster.</b> In the automated tests the browser re-downloaded the full 136&nbsp;MB on a second visit (117 of 119 requests returned full content although the server sent caching headers). shinylive ships with its own cache storage disabled.</p>
 
 <h3>What works and what broke</h3>
@@ -119,6 +121,7 @@
 <tr><th>Feature</th><th>Result</th><th>Notes</th></tr>
 <tr><td>All model rows, primary-model panel, status and warning texts</td><td class="ok">Works</td><td>Identical to the server; see parity below.</td></tr>
 <tr><td>Z-score filter, reset, “filters changed” notice</td><td class="ok">Works</td><td>Dannheim has no moderator filters, so categorical and numeric moderator filters were not exercised.</td></tr>
+<tr><td>Summary model plot</td><td class="warn">Fixed</td><td>It never rendered in webR: webR’s patched Shiny runs the error handler before nested reactive contexts unwind, so after a silent error in the plot’s initial height the output lost its dependency on the analysis and never redrew. The generated app now returns the minimum plot height until Analyze has been clicked; server behaviour and the plot are unchanged. The browser test now checks that this plot renders and changes after filtering.</td></tr>
 <tr><td>Sample, Forest, Publication Bias, Outlier Diagnostics and About tabs</td><td class="ok">Works</td><td>Plotly violin and DT tables render; no JavaScript or Shiny output errors beyond the expected “P-curve/z-curve not estimated” messages, which the server shows too.</td></tr>
 <tr><td>Workbook download and upload round trip</td><td class="ok">Works</td><td>Upload restored 12 of 12 rows with the saved filters.</td></tr>
 <tr><td>Forest PDF, PNG and CSV exports</td><td class="warn">Fixed by bridge</td><td>Download handlers always produced correct files, but in both automated Chromium environments a click sent the request past shinylive’s service worker to the static server, which returned 404. The bridge fetches the file through the service worker and saves it locally, which worked in headless Chromium and in the T3 browser.</td></tr>
@@ -131,23 +134,23 @@
 </table>
 
 <div class="figs">
-<figure><img src="evidence/t3-preview-summary.png" alt="Static Dannheim app summary tab in the T3 browser"><figcaption>The static app in the T3 browser over tailnet HTTPS, after the first analysis.</figcaption></figure>
+<figure><img src="evidence/live-after-handover.png" alt="Static Dannheim app after hand-over from the precomputed view"><figcaption>The live static app after hand-over: its own first analysis, including the Summary plot.</figcaption></figure>
 <figure><img src="evidence/t3-preview-mobile-link-restored.png" alt="Static app at phone width after opening a selection link"><figcaption>At 390 px width after opening a selection link: “Selection restored from link”, 11 of 12 effects.</figcaption></figure>
 </div>
 
 <h3>Numerical parity with the server app</h3>
-<p>I compared the workbook summary sheets downloaded from the server app and the static app after the same full-data analysis (script: <code>work/shinylive/compare-workbooks.R</code>). Model names, statuses and warnings were identical.</p>
+<p>I compared the workbook summary sheets downloaded from the original server app (using <code>meta</code>) and the final static app (metafor helpers, precomputed view) after the same full-data analysis (script: <code>work/shinylive/compare-workbooks.R</code>). Model names, statuses and warnings were identical.</p>
 <table>
 <tr><th>Model</th><th class="num">Estimate (both)</th><th class="num">Largest |difference| in estimate or CI</th></tr>
-<tr><td>Source-reference: REML / Hartung–Knapp (primary)</td><td class="num">−0.38356080</td><td class="num">0</td></tr>
+<tr><td>Source-reference: REML / Hartung–Knapp (primary)</td><td class="num">−0.38356080</td><td class="num">1.1 × 10<sup>−16</sup></td></tr>
 <tr><td>Random-effects multilevel model</td><td class="num">−0.38356079</td><td class="num">1.1 × 10<sup>−11</sup></td></tr>
 <tr><td>Robust variance estimation</td><td class="num">−0.38286908</td><td class="num">0</td></tr>
-<tr><td>Trim-and-fill</td><td class="num">−0.38300043</td><td class="num">0</td></tr>
+<tr><td>Trim-and-fill</td><td class="num">−0.38300043</td><td class="num">1.1 × 10<sup>−16</sup></td></tr>
 <tr><td>PET</td><td class="num">0.05177925</td><td class="num">4.9 × 10<sup>−17</sup></td></tr>
 <tr><td>PEESE</td><td class="num">−0.21038191</td><td class="num">1.1 × 10<sup>−16</sup></td></tr>
 <tr><td>Bayesian normal-normal model</td><td class="num">−0.38263021</td><td class="num">0</td></tr>
 </table>
-<p>The primary row reproduces the reference exactly: g = −0.38356080, 95% CI [−0.68781519, −0.07930642]. The three Bayesian prior-sensitivity rows were identical, and the forest-plot CSV differed only in the 16th significant digit of one RVE interval bound.</p>
+<p>The primary row reproduces the reference: g = −0.38356080, 95% CI [−0.68781519, −0.07930642]. The Bayesian row and its three prior-sensitivity rows were identical in the earlier meta-based static build, and the forest-plot CSV differed only in the 16th significant digit of one RVE interval bound.</p>
 
 <h2>4. Recommended design</h2>
 <h3><code>export_static()</code> as a separate step (prototyped)</h3>
@@ -156,23 +159,25 @@
 metaUI::export_static("my-app", "my-app-static")
 httpuv::runStaticServer("my-app-static")   # local preview; any HTTPS host works</pre>
 <p>The prototype in <code>R/export_static.R</code> leaves the app folder untouched. It copies the app to a temporary folder, appends the bridge (<code>inst/template_code/metaui-static.js</code>) to the copy’s <code>www/metaui.js</code> and calls <code>shinylive::export(wasm_packages = TRUE)</code>. It then writes <code>STATIC-NOTICE.md</code> (hosting requirements, data notice, bundled software) and <code>bundled-packages.csv</code> (128 packages with version, licence, location and source link). <code>shinylive</code> is a Suggests dependency. Because authors re-export after editing, author edits flow through unchanged; the bridge does nothing when an app runs on a Shiny server.</p>
-<p>Tests: unit tests for the licence table and notice run by default. An end-to-end export of a fixture app runs when <code>METAUI_TEST_SHINYLIVE=1</code>, because it downloads about 100&nbsp;MB of WebAssembly packages; it passed. The full suite passes (62 tests, 1,194 expectations, no failures; only the opt-in export test skipped). The preview apps were rebuilt with <code>export_static()</code> itself and passed the complete browser test again (all downloads, the upload round trip and selection-link restore working; primary model identical).</p>
+<p><b>Precomputed first view</b> (<code>precompute = TRUE</code>, the default; <code>R/static_preview.R</code>, <code>inst/template_code/metaui-preview.js</code>). At export, <code>shiny::testServer()</code> runs the generated server with the default inputs and Analyze once, and its Summary outputs are written into a static copy of the page. The copy looks like the normal Summary tab. Until the live app is ready, the Analyze button reads “Loading…” and the controls are disabled; export date and versions are recorded only in a JSON file. The live app then runs its own first analysis, if the reader has not interacted, and replaces the preview. Selection links skip the preview, because the full-data result would not match the linked selection. If precomputation fails, the export proceeds without it and warns.</p>
+<p><b>No <code>meta</code> in generated apps.</b> Trim-and-fill, Egger’s test, the funnel plot and the Dannheim reference model use readable metafor-based helpers in the editable <code>analysis.R</code>. The trim-and-fill helper follows meta 8.5.0’s procedure (attributed in <code>inst/COPYRIGHTS</code>). Apps load <code>meta</code> only if an author’s own model code uses it, and <code>meta</code> moved to Suggests.</p>
+<p>Tests: unit tests for the licence table and notice run by default. An end-to-end export of a fixture app runs when <code>METAUI_TEST_SHINYLIVE=1</code>, because it downloads about 100&nbsp;MB of WebAssembly packages; it passed. The full suite passes (69 tests, 1,268 expectations, no failures; only the opt-in export test skipped, which passes when enabled). The preview apps were rebuilt with <code>export_static()</code> itself and passed the complete browser test again: precomputed view and hand-over, Summary plot, all downloads, the upload round trip and selection-link restore, with the primary model identical.</p>
 
 <h3>Still to do if you go ahead</h3>
 <ul>
-<li>Add a <code>static</code> output to the JSON <code>build_app()</code> path; write the actual runtime versions into the About tab; add a short loading message, since readers otherwise see a blank page for 20–25&nbsp;s.</li>
-<li>If you accept it, show precomputed default results while R loads (decision above); otherwise mount only the packages needed for the first results, which would save part of the 6&nbsp;s mount phase.</li>
+<li>Add a <code>static</code> output to the JSON <code>build_app()</code> path; write the actual runtime versions into the About tab.</li>
+<li>Copy only the files the precomputed view uses (0.6 of 20&nbsp;MB per app); optionally mount only the packages needed for the first live results.</li>
 <li>In static exports with the Bayesian model, warn about the roughly 20&nbsp;s fits, or lower the default study cap.</li>
 <li>Add a static-export case to the CI browser smoke test (Chromium only, unless real Firefox works).</li>
 <li>Resolve source availability for the six webR-patched packages before any public deposit.</li>
 </ul>
 
 <h3>Hosting and archiving</h3>
-<p>Service workers need HTTPS or localhost, so opening <code>index.html</code> from disk does not work. GitHub Pages, Netlify, Cloudflare Pages and university web space all qualify. OSF, Zenodo and journal supplement systems store files, but as far as I know none of them serves a folder as a website. For those, the realistic pattern is a live copy on a static host plus the same bundle as a zip archive (about 157&nbsp;MB for the two preview apps, 142&nbsp;MB as a compressed archive, because the package images are already compressed) with a DOI, which readers can run locally with one command. Because the bundle pins R 4.6.0 and every package binary, an archived copy reproduces the published results without later package updates changing them; a server app does not guarantee that.</p>
+<p>Service workers need HTTPS or localhost, so opening <code>index.html</code> from disk does not work. GitHub Pages, Netlify, Cloudflare Pages and university web space all qualify. OSF, Zenodo and journal supplement systems store files, but as far as I know none of them serves a folder as a website. For those, the realistic pattern is a live copy on a static host plus the same bundle as a zip archive (about 186&nbsp;MB for the two preview apps; a compressed archive saves little, because the package images are already compressed) with a DOI, which readers can run locally with one command. Because the bundle pins R 4.6.0 and every package binary, an archived copy reproduces the published results without later package updates changing them; a server app does not guarantee that.</p>
 
 <h2>5. Limits</h2>
 <ul>
-<li><b>Loading time.</b> About 22–24&nbsp;s to first results on a 2017 laptop CPU with an instant connection. On slower connections the 136&nbsp;MB download adds roughly 22&nbsp;s at 50&nbsp;Mbit/s and nearly 2 minutes at 10&nbsp;Mbit/s (my calculation, not measured). Newer laptops will be faster; older phones are likely to be slower.</li>
+<li><b>Loading time.</b> Precomputed results appear at once; the interactive app needs about 17–21&nbsp;s on a 2017 laptop CPU with an instant connection. On slower connections the 128&nbsp;MB download adds roughly 20&nbsp;s at 50&nbsp;Mbit/s and nearly 2 minutes at 10&nbsp;Mbit/s (my calculation, not measured), during which readers can read the precomputed results. Newer laptops will be faster; older phones are likely to be slower.</li>
 <li><b>Computation.</b> Default rows are fast enough (≈ 3&nbsp;s). Bayesian fits and anything bootstrapped are 4–5 times slower than on a server and block the app while running.</li>
 <li><b>Memory.</b> The browser process running R peaked at 879&nbsp;MB with the Bayesian app. That is fine on laptops but may be tight on older phones; untested on real devices.</li>
 <li><b>Privacy.</b> The full dataset (here <code>dataset.rds</code> inside <code>app.json</code>) and all R code are sent to every visitor. That is acceptable for published data, but must be stated, as the notice does. Uploaded workbooks stay on the reader’s device, which is a privacy gain over a server.</li>
@@ -180,23 +185,26 @@ httpuv::runStaticServer("my-app-static")   # local preview; any HTTPS host works
 <li><b>Ongoing compatibility.</b> An archived bundle keeps working as long as browsers run its WebAssembly. Any future re-export depends on repo.r-wasm.org binaries being available for the current R version.</li>
 </ul>
 
-<h2>6. Speed work: can startup be halved?</h2>
-<p><b>Not by trimming the app.</b> Three GPT-6.1 Sol subagents worked in parallel on separate branches, each checked against the full browser test and the server workbook.</p>
+<h2>6. Speed work</h2>
+<p><b>Precomputing the default view gives readers results more than 100 times sooner; trimming the app gives about 10%.</b> GPT-6.1 Sol subagents worked on separate branches, each checked against the full browser test and the server workbook; I integrated and re-measured.</p>
 <table>
 <tr><th>Workstream</th><th>Result</th><th>Branch</th></tr>
-<tr><td>A: load less at startup (checks that do not load packages, <code>selectizeInput</code> instead of <code>shinyWidgets</code>, base R instead of <code>stringr</code>, optional packages loaded on use)</td><td>Results identical (max difference 1.1&nbsp;×&nbsp;10<sup>−11</sup>), all 1,226 expectations pass. 1.10× faster under automation, but no gain for real readers: median first results 24.8&nbsp;s against 24.4&nbsp;s without automation.</td><td><code>t3/shrink-generated-app-startup-loads</code></td></tr>
-<tr><td>B: replace <code>meta</code> with <code>metafor</code> in generated apps</td><td>Not equivalent. Across 324 datasets, direct trim-and-fill differed on 211 (estimate by up to 4.2, imputed studies by up to 27); rebuilding meta’s procedure in metafor matched ordinary cases to 2&nbsp;×&nbsp;10<sup>−14</sup> but not edge cases. Nothing changed.</td><td><code>t3/avoid-meta-app-loading</code></td></tr>
-<tr><td>C: webR and shinylive loading</td><td>Found that package loading under automation was dominated by symbol relocation (about 20&nbsp;s). A patch that turns off stack-trace capture during relocation made no difference (20.1 vs 20.2&nbsp;s).</td><td><code>t3/optimize-shinylive-startup</code></td></tr>
+<tr><td>Precomputed first view</td><td>Adopted. Results visible after 0.15&nbsp;s rather than 21–26&nbsp;s.</td><td><code>t3/precomputed-static-preview</code></td></tr>
+<tr><td>Replace <code>meta</code> with metafor, reproducing meta’s procedures</td><td>Adopted. On 324 audit datasets, ordinary-data differences were at most 1.24&nbsp;×&nbsp;10<sup>−14</sup> (estimates and CIs) with identical k, imputed studies and side; remaining differences arise only for missing or zero variances, which data preparation rejects. An independent check on 400 new datasets (including ties and asymmetry) agreed to 1.8&nbsp;×&nbsp;10<sup>−15</sup>, except 3 borderline cases where meta’s refit failed to converge and the helper returns an estimate. 17 packages fewer; live startup about 2&nbsp;s shorter.</td><td><code>t3/metafor-app-migration</code></td></tr>
+<tr><td>Summary plot in webR</td><td>Root cause found and fixed (section 3).</td><td><code>t3/fix-static-summary-plot</code></td></tr>
+<tr><td>Load less at startup (lazy packages, <code>selectizeInput</code> instead of <code>shinyWidgets</code>)</td><td>Not adopted: results identical, but no measurable gain without automation (median 24.8 vs 24.4&nbsp;s).</td><td><code>t3/shrink-generated-app-startup-loads</code></td></tr>
+<tr><td>webR/shinylive loading (relocation patch, prefetching)</td><td>Not adopted: the apparent relocation cost was an automation artefact, and prefetching did not help on localhost.</td><td><code>t3/optimize-shinylive-startup</code></td></tr>
 </table>
-<p>The relocation cost turned out to be a measurement artefact. webR checks each exported WebAssembly global by assigning to it and catching the resulting error, thousands of times for packages such as <code>stringi</code> and <code>sass</code>. With Playwright’s DevTools session attached, relocation across 57 modules took 20&nbsp;s; in plain headless Chromium the same instrumented build reported 0.03&nbsp;s. Startup figures measured under automation, and the apparent gains from dropping <code>stringi</code> and <code>sass</code>, are therefore inflated about twofold. Real-reader timing now uses <code>work/shinylive/real-timing.sh</code>, which runs Chromium without automation and reads times back from the server log.</p>
-<p>The floor explains why trimming cannot halve startup. Without automation, a static app containing only Shiny was ready in 5.6&nbsp;s at load average 2.7 (9.5–11.4&nbsp;s at load 5–10); one that also loads <code>metafor</code>, <code>meta</code>, <code>ggplot2</code>, <code>dplyr</code>, <code>robumeta</code> and <code>DT</code> took 18.4–20.8&nbsp;s at load 7–11. The full app’s 22–24&nbsp;s is close to that, and the first results need those packages. Mounting only what the first results need would skip 42 of 96 package images (32&nbsp;MB) and save part of the 6&nbsp;s mount phase, perhaps 10–20% overall (estimated, not measured). Halving the time to first results would require showing precomputed default results while R loads.</p>
+<p><b>Automation inflates webR startup about twofold.</b> webR checks each exported WebAssembly global by assigning to it and catching the resulting error, thousands of times for packages such as <code>stringi</code> and <code>sass</code>. With Playwright’s DevTools session attached, this relocation step took 20&nbsp;s across 57 modules; in plain headless Chromium the same instrumented build reported 0.03&nbsp;s. Reader-facing times therefore come from <code>work/shinylive/real-timing.sh</code>, which runs Chromium without automation and reads times back from the server log.</p>
+<p><b>The live app cannot be made much faster by trimming.</b> Without automation, a static app containing only Shiny was ready in 5.6&nbsp;s at load average 2.7; one that also loads <code>metafor</code>, <code>meta</code>, <code>ggplot2</code>, <code>dplyr</code>, <code>robumeta</code> and <code>DT</code> took 18.4–20.8&nbsp;s at load 7–11. The first live analysis needs most of these packages.</p>
 
 <h2>7. Reproduction and files</h2>
 <ul>
-<li><code>R/export_static.R</code>, <code>inst/template_code/metaui-static.js</code>, <code>tests/testthat/test-export-static.R</code>: prototype, bridge and tests.</li>
+<li><code>R/export_static.R</code>, <code>R/static_preview.R</code>, <code>inst/template_code/metaui-static.js</code>, <code>inst/template_code/metaui-preview.js</code>, <code>tests/testthat/test-export-static.R</code>, <code>test-summary-plot.R</code>, <code>test-metafor-compatibility.R</code>: export, precomputed view, bridge and tests.</li>
+<li><code>work/shinylive/research/</code>: meta/metafor equivalence audit, independent check (<code>verify-metafor-independent.R</code>) and evidence. <code>work/shinylive/repro-summary-plot/</code>: minimal reproduction of the webR plot bug.</li>
 <li><code>work/shinylive/static-smoke.cjs</code>: Playwright test of one app as static export or server (timings, downloads, upload, selection link). <code>startup.cjs</code>: cold/warm startup timing. <code>serve.py</code>: static server with request timing. <code>real-timing.sh</code>: startup timing in Chromium without automation (use this for reader-facing numbers); <code>timed-run.sh</code>: the same under Playwright, serialised with a machine-wide lock. <code>compare-workbooks.R</code>: server/static parity.</li>
 <li><code>work/shinylive/evidence/</code>: run results (JSON), workbooks from both modes, screenshots, dependency and licence tables, package load times.</li>
-<li>The exported site (<code>work/shinylive/site/</code>, 157 MB) is not committed; rebuild it with <code>export_static()</code>.</li>
+<li>The exported site (<code>work/shinylive/site/</code>, 186 MB) is not committed; rebuild it with <code>export_static()</code>.</li>
 </ul>
 <p class="note">Environment side effects: <code>shinylive</code> and <code>archive</code> were installed into <code>/home/lukas/R/library</code>. One install accidentally replaced metaUI there with this branch, and I reinstalled metaUI from <code>main</code> 82168af immediately afterwards. Installing Firefox and WebKit for the cross-browser check made Playwright delete cached browsers it did not recognise (<code>chromium-1248</code>, its headless shell and <code>ffmpeg-1013</code> in <code>~/.cache/ms-playwright</code>); I reinstalled exactly those revisions (Playwright 1.64.1) and removed the Firefox and WebKit downloads. Exports and tests used a separate scratch library under <code>/tmp/shinylive-explore/lib</code> with current package versions, because shinylive refused to export from the older system library.</p>
 </main>
