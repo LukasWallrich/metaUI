@@ -10,6 +10,33 @@ models_use_meta <- function(code) {
   any(grepl("\\bmeta\\s*::|(?:library|require|requireNamespace)\\s*\\(\\s*['\"]?meta(?:['\"]|\\s*[,\\)])", code, perl = TRUE))
 }
 
+# Used only inside generated apps and the model fits they run; listed in Suggests.
+# meta is added only when author model code uses it.
+metaUI_app_suggests <- c("DT", "ggplot2", "plotly", "puniform", "readxl",
+  "robumeta", "shinycssloaders", "shinyjs", "weightr", "writexl", "zcurve")
+
+app_dependencies <- function(bayesian = FALSE, meta = FALSE) {
+  sort(unique(c(declared_imports(), metaUI_app_suggests, if (bayesian) "bayesmeta", if (meta) "meta")))
+}
+
+missing_app_packages <- function(bayesian = FALSE, meta = FALSE) {
+  pkgs <- app_dependencies(bayesian, meta)
+  missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
+  if (meta && !"meta" %in% missing && utils::packageVersion("meta") < "7.0.0") missing <- c(missing, "meta")
+  missing
+}
+
+metaUI_app_ready <- function() !length(missing_app_packages())
+
+check_app_packages <- function(bayesian = FALSE, meta = FALSE) {
+  missing <- missing_app_packages(bayesian, meta)
+  if (length(missing)) stop("Generated apps need packages that are not installed",
+    if (meta) " (meta must be >= 7.0-0)", ": ",
+    paste(missing, collapse = ", "), ". Install them with install.packages(c(",
+    paste0('"', missing, '"', collapse = ", "), ")).", call. = FALSE)
+  invisible(TRUE)
+}
+
 #' Create the about text for the app
 #'
 #' This function is generally only called internally by [generate_shiny()].
@@ -19,16 +46,19 @@ models_use_meta <- function(code) {
 #' @param citation Citation requested by the author. Defaults to an empty string.
 #' @param osf_link Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.
 #' @param contact Contact information, typically email. Defaults to an empty string.
-#' @param list_packages Should all packages used by the app be listed on the About page? If TRUE, it list the packages
+#' @param list_packages Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 #' used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 #' a character vector with all packages to display.
+#' @param bayesian Is the optional Bayesian model enabled? If so, the default list includes bayesmeta.
+#' @param meta Does author model code use meta? If so, the default list includes it.
 #'
 #' @returns HTML code for the `About` panel of the Shiny app
 #'
 #' @keywords internal
 
 
-create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE) {
+create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE,
+                         bayesian = FALSE, meta = FALSE) {
   out <- glue::glue("<h3>Interactive multiverse meta-analysis of {dataset_name}</h3>
           <p><b>Last update:</b> {date}</p>
           {if (citation != '') glue::glue('<p><b>Citation:</b> {citation}</p>') else ''}
@@ -37,20 +67,16 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
           <p>Created with <a href='https://github.com/LukasWallrich/metaUI'>metaUI</a> v{utils::packageVersion('metaUI')}</p>
           ")
 
-  if (isTRUE(list_packages)) {
-    req_packages <- utils::packageDescription("metaUI") %>%
-      purrr::pluck("Imports") %>%
-      stringr::str_remove_all(stringr::regex("\\(.*?\\)", dotall = TRUE)) %>%
-      stringr::str_split_1(",|\n") %>%
-      stringr::str_trim() %>%
-      stringr::str_subset(".+")
+  if (list_packages == TRUE) {
+    req_packages <- app_dependencies(bayesian, meta)
   } else if (is.character(list_packages)) {
     req_packages <- list_packages
     list_packages <- TRUE
   }
 
-  if (isTRUE(list_packages)) {
-    package_versions <- purrr::map_chr(req_packages, \(p) utils::packageVersion(p) %>% as.character())
+  if (list_packages == TRUE) {
+    # generate_shiny() checks installation later and names any missing package.
+    package_versions <- purrr::map_chr(req_packages, \(p) tryCatch(as.character(utils::packageVersion(p)), error = function(e) "not installed"))
 
     HTML(paste0(
       out, "<h4>R packages used</h4><div class='metaui-packages'>",
@@ -92,6 +118,13 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'   be outside save_to_folder. Static generation never launches the app.
 #' @param design Optional settings from [app_design()]. Use [design_app()] to preview and export them.
 #' @param bayesian NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.
+#' @param study_info Optional study information shown to readers: a data frame (or CSV path) with one row per
+#' study and a `study` column matching the study IDs, as returned by [fetch_study_metadata()] or written by the
+#' authors. Recognised columns: `doi`, `url`, `title`, `authors` (separated by "; "), `year`, `journal`, `volume`,
+#' `issue`, `pages`, `abstract` (paragraphs separated by blank lines), `abstract_licence` (licence URL),
+#' `abstract_note`, `metadata_source`, `retrieved`, plus `status` and `abstract_policy` from the lookup. Studies in
+#' the effect-size list then open a details row. It is stored in the app; the app never fetches metadata. Include
+#' only abstracts you may republish.
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
 #' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA and static_folder is NULL, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.
 #' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
@@ -109,7 +142,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'
 #' @returns With static_folder supplied, invisibly returns the static site path.
 #'   Otherwise, with launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
-#' @examples
+#' @examplesIf metaUI:::metaUI_app_ready()
 #' raw <- data.frame(study = letters[1:6], d = c(.1, .3, -.1, .4, .2, .5),
 #'                   vi = c(.02, .03, .02, .04, .01, .05))
 #' app_data <- prepare_data(raw, "study", "d", variance = "vi")
@@ -122,7 +155,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         models = get_model_tibble, primary_model = NULL, filter_popups = list(),
         save_to_folder = NA, launch_app = is.na(save_to_folder) && is.null(static_folder), ...,
-        options = list(), overwrite = FALSE, bayesian = NULL, design = NULL,
+        options = list(), overwrite = FALSE, bayesian = NULL, design = NULL, study_info = NULL,
         static_folder = NULL) {
 
   if (!is.null(static_folder)) {
@@ -140,14 +173,16 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 
    # Evaluate so that it is TRUE when save_to_folder is NA initially
    launch_app <- launch_app
-   about <- create_about(dataset_name, ...)
+   about <- create_about(dataset_name, ..., bayesian = !is.null(bayesian))
 
   if (is.na(save_to_folder)) {
     save_to_folder <- tempfile()
   }
 
   if (!is.data.frame(dataset)) stop("Dataset must be a data.frame or tibble")
+  check_removed_example(dataset)
   metaUI_validate_prepared(dataset)
+  if (!is.null(study_info)) study_info <- validate_study_info(study_info, dataset)
 
   if (is.na(eff_size_type_label)) {
     eff_size_type_label <- if (dataset$metaUI__es_type[1] == "ZCOR") "Fisher z (model summaries: r)" else dataset$metaUI__es_type[1]
@@ -172,22 +207,15 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 
   uses_meta <- models_use_meta(c(models_to_run$code,
     if (is.character(models)) readLines(models, warn = FALSE)))
-  if (uses_meta) {
-    if (!requireNamespace("meta", quietly = TRUE) || utils::packageVersion("meta") < "7.0.0")
-      stop("meta >= 7.0-0 is required by the author model code.")
-    about_args <- list(...)
-    if (is.null(about_args$list_packages) || identical(about_args$list_packages, TRUE))
-      about_args$list_packages <- c(declared_imports(), "meta")
-    about <- do.call(create_about, c(list(dataset_name = dataset_name), about_args))
-  }
+  if (uses_meta) about <- create_about(dataset_name, ..., bayesian = !is.null(bayesian), meta = TRUE)
   bayesian <- metaUI_bayesian_options(bayesian, dataset$metaUI__es_type[1])
   package_models <- identical(models_to_run, get_model_tibble())
   if (!is.null(bayesian)) {
-    if (!requireNamespace("bayesmeta", quietly = TRUE)) stop("Install optional bayesmeta before building a Bayesian app.")
     if (is.character(models)) stop("For Bayesian authoring, supply model specifications instead of a model file.")
     models_to_run <- dplyr::bind_rows(models_to_run, metaUI_bayesian_spec(bayesian))
   }
   opts$bayesian <- bayesian
+  check_app_packages(!is.null(bayesian), uses_meta)
   if (!is.null(primary_model) && (!is.character(primary_model) || length(primary_model) != 1L ||
       sum(models_to_run$name == primary_model) != 1L))
     stop("primary_model must name exactly one model in models_to_run: ", paste(models_to_run$name, collapse = "; "))
@@ -228,6 +256,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
          direction_exclusions = attr(selected, "direction_exclusions"),
          note = "Normal Wald p-values; N not required for evidential-value plot. Author must justify selection against hypotheses/designs.")
   }, error = function(e) list(status = "unsupported", reason = conditionMessage(e)))
+  report$study_info <- study_info_report(study_info, dataset)
   report$zcurve <- "First effect per study; normal Wald |effect/SE|, not supplied source p-values. Independence across study IDs is an author assumption."
   about <- paste0(about, "<h4>Input and analysis contract</h4><pre>",
                   htmltools::htmlEscape(jsonlite::toJSON(report, auto_unbox = TRUE, pretty = TRUE, na = "null"), attribute = TRUE), "</pre>")
@@ -261,6 +290,9 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   if (!is.null(opts$design)) jsonlite::write_json(opts$design, file.path(save_to_folder, "design.json"), auto_unbox = TRUE, pretty = TRUE)
   if (is.null(opts$design) && file.exists(file.path(save_to_folder, "design.json")))
     unlink(file.path(save_to_folder, "design.json"))
+  if (!is.null(study_info)) saveRDS(study_info, file.path(save_to_folder, "study_info.rds"))
+  if (is.null(study_info) && file.exists(file.path(save_to_folder, "study_info.rds")))
+    unlink(file.path(save_to_folder, "study_info.rds"))
   file.copy(system.file("template_code", "dmetar_contributions.R", package="metaUI"),
             file.path(save_to_folder, "dmetar_contributions.R"), overwrite = TRUE)
   if (is.character(models)) {
@@ -279,12 +311,14 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
             file.path(save_to_folder, "bayesian.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "selection_links.R", package = "metaUI"),
             file.path(save_to_folder, "selection_links.R"), overwrite = TRUE)
+  file.copy(system.file("template_code", "code_export.R", package = "metaUI"),
+            file.path(save_to_folder, "code_export.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "computations.R", package = "metaUI"),
             file.path(save_to_folder, "computations.R"), overwrite = TRUE)
   file.copy(system.file("template_code", "analysis.R", package = "metaUI"),
             file.path(save_to_folder, "analysis.R"), overwrite = TRUE)
   jsonlite::write_json(report, file.path(save_to_folder, "validation.json"), auto_unbox = TRUE, pretty = TRUE, na = "null")
-  dependencies <- sort(unique(c(declared_imports(), if (uses_meta) "meta", "psych", if (!is.null(bayesian)) "bayesmeta")))
+  dependencies <- app_dependencies(!is.null(bayesian), uses_meta)
   versions <- data.frame(package = dependencies,
     version = vapply(dependencies, function(x) as.character(utils::packageVersion(x)), character(1)))
   utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
@@ -310,7 +344,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 #' @noRd
 
 generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL, uses_meta = FALSE) {
-  req_packages <- c(declared_imports(), if (uses_meta) "meta", if (!is.null(bayesian)) "bayesmeta")
+  req_packages <- app_dependencies(!is.null(bayesian), uses_meta)
 
 
   meta_check <- if (uses_meta) "if (utils::packageVersion('meta') < '7.0.0') stop('meta >= 7.0-0 is required; install dependencies before launch.')" else ""
@@ -361,9 +395,15 @@ generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL, uses_
   source(file.path(f, 'analysis.R'), local = TRUE)
   source(file.path(f, 'computations.R'), local = TRUE)
   source(file.path(f, 'selection_links.R'), local = TRUE)
+  source(file.path(f, 'code_export.R'), local = TRUE)
+  metaUI_app_dir <- normalizePath(f) # code export copies models.R and analysis code from here
   source(file.path(f, 'bayesian.R'), local = TRUE)
   source(file.path(f, 'models.R'), local = TRUE)
   source(file.path(f, 'labels_and_options.R'), local = TRUE)
+  # Optional study details written at build time (see metaUI::fetch_study_metadata()); never fetched here.
+  metaUI_study_info <- if (file.exists(file.path(f, 'study_info.rds'))) readRDS(file.path(f, 'study_info.rds')) else NULL
+  metaUI_study_details_html <- if (is.null(metaUI_study_info)) character() else metaUI_study_details(metaUI_study_info)
+  metaUI_study_reference_text <- if (is.null(metaUI_study_info)) character() else metaUI_study_reference(metaUI_study_info)
   source(file.path(f, 'dmetar_contributions.R'), local = TRUE)
   server <- source(file.path(f, 'server.R'), local = TRUE) %>% purrr::pluck('value')
   ui <- source(file.path(f, 'ui.R'), local = TRUE)  %>% purrr::pluck('value')

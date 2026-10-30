@@ -10,7 +10,9 @@ create_about(
   citation = "",
   osf_link = "",
   contact = "",
-  list_packages = TRUE
+  list_packages = TRUE,
+  bayesian = FALSE,
+  meta = FALSE
 )
 }
 \arguments{
@@ -24,9 +26,13 @@ create_about(
 
 \item{contact}{Contact information, typically email. Defaults to an empty string.}
 
-\item{list_packages}{Should all packages used by the app be listed on the About page? If TRUE, it list the packages
+\item{list_packages}{Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 a character vector with all packages to display.}
+
+\item{bayesian}{Is the optional Bayesian model enabled? If so, the default list includes bayesmeta.}
+
+\item{meta}{Does author model code use meta? If so, the default list includes it.}
 }
 \value{
 HTML code for the \code{About} panel of the Shiny app

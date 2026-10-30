@@ -33,6 +33,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
 
       sample_overview_main <- HTML("<h3>Sample breakdown</h3>")
       sample_table <- HTML("<h3>Effect sizes</h3>")
+      study_details_hint <- HTML("<p class=\'metaui-note\'>Select a study name for its reference and, where the authors could include it, its abstract.</p>")
       sample_moderation_main <- HTML("<h3>Simple tests of moderation (ML)</h3>")
       sample_moderation_notes <- HTML("<p class=\'metaui-note\'><i>Notes:</i> One moderator at a time; correlations between moderators are ignored, so these tests are exploratory. k = number of effects.</p>")
 
@@ -56,7 +57,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       results_panel <- function(...) tagList(
         conditionalPanel("!(input.go > 0)", div(class = "metaui-empty", role = "status", not_analysed)),
         conditionalPanel("input.go > 0", ...))
-      data_help <- HTML("<p class=\'metaui-help-text\'>The workbook holds all rows (not only the selection), the last applied filters and the last results. With Bayesian models, it waits for two extra prior-sensitivity fits.<br/>Uploads must be workbooks from this app, with the same columns and effect scale; rows may be edited. Saved filters are restored and analysed.</p>")
+      data_help <- HTML("<p class=\'metaui-help-text\'>The workbook holds all rows (not only the selection), the last applied filters and the last results. With Bayesian models, it waits for two extra prior-sensitivity fits.<br/>Uploads must be workbooks from this app, with the same columns and effect scale; rows may be edited. Saved filters and the equivalence bound are restored and analysed.</p><p class=\'metaui-help-text\'>The R script and Quarto file reproduce the applied selection and its model rows from the workbook of the same analysis, without metaUI. They do not reproduce the plots or diagnostic tabs.</p>")
 
 
   ')
@@ -234,10 +235,15 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
           textOutput("apply_state")),
         uiOutput("share_selection"), textOutput("link_notice"),
         tags$details(class = "metaui-help metaui-data-tools",
-        tags$summary("Download or upload data"),
+        tags$summary("Download data or code, upload data"),
         actionButton("downloadData", "Download .xlsx", icon = icon("download")),
+        div(class = "metaui-code-actions", tags$span(class = "metaui-code-label", "Code for the applied selection"),
+          actionButton("downloadCode", "R script", icon = icon("code")),
+          actionButton("downloadQuarto", "Quarto file", icon = icon("file-code"))),
         conditionalPanel("false",
-          downloadButton("executeDownload", "Execute the download")
+          downloadButton("executeDownload", "Execute the download"),
+          downloadButton("executeCodeDownload", "Execute the R script download"),
+          downloadButton("executeQuartoDownload", "Execute the Quarto download")
         ),
       fileInput("uploadData", "Upload a metaUI .xlsx",
                 multiple = FALSE,
@@ -286,6 +292,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             {if (any_filters) "sample_overview_main," else ""}
             {generate_sample_description_ui(data, any_filters)}
             sample_table,
+            if (!is.null(metaUI_study_info)) study_details_hint,
             DT::dataTableOutput("sample_table")
             )
           ),
@@ -787,7 +794,7 @@ glue_string <- ('
     out <- df %>%
       dplyr::select(dplyr::any_of("metaUI__article_label"),
         Study =
-          "metaUI__study_id", N = "metaUI__N",
+          "metaUI__study_id", metaUI__key = "metaUI__study_id", N = "metaUI__N",
         "Effect size" = "metaUI__effect_size", "Source p (primary)" = "metaUI__pvalue",
         dplyr::starts_with("metaUI__filter_"), dplyr::any_of("metaUI__url")
       ) %>%
@@ -807,13 +814,21 @@ glue_string <- ('
         as.character(tags$a(href = url, target = "_blank", rel = "noopener", url)), character(1))
     }
 
+    # Studies with author-supplied information get a disclosure button; metaui.js shows
+    # the hidden details column as a child row. Nothing is fetched while the app runs.
+    cells <- metaUI_study_cells(out$Study, out$metaUI__key, metaUI_study_info, metaUI_study_details_html, metaUI_study_reference_text)
+    out$Study <- cells$label
+    out$metaUI__details <- cells$details
+    out$metaUI__key <- NULL
+
     # Round non-integer numeric columns: effect sizes to 3 decimals, moderators to 2
     decimals <- names(out)[vapply(out, function(x) is.numeric(x) && any(x != round(x), na.rm = TRUE), logical(1))]
     decimals <- setdiff(decimals, "Effect size")
 
     table <- out %>% DT::datatable(
-      rownames = FALSE, options = list(scrollX = TRUE),
-      escape = setdiff(names(out), "URL"), # URL holds links built (and escaped) above
+      rownames = FALSE,
+      options = list(scrollX = TRUE, columnDefs = list(list(targets = ncol(out) - 1, visible = FALSE, searchable = FALSE))),
+      escape = setdiff(names(out), c("URL", "Study", "metaUI__details")), # built (and escaped) above
       caption = tags$caption(
         style = "caption-side: bottom; text-align: left; margin: 8px 0;",
         glue::glue("Effect size: {metaUI_eff_size_type_label}")
@@ -843,7 +858,7 @@ glue_string <- ('
         ggplot2::geom_smooth(data = df, ggplot2::aes(y = metaUI__effect_size, x = mod, color = NULL), formula = y ~ x, method = "lm") +
         ggplot2::geom_hline(yintercept = 0, linetype = "dashed")
     } else {
-      p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = forcats::fct_rev(mod))) +
+      p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = factor(mod, levels = rev(levels(as.factor(mod)))))) +
         ggplot2::geom_violin(fill = NA) +
         ggplot2::theme_bw() +
         ggplot2::geom_jitter(width = .1, alpha = .25) +
@@ -918,17 +933,13 @@ glue_string <- ('
     model <- moderator_model()
     df <- df_filtered()
     if (is.numeric(df[[input$moderator]])) {
-      modtable <- psych::describe(df[input$moderator] %>% as.data.frame(), fast = TRUE) # [c(2:5, 8, 9)]
-      k_moderator <- modtable$n
-      modtable[, 2:6] <- round_(as.data.frame(modtable)[, 2:6], digits = 2)
-      modtable <- modtable %>% dplyr::rename(k = n)
-      modtable$k <- k_moderator
+      x <- df[[input$moderator]]
+      modtable <- data.frame(k = sum(!is.na(x)),
+                             round_(data.frame(mean = mean(x, na.rm = TRUE), sd = stats::sd(x, na.rm = TRUE),
+                                               min = min(x, na.rm = TRUE), max = max(x, na.rm = TRUE)), digits = 2))
       # Three significant digits: a per-unit slope such as -0.0027 must not read as -0.00
       modtable$Intercept <- format(signif(model$b[1], 3), scientific = FALSE)
       modtable$`&beta;` <- format(signif(model$b[2], 3), scientific = FALSE)
-      modtable$vars <- NULL
-      modtable$range <- NULL
-      modtable$se <- NULL
 
       modtable <- modtable %>% dplyr::mutate(Moderator = input$moderator %>% stringr::str_remove("metaUI__filter_"),
                                             dplyr::across(dplyr::everything(), as.character))  %>%
@@ -1171,7 +1182,8 @@ glue_string <- ('
       filters = filter_selections,
       computations = if (length(metaUI_computation_specs(metaUI__df)) && nrow(df_filtered())) computations_comparison() else data.frame(computation = "As supplied"),
       bayesian_sensitivity = if (!is.null(bayesian_options) && nrow(df_filtered())) bayesian_sensitivity() else data.frame(status = "not enabled"),
-      equivalence = if (nrow(df_filtered())) interval_assessment() else data.frame(assessment = "Not assessed", reason = "No eligible rows selected"),
+      equivalence = if (nrow(df_filtered())) interval_assessment() else data.frame(assessment = "Not assessed", reason = "No eligible rows selected",
+        bound = if (is.null(bound <- tryCatch(chosen_bound(), error = function(e) NULL))) NA_real_ else bound),
       provenance = data.frame(field = c("uploaded", "file", "z_rule", "primary_model"),
         value = c(as.character(!is.null(upload_info)),
           if (is.null(upload_info)) "built dataset" else upload_info$file,
@@ -1181,9 +1193,11 @@ glue_string <- ('
   })
 
 
+  workbook_name <- function() paste0(Sys.Date(), "-", gsub(" ", "_", dataset_name), "-metaUIdata.xlsx")
+
   output$executeDownload <- downloadHandler(
     filename = function() {
-      paste0(Sys.Date(), "-", gsub(" ", "_", dataset_name), "-metaUIdata.xlsx")
+      workbook_name()
     },
     content = function(file) {
       writexl::write_xlsx(data_list(), file)
@@ -1206,6 +1220,41 @@ glue_string <- ('
 
 }
 )
+
+  # REPRODUCTION CODE -------------------------------------------------------
+  # Script for the applied selection; it reads the workbook of the same analysis.
+  reproduction_code <- function(format) {
+    req(is.null(state_values$pending_upload_filters))
+    df <- df_filtered()
+    metaUI_reproduction_code(format, applied = attr(df, "metaUI_applied_filters"), filters = filters,
+      source = attr(df, "metaUI_source_data"), built = metaUI__df, models = models_to_run,
+      estimates = if (nrow(df)) estimatesfiltered() else NULL,
+      settings = list(dataset_name = dataset_name, workbook = workbook_name(), primary_model = primary_model,
+        correlation = correlation_dependent, aggregation = aggregation_method[1],
+        bound = tryCatch(chosen_bound(), error = function(e) NULL), known_models = known_interval_models,
+        upload = attr(df, "metaUI_upload_info"), selected_rows = nrow(df),
+        exported = format(Sys.time(), "%Y-%m-%d %H:%M %Z")),
+      app_dir = metaUI_app_dir, env = environment(metaUI_fit_models))
+  }
+  code_name <- function(extension) sub("metaUIdata[.]xlsx$", paste0("metaUI-selection.", extension), workbook_name())
+  output$executeCodeDownload <- downloadHandler(filename = function() code_name("R"),
+    content = function(file) writeLines(reproduction_code("R"), file, useBytes = TRUE))
+  output$executeQuartoDownload <- downloadHandler(filename = function() code_name("qmd"),
+    content = function(file) writeLines(reproduction_code("qmd"), file, useBytes = TRUE))
+  outputOptions(output, "executeCodeDownload", suspendWhenHidden = FALSE)
+  outputOptions(output, "executeQuartoDownload", suspendWhenHidden = FALSE)
+  # Same gate as the workbook, which the code needs.
+  request_code <- function(target) {
+    if (!is.null(state_values$pending_upload_filters)) {
+      showModal(modalDialog(title = "Restoring filters", "Wait until the uploaded selection has been analysed."))
+    } else if (isTRUE(state_values$ever_analyzed)) {
+      shinyjs::runjs(paste0("$(\'#", target, "\')[0].click();"))
+    } else {
+      showModal(modalDialog(title = "Not analysed yet", HTML("The code reproduces model results; click <i>Analyze data</i> first.")))
+    }
+  }
+  observeEvent(input$downloadCode, request_code("executeCodeDownload"))
+  observeEvent(input$downloadQuarto, request_code("executeQuartoDownload"))
 
   # UPLOAD ----------------------------------------------------------------
 
@@ -1257,7 +1306,7 @@ glue_string <- ('
         if (length(value) != 1L || is.na(value) || !value %in% metaUI_computations(metaUI__df)) stop("Unknown saved computation.")
         filter_values$computation <- data.frame(selection = value)
       }
-      list(data = df, filters = filter_values)
+      list(data = df, filters = filter_values, bound = metaUI_saved_bound(input$uploadData$datapath, sheets))
     }, error = function(e) e)
     if (inherits(upload, "error")) {
       showModal(modalDialog(title = "Invalid upload", conditionMessage(upload)))
@@ -1272,7 +1321,8 @@ glue_string <- ('
     state_values$upload_info <- list(file = basename(input$uploadData$name), rows = nrow(upload$data), upload_number = upload_number,
       z_rule = derivation$rule, z_disagreements = derivation$supplied_z_disagreements,
       checkbox_note = "Missing-value choices restored (older files: missing values included).")
-    filter_values <- upload$filters
+    # The bound does not refit, so it can be set before the restored analysis.
+    updateNumericInput(session, "sesoi", value = upload$bound)
     restore_filters(upload$filters, upload$data, "upload")
   })
 

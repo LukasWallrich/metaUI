@@ -1,148 +1,163 @@
-# metaUI 0.3.0 (development)
+# metaUI (development version)
 
-* Add one-step static publishing through `generate_shiny(static_folder = ...)`
-  and the JSON `static_folder` field; use `export_static()` to re-export edited apps.
+* Publish apps without a Shiny server. `generate_shiny(static_folder = ...)` and
+  the JSON `static_folder` field write a static website that runs R in the
+  reader's browser (shinylive/webR); `export_static()` re-exports an app after
+  hand edits. Readers see the authors' full-data results at once while R loads.
+  Selection links, downloads and the Summary plot work in the static site, and
+  `include_sources = TRUE` bundles the source code of copyleft components for
+  archival deposits. Requires the suggested shinylive package.
+* Generated apps use metafor for trim-and-fill, the funnel plot, Egger's test and
+  the Dannheim source-reference fit. Editable helpers in `analysis.R` reproduce
+  meta's procedures (common-effect L0 trimming, ties and rounding, the 50-iteration
+  return, ML/REML with unmodified Hartung-Knapp intervals, Egger's three-study
+  guard), so estimates are unchanged. meta is needed only when author model code
+  uses it.
+* Generated apps can download an R script or Quarto file that reproduces the
+  applied selection (filters, missing-value choices, effect-size computation and
+  equivalence bound) and its model rows from the workbook of the same analysis,
+  including uploaded data. The code copies the app's `models.R` (or, if the file
+  no longer matches the loaded models, their table) and the fitting functions it
+  uses, runs without metaUI, records the package versions the app
+  used (with an optional, commented-out groundhog call) and compares its results
+  with the app's. Plots and diagnostic tabs are not reproduced.
+* Uploading a workbook now restores its equivalence bound, as selection links
+  already did. Workbooks from empty selections also record the bound.
+* metaUI no longer depends on forcats, and generated apps no longer need psych;
+  base R replaces both. The R Markdown skeleton's example recode now treats
+  `-999` as missing (shown as `(Missing)`) instead of a level named "NA".
 
 # metaUI 0.2.0
 
-## Author design helper
+This release consolidates all changes since 0.1.1, including the unreleased
+0.1.2 development versions.
 
-- `design_app()` previews colours, fonts, type size, spacing and corners and exports
-  R/JSON settings. `app_design()` validates settings and contrast.
-- `generate_shiny(design = ...)` and the JSON `design` field apply those settings
-  to generated apps. Existing apps/configurations keep their default appearance.
+## Breaking changes
 
-## Metafor estimation in generated apps
+* Packages used only by generated apps (DT, ggplot2, meta, plotly, psych,
+  puniform, readxl, robumeta, shinycssloaders, shinyjs, weightr, writexl and
+  zcurve) moved from Imports to Suggests. `generate_shiny()` names any that are
+  missing, with the command to install them.
+* `generate_shiny()` and `build_app()` refuse a nonempty output folder unless
+  `overwrite = TRUE`, so hand edits to a generated app are not overwritten by
+  accident. `overwrite = TRUE` replaces all generated files, including the
+  editable `www/metaui.css` and `www/metaui.js`; build into a fresh folder when
+  hand edits must be kept.
+* Generated apps check their dependencies at startup but no longer install
+  packages; `dependencies.csv` records the versions used for the build.
+* Correlations must declare their variance scale, and directional bias analyses an
+  explicit direction. COR is fitted via Fisher's z with a delta-method variance,
+  ZCOR is not transformed twice, and summaries are back-transformed once.
+* Multilevel models nest effects within genuine per-effect IDs; display labels may
+  now repeat. Summed sample sizes are no longer inferred.
+* Generated apps no longer use shinyBS or waffle: filter popups became inline help
+  and the waffle chart became a categorical count bar chart.
 
-- Generated apps use metafor for trim-and-fill, funnel plots, Egger regression,
-  and the Dannheim source-reference fit. Ordinary-data estimates and intervals
-  are identical within numerical tolerance (1e-8). Editable helpers preserve
-  common-effect L0 trimming, average ties, rounding, the 50-iteration return,
-  ML/REML with unmodified Hartung-Knapp intervals, and Egger's three-study guard.
-- meta is optional and checked only when author model code explicitly uses it.
+## New features
 
-## Other changes
+* Study details in the list of effect sizes. `generate_shiny(study_info = ...)`
+  adds a disclosure button to each study; it opens a row with an APA-style
+  reference, a button that copies it, the DOI link and, where permitted, the
+  abstract. `fetch_study_metadata()` looks up DOIs in Crossref while authoring,
+  uses OpenAlex for licences and abstracts that Crossref lacks, reports DOIs it
+  could not match and can cache results. Abstracts are kept when the article is
+  published under a Creative Commons licence (including ND and NC terms), CC0 or
+  the Public Domain Mark; `abstracts = "exclude_nc"` drops NC licences for
+  commercial apps, and `abstracts = "all"` keeps every abstract found. In schema
+  version 2 configurations, `study_info` is a CSV path or a lookup object
+  (`{"cache": "study-metadata.csv"}`) that `build_app()` runs into that cache.
+  Generated apps never query external services.
 
-* Add author-defined effect-size computations with explicit scale/variance contracts,
-  consistent row selection, comparisons, provenance and workbook restoration.
-* Add opt-in deterministic Bayesian normal-normal analysis, posterior median and
-  central credible intervals, disclosed priors and heterogeneity-prior sensitivity.
-* Share applied selections through build-specific validated URLs; uploaded datasets
-  remain workbook-only, and restoration waits for browser acknowledgement.
-* Render the z-score slider container as a plain `div` so it is no longer greyed out.
-* In the list of effect sizes, round effect sizes to three decimals and other
-  non-integer numeric columns to two, and render URL/DOI columns as links rather
-  than raw HTML.
-* Write categorical filter levels into the generated `ui.R` as escaped R strings;
-  a level containing a double quote previously stopped the app from starting.
-* Show a clear message when the random-effects model behind the funnel plot and
-  Egger's test does not converge, instead of a raw error. Keep the funnel plot at a
-  fixed height so it recovers after an error, and stop widget error messages
-  overlapping the content below them.
-* Remove the unused helpers `signif_floor()`, `signif_ceiling()` and `allglobal()`.
-* Standardise the outlier violin's z-axis against the built dataset, as the z-score
-  filter does, and align it with the effect-size axis. Show every moderation-table
-  row (paging hid levels beyond the 10th and the kurtosis row). Label heterogeneity
-  variance components as sigma-squared, rounded to four decimals.
-* Extend declarative authoring to schema version 2, retaining version 1 behavior.
-* Make package examples runnable without launching an app and prepare release checks.
-* Optimise p-curve without changing results and reuse compatible fitted objects.
-  Disclose session-local exact-selection caching and its opt-out for custom code.
-* Validate and persist uploads, restore picker/missing-value choices, widen slider
-  ranges, recompute descriptive z against the built reference, and disclose all
-  filter exclusions and uploaded provenance. Reject inconsistent scale inputs.
-* Report z-curve estimator refusals/warnings; correct Egger residual variance;
-  restore p-curve process options and show unidentified singleton variance splits.
-* Add a CC-BY empirical source-reference example and generated-app/reference tests.
-* Record measured before/after performance and clean hosted Linux checks.
-* Remove `inst/extdata/barroso2021.csv` because its source redistribution terms
-  could not be verified; tutorials now use the attributed CC-BY Dannheim example.
-  This is an explicit data-path removal, not a silent replacement of that analysis.
-* Check Linux, macOS and Windows in CI, with a real generated-app Chromium
-  smoke test; keep the hidden download handler active for programmatic downloads.
-* Generated apps explain their state: result tabs say "No results yet" before the
-  first analysis, a results strip names the data and selection behind the shown
-  results, and filter edits not yet analysed are flagged until Analyze data is
-  clicked. Models that were not estimated are listed beside the estimate plot with
-  their reasons. A collapsible note derives scale, declared direction and
-  aggregation assumptions from the data contract. Model code, estimates and
-  downloads are unchanged.
-* Authors can declare one `primary_model` (in `generate_shiny()` or the JSON
-  config). Apps show it first as the authors' primary analysis, label other rows as
-  explorations, and report why it is unavailable instead of substituting another
-  model. The Dannheim example declares its source-reference row.
-* Slider bounds round outward to a round tick interval with an explicit integer
-  grid, fixing overlapping end labels (Shiny's fractional tick counts) and
-  non-integer bounds such as 2000.992; a small script hides any remaining grid-label
-  collisions in narrow sidebars or after uploads.
-* Fix pre-existing bugs found in a cross-view QA pass: the outlier violin plot failed when no
-  outliers were drawn and moderation slopes were rounded to "-0.00". Correlation summary plots label the
-  back-transformed r scale.
-* Generated apps include editable `www/metaui.css` and `www/metaui.js` (responsive
-  tables and plots, WCAG AA text contrast, visible keyboard focus including sliders,
-  a skip link to results, compact empty/error states).
-* Replace shinyBS filter popups with expandable inline help, supporting keyboard,
-  touch and Escape while preserving author-provided HTML and clickable links. Newly generated apps no longer require shinyBS.
-* Repeat the selected sample summary on the Sample tab with separate Shiny output
-  IDs backed by the same reactive summary, preserving the welcome dialog.
-* Show forest row-limit messages as HTML before creating the plot output;
-  validate the configured limit as a positive finite whole number.
-* Document console blocking on interactive launch and the build-only alternative.
-* Add a synthetic correlation example with an independent Fisher-z reference fit.
+* The bundled Coles et al. (2019) facial-feedback data (`inst/extdata/coles2019.csv`)
+  include the source's outcome-type column `paq` (affective judgement versus
+  emotional experience), so apps can filter by it.
+
+* `build_app()` creates apps headlessly from a JSON configuration with a versioned
+  schema (version 2 adds computations, Bayesian analysis and design; version 1
+  behaviour is retained).
+* `design_app()` previews colours, fonts, type size, spacing and corners and exports
+  R/JSON settings; `app_design()` validates settings and contrast. Pass them via
+  `generate_shiny(design = ...)` or the JSON `design` field. Apps built without a
+  design keep the default appearance.
+* Authors can declare one `primary_model`. Apps show it first as the authors'
+  primary analysis, label other rows as explorations, and report why it is
+  unavailable instead of substituting another model.
+* Author-defined effect-size computations, with explicit scale and variance
+  contracts, consistent row selection, comparisons, provenance and workbook
+  restoration.
+* Opt-in Bayesian normal-normal analysis (requires the suggested bayesmeta
+  package): posterior medians, central credible intervals, disclosed priors and
+  heterogeneity-prior sensitivity.
+* Readers can share applied selections through build-specific, validated URLs.
+  Uploaded datasets remain workbook-only.
+* Practical-equivalence assessment of intervals against a reader-chosen symmetric
+  bound (no default). Changing the bound does not refit models; downloads record
+  the assessment and bound.
 * Forest plots show observed effects on the displayed scale, compare available
-  multilevel/RVE summary intervals, and export PDF, PNG and CSV (both scales in the CSV).
-* Add practical-equivalence interval assessment with a reader-chosen symmetric
-  bound (no default), strict containment, threshold values and model limitations.
-  Bound changes do not refit models; downloads record the assessment and bound.
-* No public release or tag is created.
+  multilevel/RVE summary intervals, and export to PDF, PNG and CSV.
+* `generate_shiny()` gained `options` (Shiny theme, forest-plot row limit,
+  checkbox/selection-list threshold); `prepare_data()` gained `arrange_filters`.
+  Apps can be created without any filters or moderators.
 
-# metaUI 0.1.2.9000 (correctness candidate)
+## Generated app interface
 
-* Use genuine per-effect IDs for all multilevel nesting; display labels may repeat.
-* Keep optional p/N rows under default preparation, validate required inputs, and
-  report excluded rows and derivations. Summed N is no longer inferred.
-* Require explicit correlation variance scales and directional bias assumptions.
-  Fit COR via Fisher z with delta-method variance; preserve ZCOR without a second
-  transform; back-transform model summaries once. Other panels retain fitting scale.
-* Report model applicability, failures, warnings, aggregation, and fitting values.
-  Correct REML heterogeneity output and remove meaningless multilevel tau2.
-* Add JSON `build_app()` and versioned schema. Nonempty output is refused by
-  default; preserve hand edits by building a fresh destination.
-* Generated apps check dependencies without installing packages. Record build
-  versions and bundled attribution; replace archived waffle dependency with a
-  categorical count bar chart and use an original SVG favicon.
-* Correct the tutorial's Wald p calculation and Fisher-z labels.
-* Add independent statistical references, headless server tests, and read-only CI.
-* Correct slider rounding so default bounds retain all eligible rows.
-* Reuse exact compatible multilevel/RVE fits in diagnostics. Session-local,
-  three-entry exact-input caching speeds repeated selections; `cache_hit` and
-  original fit timings are retained. Custom models default to no caching;
-  `options$fit_cache_entries = 0` disables it. No cross-reader cache.
-* Deduplicate identical p-curve noncentrality solves without changing numerical
-  results or selection rules; restore process options after p-curve calls.
-* Keep uploaded data in session state, validate their contract, clear cached
-  results on upload, and reject stale globals when loading author model files.
-* Report singleton-study variance splits as unidentified, and fix model plot
-  ordering and Plotly tooltip warnings.
-* Add a tiny CC-BY Dannheim mental-health pool with exact member provenance,
-  a source-reference REML/Hartung–Knapp fit, and labelled explorations.
-* Verify Linux CI, including fresh dependencies; add current/previous R matrix.
-* Existing launch_app=FALSE remains supported. Agent skill, public deployment,
-  paper draft, and runtime rewrite remain deferred.
-
-# metaUI 0.1.2 (under development)
-
-## Minor enhancements
-* generate_shiny() has gained an `options` argument to allow for more customization of the app. Currently it allows setting a Shiny theme, a limit for the number of rows in a forest plot, and a threshold for switching from checkboxes to selection lists based on the number of moderator levels, with sensible defaults.
-* prepare_data gained an argument `arrange_filters` to allow for the ordering of filters in the app. It now defaults to ordering them in the order they are passed into the function, but this can be changed to alphabetical or no ordering (in which case the order of columns determines their position)
-* Added the ability to create an app without any filters/moderators
-* Now shows "(Missing)" level only where there are any missing values in that filter/moderator - unless
+* The interface is reorganised around selecting evidence, running models and
+  reading results. A status bar leads with selected and excluded counts, filter
+  changes not yet analysed are flagged until Analyze data is clicked, and result
+  tabs say when no analysis has been run. Routine instructions and repeated
+  explanations were cut or moved into disclosures; scientific warnings,
+  provenance and model distinctions remain visible.
+* Models that were not estimated are listed with their reasons. A collapsible note
+  derives scale, declared direction and aggregation assumptions from the data
+  contract. Model applicability, failures, warnings and fitting values are
+  reported, and z-curve refusals and warnings are shown.
+* Generated apps include editable `www/metaui.css` and `www/metaui.js`: responsive
+  tables and plots, WCAG AA text contrast, visible keyboard focus, and a skip link
+  to results.
+* Uploads are validated, kept in session state and clear cached results. Downloads
+  contain the full current data, applied selections, selected summary and
+  provenance, and wait for pending restorations.
+* Slider bounds round outward to a round tick interval so default bounds retain all
+  eligible rows and end labels no longer overlap.
+* The effect-size list rounds effect sizes to three decimals and other numeric
+  columns to two, and shows URL/DOI columns as links. A "(Missing)" level appears
+  only where a filter has missing values.
 
 ## Bug fixes
-* Corrected random intercept specification in rma.mv (and added sparse = TRUE to speed up model fitting)
-* Fixed bug in describing moderators where "Other"-category already existed
-* Fixed creation of code to install required packages and added check to ensure that filters are factors or numeric (#28)
-* Waffle plots in sample description no longer run out of colors in the presence of 11 categories.
+
+* Corrected the random-intercept specification in `rma.mv()` (now with
+  `sparse = TRUE`), REML heterogeneity output, and Egger residual variance.
+  Meaningless multilevel tau² is no longer shown; singleton-study variance splits
+  are reported as unidentified.
+* Optional p and N columns no longer drop rows under default preparation; required
+  inputs are validated, and excluded rows and derivations are reported.
+* Categorical filter levels containing a double quote no longer stop the app from
+  starting.
+* A non-converging random-effects model behind the funnel plot and Egger's test
+  now gives a clear message instead of a raw error.
+* The outlier violin plot is standardised against the built dataset and no longer
+  fails when no outliers are drawn; moderation slopes are no longer rounded to
+  "-0.00"; all moderation-table rows are shown.
+* Correct the tutorial's Wald p calculation and Fisher-z labels.
+* Fixed describing moderators where an "Other" category already existed, and
+  checking that filters are factors or numeric (#28).
+
+## Performance
+
+* P-curve deduplicates identical noncentrality solves without changing results.
+* Compatible multilevel/RVE fits are reused across diagnostics, and a session-local
+  three-entry cache speeds repeated selections. Custom models default to no
+  caching; `options$fit_cache_entries = 0` disables it. Measurements are in
+  [validation/performance-optimisation.md](https://github.com/LukasWallrich/metaUI/blob/main/validation/performance-optimisation.md)
+  in the source repository.
+
+## Testing
+
+* New examples: the CC-BY Dannheim mental-health pool with a source-reference
+  REML/Hartung-Knapp model, and a synthetic correlation example with an
+  independent Fisher-z reference fit.
+* Independent statistical references, headless server tests and a generated-app
+  browser test; CI checks Linux (current and previous R), macOS and Windows.
 
 # metaUI 0.1.1
 

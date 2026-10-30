@@ -45,6 +45,7 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
     # Read the file
     data <- read.csv(data, stringsAsFactors = FALSE)
   }
+  check_removed_example(data)
 
   raw_data <- data
   alternative_base <- list(study_label = study_label, es_field = es_field, se = se,
@@ -124,12 +125,10 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   # Set NA level for categorical filters ...
   for (i in seq_along(filters)) {
     if(is.factor(data[[filters[i]]])) {
-      data[[filters[i]]] <- data[[filters[i]]] %>%
-       forcats::fct_na_value_to_level("(Missing)")
+      data[[filters[i]]] <- na_to_level(data[[filters[i]]], "(Missing)")
       # ... if there are any NA
       if (!keep_missing_level) {
-        data[[filters[i]]] <- data[[filters[i]]] %>%
-          forcats::fct_drop()
+        data[[filters[i]]] <- droplevels(data[[filters[i]]])
       }
     }
   }
@@ -287,4 +286,22 @@ metaUI_data_fingerprint <- function(data) {
   path <- tempfile(); on.exit(unlink(path))
   writeBin(serialize(columns, NULL, version = 2), path)
   unname(tools::md5sum(path))
+}
+
+# Older tutorials read inst/extdata/barroso2021.csv. That file is now a stub
+# whose single row explains the removal, so stop with that message.
+check_removed_example <- function(data) {
+  if (is.data.frame(data) && identical(names(data), c("metaUI_removed_dataset", "message")) &&
+      nrow(data) == 1L && identical(as.character(data$metaUI_removed_dataset), "barroso2021"))
+    stop(as.character(data$message[1]), call. = FALSE)
+  invisible(data)
+}
+
+
+# Recode missing values (and an explicit NA level) to a named last level
+na_to_level <- function(f, level) {
+  if (anyNA(levels(f))) levels(f)[is.na(levels(f))] <- level
+  if (!level %in% levels(f)) levels(f) <- c(levels(f), level)
+  f[is.na(f)] <- level
+  f
 }

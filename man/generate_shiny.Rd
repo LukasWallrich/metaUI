@@ -18,6 +18,7 @@ generate_shiny(
   overwrite = FALSE,
   bayesian = NULL,
   design = NULL,
+  study_info = NULL,
   static_folder = NULL
 )
 }
@@ -50,9 +51,10 @@ estimated for a reader's selection, the app reports why and does not substitute 
     \item{\code{citation}}{Citation requested by the author. Defaults to an empty string.}
     \item{\code{osf_link}}{Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.}
     \item{\code{contact}}{Contact information, typically email. Defaults to an empty string.}
-    \item{\code{list_packages}}{Should all packages used by the app be listed on the About page? If TRUE, it list the packages
+    \item{\code{list_packages}}{Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 a character vector with all packages to display.}
+    \item{\code{meta}}{Does author model code use meta? If so, the default list includes it.}
   }}
 
 \item{options}{List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
@@ -68,6 +70,14 @@ a character vector with all packages to display.}
 \item{bayesian}{NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.}
 
 \item{design}{Optional settings from \code{\link[=app_design]{app_design()}}. Use \code{\link[=design_app]{design_app()}} to preview and export them.}
+
+\item{study_info}{Optional study information shown to readers: a data frame (or CSV path) with one row per
+study and a \code{study} column matching the study IDs, as returned by \code{\link[=fetch_study_metadata]{fetch_study_metadata()}} or written by the
+authors. Recognised columns: \code{doi}, \code{url}, \code{title}, \code{authors} (separated by "; "), \code{year}, \code{journal}, \code{volume},
+\code{issue}, \code{pages}, \code{abstract} (paragraphs separated by blank lines), \code{abstract_licence} (licence URL),
+\code{abstract_note}, \code{metadata_source}, \code{retrieved}, plus \code{status} and \code{abstract_policy} from the lookup. Studies in
+the effect-size list then open a details row. It is stored in the app; the app never fetches metadata. Include
+only abstracts you may republish.}
 
 \item{static_folder}{Optional destination folder for a static shinylive site. Requires
 the suggested shinylive package. The app is generated in save_to_folder first
@@ -89,6 +99,7 @@ in one step. After editing the generated app files, use \code{\link[=export_stat
 re-export them; regenerating the app would overwrite those edits.
 }
 \examples{
+\dontshow{if (metaUI:::metaUI_app_ready()) withAutoprint(\{ # examplesIf}
 raw <- data.frame(study = letters[1:6], d = c(.1, .3, -.1, .4, .2, .5),
                   vi = c(.02, .03, .02, .04, .01, .05))
 app_data <- prepare_data(raw, "study", "d", variance = "vi")
@@ -96,4 +107,5 @@ folder <- tempfile("metaui-example-")
 generate_shiny(app_data, dataset_name = "Example", save_to_folder = folder,
                launch_app = FALSE)
 unlink(folder, recursive = TRUE)
+\dontshow{\}) # examplesIf}
 }

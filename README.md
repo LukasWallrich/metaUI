@@ -9,7 +9,7 @@ The metaUI package allows users to quickly create powerful and customisable Shin
 
 The motivation for the package came from the fact that meta-analyses are based on rich datasets that can be analyzed in numerous ways, and it is unlikely that authors and readers will always agree on the “best ways” to analyze the data. Whether it comes to the choice of model (e.g., random versus fixed effects), the methods for assessing or adjusting for publication bias (e.g., z-curve, p-curve, PET/PEESE etc), or the moderators to be considered, disagreements are likely to arise. This can lead to the inclusion of lengthy robustness checks and alternative analyses that are time-consuming and difficult to digest. metaUI, as an R package that supports researchers in creating interactive Shiny web apps can help - these apps allow readers (and reviewers) to explore meta-analytic datasets in a variety of different ways. Apart from allowing readers (and reviewers) to assess the robustness and trustworthiness of results more comprehensively, metaUI apps allow users to assess the results that are most relevant to them, such as by filtering the dataset to focus on a specific group of participants, region, outcome variable, or research method. With the opportunity for users to download the dataset used and to upload alternatives, it will also facilitate the updating of meta-analyses.
 
-The idea came from researchers who have created similar web apps for their meta-analyses that have been well received, yet they require substantial time investment and advanced coding skills to create. With metaUI, researchers can get a working app very swiftly – while they still have the flexibility to tailor the display in line with their interests and requirements. This branch is a tested development candidate with scientific and licensing limits documented below; feedback and contributions are welcome.
+The idea came from researchers who have created similar web apps for their meta-analyses that have been well received, yet they require substantial time investment and advanced coding skills to create. With metaUI, researchers can get a working app very swiftly – while they still have the flexibility to tailor the display in line with their interests and requirements. Scientific and licensing limits are documented below; feedback and contributions are welcome.
 
 
 ## Installation
@@ -18,8 +18,10 @@ You can install the development version of metaUI from [GitHub](https://github.c
 
 ``` r
 if (!require(remotes)) install.packages("remotes")
-remotes::install_github("LukasWallrich/metaUI")
+remotes::install_github("LukasWallrich/metaUI", dependencies = TRUE)
 ```
+
+`dependencies = TRUE` also installs the packages that generated apps use (listed under Suggests); `generate_shiny()` names any that are missing.
 
 ## Getting started
 
@@ -29,59 +31,12 @@ Outside R Studio, you can run `file.edit(system.file("rmarkdown/templates/create
 
 The [`Getting started` vignette](https://lukaswallrich.github.io/metaUI/articles/getting_started.html) provides a step-by-step example ... or you may want to watch this [video tutorial](https://www.youtube.com/watch?v=iaTMFzWfCe0&ab_channel=ESMARConf) for a step-by-step walk-through.
 
-## Publishing without a server
+## Building and launching apps
 
-Generate an editable app and a static website in one step:
-
-```r
-metaUI::generate_shiny(app_data, "My meta-analysis",
-  save_to_folder = "my-app", static_folder = "my-site")
-```
-
-Omit `save_to_folder` to use temporary source files. With JSON configurations,
-add `"static_folder": "my-site"` alongside the editable app's `"output"` folder.
-After editing the generated app files, re-export with
-`metaUI::export_static("my-app", "my-site", overwrite = TRUE)`; regenerating
-would overwrite your edits. Static export requires the suggested `shinylive` package.
-
-Host the site over HTTPS (for example, on GitHub Pages), or serve it from
-localhost to preview it. Opening `index.html` as a file does not work.
-The full dataset and code are sent to every visitor, so publish only material
-that may be shared. Precomputed results appear at once; controls work after
-roughly 20 seconds on a typical laptop, depending on the connection and device.
-
-## Sources
-
-Much of the package code was based on two previous interactive meta-analyses apps:
-
- - Röseler, L., Körner, R., & Schütz, A. (2021). Dynamic Meta-Analysis. Retrieved from https://osf.io/ns65r/, Shiny app accessible [here](https://metaanalyses.shinyapps.io/bodypositions/)
- - Röseler, L., Weber, L., Helgerth, K. A. C., Stich, E., Günther, M., Tegethoff, P., Wagner, F. S., Ambrus, E., Antunovic, M., Barrera, F., Halali, E., Ioannidis, K., McKay, R., Milstein, N., Molden, D. C., Papenmeier, F., Rinn, R., Schreiter, M. L., Zimdahl, M., Allen, E., Bahník, S., Baumeister, R. F., Bermeitinger, C., Bickenbach, S. L. C., Blank, P. A., Blower, F. B. N., Bögler, H. L., Boo, F. L., Boruchowicz, C., Bühler, R. L., Burgmer, P., Cheek, N., N., Dohle, S., Dorsch, L., Dück, M. S., Fels, S.-A., Fischer, A. L., Frech, M.-L., Freira, L., Friedinger, K., Genschow, O., Harris, A., Hartig, B., Häusser, J. A., Hedgebeth, M., Henkel, M., Horvath, D., Hügel, J. C., Igna, E. L. E., Imhoff, R., Intelmann, P., Karg, A. H., Klamar, A., Klein, C., Klusmann, B., Knappe, E., Köppel, L.-M., Koßmann, L., Kraft, P., Kroworsch, M. K., Krueger, S. M., Kühling, S., Lagator, S., Lammers, J., Loschelder, D. D., Navajas, J., Norem, J., K., Novak, J. Onuki, Y., Page, E., Panse, F., Pavlovic, Z., Pearton, J., Rebholz, T. R., Rodgers, S., Röseler, J. J., Rostekova, A., Roßmaier, K. V., Sartorio, M., Scheelje, L., Schindler, S., Schreiner, N. B., Seida, C., Shanks, D. R., Siems, M.-C., Stitz, M., Starkulla, M., Stäglich, M., Thies, K., Thum, E., Undorf, M., Unger, B. D., Urlichich, D., Vadillo, M. A., Wackershauser-Sablotny, V., Wessel, I., Wolf, H., Zhou, A., & Schütz, A. (2022). OpAQ: Open Anchoring Quest, Version 1.1.48.95. https://dx.doi.org/10.17605/OSF.IO/YGNVB, Shiny app accessible [here](https://metaanalyses.shinyapps.io/OpAQ/)
-
-The introductory sample is the CC-BY-4.0 mental-health pool from Dannheim et al.
-(2025), [doi:10.5271/sjweh.4219](https://doi.org/10.5271/sjweh.4219).
-Its 12 signed Hedges-g effects, CI-derived SEs, membership and changes are
-attributed in `inst/examples/dannheim`. Existing Aksayli/Coles data retain their
-verified source licences and attribution in `inst/COPYRIGHTS`.
-
-## Related projects
-
-- Allbritton et al. created [A General Tool for Living Meta-Analysis](https://dallbrit.shinyapps.io/Meta_regression_app/) to run and update meta-analyses online, which contains similar functionalities. Currently, it seems more feature-rich than metaUI, but more focused on meta-analysts rather than end users of insights - and less customisable. The app is accessible [here](https://dallbrit.shinyapps.io/Meta_regression_app/), more details are in the accompanying paper:
-
-Allbritton, D., Gómez, P., Angele, B., Vasilev, M., & Perea, M. (2024). Breathing Life Into Meta-Analytic Methods. *Journal of Cognition*, 7(1).
-
-
-Other related tools include [Metapsy](https://www.metapsy.org/) (analysis workflow
-inspiration), the [Cooperation Databank](https://cooperationdatabank.org/)
-(dataset exploration), [PsychOpen CAMA](https://cama.psychopen.eu/)
-(cumulative meta-analysis), and the [taVNS HRV app](https://vinzentwolf.shinyapps.io/taVNSHRVmeta/)
-(a Bayesian living meta-analysis). These are references, not endorsements or
-sources of bundled code. See the [issue follow-up decisions](validation/issue-followup.md)
-for the assessed feature overlap and remaining work.
-
-## Headless correctness candidate
-
-The development branch adds a versioned JSON build path while retaining editable
-R/Shiny apps. See [reproduction and scientific contract](https://github.com/LukasWallrich/metaUI/blob/main/validation/reproduction.md),
+Apps can be built in R with `generate_shiny()` or headlessly from a versioned JSON
+configuration with `build_app()`; either way, the generated R/Shiny files stay
+editable. Schema version 2 adds computation and Bayesian authoring; version 1
+continues to accept the original configuration fields. See [reproduction and scientific contract](https://github.com/LukasWallrich/metaUI/blob/main/validation/reproduction.md),
 [the tiny synthetic config](inst/examples/tiny.json), and its
 [JSON schema](inst/examples/config.schema.json). Build and launch are separate:
 
@@ -99,29 +54,32 @@ saved to (a bare `shiny::runApp()` runs the current working directory). With
 of the returned app launches Shiny and blocks the console until you stop the app.
 Assigning the app object to a variable postpones launch until you print it.
 
-Authors may name one primary model (`primary_model` in `generate_shiny()` or the
-JSON config). Apps show it first and label the other rows as explorations; they never
-substitute another model when it is unsupported.
-
 Generation refuses a nonempty folder by default. p/N are optional for the primary
 models; directional models require explicit direction. COR/ZCOR require explicit
 variance scales. Read the generated validation report before interpreting results.
 The introductory Dannheim data use signed Hedges g, not correlations. No public deployment is automatic.
 
-[PsychOpen CAMA](https://leibniz-psychology.org/en/practices-and-tools-of-open-science/psychopen-cama)
-is another platform for cumulative meta-analysis. metaUI's intended contribution is
-an author-owned app with editable R source. See the bounded
-[publication-readiness assessment](https://github.com/LukasWallrich/metaUI/blob/main/validation/publication-readiness.md).
+### Primary model
 
-### Empirical example and performance
+Authors may name one primary model (`primary_model` in `generate_shiny()` or the
+JSON config). Apps show it first and label the other rows as explorations; they never
+substitute another model when it is unsupported.
+
+### Examples
 
 Copy `inst/examples/dannheim` to a fresh working directory and run
 `Rscript --vanilla build.R`. Launch separately with
 `shiny::runApp("mental-health-app")`. The tiny CC-BY mental-health pool retains
 12 exact benchmark member IDs and original signed Hedges g with CI-derived
 native SE. The source-reference REML/Hartung–Knapp model is checked against
-metafor; other models/diagnostics are explicitly exploratory. Read the example's
+metafor; other models/diagnostics are exploratory. Read the example's
 README/provenance before interpreting results. No benchmark corpus is deployed.
+
+The [synthetic correlation example](inst/examples/correlations) demonstrates raw-r
+variance conversion and checks the fitted summary against an independent metafor
+reference.
+
+### Fit reuse and performance
 
 Generated apps reuse compatible fitted objects and retain three recent exact
 fit selections per reader session; `cache_hit` discloses reuse. Custom models
@@ -132,12 +90,38 @@ are validated, stored in session state, and clear prior cached results.
 
 [Performance measurements](https://github.com/LukasWallrich/metaUI/blob/main/validation/performance-optimisation.md) distinguish
 faster p-curve calculations/fit reuse from cache hits and first-time fitting costs.
-[Licence audit](https://github.com/LukasWallrich/metaUI/blob/main/validation/licensing-audit.md) records the licensed replacement of
-the former Barroso sample. This development candidate is not a public release.
+
+### Downloads, uploads and reproduction code
 
 Downloads preserve the full current input dataset and saved filter selections; the
 summary sheet describes the selected rows. An empty selection stays empty on
 re-upload and reports no eligible rows, while the original inputs remain available.
+
+After an analysis, readers can download an R script or a Quarto file that
+reproduces the applied selection (filters, missing-value choices, effect-size
+computation and equivalence bound) and the model rows on the Summary tab. The
+code reads the workbook from the same analysis, so it also works for uploaded
+data, and it runs without metaUI. It copies the app's `models.R`, including
+author-defined models and their helper functions, and the fitting functions that
+the app calls, so it follows the app's own code path. If `models.R` has been
+edited since the app started, the code contains the loaded model table instead
+and says that any helper code is missing. It also records the package
+versions the app used, with a commented-out
+[groundhog](https://groundhogr.com/) call that installs the CRAN versions current
+on the latest release date among them, and ends by comparing every row with the
+values the app reported. It does not reproduce the plots or diagnostic tabs. Author-defined
+models that use random numbers or external state, and other package versions,
+can give different results; the comparison shows where they do.
+See [the validation note](https://github.com/LukasWallrich/metaUI/blob/main/validation/code-export.md).
+
+### Shareable selection links
+
+After analysis, the selection link and address bar describe the applied selection
+on this exact built dataset. Links validate filters, missing-value choices,
+computation and equivalence bound before restoring and analysing. Invalid links
+leave a notice and require manual analysis. Uploaded data require the workbook,
+which includes all computation inputs; their session-specific data are not encoded
+in URLs.
 
 ### Practical equivalence and forest exports
 
@@ -145,17 +129,15 @@ Summary includes an interval assessment for a reader-chosen symmetric smallest
 effect size of interest, on the displayed SMD or r scale. No bound is assumed.
 The strict containment criterion uses the reported intervals without refitting;
 model assumptions and small-sample limitations are shown beside the assessment.
-Downloads record the bound and classification in an `equivalence` sheet.
+Downloads record the bound and classification in an `equivalence` sheet, and
+uploading the workbook restores the bound, as selection links do.
 
 Forest plots compare observed-effect intervals and available multilevel/RVE
 summary intervals. PDF, PNG and CSV downloads use the same selected rows; the
 CSV retains both fitting and displayed scales. The configured row limit also
 applies to exports.
 
-The [synthetic correlation example](inst/examples/correlations) demonstrates raw-r
-variance conversion and checks the fitted summary against an independent metafor
-reference.
-
+### Alternative effect-size computations
 
 Authors can supply up to five alternative computations in `prepare_data(alternatives = ...)`.
 Each named entry declares `es_field`, `variance` or `se`, `es_type`,
@@ -164,6 +146,8 @@ original computation. All alternatives use the same effects and fitting scale.
 Readers apply a computation with Analyze data; the comparison tab fits the
 configured multilevel/RVE models for the same selection. The descriptive z filter
 and source p-values remain anchored to the primary computation.
+
+### Bayesian analysis
 
 Enable study-level Bayesian analysis with
 `generate_shiny(..., bayesian = list(enabled = TRUE))`, after installing the
@@ -181,13 +165,55 @@ Analyze blocks the Shiny server process while fitting. Prior sensitivity runs
 when its tab or download is requested and can require two extra fits.
 See [Röver et al.](https://doi.org/10.1002/jrsm.1475) for the prior rationale.
 
-After analysis, the selection link and address bar describe the applied selection
-on this exact built dataset. Links validate filters, missing-value choices,
-computation and equivalence bound before restoring and analysing. Invalid links
-leave a notice and require manual analysis. Uploaded data require the workbook,
-which includes all computation inputs; their session-specific data are not encoded
-in URLs. Schema version 2 adds computation and Bayesian authoring; version 1
-continues to accept the original configuration fields.
+### Study details
+
+Readers can open a row in the list of effect sizes to see the study's reference
+and, where permitted, its abstract. Authors supply the details as
+`generate_shiny(study_info = ...)` or as a `study_info` CSV in a schema version 2
+configuration: one row per study, with a `study` column matching the study IDs.
+To fill this from DOIs, call `fetch_study_metadata()` while authoring. It queries the
+free Crossref REST API once per DOI, asks OpenAlex for licences and abstracts that
+Crossref lacks, and can cache results in a CSV. The generated app stores the result
+and never contacts either service. Missing, malformed or unknown DOIs are listed and
+left without details; nothing is matched by title.
+
+```r
+data <- metaUI::prepare_data("effects.csv", "study", "d", variance = "vi", url = "doi")
+info <- metaUI::fetch_study_metadata(data, cache = "study-metadata.csv")
+metaUI::generate_shiny(data, "My meta-analysis", study_info = info,
+                      save_to_folder = "my-app", launch_app = FALSE)
+```
+
+In a schema version 2 configuration for `build_app()`, `study_info` can instead run
+the lookup on the mapped `url` column while building and save the result for review:
+
+```json
+"study_info": {"cache": "study-metadata.csv", "abstracts": "open_licence", "openalex": true}
+```
+
+Only `cache` is required. DOIs already found in the cache are not queried again, so
+rebuilds (`metaUI::build_app("config.json", overwrite = TRUE)`) reuse the reviewed CSV.
+
+Single-DOI lookups are free on both services and need no key. Two optional
+environment variables, best set in `~/.Renviron` so they stay out of scripts:
+
+```
+METAUI_MAILTO=you@example.org   # contact address Crossref asks for (its "polite" pool)
+OPENALEX_API_KEY=your-key       # free key: openalex.org, Settings > API key; raises the rate limit
+```
+
+Crossref states that abstracts remain under publisher or author copyright,
+unlike the rest of its metadata. By default, the function therefore keeps an
+abstract only when the article is published under a Creative Commons licence (CC BY,
+with or without SA, ND or NC terms), CC0 or the Public Domain Mark, as recorded by
+Crossref or OpenAlex, and the app shows that licence beside it. All of these allow
+verbatim copies of the work in part. NonCommercial licences cover academic,
+non-commercial apps; for an app used commercially, set `abstracts = "exclude_nc"`.
+`abstracts = "all"` keeps every abstract found; authors who choose it are responsible
+for the right to republish them. Abstracts that authors add to the CSV are likewise
+their responsibility. This rule is a conservative default, not legal advice.
+
+The reference is shown in APA style with a button that copies it.
 
 ### Author design settings
 
@@ -223,3 +249,69 @@ may still request external stylesheets. Other analytical plots retain
 their plotting packages' styles. The contrast check covers text and accent
 against page, panel and derived tinted backgrounds, not an accessibility audit
 of author-supplied HTML or arbitrary Bootstrap themes.
+
+## Publishing without a server
+
+Generate an editable app and a static website in one step:
+
+```r
+metaUI::generate_shiny(app_data, "My meta-analysis",
+  save_to_folder = "my-app", static_folder = "my-site")
+```
+
+Omit `save_to_folder` to use temporary source files. With JSON configurations,
+add `"static_folder": "my-site"` alongside the editable app's `"output"` folder.
+After editing the generated app files, re-export with
+`metaUI::export_static("my-app", "my-site", overwrite = TRUE)`; regenerating
+would overwrite your edits. Static export requires the suggested `shinylive` package.
+
+Host the site over HTTPS (for example, on GitHub Pages), or serve it from
+localhost to preview it. Opening `index.html` as a file does not work.
+The full dataset and code are sent to every visitor, so publish only material
+that may be shared. Precomputed results appear at once; controls work after
+roughly 20 seconds on a typical laptop, depending on the connection and device.
+
+## Sources
+
+Much of the package code was based on two previous interactive meta-analyses apps:
+
+ - Röseler, L., Körner, R., & Schütz, A. (2021). Dynamic Meta-Analysis. Retrieved from https://osf.io/ns65r/, Shiny app accessible [here](https://metaanalyses.shinyapps.io/bodypositions/)
+ - Röseler, L., Weber, L., Helgerth, K. A. C., Stich, E., Günther, M., Tegethoff, P., Wagner, F. S., Ambrus, E., Antunovic, M., Barrera, F., Halali, E., Ioannidis, K., McKay, R., Milstein, N., Molden, D. C., Papenmeier, F., Rinn, R., Schreiter, M. L., Zimdahl, M., Allen, E., Bahník, S., Baumeister, R. F., Bermeitinger, C., Bickenbach, S. L. C., Blank, P. A., Blower, F. B. N., Bögler, H. L., Boo, F. L., Boruchowicz, C., Bühler, R. L., Burgmer, P., Cheek, N., N., Dohle, S., Dorsch, L., Dück, M. S., Fels, S.-A., Fischer, A. L., Frech, M.-L., Freira, L., Friedinger, K., Genschow, O., Harris, A., Hartig, B., Häusser, J. A., Hedgebeth, M., Henkel, M., Horvath, D., Hügel, J. C., Igna, E. L. E., Imhoff, R., Intelmann, P., Karg, A. H., Klamar, A., Klein, C., Klusmann, B., Knappe, E., Köppel, L.-M., Koßmann, L., Kraft, P., Kroworsch, M. K., Krueger, S. M., Kühling, S., Lagator, S., Lammers, J., Loschelder, D. D., Navajas, J., Norem, J., K., Novak, J. Onuki, Y., Page, E., Panse, F., Pavlovic, Z., Pearton, J., Rebholz, T. R., Rodgers, S., Röseler, J. J., Rostekova, A., Roßmaier, K. V., Sartorio, M., Scheelje, L., Schindler, S., Schreiner, N. B., Seida, C., Shanks, D. R., Siems, M.-C., Stitz, M., Starkulla, M., Stäglich, M., Thies, K., Thum, E., Undorf, M., Unger, B. D., Urlichich, D., Vadillo, M. A., Wackershauser-Sablotny, V., Wessel, I., Wolf, H., Zhou, A., & Schütz, A. (2022). OpAQ: Open Anchoring Quest, Version 1.1.48.95. https://dx.doi.org/10.17605/OSF.IO/YGNVB, Shiny app accessible [here](https://metaanalyses.shinyapps.io/OpAQ/)
+
+The introductory sample is the CC-BY-4.0 mental-health pool from Dannheim et al.
+(2025), [doi:10.5271/sjweh.4219](https://doi.org/10.5271/sjweh.4219).
+Its 12 signed Hedges-g effects, CI-derived SEs, membership and changes are
+attributed in `inst/examples/dannheim`. Existing Aksayli/Coles data retain their
+verified source licences and attribution in `inst/COPYRIGHTS`.
+
+[Licence audit](https://github.com/LukasWallrich/metaUI/blob/main/validation/licensing-audit.md) records the sources and licences of
+bundled code and data.
+
+## Related projects
+
+- Allbritton et al.'s [A General Tool for Living Meta-Analysis](https://dallbrit.shinyapps.io/Meta_regression_app/)
+  ([source](https://github.com/davidallbritton/living-meta-analysis-app),
+  [doi:10.5281/zenodo.21938551](https://doi.org/10.5281/zenodo.21938551)) is the
+  closest related tool. Analysts upload their data or use curated files, select
+  studies by criteria generated from the data's columns, and fit frequentist and
+  Bayesian models; release 1.5.1 adds multilevel models and meta-regression. The
+  app downloads R code that reproduces the displayed analyses, and a copy with a
+  saved selection file reopens with, for example, an article's selections. Its
+  model menu and interface are those of the shared app, whereas metaUI generates
+  a separate app whose models and explanations each author edits. The tool is
+  described in:
+
+Allbritton, D., Gómez, P., Angele, B., Vasilev, M., & Perea, M. (2024). Breathing Life Into Meta-Analytic Methods. *Journal of Cognition*, 7(1), 61. [doi:10.5334/joc.389](https://doi.org/10.5334/joc.389)
+
+
+Other related tools include [Metapsy](https://www.metapsy.org/) (analysis workflow
+inspiration), the [Cooperation Databank](https://cooperationdatabank.org/)
+(dataset exploration), [PsychOpen CAMA](https://cama.psychopen.eu/)
+(cumulative meta-analysis), and the [taVNS HRV app](https://vinzentwolf.shinyapps.io/taVNSHRVmeta/)
+(a Bayesian living meta-analysis). These are references, not endorsements or
+sources of bundled code. See the [issue follow-up decisions](validation/issue-followup.md)
+for the assessed feature overlap and remaining work.
+
+Compared with these projects, metaUI's intended contribution is an author-owned
+app with editable R source. See the bounded
+[publication-readiness assessment](https://github.com/LukasWallrich/metaUI/blob/main/validation/publication-readiness.md).

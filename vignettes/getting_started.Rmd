@@ -19,7 +19,7 @@ This vignette shows how to use `metaUI` to generate a Shiny app in a few simple 
 ```{r setup, message=FALSE}
 # Paste the following two lines to your Console and remove the # to install the package
 # if (!require(remotes)) install.packages("remotes")
-# remotes::install_github("LukasWallrich/metaUI")
+# remotes::install_github("LukasWallrich/metaUI", dependencies = TRUE)
 
 library(metaUI)
 library(dplyr)

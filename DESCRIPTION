@@ -22,39 +22,37 @@ BugReports: https://github.com/LukasWallrich/metaUI/issues
 Depends: R (>= 4.1.0)
 Imports: 
     dplyr,
-    DT,
-    ggplot2,
     glue,
     htmltools,
     jsonlite,
-    forcats,
-    psych,
     metafor,
-    plotly,
     poibin,
-    puniform,
     purrr,
-    readxl,
     rlang,
-    robumeta,
     shiny,
-    shinycssloaders,
-    shinyjs,
     shinythemes,
     shinyWidgets,
     stringr,
     tibble,
-    tidyr,
+    tidyr
+Suggests: 
+    bayesmeta,
+    DT,
+    ggplot2,
+    knitr,
+    meta (>= 7.0-0),
+    plotly,
+    puniform,
+    readxl,
+    rmarkdown,
+    robumeta,
+    shinycssloaders,
+    shinyjs,
+    shinylive,
+    testthat,
     weightr,
     writexl,
     zcurve
-Suggests: 
-    meta (>= 7.0-0),
-    bayesmeta,
-    testthat,
-    knitr,
-    rmarkdown,
-    shinylive
 VignetteBuilder: 
     knitr
 Config/testthat/edition: 3

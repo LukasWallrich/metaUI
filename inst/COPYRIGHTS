@@ -42,7 +42,9 @@ with this copyright holder to the Coles source adaptation.
 Coles NA, Larsen JT, Lench HC (2019), A meta-analysis of the facial feedback
 literature. DOI https://doi.org/10.1037/bul0000194 .
 Changes: numeric effects/variances, bibliographic and coded covariates exported
-through psymetadata; no article prose or PDFs redistributed.
+through psymetadata; outcome type (paq: affective judgement yes/no) added from
+the OSF data.csv, matched row by row on study ID and effect size; no article
+prose or PDFs redistributed.
 P-curve calculations originate with Uri Simonsohn, Leif D. Nelson, and Joseph
 P. Simmons (2014), through dmetar's implementation. https://www.p-curve.com/
 Upstream dmetar DESCRIPTION specifies MIT + file LICENSE; LICENSE identifies

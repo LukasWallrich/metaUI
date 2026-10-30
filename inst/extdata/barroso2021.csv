@@ -1,0 +1,2 @@
+"metaUI_removed_dataset","message"
+"barroso2021","The Barroso et al. (2021) example data are no longer bundled with metaUI. Use system.file('extdata', 'coles2019.csv', package = 'metaUI') or the example in system.file('examples', 'dannheim', package = 'metaUI') instead."

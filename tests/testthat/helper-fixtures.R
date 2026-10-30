@@ -6,3 +6,5 @@ fixture <- function() {
 }
 prepared <- function(x = fixture(), ...) prepare_data(x, "study", "yi", variance = "vi", es_label = "label", es_id = "id", ...)
 fit <- function(x, models = get_model_tibble()[1:2, ]) metaUI:::metaUI_fit_models(x, models)
+# Generated apps and model fits use packages listed in Suggests.
+skip_without_app_packages <- function() testthat::skip_if_not(metaUI:::metaUI_app_ready(), "generated-app packages are not installed")

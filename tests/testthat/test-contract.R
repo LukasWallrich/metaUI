@@ -1,3 +1,5 @@
+skip_without_app_packages()
+
 test_that("optional fields preserve membership and invalid required rows are reported", {
   d <- prepared()
   expect_equal(nrow(d), 16)

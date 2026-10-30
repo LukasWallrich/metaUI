@@ -1,3 +1,5 @@
+skip_without_app_packages()
+
 test_that("generated sample tabs share values without duplicate output bindings", {
   path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
   d <- prepared()
@@ -123,6 +125,7 @@ test_that("changing the practical bound does not refit or change applied filters
   generate_shiny(prepared(), "Bound change", save_to_folder = path, launch_app = FALSE)
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  file <- tempfile(fileext = ".xlsx"); on.exit(unlink(file), add = TRUE)
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
     original <- estimatesreactive()
@@ -132,8 +135,20 @@ test_that("changing the practical bound does not refit or change applied filters
     expect_false(filters_changed())
     expect_equal(data_list()$equivalence$bound, rep(1, 7))
     expect_true(any(interval_assessment()$assessment == "Interval within bounds"))
+    writexl::write_xlsx(data_list(), file)
+    expect_identical(metaUI:::metaUI_saved_bound(file), 1)
     session$setInputs(sesoi = -1)
     expect_match(interval_assessment()$reason, "positive finite")
     expect_identical(estimatesreactive(), original)
+    # Empty selections still record the bound for upload.
+    session$setInputs(sesoi = .5, outliers_z_scores = c(50, 60), go = 2)
+    expect_equal(nrow(df_filtered()), 0L)
+    writexl::write_xlsx(data_list(), file)
+    expect_identical(metaUI:::metaUI_saved_bound(file), .5)
+    session$setInputs(sesoi = NA)
+    writexl::write_xlsx(data_list(), file)
+    expect_identical(metaUI:::metaUI_saved_bound(file), NA_real_)
+    writexl::write_xlsx(data_list()[c("dataset", "filters")], file)
+    expect_identical(metaUI:::metaUI_saved_bound(file), NA_real_)  # no equivalence sheet
   })
 })
