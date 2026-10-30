@@ -1,0 +1,374 @@
+[
+  {
+    "epoch": 1793372799241,
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold"
+  },
+  {
+    "epoch": 1793372799435,
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold"
+  },
+  {
+    "epoch": 1793372799457,
+    "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+  },
+  {
+    "epoch": 1793372800130,
+    "text": "POSTPROFILE {\"path\":\"libRblas.so\",\"table\":0,\"relocate\":3.4000000953674316,\"got\":0.3000001907348633}"
+  },
+  {
+    "epoch": 1793372800889,
+    "text": "POSTPROFILE {\"path\":\"/usr/lib/R/library/methods/libs/methods.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372801528,
+    "text": "POSTPROFILE {\"path\":\"/usr/lib/R/library/utils/libs/utils.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372801709,
+    "text": "Service Worker registered"
+  },
+  {
+    "epoch": 1793372801721,
+    "text": "POSTPROFILE {\"path\":\"/usr/lib/R/library/grDevices/libs/grDevices.so\",\"table\":0,\"relocate\":12.600000381469727,\"got\":0}"
+  },
+  {
+    "epoch": 1793372801838,
+    "text": "POSTPROFILE {\"path\":\"/usr/lib/R/library/graphics/libs/graphics.so\",\"table\":0,\"relocate\":0,\"got\":0.10000038146972656}"
+  },
+  {
+    "epoch": 1793372803075,
+    "text": "POSTPROFILE {\"path\":\"libRlapack.so\",\"table\":0,\"relocate\":832.5999999046326,\"got\":1.5999999046325684}"
+  },
+  {
+    "epoch": 1793372803101,
+    "text": "POSTPROFILE {\"path\":\"/usr/lib/R/library/stats/libs/stats.so\",\"table\":0.19999980926513672,\"relocate\":15.199999809265137,\"got\":0.3000001907348633}"
+  },
+  {
+    "epoch": 1793372803184,
+    "text": "POSTPROFILE {\"path\":\"/usr/lib/R/library/webr/libs/webr.so\",\"table\":0,\"relocate\":5.200000286102295,\"got\":0.19999980926513672}"
+  },
+  {
+    "epoch": 1793372803232,
+    "text": "WebR is using `PostMessage` communication channel, nested R REPLs are not available."
+  },
+  {
+    "epoch": 1793372803232,
+    "text": "preload echo:"
+  },
+  {
+    "epoch": 1793372803233,
+    "text": "preload echo:R version 4.6.0 (2026-04-24) -- \"Because it was There\""
+  },
+  {
+    "epoch": 1793372803234,
+    "text": "preload echo:Copyright (C) 2026 The R Foundation for Statistical Computing"
+  },
+  {
+    "epoch": 1793372803234,
+    "text": "preload echo:Platform: wasm32-unknown-emscripten (32-bit)"
+  },
+  {
+    "epoch": 1793372803235,
+    "text": "preload echo:"
+  },
+  {
+    "epoch": 1793372803235,
+    "text": "preload echo:R is free software and comes with ABSOLUTELY NO WARRANTY."
+  },
+  {
+    "epoch": 1793372803236,
+    "text": "preload echo:You are welcome to redistribute it under certain conditions."
+  },
+  {
+    "epoch": 1793372803238,
+    "text": "preload echo:Type 'license()' or 'licence()' for distribution details."
+  },
+  {
+    "epoch": 1793372803241,
+    "text": "preload echo:"
+  },
+  {
+    "epoch": 1793372803241,
+    "text": "preload echo:R is a collaborative project with many contributors."
+  },
+  {
+    "epoch": 1793372803242,
+    "text": "preload echo:Type 'contributors()' for more information and"
+  },
+  {
+    "epoch": 1793372803242,
+    "text": "preload echo:'citation()' on how to cite R or R packages in publications."
+  },
+  {
+    "epoch": 1793372803242,
+    "text": "preload echo:"
+  },
+  {
+    "epoch": 1793372803244,
+    "text": "preload echo:Type 'demo()' for some demos, 'help()' for on-line help, or"
+  },
+  {
+    "epoch": 1793372803245,
+    "text": "preload echo:'help.start()' for an HTML browser interface to help."
+  },
+  {
+    "epoch": 1793372803246,
+    "text": "preload echo:Type 'q()' to quit R."
+  },
+  {
+    "epoch": 1793372803247,
+    "text": "preload echo:"
+  },
+  {
+    "epoch": 1793372807933,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/digest/libs/digest.so\",\"table\":0,\"relocate\":51.59999990463257,\"got\":0.19999980926513672}"
+  },
+  {
+    "epoch": 1793372808122,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/rlang/libs/rlang.so\",\"table\":0.19999980926513672,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372808308,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/cli/libs/cli.so\",\"table\":0,\"relocate\":0,\"got\":0.09999990463256836}"
+  },
+  {
+    "epoch": 1793372810271,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/fastmap/libs/fastmap.so\",\"table\":0,\"relocate\":19.40000009536743,\"got\":0.09999990463256836}"
+  },
+  {
+    "epoch": 1793372810371,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/htmltools/libs/htmltools.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372811363,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/Rcpp/libs/Rcpp.so\",\"table\":0,\"relocate\":741.4000000953674,\"got\":7.700000286102295}"
+  },
+  {
+    "epoch": 1793372811524,
+    "text": "POSTPROFILE {\"path\":\"/usr/lib/R/library/tools/libs/tools.so\",\"table\":0,\"relocate\":0,\"got\":0.10000038146972656}"
+  },
+  {
+    "epoch": 1793372813939,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/later/libs/later.so\",\"table\":0.09999990463256836,\"relocate\":931.5999999046326,\"got\":0.5}"
+  },
+  {
+    "epoch": 1793372814149,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/magrittr/libs/magrittr.so\",\"table\":0,\"relocate\":29.199999809265137,\"got\":0}"
+  },
+  {
+    "epoch": 1793372814297,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/httpuv/libs/httpuv.so\",\"table\":0,\"relocate\":0.09999990463256836,\"got\":0}"
+  },
+  {
+    "epoch": 1793372814378,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/mime/libs/mime.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372816300,
+    "text": "preload echo:CPHASE mount-start 55.026 "
+  },
+  {
+    "epoch": 1793372816384,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/glue/libs/glue.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372816988,
+    "text": "POSTPROFILE {\"path\":\"/usr/lib/R/modules/internet.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372836022,
+    "text": "preload echo:CPHASE mount-end 16.014 "
+  },
+  {
+    "epoch": 1793372836104,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/renv/libs/renv.so\",\"table\":0,\"relocate\":0,\"got\":0.2999997138977051}"
+  },
+  {
+    "epoch": 1793372839463,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/vctrs/libs/vctrs.so\",\"table\":5.300000190734863,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372839945,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/tibble/libs/tibble.so\",\"table\":0.09999990463256836,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372840740,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/dplyr/libs/dplyr.so\",\"table\":0,\"relocate\":374.80000019073486,\"got\":0.19999980926513672}"
+  },
+  {
+    "epoch": 1793372841357,
+    "text": "preload error:"
+  },
+  {
+    "epoch": 1793372841357,
+    "text": "preload error:Attaching package: ‘dplyr’"
+  },
+  {
+    "epoch": 1793372841359,
+    "text": "preload error:"
+  },
+  {
+    "epoch": 1793372841370,
+    "text": "preload error:The following objects are masked from ‘package:stats’:"
+  },
+  {
+    "epoch": 1793372841371,
+    "text": "preload error:"
+  },
+  {
+    "epoch": 1793372841371,
+    "text": "preload error:    filter, lag"
+  },
+  {
+    "epoch": 1793372841373,
+    "text": "preload error:"
+  },
+  {
+    "epoch": 1793372841381,
+    "text": "preload error:The following objects are masked from ‘package:base’:"
+  },
+  {
+    "epoch": 1793372841381,
+    "text": "preload error:"
+  },
+  {
+    "epoch": 1793372841381,
+    "text": "preload error:    intersect, setdiff, setequal, union"
+  },
+  {
+    "epoch": 1793372841381,
+    "text": "preload error:"
+  },
+  {
+    "epoch": 1793372841641,
+    "text": "POSTPROFILE {\"path\":\"/usr/lib/R/library/grid/libs/grid.so\",\"table\":0,\"relocate\":0.09999990463256836,\"got\":0}"
+  },
+  {
+    "epoch": 1793372843482,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/farver/libs/farver.so\",\"table\":0,\"relocate\":1468.4000000953674,\"got\":2.0999999046325684}"
+  },
+  {
+    "epoch": 1793372845836,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/S7/libs/S7.so\",\"table\":0.09999990463256836,\"relocate\":462.6000003814697,\"got\":0}"
+  },
+  {
+    "epoch": 1793372846991,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/jsonlite/libs/jsonlite.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372847480,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/mnormt/libs/mnormt.so\",\"table\":0,\"relocate\":147.5,\"got\":0.19999980926513672}"
+  },
+  {
+    "epoch": 1793372847610,
+    "text": "POSTPROFILE {\"path\":\"/usr/lib/R/library/parallel/libs/parallel.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372847800,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/lattice/libs/lattice.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372848093,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/nlme/libs/nlme.so\",\"table\":0,\"relocate\":0.09999990463256836,\"got\":0}"
+  },
+  {
+    "epoch": 1793372848293,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/CompQuadForm/libs/CompQuadForm.so\",\"table\":0,\"relocate\":0.09999990463256836,\"got\":0}"
+  },
+  {
+    "epoch": 1793372848420,
+    "text": "POSTPROFILE {\"path\":\"/usr/lib/R/library/splines/libs/splines.so\",\"table\":0,\"relocate\":0,\"got\":0.09999990463256836}"
+  },
+  {
+    "epoch": 1793372848485,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/MASS/libs/MASS.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372848877,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/rbibutils/libs/rbibutils.so\",\"table\":0.09999990463256836,\"relocate\":273.59999990463257,\"got\":3.6999998092651367}"
+  },
+  {
+    "epoch": 1793372849057,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/Matrix/libs/Matrix.so\",\"table\":0.3000001907348633,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372853811,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/minqa/libs/minqa.so\",\"table\":0,\"relocate\":213.09999990463257,\"got\":0.19999980926513672}"
+  },
+  {
+    "epoch": 1793372854214,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/nloptr/libs/nloptr.so\",\"table\":0.09999990463256836,\"relocate\":299.09999990463257,\"got\":0.8000001907348633}"
+  },
+  {
+    "epoch": 1793372855666,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/lme4/libs/lme4.so\",\"table\":0,\"relocate\":1050.0999999046326,\"got\":2.4000000953674316}"
+  },
+  {
+    "epoch": 1793372859244,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/purrr/libs/purrr.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372862602,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/readr/libs/readr.so\",\"table\":0.09999990463256836,\"relocate\":3026.2999997138977,\"got\":4}"
+  },
+  {
+    "epoch": 1793372863531,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/tzdb/libs/tzdb.so\",\"table\":0,\"relocate\":781,\"got\":1.200000286102295}"
+  },
+  {
+    "epoch": 1793372883114,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/stringi/libs/stringi.so\",\"table\":0.5,\"relocate\":18331.89999961853,\"got\":25.800000190734863}"
+  },
+  {
+    "epoch": 1793372883516,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/xml2/libs/xml2.so\",\"table\":0.09999990463256836,\"relocate\":141.2999997138977,\"got\":2}"
+  },
+  {
+    "epoch": 1793372883778,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/data.table/libs/data_table.so\",\"table\":0.09999990463256836,\"relocate\":0,\"got\":2.5999999046325684}"
+  },
+  {
+    "epoch": 1793372885588,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/tidyr/libs/tidyr.so\",\"table\":0,\"relocate\":445.5,\"got\":0.09999990463256836}"
+  },
+  {
+    "epoch": 1793372885825,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/poibin/libs/poibin.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372886349,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/puniform/libs/puniform.so\",\"table\":0,\"relocate\":397.69999980926514,\"got\":0.40000009536743164}"
+  },
+  {
+    "epoch": 1793372886567,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/readxl/libs/readxl.so\",\"table\":0,\"relocate\":0,\"got\":0}"
+  },
+  {
+    "epoch": 1793372901602,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/sass/libs/sass.so\",\"table\":0.3000001907348633,\"relocate\":14507.199999809265,\"got\":7.700000286102295}"
+  },
+  {
+    "epoch": 1793372901815,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/library/cachem/libs/cachem.so\",\"table\":0,\"relocate\":0.09999990463256836,\"got\":0}"
+  },
+  {
+    "epoch": 1793372902219,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/writexl/libs/writexl.so\",\"table\":0,\"relocate\":54.5,\"got\":0.10000038146972656}"
+  },
+  {
+    "epoch": 1793372902593,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/zcurve/libs/zcurve.so\",\"table\":0,\"relocate\":234.5,\"got\":0.8000001907348633}"
+  },
+  {
+    "epoch": 1793372903161,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/xfun/libs/xfun.so\",\"table\":0,\"relocate\":8.800000190734863,\"got\":0}"
+  },
+  {
+    "epoch": 1793372903676,
+    "text": "POSTPROFILE {\"path\":\"/shinylive/webr/packages/yaml/libs/yaml.so\",\"table\":0,\"relocate\":76.5,\"got\":0.19999980926513672}"
+  },
+  {
+    "epoch": 1793372906728,
+    "text": "The specified value \"NA\" cannot be parsed, or is out of range."
+  }
+]

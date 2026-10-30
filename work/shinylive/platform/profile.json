@@ -1,0 +1,754 @@
+[
+  {
+    "epoch": 1793371916640,
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold"
+  },
+  {
+    "epoch": 1793371916700,
+    "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+  },
+  {
+    "epoch": 1793371917971,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/usr/lib/R/library/methods/libs/methods.so\",\"compile\":1.6000003814697266,\"instantiate\":0.19999980926513672,\"post\":5.5}"
+  },
+  {
+    "epoch": 1793371918472,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/usr/lib/R/library/utils/libs/utils.so\",\"compile\":7,\"instantiate\":0.19999980926513672,\"post\":6.100000381469727}"
+  },
+  {
+    "epoch": 1793371918586,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/usr/lib/R/library/grDevices/libs/grDevices.so\",\"compile\":4,\"instantiate\":0.5,\"post\":16.300000190734863}"
+  },
+  {
+    "epoch": 1793371918691,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/usr/lib/R/library/graphics/libs/graphics.so\",\"compile\":0.8000001907348633,\"instantiate\":0.19999980926513672,\"post\":10.199999809265137}"
+  },
+  {
+    "epoch": 1793371919142,
+    "text": "Service Worker registered"
+  },
+  {
+    "epoch": 1793371920168,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"libRlapack.so\",\"compile\":23.700000286102295,\"instantiate\":1.8999996185302734,\"post\":1001.1000003814697}"
+  },
+  {
+    "epoch": 1793371920238,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/usr/lib/R/library/stats/libs/stats.so\",\"compile\":7.299999713897705,\"instantiate\":0.6000003814697266,\"post\":58.89999961853027}"
+  },
+  {
+    "epoch": 1793371920379,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/usr/lib/R/library/webr/libs/webr.so\",\"compile\":2.1000003814697266,\"instantiate\":0.2999997138977051,\"post\":26.59999990463257}"
+  },
+  {
+    "epoch": 1793371920459,
+    "text": "WebR is using `PostMessage` communication channel, nested R REPLs are not available."
+  },
+  {
+    "epoch": 1793371920459,
+    "text": "preload echo:"
+  },
+  {
+    "epoch": 1793371920459,
+    "text": "preload echo:R version 4.6.0 (2026-04-24) -- \"Because it was There\""
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:Copyright (C) 2026 The R Foundation for Statistical Computing"
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:Platform: wasm32-unknown-emscripten (32-bit)"
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:"
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:R is free software and comes with ABSOLUTELY NO WARRANTY."
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:You are welcome to redistribute it under certain conditions."
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:Type 'license()' or 'licence()' for distribution details."
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:"
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:R is a collaborative project with many contributors."
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:Type 'contributors()' for more information and"
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:'citation()' on how to cite R or R packages in publications."
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:"
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:Type 'demo()' for some demos, 'help()' for on-line help, or"
+  },
+  {
+    "epoch": 1793371920466,
+    "text": "preload echo:'help.start()' for an HTML browser interface to help."
+  },
+  {
+    "epoch": 1793371920467,
+    "text": "preload echo:Type 'q()' to quit R."
+  },
+  {
+    "epoch": 1793371920467,
+    "text": "preload echo:"
+  },
+  {
+    "epoch": 1793371924283,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/library.data.gz\",\"ms\":3808.3999996185303}"
+  },
+  {
+    "epoch": 1793371924772,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/digest/libs/digest.so\",\"compile\":1.5,\"instantiate\":0.20000028610229492,\"post\":45.69999980926514}"
+  },
+  {
+    "epoch": 1793371924853,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/rlang/libs/rlang.so\",\"compile\":1,\"instantiate\":0.3000001907348633,\"post\":6.199999809265137}"
+  },
+  {
+    "epoch": 1793371924968,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/cli/libs/cli.so\",\"compile\":0.6999998092651367,\"instantiate\":0.10000038146972656,\"post\":5.099999904632568}"
+  },
+  {
+    "epoch": 1793371926232,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/fastmap/libs/fastmap.so\",\"compile\":0.5,\"instantiate\":0.39999961853027344,\"post\":24.40000009536743}"
+  },
+  {
+    "epoch": 1793371926302,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/htmltools/libs/htmltools.so\",\"compile\":0.19999980926513672,\"instantiate\":0.20000028610229492,\"post\":9.799999713897705}"
+  },
+  {
+    "epoch": 1793371926835,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/Rcpp/libs/Rcpp.so\",\"compile\":2.700000286102295,\"instantiate\":2.299999713897705,\"post\":454}"
+  },
+  {
+    "epoch": 1793371927033,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/usr/lib/R/library/tools/libs/tools.so\",\"compile\":3.200000286102295,\"instantiate\":0.19999980926513672,\"post\":20.5}"
+  },
+  {
+    "epoch": 1793371928207,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/later/libs/later.so\",\"compile\":3.1999998092651367,\"instantiate\":1.3000001907348633,\"post\":508.8999996185303}"
+  },
+  {
+    "epoch": 1793371928316,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/magrittr/libs/magrittr.so\",\"compile\":0.20000028610229492,\"instantiate\":0.09999990463256836,\"post\":27.40000009536743}"
+  },
+  {
+    "epoch": 1793371928513,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/httpuv/libs/httpuv.so\",\"compile\":0.40000009536743164,\"instantiate\":0.19999980926513672,\"post\":9}"
+  },
+  {
+    "epoch": 1793371928611,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/mime/libs/mime.so\",\"compile\":0.09999990463256836,\"instantiate\":0.09999990463256836,\"post\":9.099999904632568}"
+  },
+  {
+    "epoch": 1793371929713,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/vfs/usr/lib/R/share.data.gz\",\"ms\":538.5999999046326}"
+  },
+  {
+    "epoch": 1793371929720,
+    "text": "preload echo:CPHASE mount-start 09.160 "
+  },
+  {
+    "epoch": 1793371929779,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/glue/libs/glue.so\",\"compile\":0.20000028610229492,\"instantiate\":0.09999990463256836,\"post\":10.099999904632568}"
+  },
+  {
+    "epoch": 1793371930492,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/usr/lib/R/modules/internet.so\",\"compile\":1.9000000953674316,\"instantiate\":0.19999980926513672,\"post\":20.199999809265137}"
+  },
+  {
+    "epoch": 1793371930771,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/dplyr/dplyr_1.2.1.tgz\",\"ms\":222.5}"
+  },
+  {
+    "epoch": 1793371931681,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/ggplot2/ggplot2_4.0.3.tgz\",\"ms\":872.9000000953674}"
+  },
+  {
+    "epoch": 1793371931847,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/metafor/metafor_5.2-1.tgz\",\"ms\":152.7000002861023}"
+  },
+  {
+    "epoch": 1793371931910,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/robumeta/robumeta_2.1.tgz\",\"ms\":53.80000019073486}"
+  },
+  {
+    "epoch": 1793371932150,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/bayesmeta/bayesmeta_3.5.tgz\",\"ms\":221.30000019073486}"
+  },
+  {
+    "epoch": 1793371932271,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/tibble/tibble_3.3.1.tgz\",\"ms\":103.09999990463257}"
+  },
+  {
+    "epoch": 1793371932426,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/poibin/poibin_1.6.tgz\",\"ms\":59}"
+  },
+  {
+    "epoch": 1793371932505,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/stringr/stringr_1.6.0.tgz\",\"ms\":60.5}"
+  },
+  {
+    "epoch": 1793371932890,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/DT/DT_0.34.0.tgz\",\"ms\":370.2999997138977}"
+  },
+  {
+    "epoch": 1793371932964,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/forcats/forcats_1.0.1.tgz\",\"ms\":61.5}"
+  },
+  {
+    "epoch": 1793371933129,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/meta/meta_8.5-0.tgz\",\"ms\":148.5}"
+  },
+  {
+    "epoch": 1793371933523,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/plotly/plotly_4.12.1.tgz\",\"ms\":384.7000002861023}"
+  },
+  {
+    "epoch": 1793371933639,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/psych/psych_2.6.9.tgz\",\"ms\":108.80000019073486}"
+  },
+  {
+    "epoch": 1793371933676,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/puniform/puniform_0.2.8.tgz\",\"ms\":28.5}"
+  },
+  {
+    "epoch": 1793371933753,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/purrr/purrr_1.2.2.tgz\",\"ms\":64.80000019073486}"
+  },
+  {
+    "epoch": 1793371933865,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/readxl/readxl_1.5.0.1.tgz\",\"ms\":101.90000009536743}"
+  },
+  {
+    "epoch": 1793371933941,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/shinycssloaders/shinycssloaders_1.1.0.tgz\",\"ms\":52.90000009536743}"
+  },
+  {
+    "epoch": 1793371934090,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/shinyjs/shinyjs_2.1.1.tgz\",\"ms\":135.30000019073486}"
+  },
+  {
+    "epoch": 1793371934256,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/shinythemes/shinythemes_1.2.0.tgz\",\"ms\":147.5}"
+  },
+  {
+    "epoch": 1793371934587,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/shinyWidgets/shinyWidgets_0.9.1.tgz\",\"ms\":324.40000009536743}"
+  },
+  {
+    "epoch": 1793371934691,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/tidyr/tidyr_1.3.2.tgz\",\"ms\":88.40000009536743}"
+  },
+  {
+    "epoch": 1793371934756,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/weightr/weightr_2.0.2.tgz\",\"ms\":53.30000019073486}"
+  },
+  {
+    "epoch": 1793371934849,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/writexl/writexl_2.0.1.tgz\",\"ms\":75.59999990463257}"
+  },
+  {
+    "epoch": 1793371934906,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/zcurve/zcurve_2.4.6.tgz\",\"ms\":44.19999980926514}"
+  },
+  {
+    "epoch": 1793371934942,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/generics/generics_0.1.4.tgz\",\"ms\":27}"
+  },
+  {
+    "epoch": 1793371935018,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/pillar/pillar_1.11.1.tgz\",\"ms\":56.40000009536743}"
+  },
+  {
+    "epoch": 1793371935070,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/pkgconfig/pkgconfig_2.0.3.tgz\",\"ms\":40}"
+  },
+  {
+    "epoch": 1793371935130,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/tidyselect/tidyselect_1.2.1.tgz\",\"ms\":44.39999961853027}"
+  },
+  {
+    "epoch": 1793371935226,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/utf8/utf8_1.2.6.tgz\",\"ms\":67.89999961853027}"
+  },
+  {
+    "epoch": 1793371935399,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/vctrs/vctrs_0.7.3.tgz\",\"ms\":157.80000019073486}"
+  },
+  {
+    "epoch": 1793371935554,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/farver/farver_2.1.2.tgz\",\"ms\":137.5}"
+  },
+  {
+    "epoch": 1793371935617,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/gtable/gtable_0.3.6.tgz\",\"ms\":50.19999980926514}"
+  },
+  {
+    "epoch": 1793371935770,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/isoband/isoband_0.3.0.tgz\",\"ms\":130}"
+  },
+  {
+    "epoch": 1793371935835,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/labeling/labeling_0.4.3.tgz\",\"ms\":56.299999713897705}"
+  },
+  {
+    "epoch": 1793371935894,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/RColorBrewer/RColorBrewer_1.1-3.tgz\",\"ms\":49.09999990463257}"
+  },
+  {
+    "epoch": 1793371935987,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/S7/S7_0.2.2.tgz\",\"ms\":83.59999990463257}"
+  },
+  {
+    "epoch": 1793371936101,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/scales/scales_1.4.0.tgz\",\"ms\":101}"
+  },
+  {
+    "epoch": 1793371936186,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/viridisLite/viridisLite_0.4.3.tgz\",\"ms\":68.5}"
+  },
+  {
+    "epoch": 1793371936318,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/lattice/lattice_0.23-1.tgz\",\"ms\":119.19999980926514}"
+  },
+  {
+    "epoch": 1793371936670,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/mathjaxr/mathjaxr_2.0-0.tgz\",\"ms\":333.7999997138977}"
+  },
+  {
+    "epoch": 1793371937105,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/Matrix/Matrix_1.7-6.tgz\",\"ms\":415.80000019073486}"
+  },
+  {
+    "epoch": 1793371937300,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/metadat/metadat_1.6-0.tgz\",\"ms\":173.69999980926514}"
+  },
+  {
+    "epoch": 1793371937837,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/nlme/nlme_3.1-171.tgz\",\"ms\":508.2000002861023}"
+  },
+  {
+    "epoch": 1793371937926,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/numDeriv/numDeriv_2016.8-1.1.tgz\",\"ms\":69}"
+  },
+  {
+    "epoch": 1793371937979,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/pbapply/pbapply_1.7-5.tgz\",\"ms\":33.30000019073486}"
+  },
+  {
+    "epoch": 1793371938141,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/abind/abind_1.4-8.tgz\",\"ms\":140.5}"
+  },
+  {
+    "epoch": 1793371938249,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/backports/backports_1.5.1.tgz\",\"ms\":74.2999997138977}"
+  },
+  {
+    "epoch": 1793371938373,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/checkmate/checkmate_2.3.4.tgz\",\"ms\":100.5}"
+  },
+  {
+    "epoch": 1793371938537,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/forestplot/forestplot_3.2.0.tgz\",\"ms\":149.39999961853027}"
+  },
+  {
+    "epoch": 1793371938640,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/mvtnorm/mvtnorm_1.2-4.tgz\",\"ms\":89.2000002861023}"
+  },
+  {
+    "epoch": 1793371939593,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/stringi/stringi_1.8.9.tgz\",\"ms\":924.5}"
+  },
+  {
+    "epoch": 1793371939855,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/crosstalk/crosstalk_1.2.2.tgz\",\"ms\":250.10000038146973}"
+  },
+  {
+    "epoch": 1793371939903,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/evaluate/evaluate_1.0.5.tgz\",\"ms\":32.40000009536743}"
+  },
+  {
+    "epoch": 1793371939965,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/highr/highr_0.12.tgz\",\"ms\":51.09999990463257}"
+  },
+  {
+    "epoch": 1793371940038,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/htmlwidgets/htmlwidgets_1.6.4.tgz\",\"ms\":64.2999997138977}"
+  },
+  {
+    "epoch": 1793371940277,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/knitr/knitr_1.52.tgz\",\"ms\":220.69999980926514}"
+  },
+  {
+    "epoch": 1793371940347,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/lazyeval/lazyeval_0.2.3.tgz\",\"ms\":55}"
+  },
+  {
+    "epoch": 1793371940849,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/rmarkdown/rmarkdown_2.32.tgz\",\"ms\":482.30000019073486}"
+  },
+  {
+    "epoch": 1793371940947,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/tinytex/tinytex_0.61.tgz\",\"ms\":67.19999980926514}"
+  },
+  {
+    "epoch": 1793371941067,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/xfun/xfun_0.61.tgz\",\"ms\":105.69999980926514}"
+  },
+  {
+    "epoch": 1793371941190,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/yaml/yaml_2.3.12.tgz\",\"ms\":88.2000002861023}"
+  },
+  {
+    "epoch": 1793371941331,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/bit/bit_4.6.0.tgz\",\"ms\":128.59999990463257}"
+  },
+  {
+    "epoch": 1793371941429,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/bit64/bit64_4.8.6.tgz\",\"ms\":74}"
+  },
+  {
+    "epoch": 1793371941538,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/boot/boot_1.3-32.tgz\",\"ms\":91.39999961853027}"
+  },
+  {
+    "epoch": 1793371941650,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/clipr/clipr_0.8.1.tgz\",\"ms\":56.700000286102295}"
+  },
+  {
+    "epoch": 1793371941694,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/CompQuadForm/CompQuadForm_1.4.4.tgz\",\"ms\":57.60000038146973}"
+  },
+  {
+    "epoch": 1793371941815,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/crayon/crayon_1.5.3.tgz\",\"ms\":102.09999990463257}"
+  },
+  {
+    "epoch": 1793371941894,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/hms/hms_1.1.4.tgz\",\"ms\":62.40000009536743}"
+  },
+  {
+    "epoch": 1793371942314,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/lme4/lme4_2.0-6.tgz\",\"ms\":369.19999980926514}"
+  },
+  {
+    "epoch": 1793371942349,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/MASS/MASS_7.3-66.tgz\",\"ms\":63.700000286102295}"
+  },
+  {
+    "epoch": 1793371942389,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/metabook/metabook_0.2-0.tgz\",\"ms\":31.59999990463257}"
+  },
+  {
+    "epoch": 1793371942428,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/minqa/minqa_1.2.8.tgz\",\"ms\":28.699999809265137}"
+  },
+  {
+    "epoch": 1793371942490,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/nloptr/nloptr_2.2.1.9000.tgz\",\"ms\":49.59999990463257}"
+  },
+  {
+    "epoch": 1793371942621,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/rbibutils/rbibutils_2.4.1.tgz\",\"ms\":119.90000009536743}"
+  },
+  {
+    "epoch": 1793371942682,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/Rdpack/Rdpack_2.6.6.tgz\",\"ms\":49.200000286102295}"
+  },
+  {
+    "epoch": 1793371942782,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/readr/readr_2.2.0.tgz\",\"ms\":87.09999990463257}"
+  },
+  {
+    "epoch": 1793371942864,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/reformulas/reformulas_0.4.4.tgz\",\"ms\":56.299999713897705}"
+  },
+  {
+    "epoch": 1793371943019,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/tzdb/tzdb_0.5.0.tgz\",\"ms\":136.40000009536743}"
+  },
+  {
+    "epoch": 1793371943204,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/vroom/vroom_1.7.1.9000.tgz\",\"ms\":165.90000009536743}"
+  },
+  {
+    "epoch": 1793371943494,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/xml2/xml2_1.6.0.tgz\",\"ms\":259.8999996185303}"
+  },
+  {
+    "epoch": 1793371943563,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/askpass/askpass_1.2.1.tgz\",\"ms\":47.80000019073486}"
+  },
+  {
+    "epoch": 1793371943909,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/curl/curl_8.0.0.tgz\",\"ms\":244.5}"
+  },
+  {
+    "epoch": 1793371944140,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/data.table/data.table_1.18.6.1.tgz\",\"ms\":300.5}"
+  },
+  {
+    "epoch": 1793371944202,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/httr/httr_1.4.9.tgz\",\"ms\":47.09999990463257}"
+  },
+  {
+    "epoch": 1793371944639,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/openssl/openssl_2.4.2.tgz\",\"ms\":412.80000019073486}"
+  },
+  {
+    "epoch": 1793371944712,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/sys/sys_3.4.3.tgz\",\"ms\":56.80000019073486}"
+  },
+  {
+    "epoch": 1793371944944,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/GPArotation/GPArotation_2026.8-2.tgz\",\"ms\":195.5}"
+  },
+  {
+    "epoch": 1793371945104,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/mnormt/mnormt_2.1.1.tgz\",\"ms\":116.19999980926514}"
+  },
+  {
+    "epoch": 1793371945199,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/ADGofTest/ADGofTest_0.3.tgz\",\"ms\":67.39999961853027}"
+  },
+  {
+    "epoch": 1793371945449,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/cellranger/cellranger_1.1.0.tgz\",\"ms\":217.39999961853027}"
+  },
+  {
+    "epoch": 1793371945541,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/rematch/rematch_2.0.0.tgz\",\"ms\":74.5}"
+  },
+  {
+    "epoch": 1793371945662,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/packages/nleqslv/nleqslv_3.3.7.tgz\",\"ms\":95.10000038146973}"
+  },
+  {
+    "epoch": 1793371945857,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/vfs/usr/lib/R/library/parallel.data.gz\",\"ms\":152.19999980926514}"
+  },
+  {
+    "epoch": 1793371946003,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/vfs/usr/lib/R/library/tcltk.data.gz\",\"ms\":111.2999997138977}"
+  },
+  {
+    "epoch": 1793371946984,
+    "text": "CPROFILE {\"kind\":\"mount\",\"path\":\"/shinylive/webr/vfs/usr/lib/R/library/translations.data.gz\",\"ms\":963.1999998092651}"
+  },
+  {
+    "epoch": 1793371947319,
+    "text": "preload echo:CPHASE mount-end 27.315 "
+  },
+  {
+    "epoch": 1793371947387,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/renv/libs/renv.so\",\"compile\":0.40000009536743164,\"instantiate\":0.09999990463256836,\"post\":7.699999809265137}"
+  },
+  {
+    "epoch": 1793371953115,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/vctrs/libs/vctrs.so\",\"compile\":9.699999809265137,\"instantiate\":3.8000001907348633,\"post\":20.199999809265137}"
+  },
+  {
+    "epoch": 1793371953810,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/tibble/libs/tibble.so\",\"compile\":0.10000038146972656,\"instantiate\":0.09999990463256836,\"post\":4.799999713897705}"
+  },
+  {
+    "epoch": 1793371955377,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/dplyr/libs/dplyr.so\",\"compile\":0.40000009536743164,\"instantiate\":0.5,\"post\":662.5}"
+  },
+  {
+    "epoch": 1793371955750,
+    "text": "preload error:"
+  },
+  {
+    "epoch": 1793371955751,
+    "text": "preload error:Attaching package: ‘dplyr’"
+  },
+  {
+    "epoch": 1793371955751,
+    "text": "preload error:"
+  },
+  {
+    "epoch": 1793371955754,
+    "text": "preload error:The following objects are masked from ‘package:stats’:"
+  },
+  {
+    "epoch": 1793371955754,
+    "text": "preload error:"
+  },
+  {
+    "epoch": 1793371955754,
+    "text": "preload error:    filter, lag"
+  },
+  {
+    "epoch": 1793371955755,
+    "text": "preload error:"
+  },
+  {
+    "epoch": 1793371955755,
+    "text": "preload error:The following objects are masked from ‘package:base’:"
+  },
+  {
+    "epoch": 1793371955756,
+    "text": "preload error:"
+  },
+  {
+    "epoch": 1793371955756,
+    "text": "preload error:    intersect, setdiff, setequal, union"
+  },
+  {
+    "epoch": 1793371955756,
+    "text": "preload error:"
+  },
+  {
+    "epoch": 1793371955963,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/usr/lib/R/library/grid/libs/grid.so\",\"compile\":0.8000001907348633,\"instantiate\":0.09999990463256836,\"post\":5.5}"
+  },
+  {
+    "epoch": 1793371957485,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/farver/libs/farver.so\",\"compile\":2.0999999046325684,\"instantiate\":1.700000286102295,\"post\":1388.1999998092651}"
+  },
+  {
+    "epoch": 1793371959565,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/S7/libs/S7.so\",\"compile\":0.20000028610229492,\"instantiate\":0.19999980926513672,\"post\":353.2000002861023}"
+  },
+  {
+    "epoch": 1793371960778,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/jsonlite/libs/jsonlite.so\",\"compile\":0.39999961853027344,\"instantiate\":0.10000038146972656,\"post\":14.5}"
+  },
+  {
+    "epoch": 1793371961271,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/mnormt/libs/mnormt.so\",\"compile\":0.39999961853027344,\"instantiate\":0.3000001907348633,\"post\":191.90000009536743}"
+  },
+  {
+    "epoch": 1793371961410,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/usr/lib/R/library/parallel/libs/parallel.so\",\"compile\":0.19999980926513672,\"instantiate\":0.09999990463256836,\"post\":14}"
+  },
+  {
+    "epoch": 1793371961616,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/lattice/libs/lattice.so\",\"compile\":0.20000028610229492,\"instantiate\":0.09999990463256836,\"post\":9.300000190734863}"
+  },
+  {
+    "epoch": 1793371961902,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/nlme/libs/nlme.so\",\"compile\":0.6000003814697266,\"instantiate\":0.2999997138977051,\"post\":12.599999904632568}"
+  },
+  {
+    "epoch": 1793371962072,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/CompQuadForm/libs/CompQuadForm.so\",\"compile\":0.19999980926513672,\"instantiate\":0.09999990463256836,\"post\":12.400000095367432}"
+  },
+  {
+    "epoch": 1793371962347,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/usr/lib/R/library/splines/libs/splines.so\",\"compile\":0.20000028610229492,\"instantiate\":0,\"post\":15.899999618530273}"
+  },
+  {
+    "epoch": 1793371962502,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/MASS/libs/MASS.so\",\"compile\":2.5999999046325684,\"instantiate\":0.10000038146972656,\"post\":12.299999713897705}"
+  },
+  {
+    "epoch": 1793371963001,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/rbibutils/libs/rbibutils.so\",\"compile\":5.5,\"instantiate\":0.6999998092651367,\"post\":299.59999990463257}"
+  },
+  {
+    "epoch": 1793371963168,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/Matrix/libs/Matrix.so\",\"compile\":9.5,\"instantiate\":0.40000009536743164,\"post\":17.59999990463257}"
+  },
+  {
+    "epoch": 1793371969507,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/minqa/libs/minqa.so\",\"compile\":2.9000000953674316,\"instantiate\":0.5999999046325684,\"post\":383.7999997138977}"
+  },
+  {
+    "epoch": 1793371970016,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/nloptr/libs/nloptr.so\",\"compile\":1.9000000953674316,\"instantiate\":1.1999998092651367,\"post\":417.40000009536743}"
+  },
+  {
+    "epoch": 1793371971275,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/lme4/libs/lme4.so\",\"compile\":6.899999618530273,\"instantiate\":8,\"post\":947}"
+  },
+  {
+    "epoch": 1793371973959,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/purrr/libs/purrr.so\",\"compile\":0.39999961853027344,\"instantiate\":0.10000038146972656,\"post\":6.399999618530273}"
+  },
+  {
+    "epoch": 1793371976558,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/readr/libs/readr.so\",\"compile\":3.200000286102295,\"instantiate\":3.1999998092651367,\"post\":2463.699999809265}"
+  },
+  {
+    "epoch": 1793371977097,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/tzdb/libs/tzdb.so\",\"compile\":0.9000000953674316,\"instantiate\":0.8999996185302734,\"post\":503.1000003814697}"
+  },
+  {
+    "epoch": 1793372002263,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/stringi/libs/stringi.so\",\"compile\":44.90000009536743,\"instantiate\":61.5,\"post\":24422.799999713898}"
+  },
+  {
+    "epoch": 1793372002795,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/xml2/libs/xml2.so\",\"compile\":4.099999904632568,\"instantiate\":1.5,\"post\":174.2000002861023}"
+  },
+  {
+    "epoch": 1793372002937,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/data.table/libs/data_table.so\",\"compile\":2.3000001907348633,\"instantiate\":0.40000009536743164,\"post\":18.5}"
+  },
+  {
+    "epoch": 1793372004276,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/tidyr/libs/tidyr.so\",\"compile\":0.5999999046325684,\"instantiate\":0.5999999046325684,\"post\":392.59999990463257}"
+  },
+  {
+    "epoch": 1793372004508,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/poibin/libs/poibin.so\",\"compile\":0.2999997138977051,\"instantiate\":0,\"post\":33.40000009536743}"
+  },
+  {
+    "epoch": 1793372005084,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/puniform/libs/puniform.so\",\"compile\":2.8000001907348633,\"instantiate\":2.299999713897705,\"post\":492.5}"
+  },
+  {
+    "epoch": 1793372005335,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/readxl/libs/readxl.so\",\"compile\":9.600000381469727,\"instantiate\":0.39999961853027344,\"post\":48.10000038146973}"
+  },
+  {
+    "epoch": 1793372018409,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/sass/libs/sass.so\",\"compile\":25.600000381469727,\"instantiate\":27.699999809265137,\"post\":12755.400000095367}"
+  },
+  {
+    "epoch": 1793372018712,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/library/cachem/libs/cachem.so\",\"compile\":0.09999990463256836,\"instantiate\":0.09999990463256836,\"post\":41.59999990463257}"
+  },
+  {
+    "epoch": 1793372019193,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/writexl/libs/writexl.so\",\"compile\":5.100000381469727,\"instantiate\":0.2999997138977051,\"post\":107.5}"
+  },
+  {
+    "epoch": 1793372019558,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/zcurve/libs/zcurve.so\",\"compile\":1.9000000953674316,\"instantiate\":4.400000095367432,\"post\":259.2999997138977}"
+  },
+  {
+    "epoch": 1793372019988,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/xfun/libs/xfun.so\",\"compile\":0.2999997138977051,\"instantiate\":0,\"post\":43.40000009536743}"
+  },
+  {
+    "epoch": 1793372020494,
+    "text": "CPROFILE {\"kind\":\"dylink\",\"path\":\"/shinylive/webr/packages/yaml/libs/yaml.so\",\"compile\":1.200000286102295,\"instantiate\":0.2999997138977051,\"post\":136.5}"
+  },
+  {
+    "epoch": 1793372023425,
+    "text": "The specified value \"NA\" cannot be parsed, or is out of range."
+  }
+]

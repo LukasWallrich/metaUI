@@ -120,3 +120,31 @@ static_notice <- function(bundled) {
     "The app code itself (ui.R, server.R, and the other R files) is part of this export and",
     "carries the licence stated in its COPYRIGHTS file.")
 }
+
+#' Avoid collecting unused JavaScript stacks during webR symbol relocation
+#'
+#' webR 0.6.0 probes immutable Wasm globals by assigning to them and catching
+#' TypeError. Capturing R's deep Wasm call stack for every successful probe is
+#' expensive in Chromium. The exceptions are consumed internally; disable stack
+#' capture only for this synchronous relocation loop and restore it even on error.
+#' Unknown webR loaders are left unchanged rather than patched speculatively.
+#' @noRd
+static_optimize_webr <- function(dest_dir) {
+  loader <- file.path(dest_dir, "shinylive", "webr", "R.js")
+  if (!file.exists(loader)) return(invisible(FALSE))
+  code <- paste(readLines(loader, warn = FALSE), collapse = "\n")
+  marker <- "/* metaUI: avoid unused relocation stacks */"
+  if (grepl(marker, code, fixed = TRUE)) return(invisible(TRUE))
+  original <- paste0("var relocated={};for(var e in exports){",
+    "relocated[e]=relocateExport(e,exports[e])}return relocated")
+  if (!grepl(original, code, fixed = TRUE)) {
+    warning("webR loader not recognized; leaving symbol relocation unchanged.", call. = FALSE)
+    return(invisible(FALSE))
+  }
+  replacement <- paste0(marker,
+    "var relocated={};var stackLimit=Error.stackTraceLimit;try{Error.stackTraceLimit=0;",
+    "for(var e in exports){relocated[e]=relocateExport(e,exports[e])}}",
+    "finally{Error.stackTraceLimit=stackLimit}return relocated")
+  writeLines(sub(original, replacement, code, fixed = TRUE), loader, useBytes = TRUE)
+  invisible(TRUE)
+}
