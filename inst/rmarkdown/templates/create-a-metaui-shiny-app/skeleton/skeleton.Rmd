@@ -45,13 +45,17 @@ Now **create or change any of the fields** that need to be calculated or adjuste
 ```{r}
 # Make any edits needed to get all the fields you need. 
 # All rows within mutate are just examples that you need to delete or adjust
+
+# Check for unexpected codes first: factor() below turns unlisted codes into missing values
+stopifnot(all(my_data$continent %in% c(1:6, -999, NA)))
+
 my_data <- my_data %>% mutate(
   # Maybe combine various fields into the study label
   study_label = paste0(author, " (", pub_year, ")", ": ", study_id),
   # Maybe calculate the standard error from the variance
   se = sqrt(var), 
   # Turn categorical moderators/filters into factors
-  # ... and make sure they have clear labels (codes not listed, such as -999, become missing)
+  # ... and make sure they have clear labels (the missing-value code -999 becomes NA)
   continent = factor(continent, levels = 1:6,
                      labels = c("North America", "South America", "Europe",
                                 "Asia", "Africa", "Oceania"))

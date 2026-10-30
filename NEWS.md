@@ -11,7 +11,8 @@
 * Uploading a workbook now restores its equivalence bound, as selection links
   already did. Workbooks from empty selections also record the bound.
 * metaUI no longer depends on forcats, and generated apps no longer need psych;
-  base R replaces both.
+  base R replaces both. The R Markdown skeleton's example recode now treats
+  `-999` as missing (shown as `(Missing)`) instead of a level named "NA".
 
 # metaUI 0.2.0
 
