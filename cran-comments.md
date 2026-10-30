@@ -12,9 +12,10 @@ author-supplied effect computations, shareable selections and accessible UI.
 
 ## Notes
 
-Runtime Imports intentionally include dependencies used by generated standalone
-Shiny apps; generated global.R checks these and dependencies.csv records versions.
-Only bayesmeta is newly optional, in Suggests, checked when enabled.
+Packages used only by generated standalone Shiny apps are in Suggests.
+generate_shiny() checks them before building and stops with an install command
+if any is missing; tests and examples are skipped when they are absent.
+Generated global.R checks them again, and dependencies.csv records versions.
 
 The source/reference data licensing audit is bundled in inst/COPYRIGHTS; an input
 with unverifiable redistribution terms was removed. Examples do not launch apps,

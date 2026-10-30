@@ -37,29 +37,14 @@ my_assign <- function(name, value, envir = 1L) assign(name, value, pos = envir)
 no_check_warnings <- function() {
   return(TRUE)
 
-  # Shiny app
-  plotly::ggplotly()
-  shinycssloaders::withSpinner()
+  # Imports used only in generated-app code strings. Packages used only by
+  # generated apps are in Suggests and checked by generate_shiny().
   shinyWidgets::pickerInput()
   shinythemes::themeSelector()
-  psych::describe()
   htmltools::htmlEscape()
   jsonlite::write_json()
   tools::md5sum()
   forcats::fct_drop()
-  DT::datatable()
-  shinyjs::useShinyjs()
-  ggplot2::ggplot()
-
-  #Import/export
-  readxl::read_excel()
-  writexl::write_xlsx()
-
-  # Estimation packages
   metafor::rma.mv()
-  meta::metabias()
-  puniform::puniform()
-  robumeta::robu()
-  weightr::weightfunct()
-  zcurve::zcurve()
 }
+

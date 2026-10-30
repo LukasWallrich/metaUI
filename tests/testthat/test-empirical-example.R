@@ -1,3 +1,5 @@
+skip_without_app_packages()
+
 test_that("CC-BY example retains exact native-scale membership and reference fit", {
   root <- system.file("examples", "dannheim", package = "metaUI")
   x <- read.csv(file.path(root, "mental-health.csv"))
