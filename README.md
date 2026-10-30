@@ -118,6 +118,21 @@ Downloads preserve the full current input dataset and saved filter selections; t
 summary sheet describes the selected rows. An empty selection stays empty on
 re-upload and reports no eligible rows, while the original inputs remain available.
 
+### Reproduction code
+
+After an analysis, readers can download an R script or a Quarto file that
+reproduces the applied selection (filters, missing-value choices, effect-size
+computation and equivalence bound) and the model rows on the Summary tab. The
+code reads the workbook from the same analysis, so it also works for uploaded
+data, and it runs without metaUI. It copies the app's `models.R`, including
+author-defined models and their helper functions, and the fitting functions that
+the app calls, so it follows the app's own code path. It also records the package
+versions the app used and ends by comparing every row with the values the app
+reported. It does not reproduce the plots or diagnostic tabs. Author-defined
+models that use random numbers or external state, and other package versions,
+can give different results; the comparison shows where they do.
+See [the validation note](https://github.com/LukasWallrich/metaUI/blob/main/validation/code-export.md).
+
 ### Practical equivalence and forest exports
 
 Summary includes an interval assessment for a reader-chosen symmetric smallest

@@ -48,11 +48,20 @@ metaUI_code_closure <- function(roots, defs, exclude = character()) {
   defs[names(defs) %in% included]
 }
 
+# Packages named in code (pkg::f or library(pkg)); comments are ignored.
 metaUI_code_packages <- function(code) {
-  found <- regmatches(code, gregexpr("\\b[A-Za-z][A-Za-z0-9.]*[A-Za-z0-9](?=:::?)", code, perl = TRUE))[[1]]
-  attached <- regmatches(code, gregexpr("(?<=library\\()[A-Za-z][A-Za-z0-9.]*(?=\\))", code, perl = TRUE))[[1]]
+  used <- unlist(lapply(code, function(x) {
+    tokens <- tryCatch(utils::getParseData(parse(text = x, keep.source = TRUE)), error = function(e) NULL)
+    if (is.null(tokens)) return(character())
+    calls <- which(tokens$token == "SYMBOL_FUNCTION_CALL" & tokens$text %in% c("library", "require"))
+    attached <- vapply(calls, function(i) {
+      after <- tokens[tokens$line1 == tokens$line1[i] & tokens$col1 > tokens$col2[i] & tokens$token %in% c("SYMBOL", "STR_CONST"), ]
+      if (nrow(after)) gsub("[\"']", "", after$text[1]) else ""
+    }, character(1))
+    c(tokens$text[tokens$token == "SYMBOL_PACKAGE"], attached)
+  }))
   base <- c("base", "stats", "utils", "methods", "graphics", "grDevices", "tools", "parallel", "grid")
-  sort(setdiff(unique(c(found, attached)), base))
+  sort(setdiff(unique(used[nzchar(used)]), base))
 }
 
 # format: "R" (plain script) or "qmd" (Quarto). `applied` is the filter record saved
@@ -127,7 +136,8 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
       "  message(\"Installed package versions differ from the app's:\")",
       "  print(data.frame(app = app_versions, installed = installed)[installed != app_versions, ])",
       "}",
-      "suppressPackageStartupMessages(library(dplyr))"), "packages")
+      "suppressPackageStartupMessages(library(dplyr))",
+      if (format == "qmd") "options(width = 160)  # keep result tables on one line in the rendered page"), "packages")
 
   helper_section <- section("Fitting functions",
     paste0("Copied from the app's ", paste(helper_files, collapse = ", "), ". `metaUI_fit_models()` is the function the app calls. ",
@@ -234,6 +244,8 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
       "  estimates$role <- if (is.null(primary_model)) \"estimator\" else ifelse(estimates$Model == primary_model, \"primary\", \"exploration\")",
       "  estimates <- estimates[order(estimates$role != \"primary\"), , drop = FALSE]",
       "  print(estimates[c(\"Model\", \"role\", \"es\", \"LCL\", \"UCL\", \"k\", \"status\")], digits = 6, row.names = FALSE)",
+      "  if (!is.null(primary_model) && estimates$role[1] == \"primary\") with(estimates[1, ], cat(\"Primary analysis (\", Model, \"): \",",
+      "    if (status == \"ok\") sprintf(\"%.4f [%.4f, %.4f], k = %g\", es, LCL, UCL, k) else paste0(status, \": \", reason), \"\\n\", sep = \"\"))",
       "  notes <- estimates[nzchar(estimates$reason) | nzchar(estimates$warnings), , drop = FALSE]",
       "  if (nrow(notes)) print(notes[c(\"Model\", \"reason\", \"warnings\")], row.names = FALSE)",
       "} else {",
@@ -276,8 +288,8 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
     "compare")
 
   sections <- list(packages, helper_section, models_section, data_section, selection_section, fit_section, equivalence_section, compare_section)
-  code <- paste(unlist(lapply(sections, function(s) s$code)), collapse = "\n")
-  used <- metaUI_code_packages(code)
+  code <- paste(setdiff(unlist(lapply(sections, function(s) s$code)), versions_placeholder), collapse = "\n")
+  used <- metaUI_code_packages(c(code, model_code))
   versions <- vapply(used, function(p) tryCatch(as.character(utils::packageVersion(p)), error = function(e) NA_character_), character(1))
   version_code <- paste0("app_versions <- c(", paste0("\n  ", used, " = ", vapply(versions, metaUI_code_string, character(1)), collapse = ","), ")")
   sections[[1]]$code[sections[[1]]$code == versions_placeholder] <- version_code
@@ -285,14 +297,14 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
 
   if (format == "R") {
     comment <- function(text) unlist(lapply(text, function(x) c(strwrap(x, width = 78, prefix = "# "), "#")))
-    out <- c(paste("#", title), "#", comment(intro), "# Licence: GPL-3-or-later, as metaUI.", "")
+    out <- c(paste("#", title), "#", comment(intro), "# Licence: the fitting functions are metaUI code (GPL-3-or-later); models.R is the authors' code.", "")
     for (s in sections) out <- c(out, paste0("# ", s$title, " ", strrep("-", max(4L, 74L - nchar(s$title)))),
       if (length(s$text)) utils::head(comment(s$text), -1L), s$code, "")
   } else {
     out <- c("---", paste0("title: ", jsonlite::toJSON(title, auto_unbox = TRUE)),
       paste0("date: ", jsonlite::toJSON(settings$exported, auto_unbox = TRUE)),
       "format:", "  html:", "    embed-resources: true", "    toc: true", "execute:", "  echo: true", "---", "",
-      paste0(intro, "\n"), "Licence: GPL-3-or-later, as metaUI.", "")
+      paste0(intro, "\n"), "Licence: the fitting functions are metaUI code (GPL-3-or-later); models.R is the authors' code.", "")
     for (s in sections) out <- c(out, paste("##", s$title), "", paste0(s$text, "\n"),
       paste0("```{r ", s$label, "}"), if (identical(s$label, "functions")) c("#| code-fold: true", "#| code-summary: \"Show the fitting functions\""),
       s$code, "```", "")

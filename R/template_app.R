@@ -234,7 +234,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
           textOutput("apply_state")),
         uiOutput("share_selection"), textOutput("link_notice"),
         tags$details(class = "metaui-help metaui-data-tools",
-        tags$summary("Download or upload data"),
+        tags$summary("Download data or code, upload data"),
         actionButton("downloadData", "Download .xlsx", icon = icon("download")),
         div(class = "metaui-code-actions", tags$span(class = "metaui-code-label", "Code for the applied selection"),
           actionButton("downloadCode", "R script", icon = icon("code")),

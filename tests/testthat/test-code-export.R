@@ -22,6 +22,7 @@ copy_download <- function(path, dir, name) { file.copy(path, file.path(dir, name
 expect_reproduces <- function(result, app) {
   expect_false(result$metaUI)
   expect_true(all(result$agreement$agrees), info = paste(result$log, collapse = "\n"))
+  expect_false(any(grepl("^Warning|differs? from", result$log)), info = paste(result$log, collapse = "\n"))
   x <- result$estimates[match(app$Model, result$estimates$Model), ]
   expect_identical(x$status, app$status)
   ok <- app$status == "ok"
@@ -153,6 +154,8 @@ test_that("Dannheim export reproduces the source reference and a filtered select
     row <- result$estimates[result$estimates$Model == primary, ]
     expect_identical(result$estimates$role[1], "primary")
     expect_equal(c(row$es, row$LCL, row$UCL), c(-0.38356080, -0.68781519, -0.07930642), tolerance = 1e-7)
+    expect_true(any(grepl("Primary analysis (Source-reference: REML / Hartung-Knapp (rounded inputs)): -0.3836 [-0.6878, -0.0793], k = 12",
+      result$log, fixed = TRUE)))
 
     session$setInputs(outliers_z_scores = c(-1, 1), go = 2)
     expect_true(sum(keep) < 12 && sum(keep) > 2)
@@ -162,4 +165,14 @@ test_that("Dannheim export reproduces the source reference and a filtered select
     expect_equal(c(row$es, row$LCL, row$UCL), c(as.numeric(reference$b), reference$ci.lb, reference$ci.ub), tolerance = 1e-8)
     expect_equal(result$selected, sum(keep))
   })
+})
+
+test_that("code helpers write exact numbers and ignore packages named in comments", {
+  x <- c(.6, -0.38356079413915367, 1/3, NA, 2e-20, 12)
+  expect_identical(eval(parse(text = metaUI:::metaUI_code_number(x))), x)
+  expect_identical(metaUI:::metaUI_code_number(.6), "0.6")
+  expect_identical(metaUI:::metaUI_code_number(numeric()), "numeric()")
+  code <- c("# see metaUI::prepare_data()\nlibrary(dplyr)\nfit <- metafor::rma(1)\nlabel <- \"robumeta::robu\"",
+    "meta::trimfill(meta::metagen(TE = 1))")
+  expect_identical(metaUI:::metaUI_code_packages(code), c("dplyr", "meta", "metafor"))
 })
