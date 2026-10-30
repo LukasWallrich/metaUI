@@ -505,23 +505,27 @@ validate_static_folder <- function(static_folder, save_to_folder) {
     stop("static_folder must be a nonempty scalar string.")
   if (!requireNamespace("shinylive", quietly = TRUE))
     stop('Static generation requires the shinylive package: install.packages("shinylive").')
-  canonical <- function(path) {
-    path <- path.expand(path)
-    if (file.exists(path)) return(normalizePath(path, winslash = "/", mustWork = TRUE))
-    parent <- dirname(path)
-    if (identical(parent, path)) return(path)
-    parent <- Recall(parent)
-    leaf <- basename(path)
-    if (leaf == "..") return(dirname(parent))
-    if (leaf == ".") return(parent)
-    file.path(parent, leaf)
-  }
-  if (!is.na(save_to_folder)) {
-    source <- canonical(save_to_folder)
-    target <- canonical(static_folder)
-    if (identical(source, target) || startsWith(target, paste0(sub("/+$", "", source), "/")))
-      stop("static_folder must be outside save_to_folder (not equal to or inside it).")
-  }
+  if (!is.na(save_to_folder) && metaUI_paths_overlap(save_to_folder, static_folder))
+    stop("static_folder must be separate from save_to_folder (not equal to, inside or containing it).")
+}
+
+# Absolute path with symlinks resolved, also for paths that do not exist yet.
+metaUI_canonical_path <- function(path) {
+  path <- path.expand(path)
+  if (file.exists(path)) return(normalizePath(path, winslash = "/", mustWork = TRUE))
+  parent <- dirname(path)
+  if (identical(parent, path)) return(path)
+  parent <- metaUI_canonical_path(parent)
+  leaf <- basename(path)
+  if (leaf == "..") return(dirname(parent))
+  if (leaf == ".") return(parent)
+  file.path(parent, leaf)
+}
+
+# TRUE if two folders are the same or one contains the other.
+metaUI_paths_overlap <- function(a, b) {
+  a <- sub("/+$", "", metaUI_canonical_path(a)); b <- sub("/+$", "", metaUI_canonical_path(b))
+  identical(a, b) || startsWith(a, paste0(b, "/")) || startsWith(b, paste0(a, "/"))
 }
 
 #' @name export_static

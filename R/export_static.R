@@ -43,6 +43,10 @@ export_static <- function(app_dir, dest_dir, subdir = "", overwrite = FALSE, pre
   if (!all(file.exists(file.path(app_dir, c("global.R", "ui.R", "server.R", "www/metaui.js")))))
     stop("app_dir must be a folder created by generate_shiny() or build_app().")
   target <- if (nzchar(subdir)) file.path(dest_dir, subdir) else dest_dir
+  # Never delete or write into the source app: reject overlapping folders first.
+  if (metaUI_paths_overlap(app_dir, target) ||
+      startsWith(paste0(metaUI_canonical_path(dest_dir), "/"), paste0(sub("/+$", "", metaUI_canonical_path(app_dir)), "/")))
+    stop("dest_dir (and subdir) must be separate from app_dir: not equal to, inside or containing it.")
   if (dir.exists(target) && length(list.files(target))) {
     if (!overwrite) stop("Destination exists: ", target, ". Use overwrite = TRUE to replace it.")
     unlink(target, recursive = TRUE)

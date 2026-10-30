@@ -25,6 +25,20 @@ test_that("export_static() rejects folders that are not generated apps", {
   expect_error(export_static(tempdir(), tempfile()), "created by generate_shiny")
 })
 
+test_that("export_static() refuses destinations that overlap the source app", {
+  skip_if_not_installed("shinylive")
+  root <- tempfile(); app <- file.path(root, "project", "app")
+  on.exit(unlink(root, recursive = TRUE))
+  dir.create(file.path(app, "www"), recursive = TRUE)
+  for (f in c("global.R", "server.R", "ui.R", "www/metaui.js")) writeLines("", file.path(app, f))
+  writeLines("keep", file.path(root, "project", "sibling.txt"))
+  for (dest in list(list(app, ""), list(dirname(app), ""), list(file.path(app, "site"), ""),
+                    list(dirname(dirname(app)), "project"), list(app, "site")))
+    expect_error(export_static(app, dest[[1]], subdir = dest[[2]], overwrite = TRUE), "separate from app_dir")
+  expect_true(file.exists(file.path(app, "global.R")))
+  expect_true(file.exists(file.path(root, "project", "sibling.txt")))
+})
+
 test_that("export_static() writes a static site with the bridge and notices", {
   # Downloads ~100 MB of WebAssembly packages; run explicitly.
   skip_on_cran()

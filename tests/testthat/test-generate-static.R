@@ -39,16 +39,17 @@ test_that("static generation validates before writing sources", {
     static_folder = file.path(root, "site")), "requires the shinylive package")
   expect_false(dir.exists(app))
   local_mocked_bindings(requireNamespace = function(...) TRUE, .package = "base")
-  for (site in c(app, file.path(app, "site"), file.path(app, "new", "..", "site"))) {
+  # Equal, inside, or containing the source folder (which overwrite would delete).
+  for (site in c(app, file.path(app, "site"), file.path(app, "new", "..", "site"), root)) {
     expect_error(generate_shiny(NULL, "Static", save_to_folder = app,
-      static_folder = site), "outside save_to_folder")
+      static_folder = site), "separate from save_to_folder")
     expect_false(dir.exists(app))
   }
   dir.create(app)
   link <- file.path(root, "alias")
   if (file.symlink(app, link))
     expect_error(generate_shiny(NULL, "Static", save_to_folder = app,
-      static_folder = file.path(link, "site")), "outside save_to_folder")
+      static_folder = file.path(link, "site")), "separate from save_to_folder")
   for (site in list(NA_character_, "", c("a", "b"), 1, FALSE))
     expect_error(generate_shiny(NULL, "Static", static_folder = site), "nonempty scalar string")
 })
