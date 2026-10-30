@@ -1,0 +1,35 @@
+[
+  {
+    "run": 1,
+    "start_epoch": 1793371477.633,
+    "loadavg_1m": 3.02,
+    "iframe_s": 45.708,
+    "ready_s": 47.011,
+    "first_analysis_s": 2.353,
+    "first_results_s": 49.364,
+    "heap_MB": 12.234295,
+    "engine": "chromium"
+  },
+  {
+    "run": 2,
+    "start_epoch": 1793371527.185,
+    "loadavg_1m": 3.73,
+    "iframe_s": 43.63,
+    "ready_s": 45.189,
+    "first_analysis_s": 3.93,
+    "first_results_s": 49.119,
+    "heap_MB": 12.803873,
+    "engine": "chromium"
+  },
+  {
+    "run": 3,
+    "start_epoch": 1793371576.68,
+    "loadavg_1m": 4.57,
+    "iframe_s": 43.361,
+    "ready_s": 44.581,
+    "first_analysis_s": 2.629,
+    "first_results_s": 47.21,
+    "heap_MB": 12.547838,
+    "engine": "chromium"
+  }
+]

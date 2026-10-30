@@ -4,6 +4,7 @@
 const pw = require(process.env.METAUI_PLAYWRIGHT || 'playwright');
 const engine = process.env.BROWSER || 'chromium';
 const fs = require('node:fs');
+const os = require('node:os');
 const url = process.env.URL, runs = Number(process.env.RUNS || 2);
 (async () => {
   const browser = await pw[engine].launch({headless: true, args: process.env.CHROMIUM_ARGS ? [process.env.CHROMIUM_ARGS] : [],
@@ -12,7 +13,7 @@ const url = process.env.URL, runs = Number(process.env.RUNS || 2);
   const results = [];
   for (let r = 0; r < runs; r++) {
     const page = await context.newPage();
-    const t0 = Date.now(), res = {run: r + 1, start_epoch: t0 / 1000};
+    const t0 = Date.now(), res = {run: r + 1, start_epoch: t0 / 1000, loadavg_1m: os.loadavg()[0]};
     await page.goto(url);
     let app;
     while (!app) { app = page.frames().find(f => f !== page.mainFrame() && /app_/.test(f.url())); if (!app) await page.waitForTimeout(100); }
@@ -25,6 +26,7 @@ const url = process.env.URL, runs = Number(process.env.RUNS || 2);
     await app.locator('#go').click();
     await app.waitForFunction(() => document.querySelector('#effectestimate')?.innerText.includes('Source-reference'), null, {timeout: 600000, polling: 100});
     res.first_analysis_s = (Date.now() - s) / 1000;
+    res.first_results_s = (Date.now() - t0) / 1000;
     res.heap_MB = await page.evaluate(() => performance.memory ? performance.memory.usedJSHeapSize / 1e6 : null);
     res.engine = engine;
     results.push(res); console.log(JSON.stringify(res));
