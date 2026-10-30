@@ -79,6 +79,13 @@ the downloaded workbook and code. That process does not load metaUI.
   (16 of 16 effects, with equivalence bound 1) and, after a workbook upload with
   restored filters, for the uploaded data (4 of 16 effects).
 
+- groundhog (one manual run, 30 October 2026, not in CI): with the commented-out
+  call enabled, the browser test's script installed the eight packages and their
+  dependencies as of 16 September 2026 into an empty library (146 packages built
+  from source, about 37 minutes on Linux), reported the one version that differed
+  (readxl 1.5.0 from CRAN against the app's 1.5.0.1 from a binary repository) and
+  agreed with all seven app rows.
+
 Workbook values pass through xlsx, which can change the last binary digit of a
 double; the observed differences above stay below 10⁻¹¹.
 
