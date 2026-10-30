@@ -15,20 +15,6 @@
     var root = document.getElementById('root');
     var live = root && root.querySelector('iframe');
     if (!live || event.source !== live.contentWindow || event.origin !== location.origin || event.data !== 'metaui-live-ready') return;
-    // Keep the exact export-time plot if webR returned no initial plot image.
-    // Discard it on the next applied analysis/upload; it never represents edits.
-    try {
-      var plot = live.contentDocument.getElementById('model_comparison');
-      var image = preview.contentDocument.querySelector('#model_comparison img');
-      if (plot && image && !plot.querySelector('img')) {
-        var fallback = image.cloneNode(true);
-        fallback.dataset.metauiPrecomputedPlot = 'true';
-        plot.appendChild(fallback);
-        live.contentWindow.jQuery(live.contentDocument).on('shiny:inputchanged', function (e) {
-          if (['go', 'uploadData', 'executeUpload'].indexOf(e.name) >= 0) fallback.remove();
-        });
-      }
-    } catch (e) {}
     // Match the scroll position where possible; avoid stealing focus from readers.
     try { live.contentWindow.scrollTo(0, preview.contentWindow.scrollY); } catch (e) {}
     var focused = document.activeElement === preview;
