@@ -122,11 +122,16 @@ function reproduce(script, workbook, selected) {
   assert(fs.readFileSync(quarto, 'utf8').startsWith('---\ntitle: "Reproduce a metaUI selection'), 'Quarto download lacks its header');
   assert(fs.readFileSync(script, 'utf8').includes('bound <- 1'), 'R script lost the equivalence bound');
   reproduce(script, path.join(evidence,'round-trip.xlsx'), 16);
+  // Clear the bound so the upload has to restore it.
+  await page.locator('#sesoi').fill('');
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('No bound chosen'));
   await page.locator('#uploadData').setInputFiles(path.join(evidence,'round-trip.xlsx'));
   await page.waitForFunction(()=>document.querySelector('#uploadData_progress')?.textContent.includes('Upload complete'));
   await page.locator('#executeUpload').click();
   await page.waitForFunction(()=>document.querySelector('#selection_status')?.textContent.includes('Uploaded data:'));
   await settledSample(16);
+  assert.equal(await page.locator('#sesoi').inputValue(), '1', 'upload did not restore the equivalence bound');
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval within bounds'));
   await page.locator('#uploadData').setInputFiles(path.join(root,'upload.xlsx'));
   await page.waitForFunction(()=>document.querySelector('#uploadData_progress')?.textContent.includes('Upload complete'));
   await page.locator('#executeUpload').click(); await settledSample(4);
@@ -157,7 +162,7 @@ function reproduce(script, workbook, selected) {
   await page.screenshot({path:path.join(evidence,'mobile.png')});
   fs.writeFileSync(path.join(evidence,'result.json'),JSON.stringify({
     ok:true,checks:['standalone startup','analysis','cache disclosure','forest render and PDF/PNG/CSV exports','practical interval assessment',
-      'keyboard inline filter help','sample summary on both tabs','download/upload round trip','R/Quarto code export reproduced in fresh R (built and uploaded data)','picker and missing-value restoration','numeric filtering','reset'],
+      'keyboard inline filter help','sample summary on both tabs','download/upload round trip with equivalence bound','R/Quarto code export reproduced in fresh R (built and uploaded data)','picker and missing-value restoration','numeric filtering','reset'],
     uploaded_selection:selected,js_errors:errors},null,2));
   console.log('Generated-app browser smoke checks passed.');
 })().catch(async error=>{

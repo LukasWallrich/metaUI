@@ -67,6 +67,14 @@ test_that("exported code reproduces filtered, alternative, uploaded and empty se
     expect_match(code, "metaUI__alt_1_fit_effect", fixed = TRUE)
     expect_match(code, "include_missing = FALSE", fixed = TRUE)
     expect_match(code, "bound <- 0.3", fixed = TRUE)
+    # The optional groundhog call is commented out and parses once uncommented.
+    groundhog <- grep("^# groundhog::groundhog.library", readLines(script), value = TRUE)
+    expect_length(groundhog, 1L)
+    call <- parse(text = sub("^# ", "", groundhog))[[1]]
+    # Packages attached or used by the copied helpers count too, not only models.R.
+    expect_true(all(c("metafor", "dplyr") %in% eval(call[[2]])))
+    expect_match(code, "\n  dplyr = \"", fixed = TRUE)
+    expect_match(call[[3]], "^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
     result <- run_export(runs[1], script, output$executeDownload)
     expect_equal(result$selected, 9)
     expect_reproduces(result, app)
@@ -175,4 +183,5 @@ test_that("code helpers write exact numbers and ignore packages named in comment
   code <- c("# see metaUI::prepare_data()\nlibrary(dplyr)\nfit <- metafor::rma(1)\nlabel <- \"robumeta::robu\"",
     "meta::trimfill(meta::metagen(TE = 1))")
   expect_identical(metaUI:::metaUI_code_packages(code), c("dplyr", "meta", "metafor"))
+  expect_error(metaUI:::metaUI_code_packages("if (TRUE) {"))
 })

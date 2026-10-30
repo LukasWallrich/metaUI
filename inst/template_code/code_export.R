@@ -51,8 +51,7 @@ metaUI_code_closure <- function(roots, defs, exclude = character()) {
 # Packages named in code (pkg::f or library(pkg)); comments are ignored.
 metaUI_code_packages <- function(code) {
   used <- unlist(lapply(code, function(x) {
-    tokens <- tryCatch(utils::getParseData(parse(text = x, keep.source = TRUE)), error = function(e) NULL)
-    if (is.null(tokens)) return(character())
+    tokens <- utils::getParseData(parse(text = x, keep.source = TRUE))
     calls <- which(tokens$token == "SYMBOL_FUNCTION_CALL" & tokens$text %in% c("library", "require"))
     attached <- vapply(calls, function(i) {
       after <- tokens[tokens$line1 == tokens$line1[i] & tokens$col1 > tokens$col2[i] & tokens$token %in% c("SYMBOL", "STR_CONST"), ]
@@ -288,11 +287,26 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
     "compare")
 
   sections <- list(packages, helper_section, models_section, data_section, selection_section, fit_section, equivalence_section, compare_section)
-  code <- paste(setdiff(unlist(lapply(sections, function(s) s$code)), versions_placeholder), collapse = "\n")
+  code <- unlist(lapply(sections, function(s) s$code))
+  code <- paste(code[code != versions_placeholder], collapse = "\n")
   used <- metaUI_code_packages(c(code, model_code))
   versions <- vapply(used, function(p) tryCatch(as.character(utils::packageVersion(p)), error = function(e) NA_character_), character(1))
   version_code <- paste0("app_versions <- c(", paste0("\n  ", used, " = ", vapply(versions, metaUI_code_string, character(1)), collapse = ","), ")")
-  sections[[1]]$code[sections[[1]]$code == versions_placeholder] <- version_code
+  # groundhog loads the CRAN versions current on a date; the latest publication
+  # date among the installed versions approximates the app's library.
+  published <- vapply(used, function(p) {
+    date <- tryCatch(utils::packageDescription(p)[["Date/Publication"]], error = function(e) NULL)
+    if (is.null(date)) NA_character_ else substr(date, 1, 10)
+  }, character(1))
+  snapshot <- if (any(!is.na(published))) max(published, na.rm = TRUE)
+  groundhog_code <- if (!is.null(snapshot)) c("",
+    strwrap(paste0("Optional: install and load the CRAN versions current on ", snapshot,
+      ", the latest release date among the versions above, with groundhog (install.packages(\"groundhog\")). ",
+      "This approximates the app's versions; the check below reports any that differ.",
+      if (anyNA(published)) paste0(" Not on CRAN, so not covered: ", paste(used[is.na(published)], collapse = ", "), ".") else ""),
+      width = 78, prefix = "# "),
+    paste0("# groundhog::groundhog.library(", metaUI_code_string(used[!is.na(published)]), ", \"", snapshot, "\")"), "")
+  sections[[1]]$code <- unlist(lapply(sections[[1]]$code, function(x) if (identical(x, versions_placeholder)) c(version_code, groundhog_code) else x))
   title <- paste0("Reproduce a metaUI selection: ", gsub("[\r\n]+", " ", settings$dataset_name))
 
   if (format == "R") {

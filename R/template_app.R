@@ -56,7 +56,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       results_panel <- function(...) tagList(
         conditionalPanel("!(input.go > 0)", div(class = "metaui-empty", role = "status", not_analysed)),
         conditionalPanel("input.go > 0", ...))
-      data_help <- HTML("<p class=\'metaui-help-text\'>The workbook holds all rows (not only the selection), the last applied filters and the last results. With Bayesian models, it waits for two extra prior-sensitivity fits.<br/>Uploads must be workbooks from this app, with the same columns and effect scale; rows may be edited. Saved filters are restored and analysed.</p><p class=\'metaui-help-text\'>The R script and Quarto file reproduce the applied selection and its model rows from the workbook of the same analysis, without metaUI. They do not reproduce the plots or diagnostic tabs.</p>")
+      data_help <- HTML("<p class=\'metaui-help-text\'>The workbook holds all rows (not only the selection), the last applied filters and the last results. With Bayesian models, it waits for two extra prior-sensitivity fits.<br/>Uploads must be workbooks from this app, with the same columns and effect scale; rows may be edited. Saved filters and the equivalence bound are restored and analysed.</p><p class=\'metaui-help-text\'>The R script and Quarto file reproduce the applied selection and its model rows from the workbook of the same analysis, without metaUI. They do not reproduce the plots or diagnostic tabs.</p>")
 
 
   ')
@@ -1182,7 +1182,8 @@ glue_string <- ('
       filters = filter_selections,
       computations = if (length(metaUI_computation_specs(metaUI__df)) && nrow(df_filtered())) computations_comparison() else data.frame(computation = "As supplied"),
       bayesian_sensitivity = if (!is.null(bayesian_options) && nrow(df_filtered())) bayesian_sensitivity() else data.frame(status = "not enabled"),
-      equivalence = if (nrow(df_filtered())) interval_assessment() else data.frame(assessment = "Not assessed", reason = "No eligible rows selected"),
+      equivalence = if (nrow(df_filtered())) interval_assessment() else data.frame(assessment = "Not assessed", reason = "No eligible rows selected",
+        bound = if (is.null(bound <- tryCatch(chosen_bound(), error = function(e) NULL))) NA_real_ else bound),
       provenance = data.frame(field = c("uploaded", "file", "z_rule", "primary_model"),
         value = c(as.character(!is.null(upload_info)),
           if (is.null(upload_info)) "built dataset" else upload_info$file,
@@ -1305,7 +1306,7 @@ glue_string <- ('
         if (length(value) != 1L || is.na(value) || !value %in% metaUI_computations(metaUI__df)) stop("Unknown saved computation.")
         filter_values$computation <- data.frame(selection = value)
       }
-      list(data = df, filters = filter_values)
+      list(data = df, filters = filter_values, bound = metaUI_saved_bound(input$uploadData$datapath, sheets))
     }, error = function(e) e)
     if (inherits(upload, "error")) {
       showModal(modalDialog(title = "Invalid upload", conditionMessage(upload)))
@@ -1320,7 +1321,8 @@ glue_string <- ('
     state_values$upload_info <- list(file = basename(input$uploadData$name), rows = nrow(upload$data), upload_number = upload_number,
       z_rule = derivation$rule, z_disagreements = derivation$supplied_z_disagreements,
       checkbox_note = "Missing-value choices restored (older files: missing values included).")
-    filter_values <- upload$filters
+    # The bound does not refit, so it can be set before the restored analysis.
+    if (!is.null(upload$bound)) updateNumericInput(session, "sesoi", value = upload$bound)
     restore_filters(upload$filters, upload$data, "upload")
   })
 

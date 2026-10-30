@@ -5,8 +5,10 @@
   equivalence bound) and its model rows from the workbook of the same analysis,
   including uploaded data. The code copies the app's `models.R` and the fitting
   functions it uses, runs without metaUI, records the package versions the app
-  used and compares its results with the app's. Plots and diagnostic tabs are not
-  reproduced.
+  used (with an optional, commented-out groundhog call) and compares its results
+  with the app's. Plots and diagnostic tabs are not reproduced.
+* Uploading a workbook now restores its equivalence bound, as selection links
+  already did. Workbooks from empty selections also record the bound.
 
 # metaUI 0.2.0
 

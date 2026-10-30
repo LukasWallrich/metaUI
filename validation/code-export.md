@@ -26,7 +26,11 @@ effect-computation comparison and the Bayesian prior sensitivity. It names the
 author-defined rows, whose code may use random numbers or external state, and
 notes that cached fits and other package versions can matter. The first code
 section records the package versions of the running app and reports any
-installed version that differs. The last section embeds the app's estimates,
+installed version that differs. A commented-out `groundhog::groundhog.library()`
+call names the same CRAN packages with the latest publication date among the
+installed versions; groundhog then installs the versions current on that date,
+which match the app's versions where the app's library was up to date on that
+date. The last section embeds the app's estimates,
 intervals, k and status for every row and reports agreement within 1e-6 (or that
 neither fitted a model, for an empty selection). The R script also accepts the
 workbook path as its first command-line argument. The Quarto file folds the
@@ -41,7 +45,7 @@ folder, from which the code reads `models.R` and the analysis files.
 All runs use a fresh `Rscript --vanilla` process in a directory containing only
 the downloaded workbook and code. That process does not load metaUI.
 
-- `tests/testthat/test-code-export.R` (80 expectations; the fresh-process runs are skipped on CRAN):
+- `tests/testthat/test-code-export.R` (85 expectations; the fresh-process runs are skipped on CRAN):
   - A synthetic app with a numeric filter with a missing value (missing values
     excluded), a categorical filter (three of four groups), an alternative
     computation, a negative declared direction (p-uniform* is fitted on reflected
@@ -79,4 +83,5 @@ The code reproduces the app's model rows with the same code and data, not an
 independent analysis; `validation/reproduction.md` describes the independent
 reference fits. A first analysis with no eligible rows has no workbook or code
 download, as before. Results from other package versions are compared, not
-guaranteed. The download does not include an `renv` lockfile or rendered HTML.
+guaranteed. The download does not include an `renv` lockfile or rendered HTML;
+rendering would need Quarto on the app's server.
