@@ -5,9 +5,10 @@ This release consolidates all changes since 0.1.1, including the unreleased
 
 ## Breaking changes
 
-* The example dataset `inst/extdata/barroso2021.csv` is no longer included.
-  Tutorials and examples now use the CC-BY Dannheim mental-health example
-  (`inst/examples/dannheim`).
+* Packages used only by generated apps (DT, ggplot2, meta, plotly, psych,
+  puniform, readxl, robumeta, shinycssloaders, shinyjs, weightr, writexl and
+  zcurve) moved from Imports to Suggests. `generate_shiny()` names any that are
+  missing, with the command to install them.
 * `generate_shiny()` and `build_app()` refuse a nonempty `save_to_folder` unless
   `overwrite = TRUE`, so hand edits to a generated app are not overwritten.
 * Generated apps check their dependencies at startup but no longer install
@@ -21,6 +22,10 @@ This release consolidates all changes since 0.1.1, including the unreleased
   and the waffle chart became a categorical count bar chart.
 
 ## New features
+
+* The bundled Coles et al. (2019) facial-feedback data (`inst/extdata/coles2019.csv`)
+  include the source's outcome-type column `paq` (affective judgement versus
+  emotional experience), so apps can filter by it.
 
 * `build_app()` creates apps headlessly from a JSON configuration with a versioned
   schema (version 2 adds computations, Bayesian analysis and design; version 1

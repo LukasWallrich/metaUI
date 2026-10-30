@@ -5,6 +5,31 @@ declared_imports <- function() {
   imports[nzchar(imports)]
 }
 
+# Used only inside generated apps and the model fits they run; listed in Suggests.
+metaUI_app_suggests <- c("DT", "ggplot2", "meta", "plotly", "psych", "puniform", "readxl",
+  "robumeta", "shinycssloaders", "shinyjs", "weightr", "writexl", "zcurve")
+
+app_dependencies <- function(bayesian = FALSE) {
+  sort(unique(c(declared_imports(), metaUI_app_suggests, if (bayesian) "bayesmeta")))
+}
+
+missing_app_packages <- function(bayesian = FALSE) {
+  pkgs <- app_dependencies(bayesian)
+  missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
+  if (!"meta" %in% missing && utils::packageVersion("meta") < "7.0.0") missing <- c(missing, "meta")
+  missing
+}
+
+metaUI_app_ready <- function() !length(missing_app_packages())
+
+check_app_packages <- function(bayesian = FALSE) {
+  missing <- missing_app_packages(bayesian)
+  if (length(missing)) stop("Generated apps need packages that are not installed (meta must be >= 7.0-0): ",
+    paste(missing, collapse = ", "), ". Install them with install.packages(c(",
+    paste0('"', missing, '"', collapse = ", "), ")).", call. = FALSE)
+  invisible(TRUE)
+}
+
 #' Create the about text for the app
 #'
 #' This function is generally only called internally by [generate_shiny()].
@@ -94,7 +119,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @inheritDotParams create_about
 #'
 #' @returns With launch_app = FALSE, invisibly returns the generated app folder path. With launch_app = TRUE, returns a Shiny app object; printing it launches the app and blocks the console until it stops.
-#' @examples
+#' @examplesIf metaUI:::metaUI_app_ready()
 #' raw <- data.frame(study = letters[1:6], d = c(.1, .3, -.1, .4, .2, .5),
 #'                   vi = c(.02, .03, .02, .04, .01, .05))
 #' app_data <- prepare_data(raw, "study", "d", variance = "vi")
@@ -126,6 +151,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   }
 
   if (!is.data.frame(dataset)) stop("Dataset must be a data.frame or tibble")
+  check_removed_example(dataset)
   metaUI_validate_prepared(dataset)
 
   if (is.na(eff_size_type_label)) {
@@ -152,11 +178,11 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   bayesian <- metaUI_bayesian_options(bayesian, dataset$metaUI__es_type[1])
   package_models <- identical(models_to_run, get_model_tibble())
   if (!is.null(bayesian)) {
-    if (!requireNamespace("bayesmeta", quietly = TRUE)) stop("Install optional bayesmeta before building a Bayesian app.")
     if (is.character(models)) stop("For Bayesian authoring, supply model specifications instead of a model file.")
     models_to_run <- dplyr::bind_rows(models_to_run, metaUI_bayesian_spec(bayesian))
   }
   opts$bayesian <- bayesian
+  check_app_packages(!is.null(bayesian))
   if (!is.null(primary_model) && (!is.character(primary_model) || length(primary_model) != 1L ||
       sum(models_to_run$name == primary_model) != 1L))
     stop("primary_model must name exactly one model in models_to_run: ", paste(models_to_run$name, collapse = "; "))
@@ -253,7 +279,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   file.copy(system.file("template_code", "analysis.R", package = "metaUI"),
             file.path(save_to_folder, "analysis.R"), overwrite = TRUE)
   jsonlite::write_json(report, file.path(save_to_folder, "validation.json"), auto_unbox = TRUE, pretty = TRUE, na = "null")
-  dependencies <- sort(unique(c(declared_imports(), "psych", if (!is.null(bayesian)) "bayesmeta")))
+  dependencies <- app_dependencies(!is.null(bayesian))
   versions <- data.frame(package = dependencies,
     version = vapply(dependencies, function(x) as.character(utils::packageVersion(x)), character(1)))
   utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
@@ -277,7 +303,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 #' @noRd
 
 generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL) {
-  req_packages <- c(declared_imports(), if (!is.null(bayesian)) "bayesmeta")
+  req_packages <- app_dependencies(!is.null(bayesian))
 
 
   label_code <- paste(deparse(as.character(metaUI_eff_size_type_label)), collapse = "\n")

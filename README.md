@@ -18,8 +18,10 @@ You can install the development version of metaUI from [GitHub](https://github.c
 
 ``` r
 if (!require(remotes)) install.packages("remotes")
-remotes::install_github("LukasWallrich/metaUI")
+remotes::install_github("LukasWallrich/metaUI", dependencies = TRUE)
 ```
+
+`dependencies = TRUE` also installs the packages that generated apps use (listed under Suggests); `generate_shiny()` names any that are missing.
 
 ## Getting started
 

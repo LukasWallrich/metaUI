@@ -1,3 +1,5 @@
+skip_without_app_packages()
+
 test_that("design settings reject malformed or unreadable values", {
   expect_error(app_design(accent = "red"), "six-digit")
   expect_error(app_design(accent = "#FFFFFF"), "contrast")

@@ -77,6 +77,7 @@ a folder. If saved, that folder will contain all the code and data needed to run
 on that folder, or modified by editing server.R, ui.R, global.R and models.R in the folder.
 }
 \examples{
+\dontshow{if (metaUI:::metaUI_app_ready()) withAutoprint(\{ # examplesIf}
 raw <- data.frame(study = letters[1:6], d = c(.1, .3, -.1, .4, .2, .5),
                   vi = c(.02, .03, .02, .04, .01, .05))
 app_data <- prepare_data(raw, "study", "d", variance = "vi")
@@ -84,4 +85,5 @@ folder <- tempfile("metaui-example-")
 generate_shiny(app_data, dataset_name = "Example", save_to_folder = folder,
                launch_app = FALSE)
 unlink(folder, recursive = TRUE)
+\dontshow{\}) # examplesIf}
 }

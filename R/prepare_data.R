@@ -45,6 +45,7 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
     # Read the file
     data <- read.csv(data, stringsAsFactors = FALSE)
   }
+  check_removed_example(data)
 
   raw_data <- data
   alternative_base <- list(study_label = study_label, es_field = es_field, se = se,
@@ -288,3 +289,12 @@ metaUI_data_fingerprint <- function(data) {
   writeBin(serialize(columns, NULL, version = 2), path)
   unname(tools::md5sum(path))
 }
+
+# Older tutorials read inst/extdata/barroso2021.csv. That file is now a stub
+# whose single row explains the removal, so stop with that message.
+check_removed_example <- function(data) {
+  if (is.data.frame(data) && "metaUI_removed_dataset" %in% names(data))
+    stop(as.character(data$message[1]), call. = FALSE)
+  invisible(data)
+}
+
