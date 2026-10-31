@@ -190,6 +190,8 @@ test_that("prepare_data decodes HTML escapes in text and factor columns", {
   expect_equal(as.character(out$metaUI__study_id), c("Strack, Martin, & Stepper (1988)", "Lee – Kim", "O'Neil"))
   expect_equal(levels(out$metaUI__filter_Stimulus), c("A < B", "C"))
   expect_equal(out$note, c("&lt; stays escaped once", NA, "plain"))
+  expect_equal(metaUI:::metaUI_decode_entities(c("a &ndash; b &#X2014; c", "bad &#xD800; kept &amp; ok")),
+    c("a \u2013 b \u2014 c", "bad &#xD800; kept & ok"))
 })
 
 test_that("tall forest plots repeat the x axis at the top", {

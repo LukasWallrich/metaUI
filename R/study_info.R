@@ -260,16 +260,20 @@ metaUI_apply_abstract_policy <- function(record, abstracts) {
 # Plain text from Crossref strings: markup removed, entities decoded.
 metaUI_plain_text <- function(x) trimws(gsub("[[:space:]]+", " ", metaUI_decode_entities(gsub("<[^>]+>", "", x))))
 
-# Decodes the HTML entities that bibliographic exports leave in text ("&amp;", "&#8211;").
-# &amp; goes last, so "&amp;lt;" becomes the literal "&lt;" rather than "<".
+# Decodes the HTML entities that bibliographic exports leave in text ("&amp;", "&#8211;",
+# "&ndash;"); other named entities stay as they are. Invalid code points are left
+# undecoded. &amp; goes last, so "&amp;lt;" becomes the literal "&lt;" rather than "<".
 metaUI_decode_entities <- function(x) {
-  x <- gsub("&lt;", "<", gsub("&gt;", ">", gsub("&quot;", "\"", gsub("&#39;|&apos;", "'", gsub("&nbsp;", " ", x)))))
-  for (code in unique(unlist(regmatches(x, gregexpr("&#(x[0-9A-Fa-f]+|[0-9]+);", x))))) {
-    n <- sub("^&#(x?)([0-9A-Fa-f]+);$", "\\2", code)
-    value <- if (grepl("^&#x", code)) strtoi(n, 16L) else as.integer(n)
-    if (!is.na(value) && value > 0L) x <- gsub(code, intToUtf8(value), x, fixed = TRUE)
+  named <- c(lt = "<", gt = ">", quot = "\"", apos = "'", nbsp = " ", ndash = "\u2013", mdash = "\u2014",
+    hellip = "\u2026", lsquo = "\u2018", rsquo = "\u2019", ldquo = "\u201c", rdquo = "\u201d")
+  for (name in names(named)) x <- gsub(paste0("&", name, ";"), named[[name]], x, fixed = TRUE)
+  for (code in unique(unlist(regmatches(x, gregexpr("&#([xX][0-9A-Fa-f]+|[0-9]+);", x))))) {
+    n <- sub("^&#[xX]?([0-9A-Fa-f]+);$", "\\1", code)
+    value <- suppressWarnings(if (grepl("^&#[xX]", code)) strtoi(n, 16L) else as.integer(n))
+    char <- if (is.na(value) || value <= 0L) NA_character_ else intToUtf8(value)
+    if (!is.na(char)) x <- gsub(code, char, x, fixed = TRUE)
   }
-  gsub("&amp;", "&", x)
+  gsub("&amp;", "&", x, fixed = TRUE)
 }
 
 # JATS abstract to paragraphs separated by blank lines; a lone "Abstract" heading is dropped.
