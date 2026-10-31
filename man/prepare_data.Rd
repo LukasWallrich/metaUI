@@ -81,6 +81,11 @@ tibble with the data from the file/input reformatted for metaUI
 \description{
 You may want to use the \code{\link[metafor:escalc]{metafor::escalc()}} function in the metafor package to calculate effect sizes and their variances in preparation for this function.
 }
+\details{
+HTML escapes in text and factor columns, such as \verb{&amp;} or \verb{&#8211;} left by
+reference managers and web exports, are decoded (to \code{&} and an en dash) so that
+apps show plain text; a message names the columns changed.
+}
 \examples{
 raw <- data.frame(study = letters[1:4], d = c(.1, .3, -.1, .4), vi = rep(.02, 4))
 prepare_data(raw, "study", "d", variance = "vi")

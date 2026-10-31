@@ -2,6 +2,10 @@
 #'
 #' You may want to use the [metafor::escalc()] function in the metafor package to calculate effect sizes and their variances in preparation for this function.
 #'
+#' HTML escapes in text and factor columns, such as `&amp;` or `&#8211;` left by
+#' reference managers and web exports, are decoded (to `&` and an en dash) so that
+#' apps show plain text; a message names the columns changed.
+#'
 #' @param data path to the .csv file to read OR a data frame
 #' @param study_label Character. Name of the field to use as the id/study label
 #' @param es_field Character. Name of the field to use as the effect size
@@ -46,8 +50,8 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
     data <- read.csv(data, stringsAsFactors = FALSE)
   }
   check_removed_example(data)
-
-  raw_data <- data
+  raw_data <- data # undecoded, as alternatives are prepared (and decoded) from it again
+  data <- decode_text_entities(data)
   alternative_base <- list(study_label = study_label, es_field = es_field, se = se,
     pvalue = pvalue, sample_size = sample_size, variance = variance, filters = filters,
     url = url, es_type = es_type, article_label = article_label, es_label = es_label,
@@ -247,7 +251,7 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
       kept$metaUI_original_effect_id <- original_rows[reason == ""]
       args$es_id <- "metaUI_original_effect_id"
     }
-    alt <- tryCatch(do.call(prepare_data, c(list(data = kept), args)), error = function(e)
+    alt <- tryCatch(suppressMessages(do.call(prepare_data, c(list(data = kept), args))), error = function(e)
       stop("Alternative ", names(alternatives)[i], " is invalid for retained effects (original rows ",
         paste(original_rows[reason == ""], collapse = ", "), "): ", conditionMessage(e)))
     if (!identical(as.character(alt$metaUI__study_id), as.character(data$metaUI__study_id)) ||
@@ -304,4 +308,23 @@ na_to_level <- function(f, level) {
   if (!level %in% levels(f)) levels(f) <- c(levels(f), level)
   f[is.na(f)] <- level
   f
+}
+
+# Text exported from reference managers or web pages often keeps HTML escapes, which
+# apps would show verbatim ("Smith &amp; Lee"). Decodes them in text and factor
+# columns and reports the columns changed.
+decode_text_entities <- function(data) {
+  changed <- character()
+  for (name in names(data)) {
+    x <- data[[name]]
+    if (!is.character(x) && !is.factor(x)) next
+    values <- if (is.factor(x)) levels(x) else x
+    decoded <- metaUI_decode_entities(values)
+    if (identical(decoded, values)) next
+    if (is.factor(x)) levels(x) <- decoded else x <- decoded
+    data[[name]] <- x
+    changed <- c(changed, name)
+  }
+  if (length(changed)) message("Decoded HTML escapes such as '&amp;' in: ", paste(changed, collapse = ", "), ".")
+  data
 }

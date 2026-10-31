@@ -258,16 +258,22 @@ metaUI_apply_abstract_policy <- function(record, abstracts) {
 }
 
 # Plain text from Crossref strings: markup removed, entities decoded.
-metaUI_plain_text <- function(x) {
-  x <- gsub("<[^>]+>", "", x)
-  x <- gsub("&lt;", "<", gsub("&gt;", ">", gsub("&quot;", "\"", gsub("&#39;|&apos;", "'", x))))
-  for (code in unique(regmatches(x, gregexpr("&#x?[0-9A-Fa-f]+;", x))[[1]])) {
-    n <- sub("^&#(x?)([0-9A-Fa-f]+);$", "\\2", code)
-    value <- if (grepl("^&#x", code)) strtoi(n, 16L) else as.integer(n)
-    x <- gsub(code, intToUtf8(value), x, fixed = TRUE)
+metaUI_plain_text <- function(x) trimws(gsub("[[:space:]]+", " ", metaUI_decode_entities(gsub("<[^>]+>", "", x))))
+
+# Decodes the HTML entities that bibliographic exports leave in text ("&amp;", "&#8211;",
+# "&ndash;"); other named entities stay as they are. Invalid code points are left
+# undecoded. &amp; goes last, so "&amp;lt;" becomes the literal "&lt;" rather than "<".
+metaUI_decode_entities <- function(x) {
+  named <- c(lt = "<", gt = ">", quot = "\"", apos = "'", nbsp = " ", ndash = "\u2013", mdash = "\u2014",
+    hellip = "\u2026", lsquo = "\u2018", rsquo = "\u2019", ldquo = "\u201c", rdquo = "\u201d")
+  for (name in names(named)) x <- gsub(paste0("&", name, ";"), named[[name]], x, fixed = TRUE)
+  for (code in unique(unlist(regmatches(x, gregexpr("&#([xX][0-9A-Fa-f]+|[0-9]+);", x))))) {
+    n <- sub("^&#[xX]?([0-9A-Fa-f]+);$", "\\1", code)
+    value <- suppressWarnings(if (grepl("^&#[xX]", code)) strtoi(n, 16L) else as.integer(n))
+    char <- if (is.na(value) || value <= 0L) NA_character_ else intToUtf8(value)
+    if (!is.na(char)) x <- gsub(code, char, x, fixed = TRUE)
   }
-  x <- gsub("&amp;", "&", x)
-  trimws(gsub("[[:space:]]+", " ", x))
+  gsub("&amp;", "&", x, fixed = TRUE)
 }
 
 # JATS abstract to paragraphs separated by blank lines; a lone "Abstract" heading is dropped.
@@ -290,6 +296,9 @@ validate_study_info <- function(info, dataset) {
   if (length(unknown)) stop("Unknown study_info columns: ", paste(unknown, collapse = ", "),
     ". Allowed: ", paste(study_info_fields, collapse = ", "))
   info[] <- lapply(info, function(x) { x <- as.character(x); x[!is.na(x) & !nzchar(trimws(x))] <- NA; x })
+  # Older or hand-written files may keep escapes that prepare_data() decoded in study IDs.
+  escaped <- !info$study %in% as.character(dataset$metaUI__study_id)
+  info$study[escaped] <- metaUI_decode_entities(info$study[escaped])
   if (anyNA(info$study) || anyDuplicated(info$study)) stop("study_info needs one row per study, with nonmissing study IDs.")
   unmatched <- setdiff(info$study, as.character(dataset$metaUI__study_id))
   if (length(unmatched)) stop("study_info rows do not match any study ID: ", paste(utils::head(unmatched, 10), collapse = ", "))

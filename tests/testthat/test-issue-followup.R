@@ -180,3 +180,32 @@ test_that("compact p-curve returns its notes as HTML only on request", {
   expect_gt(length(compact$notes), 0)
   expect_identical(compact$pcurveResults, r$pcurveResults)
 })
+
+test_that("prepare_data decodes HTML escapes in text and factor columns", {
+  raw <- data.frame(study = c("Strack, Martin, &amp; Stepper (1988)", "Lee &#8211; Kim", "O&#39;Neil"),
+    d = c(.1, .3, -.1), vi = rep(.02, 3), stim = factor(c("A &lt; B", "A &lt; B", "C")),
+    note = c("&amp;lt; stays escaped once", NA, "plain"))
+  expect_message(out <- prepare_data(raw, "study", "d", variance = "vi", filters = c(Stimulus = "stim")),
+    "study, stim, note")
+  expect_equal(as.character(out$metaUI__study_id), c("Strack, Martin, & Stepper (1988)", "Lee – Kim", "O'Neil"))
+  expect_equal(levels(out$metaUI__filter_Stimulus), c("A < B", "C"))
+  expect_equal(out$note, c("&lt; stays escaped once", NA, "plain"))
+  expect_equal(metaUI:::metaUI_decode_entities(c("a &ndash; b &#X2014; c", "bad &#xD800; kept &amp; ok")),
+    c("a \u2013 b \u2014 c", "bad &#xD800; kept & ok"))
+})
+
+test_that("tall forest plots repeat the x axis at the top", {
+  rows <- data.frame(label = c("A: 1", "B: 1"), kind = "Selected effect", es = c(.1, .2), LCL = c(-.1, 0), UCL = c(.3, .4), row = 2:1)
+  secondary <- function(...) metaUI:::metaUI_forest_plot(rows, "SMD", ...)$scales$get_scales("x")$secondary.axis
+  expect_s3_class(secondary(top_axis = TRUE), "AxisSecondary")
+  expect_s3_class(secondary(), "waiver")
+})
+
+test_that("double-escaped IDs are decoded once for alternatives and study details", {
+  raw <- data.frame(study = c("A &amp;lt; B", "C &amp; D"), d = c(.1, .3), vi = c(.02, .03), d2 = c(.12, .28))
+  out <- suppressMessages(prepare_data(raw, "study", "d", variance = "vi",
+    alternatives = list(Alt = list(es_field = "d2", variance = "vi", es_type = "SMD", justification = "Test."))))
+  expect_equal(as.character(out$metaUI__study_id), c("A &lt; B", "C & D"))
+  info <- metaUI:::validate_study_info(data.frame(study = c("A &lt; B", "C &amp; D"), title = c("T1", "T2")), out)
+  expect_setequal(info$study, c("A &lt; B", "C & D"))
+})
