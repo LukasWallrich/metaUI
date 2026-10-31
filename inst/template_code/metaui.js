@@ -164,7 +164,7 @@
       $(window).off('scroll', watch).off('touchstart wheel keydown', finish);
     };
     $(window).on('scroll', watch).one('touchstart wheel keydown', finish);
-    setTimeout(show, 50);
+    setTimeout(function () { if (!done) show(); }, 50);
     $(document).one('shiny:idle', function () {
       setTimeout(function () { if (!done) show(); setTimeout(finish, 300); }, 150);
     });

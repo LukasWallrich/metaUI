@@ -152,3 +152,31 @@ test_that("changing the practical bound does not refit or change applied filters
     expect_identical(metaUI:::metaUI_saved_bound(file), NA_real_)  # no equivalence sheet
   })
 })
+
+test_that("phone-width plots keep legible widths and two-line forest labels", {
+  expect_equal(metaUI:::metaUI_plot_width(NULL, 680), 680)
+  expect_equal(metaUI:::metaUI_plot_width(NA, 680), 680)
+  expect_equal(metaUI:::metaUI_plot_width(360, 680), 540)
+  expect_equal(metaUI:::metaUI_plot_width(280, 680), 480)
+  expect_equal(metaUI:::metaUI_plot_width(1000, 680), 1000)
+  rows <- data.frame(row = 1:2, es = c(.1, .2), LCL = 0, UCL = .3, kind = "Selected effect",
+    label = c("Short 2001", "A very long study label from an earlier replication project, 2019 (effect 3)"))
+  labels <- ggplot2::ggplot_build(metaUI:::metaUI_forest_plot(rows, "SMD", label_width = 26))$layout$panel_params[[1]]$y$get_labels()
+  expect_equal(labels[1], "Short 2001")
+  lines <- strsplit(labels[2], "\n")[[1]]
+  expect_length(lines, 2)
+  expect_equal(lines[1], "A very long study label")
+  expect_match(lines[2], "^….*2019 \\(effect 3\\)$")
+  expect_lte(nchar(lines[2]), 26)
+})
+
+test_that("compact p-curve returns its notes as HTML only on request", {
+  png(tempfile()); on.exit(dev.off(), add = TRUE)
+  x <- metaUI:::metaUI_pcurve_data(prepared(direction = "positive"))
+  invisible(suppressWarnings(utils::capture.output(r <- metaUI:::pcurve(x))))
+  expect_null(r$notes)
+  invisible(suppressWarnings(utils::capture.output(compact <- metaUI:::pcurve(x, compact = TRUE))))
+  expect_type(compact$notes, "character")
+  expect_gt(length(compact$notes), 0)
+  expect_identical(compact$pcurveResults, r$pcurveResults)
+})

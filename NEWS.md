@@ -10,8 +10,8 @@
   archival deposits. Requires the suggested shinylive package. Every visitor
   downloads the full dataset and app code, so publish only shareable material.
 * Generated apps work on phones, on a Shiny server and as static sites. The
-  filters collapse behind a "Show filters" button so that results follow
-  closely; tables with four or more columns become one labelled card per row
+  filters collapse behind a "Show filters" button so that results appear
+  near the top of the page; tables with four or more columns become one labelled card per row
   instead of scrolling sideways; wide plots scale to fit, and the forest plot
   wraps study labels. Static sites also show the precomputed preview at phone
   width, including when filters use selection boxes, which previously prevented

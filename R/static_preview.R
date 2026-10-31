@@ -235,7 +235,7 @@ static_stack_table <- function(html) {
     first <<- c(first, trimws(static_unescape(gsub("<[^>]+>", "", sub("(?s)^<td\\b[^>]*>(.*?)</td>.*", "\\1",
       substring(row, starts[1]), perl = TRUE)))))
     contents <- sub("(?s)^<td\\b[^>]*>(.*?)</td>.*", "\\1", substring(row, starts), perl = TRUE)
-    empty <- !nzchar(trimws(gsub("<[^>]+>", "", contents))) & !grepl("<(img|svg|button|input)\\b", contents)
+    empty <- !nzchar(trimws(gsub("&nbsp;|&#160;|\u00a0", " ", gsub("<[^>]+>", "", contents)))) & !grepl("<(img|svg|button|input)\\b", contents)
     attrs <- paste0('<td data-label="', htmltools::htmlEscape(names, attribute = TRUE), '"',
       ifelse(empty, " data-empty", ""))
     regmatches(row, list(starts)) <- list(paste0(attrs, substring(parts, 4L)))

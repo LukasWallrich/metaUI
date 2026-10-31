@@ -51,6 +51,7 @@ test_that("export_static() writes a static site with the bridge and notices", {
   out <- export_static(app, site, subdir = "fixture")
   expect_true(all(file.exists(file.path(out, c("index.html", "app.json", "STATIC-NOTICE.md", "bundled-packages.csv")))))
   expect_true(file.exists(file.path(site, "shinylive-sw.js")))
+  expect_match(paste(readLines(file.path(out, "index.html")), collapse = "\n"), "height: 100dvh", fixed = TRUE)
   expect_identical(tools::md5sum(file.path(app, c("www/metaui.js", "ui.R"))), before)
   files <- jsonlite::read_json(file.path(out, "app.json"))
   js <- Filter(function(f) f$name == "www/metaui.js", files)[[1]]$content
