@@ -96,6 +96,7 @@ export_static <- function(app_dir, dest_dir, subdir = "", overwrite = FALSE, pre
     unlink(preview, recursive = TRUE)
   }
   shinylive::export(staging, dest_dir, subdir = subdir, wasm_packages = TRUE)
+  static_fit_viewport(file.path(target, "index.html"))
   if (has_preview) static_add_preview(target, file.path(preview_copy, "metaui-preview"))
   bundled <- static_bundled_packages(file.path(dest_dir, "shinylive", "webr"))
   r_version <- static_r_version(file.path(dest_dir, "shinylive", "webr"))
@@ -232,4 +233,11 @@ validate_static_destination <- function(target, overwrite) {
   if (!previous_export)
     stop("Use an empty or previous-export folder for static output; refusing to delete: ", target)
   invisible(NULL)
+}
+
+# Mobile browsers count their collapsing toolbars in 100vh, which would hide the
+# bottom of the app frame; dynamic viewport units fit the visible area.
+static_fit_viewport <- function(path) {
+  html <- paste(readLines(path, warn = FALSE), collapse = "\n")
+  writeLines(sub('style="height: 100vh; width: 100vw"', 'style="height: 100vh; height: 100dvh; width: 100vw"', html, fixed = TRUE), path)
 }

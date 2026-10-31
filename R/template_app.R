@@ -222,12 +222,16 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
       sidebarPanel(
         width = 3,
         tags$h2(class = "metaui-panel-title", "Select effects"),
+        # Phones collapse the filters so that results follow closely; metaui.js toggles them.
+        tags$button(type = "button", class = "btn metaui-filters-toggle", `aria-expanded` = "false",
+          `aria-controls` = "metaui_filter_panel", "Show filters"),
+        div(id = "metaui_filter_panel", class = "metaui-filter-panel",
         {if (length(metaUI_computation_specs(data))) paste0(
           \'selectInput("computation", "Effect-size computation", choices = \',
           paste(deparse(metaUI_computations(data)), collapse = "\n"), \', selected = "primary"),\nuiOutput("computation_note"),\') else ""}
         div(id = "filters",
         {generate_ui_filters(data, filter_popups, any_filters, opts = opts)}
-        tags$details(class = "metaui-help metaui-advanced", tags$summary("Exclude extreme effects"), div(id = "z_score_filter"), zscore_help)),
+        tags$details(class = "metaui-help metaui-advanced", tags$summary("Exclude extreme effects"), div(id = "z_score_filter"), zscore_help))),
         div(class = "metaui-actions",
           shinyjs::disabled(actionButton("go", "Analyze data", class = "btn-primary")),
           actionButton("resetFilters", "Reset filters")),
@@ -304,7 +308,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             "Publication Bias", results_panel(qrppb_main, funnel_main, plotOutput("funnel", width = "100%") %>% shinycssloaders::withSpinner(),
             eggers_main, DT::dataTableOutput("eggers") %>% shinycssloaders::withSpinner(),
             firstvalues,
-            pcurve_main, div(class = "metaui-scroll", plotOutput("pcurve", height = "auto") %>% shinycssloaders::withSpinner()),
+            pcurve_main, div(class = "metaui-scroll", plotOutput("pcurve", height = "auto") %>% shinycssloaders::withSpinner()), uiOutput("pcurve_notes"),
             zcurve_main, div(class = "metaui-scroll", plotOutput("zcurve", height = "auto") %>% shinycssloaders::withSpinner()),
             div(class = "metaui-reason", textOutput("zcurve_warnings")))
           ),
@@ -827,7 +831,7 @@ glue_string <- ('
 
     table <- out %>% DT::datatable(
       rownames = FALSE,
-      options = list(scrollX = TRUE, columnDefs = list(list(targets = ncol(out) - 1, visible = FALSE, searchable = FALSE))),
+      options = list(columnDefs = list(list(targets = ncol(out) - 1, visible = FALSE, searchable = FALSE))),
       escape = setdiff(names(out), c("URL", "Study", "metaUI__details")), # built (and escaped) above
       caption = tags$caption(
         style = "caption-side: bottom; text-align: left; margin: 8px 0;",
@@ -959,7 +963,7 @@ glue_string <- ('
 
     }
 
-    modtable %>% DT::datatable(rownames = FALSE, options = list(dom = "t", paging = FALSE, scrollX = TRUE, ordering = FALSE), escape = FALSE)
+    modtable %>% DT::datatable(rownames = FALSE, options = list(dom = "t", paging = FALSE, ordering = FALSE), escape = FALSE)
   })
 
   output$moderation_text <- shiny::renderText({
@@ -1010,9 +1014,17 @@ glue_string <- ('
       need(nrow(df) <= <<opts$max_forest_plot_rows>>, forest_limit_message))
     metaUI_forest_rows(df, estimatesfiltered(), models_to_run)
   })
-  forest_plot <- reactive(metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1], accent = "<<if (is.null(opts$design)) "#096b74" else opts$design$accent>>", ink = "<<if (is.null(opts$design)) "#182f46" else opts$design$text>>", background = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", interval_colour = "<<if (is.null(opts$design)) "#52616d" else opts$design$text>>", grid_colour = "<<if (is.null(opts$design)) "#EBEBEB" else design_mix(opts$design$text, opts$design$surface, .18)>>"))
+  forest_plot_for <- function(label_width = NULL) metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1], accent = "<<if (is.null(opts$design)) "#096b74" else opts$design$accent>>", ink = "<<if (is.null(opts$design)) "#182f46" else opts$design$text>>", background = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", interval_colour = "<<if (is.null(opts$design)) "#52616d" else opts$design$text>>", grid_colour = "<<if (is.null(opts$design)) "#EBEBEB" else design_mix(opts$design$text, opts$design$surface, .18)>>", label_width = label_width)
+  forest_plot <- reactive(forest_plot_for())
   forest_height <- function() 100 + 23 * nrow(forest_rows())
-  output$foreststudies <- renderPlot(print(forest_plot()), height = forest_height, width = function() max(760, session$clientData$output_foreststudies_width))
+  # Phones get the plot at their column width, with wrapped labels on taller rows;
+  # downloads keep the full-width layout.
+  forest_narrow <- function() isTRUE(session$clientData$output_foreststudies_width < 600)
+  output$foreststudies <- renderPlot({
+    if (forest_narrow()) print(forest_plot_for(label_width = 26))
+    else print(forest_plot())
+  }, height = function() if (forest_narrow()) 90 + 34 * nrow(forest_rows()) else forest_height(),
+    width = function() if (forest_narrow()) session$clientData$output_foreststudies_width else max(760, session$clientData$output_foreststudies_width))
   output$forest_pdf <- downloadHandler(filename = function() "forest-plot.pdf", content = function(file) {
     ggplot2::ggsave(file, forest_plot(), device = "pdf", width = 10,
       height = forest_height() / 96, limitsize = FALSE)
@@ -1058,7 +1070,7 @@ glue_string <- ('
       "p" = ifelse(round(eggers$p.value, 3) == 0, "< .001", round(eggers$p.value, 3)),
       check.names = FALSE
     )
-    eggers_table[1, ] %>% DT::datatable(options = list(dom = "t", scrollX = TRUE), escape = FALSE) %>%
+    eggers_table[1, ] %>% DT::datatable(rownames = FALSE, options = list(dom = "t"), escape = FALSE) %>%
      DT::formatRound(columns = 1:3, digits=3)
 
   })
@@ -1066,15 +1078,25 @@ glue_string <- ('
 
   # PCURVE ------------------------------------------------------------------
 
+  # Phone-width p-curves show their notes and test results as text below the plot.
+  pcurve_notes <- reactiveVal(NULL)
+  output$pcurve_notes <- renderUI({
+    notes <- pcurve_notes()
+    if (length(notes)) p(class = "metaui-note metaui-pcurve-notes", HTML(paste(notes, collapse = "<br>")))
+  })
   output$pcurve <- renderPlot({
+    pcurve_notes(NULL)
     df <- df_filtered()
     selected <- tryCatch(metaUI_pcurve_data(df), error = function(e) e)
     validate(need(!inherits(selected, "error"), if (inherits(selected, "error")) conditionMessage(selected) else ""))
     message("P-curve direction-contrary exclusions: ", attr(selected, "direction_exclusions"))
-    result <- tryCatch(pcurve(selected, effect.estimation = FALSE), error = function(e) e)
+    compact <- isTRUE(session$clientData$output_pcurve_width < 600)
+    result <- tryCatch(pcurve(selected, effect.estimation = FALSE, compact = compact), error = function(e) e)
     validate(need(!inherits(result, "error"), if (inherits(result, "error")) conditionMessage(result) else ""))
+    if (compact) pcurve_notes(result$notes)
     graphics::mtext(paste("Direction-contrary exclusions:", attr(selected, "direction_exclusions")), side = 3, line = 0)
-  }, width = function() max(680, session$clientData$output_pcurve_width), height = 520, res = 96)
+  }, width = function() metaUI_plot_width(session$clientData$output_pcurve_width, 680),
+    height = function() if (isTRUE(session$clientData$output_pcurve_width < 600)) 460 else 520, res = 96)
 
 
   # ZCURVE ------------------------------------------------------------------
@@ -1101,8 +1123,10 @@ glue_string <- ('
   output$zcurve <- renderPlot({
     value <- zcurve_fit()
     validate(need(!inherits(value$result, "error"), "Z-curve not estimated for this selection; reason below."))
-    zcurve::plot.zcurve(value$result, annotation = TRUE, main = "")
-  }, width = function() max(680, session$clientData$output_zcurve_width), height = 480, res = 96)
+    # Smaller annotations keep the fit statistics inside narrow (phone) plots.
+    width <- metaUI_plot_width(session$clientData$output_zcurve_width, 680)
+    zcurve::plot.zcurve(value$result, annotation = TRUE, main = "", cex.anno = min(1, width / 680))
+  }, width = function() metaUI_plot_width(session$clientData$output_zcurve_width, 680), height = 480, res = 96)
 
   # VIOLIN PLOTLY -------------------------------------------------------------
   output$violin <- plotly::renderPlotly({

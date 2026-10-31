@@ -126,3 +126,94 @@
     } else report(false);
   });
 })(jQuery);
+
+/* Phones: the filters collapse behind a toggle so that results follow closely, and
+   Analyze data collapses them again and moves to the results. metaui.css hides the
+   toggle and keeps the filters open on wider screens. */
+(function ($) {
+  'use strict';
+  var phone = window.matchMedia('(max-width: 767px)');
+  function setOpen(open) {
+    var toggle = document.querySelector('.metaui-filters-toggle');
+    if (!toggle) return;
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.textContent = open ? 'Hide filters' : 'Show filters';
+    document.getElementById(toggle.getAttribute('aria-controls')).classList.toggle('metaui-open', open);
+  }
+  $(document).on('click', '.metaui-filters-toggle', function () {
+    setOpen(this.getAttribute('aria-expanded') !== 'true');
+  });
+  $(document).on('click', '#go', function () {
+    if (!phone.matches) return;
+    setOpen(false);
+    var results = document.getElementById('metaui_results');
+    if (!results) return;
+    // Re-rendering outputs briefly collapse the results, and the browser then resets the
+    // scroll position. Hold their height and keep them in view until the analysis has
+    // settled, unless the reader moves first.
+    results.style.minHeight = Math.max(results.offsetHeight, window.innerHeight) + 'px';
+    var show = function () { results.scrollIntoView({ block: 'start' }); };
+    var done = false;
+    var watch = function () {
+      if (!done && Math.abs(results.getBoundingClientRect().top) > 40) window.requestAnimationFrame(show);
+    };
+    var finish = function () {
+      if (done) return;
+      done = true;
+      results.style.minHeight = '';
+      $(window).off('scroll', watch).off('touchstart wheel keydown', finish);
+    };
+    $(window).on('scroll', watch).one('touchstart wheel keydown', finish);
+    setTimeout(function () { if (!done) show(); }, 50);
+    $(document).one('shiny:idle', function () {
+      setTimeout(function () { if (!done) show(); setTimeout(finish, 300); }, 150);
+    });
+    setTimeout(finish, 20000);
+  });
+})(jQuery);
+
+/* Phones: tables with four or more columns reflow into one card per row (metaui.css).
+   Each cell is labelled with its column heading. Tables whose first column names the
+   row (models, studies) use it as the card title. static_stack_table() in the package
+   applies the same labels to the script-free static preview. */
+(function ($) {
+  'use strict';
+  var numeric = /^[\s\d.,%<>=+\-−[\]()]*$|^NA$/;
+  function stack(table) {
+    var head = table.tHead;
+    if (!head || !head.rows.length || !table.tBodies.length) return;
+    var names = Array.prototype.map.call(head.rows[head.rows.length - 1].cells,
+      function (cell) { return cell.textContent.replace(/\s+/g, ' ').trim(); });
+    if (names.length < 4) return;
+    var rows = [];
+    Array.prototype.forEach.call(table.tBodies, function (body) {
+      Array.prototype.forEach.call(body.rows, function (row) {
+        if (row.cells.length === names.length) rows.push(row); // not child or "no data" rows
+      });
+    });
+    rows.forEach(function (row) {
+      Array.prototype.forEach.call(row.cells, function (cell, i) {
+        cell.setAttribute('data-label', names[i]);
+        cell.toggleAttribute('data-empty', !cell.textContent.trim() && !cell.querySelector('img, svg, button, input'));
+      });
+    });
+    // Columns empty in every row are hidden on cards, so their sort buttons go too.
+    Array.prototype.forEach.call(head.rows[head.rows.length - 1].cells, function (th, i) {
+      th.toggleAttribute('data-empty', rows.length > 0 && rows.every(function (row) { return row.cells[i].hasAttribute('data-empty'); }));
+    });
+    var named = rows.length && rows.every(function (row) { return !numeric.test(row.cells[0].textContent.trim()); });
+    table.classList.add('metaui-stack');
+    table.classList.toggle('metaui-stack-named', named);
+    // DataTables headers stay visible on phones as sort buttons when sorting is useful.
+    table.classList.toggle('metaui-stack-sortable', rows.length > 1 && !!head.querySelector('.sorting, .sorting_asc, .sorting_desc, .dt-orderable-asc, .dt-orderable-desc'));
+  }
+  function stackAll() { document.querySelectorAll('.tab-content table').forEach(stack); }
+  var timer;
+  function schedule() { clearTimeout(timer); timer = setTimeout(stackAll, 30); }
+  $(document).on('draw.dt', function (event, settings) { if (settings && settings.nTable) stack(settings.nTable); });
+  document.addEventListener('DOMContentLoaded', function () {
+    var results = document.querySelector('.tab-content') || document.body;
+    new MutationObserver(schedule).observe(results, { childList: true, subtree: true });
+    schedule();
+  });
+})(jQuery);

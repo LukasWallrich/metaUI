@@ -43,6 +43,15 @@ metaUI_slider_input <- function(inputId, label, spec, value = c(spec$min, spec$m
     addAttrs(`data-grid-num` = spec$ticks)$allTags()
 }
 
+# Render width for plots that need room for labels: at least `min_width` on wide
+# screens, but on narrow (phone) columns only up to 1.5 times their width (or 480px,
+# whichever is larger), so that the image scaled to fit by metaui.css keeps legible
+# text instead of needing sideways scrolling.
+metaUI_plot_width <- function(width, min_width) {
+  if (is.null(width) || !is.finite(width) || width <= 0) return(min_width)
+  max(width, min(min_width, max(480, 1.5 * width)))
+}
+
 #' Format p-value in line with APA standard (no leading 0)
 #'
 #' Formats p-value in line with APA standard, returning it without leading 0 and

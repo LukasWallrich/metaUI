@@ -83,7 +83,7 @@ h4 { font-size: 18px; margin: 22px 0 8px; }
 a:not(.btn) { color: var(--metaui-accent); }
 caption, .shiny-table .NA, .shiny-table td.NA { color: var(--metaui-slate) !important; }
 
-/* Skip link: hidden until focused, always shown on phones where results follow the filters */
+/* Skip link: hidden until focused */
 .metaui-skip { position: absolute; left: -9999px; }
 .metaui-skip:focus { position: static; display: inline-block; margin: 8px 0 0; }
 
@@ -108,7 +108,6 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
 #moderation_table td { white-space: nowrap; }
 
 @media (max-width: 767px) {
-  .metaui-skip { position: static; display: inline-block; margin: 10px 0 0; font-size: 14px; }
   #effectestimate table, .metaui-help { font-size: 13px; }
   .metaui-primary-value { font-size: 22px; }
   .nav-tabs > li > a { padding: 8px 10px; }
@@ -203,7 +202,6 @@ input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 
   .metaui-header { margin: 0 -15px 18px; padding: 20px; }
   .row > .col-sm-3:has(> form.well), .row > .col-sm-3:has(> form.well) + .col-sm-9 { width: 100%; }
   .well { padding: 20px; }
-  .metaui-skip { margin: 8px 0; }
   .tab-content { padding: 8px 15px 20px; }
   .nav-tabs > li > a { padding: 9px 11px; font-size: 13px; }
   .metaui-primary { padding: 16px; }
@@ -260,3 +258,69 @@ table.dataTable td.metaui-study-child { background: var(--metaui-surface); borde
 .metaui-copy-status { margin-left: 4px; color: var(--metaui-slate); font-size: 13px; }
 h4.metaui-study-heading { font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
 @media (max-width: 767px) { .metaui-study-info { left: 0; max-width: calc(100vw - 100px); } }
+
+/* Wide plots render at a legible width and scale to fit their column. */
+.metaui-scroll img { max-width: 100%; height: auto !important; }
+.metaui-scroll .shiny-plot-output { width: 100% !important; height: auto !important; }
+
+/* Phones: filters collapse behind a toggle (metaui.js); wide tables become one card per row. */
+.metaui-filters-toggle { display: none; }
+@media (max-width: 767px) {
+  .container-fluid { padding: 0 10px 24px; }
+  .container-fluid > .row { margin-left: -10px; margin-right: -10px; }
+  .container-fluid > .row > [class*="col-"] { padding-left: 10px; padding-right: 10px; }
+  .metaui-header { margin: 0 -10px 12px; padding: 12px 16px; }
+  .metaui-header h2 { font-size: 21px; letter-spacing: -.3px; }
+  .well { padding: 16px; margin-bottom: 14px; border-radius: 8px; }
+  .metaui-panel-title { font-size: 18px; margin-bottom: 10px; }
+  .metaui-filters-toggle { display: block; width: 100%; margin-bottom: 10px; text-align: center !important; background: #fff; color: var(--metaui-accent); border: 1px solid #9fc3c7; font-weight: 600; }
+  .metaui-filters-toggle::after { content: ' \25BE'; }
+  .metaui-filters-toggle[aria-expanded="true"]::after { content: ' \25B4'; }
+  .metaui-filter-panel { display: none; }
+  .metaui-filter-panel.metaui-open { display: block; padding-top: 6px; }
+  .metaui-data-tools { margin-top: 10px; padding-top: 10px; }
+  .metaui-data-tools > summary { margin-bottom: 0; }
+  .metaui-data-tools[open] > summary { margin-bottom: 12px; }
+  .metaui-share { margin-top: 6px; }
+  .metaui-basis { font-size: 14px; }
+  .nav-tabs { padding: 4px; gap: 2px; }
+  .nav-tabs > li > a { padding: 8px 10px; font-size: 13px; }
+  .tab-content { padding: 4px 12px 18px; min-height: 0; }
+  .tab-content h3 { font-size: 20px; }
+  h4 { font-size: 17px; }
+  .metaui-primary-value { font-size: 26px; }
+
+  #effectestimate_box { border: 0; border-radius: 0; overflow: visible; }
+  #effectestimate { min-width: 0; }
+  table.metaui-stack, table.metaui-stack > tbody, table.metaui-stack > tbody > tr, table.metaui-stack > tbody > tr > td { display: block; width: 100% !important; }
+  table.metaui-stack { min-width: 0 !important; border: 0; background: transparent; }
+  table.metaui-stack > thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  table.metaui-stack > tbody > tr { margin: 0 0 10px; padding: 6px 12px; border: 1px solid var(--metaui-rule); border-radius: 7px; background: #fff !important; }
+  table.metaui-stack > tbody > tr > td[data-label] { display: grid; grid-template-columns: minmax(6.5em, 38%) minmax(0, 1fr); gap: 10px; padding: 6px 0 !important; border: 0 !important; border-top: 1px solid #edf2f5 !important; text-align: left !important; white-space: normal !important; min-width: 0 !important; max-width: none !important; overflow-wrap: anywhere; background: transparent !important; }
+  table.metaui-stack > tbody > tr > td[data-label]::before { content: attr(data-label); font-size: 13px; font-weight: 600; color: var(--metaui-slate); overflow-wrap: normal; }
+  table.metaui-stack > tbody > tr > td[data-empty] { display: none !important; }
+  table.metaui-stack > caption { display: block; width: 100%; }
+  table.metaui-stack > tbody > tr > td[data-label]:first-child { border-top: 0 !important; }
+  table.metaui-stack-named > tbody > tr > td[data-label]:first-child { display: block; font-size: 15px; font-weight: 600; color: var(--metaui-ink); padding: 4px 0 6px !important; }
+  table.metaui-stack-named > tbody > tr > td[data-label]:first-child::before { content: none; }
+  #effectestimate_box.metaui-has-primary table.metaui-stack > tbody > tr:first-child { border-color: #9fc3c7; border-left: 4px solid var(--metaui-accent); background: #f4faf9 !important; }
+  #effectestimate_box.metaui-has-primary tbody tr:first-child td { background: transparent; }
+  /* Study details open under their card. */
+  table.metaui-stack > tbody > tr > td.metaui-study-child { padding: 10px 12px !important; border-left: 0; }
+  table.metaui-stack > tbody > tr:has(> td.metaui-study-child) { margin-top: -6px; border-top: 0; border-radius: 0 0 7px 7px; padding: 0; background: var(--metaui-surface) !important; }
+  .metaui-study-info { position: static; max-width: none; }
+  /* DataTables: sortable headings become a row of sort buttons above the cards. */
+  table.metaui-stack-sortable.dataTable > thead { position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; display: block; margin-bottom: 10px; }
+  table.metaui-stack-sortable.dataTable > thead > tr { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  table.metaui-stack-sortable.dataTable > thead > tr::before { content: 'Sort by'; font-size: 13px; color: var(--metaui-slate); margin-right: 2px; }
+  table.metaui-stack-sortable.dataTable > thead > tr > th { display: block; width: auto !important; min-width: 0 !important; padding: 5px 24px 5px 10px !important; border: 1px solid var(--metaui-rule) !important; border-radius: 15px; background-color: #fff; font-size: 12px; white-space: nowrap; }
+  table.metaui-stack-sortable.dataTable > thead > tr > th[data-empty] { display: none; }
+  table.metaui-stack-sortable.dataTable > thead > tr > th.sorting_asc, table.metaui-stack-sortable.dataTable > thead > tr > th.sorting_desc { border-color: var(--metaui-accent) !important; color: var(--metaui-accent); }
+  table.dataTable.metaui-stack { margin: 0 !important; }
+  table.dataTable.metaui-stack.no-footer { border-bottom: 0; }
+  .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate { float: none !important; text-align: left !important; margin: 0 0 10px; }
+  .dataTables_wrapper .dataTables_filter label { display: flex; align-items: center; gap: 8px; width: 100%; }
+  .dataTables_wrapper .dataTables_filter input { flex: 1; margin-left: 0; min-width: 0; }
+  .dataTables_wrapper .dataTables_paginate { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 4px; }
+  .dataTables_wrapper .dataTables_paginate .paginate_button { margin: 0; padding: 6px 10px; }
+}

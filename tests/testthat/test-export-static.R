@@ -51,6 +51,7 @@ test_that("export_static() writes a static site with the bridge and notices", {
   out <- export_static(app, site, subdir = "fixture")
   expect_true(all(file.exists(file.path(out, c("index.html", "app.json", "STATIC-NOTICE.md", "bundled-packages.csv")))))
   expect_true(file.exists(file.path(site, "shinylive-sw.js")))
+  expect_match(paste(readLines(file.path(out, "index.html")), collapse = "\n"), "height: 100dvh", fixed = TRUE)
   expect_identical(tools::md5sum(file.path(app, c("www/metaui.js", "ui.R"))), before)
   files <- jsonlite::read_json(file.path(out, "app.json"))
   js <- Filter(function(f) f$name == "www/metaui.js", files)[[1]]$content
@@ -107,6 +108,18 @@ test_that("precomputation uses the app server and writes an inert Summary", {
   expect_setequal(list.files(preview, recursive = TRUE), c(referenced, "provenance.json"))
   expect_true(all(file.exists(file.path(preview, referenced))))
   expect_identical(tools::md5sum(list.files(app, recursive = TRUE, full.names = TRUE)), before)
+})
+
+test_that("precomputation reads picker defaults, which shinyWidgets supplies as raw HTML", {
+  app <- tempfile(); preview <- tempfile()
+  on.exit(unlink(c(app, preview), recursive = TRUE))
+  raw <- fixture()
+  raw$source <- factor(rep(c("a & b", " <c>", paste0("s", 1:6)), each = 2))
+  generate_shiny(prepared(raw, filters = c(Source = "source")), "Picker fixture",
+    save_to_folder = app, launch_app = FALSE)
+  expect_match(paste(readLines(file.path(app, "ui.R")), collapse = "\n"), "pickerInput", fixed = TRUE)
+  rendered <- metaUI:::static_precompute(app, preview)
+  expect_match(rendered$selection_overview, "16 of 16")
 })
 
 test_that("preview opt-out and failed precomputation preserve a working export", {
@@ -236,4 +249,17 @@ test_that("overwrite replaces only recognisable exports and sources cover the sh
     expect_match(notice, if (nzchar(subdir)) "../../sources/" else "sources/", fixed = TRUE)
     if (nzchar(subdir)) expect_identical(readLines(file.path(site, "sibling.txt")), "sibling")
   }
+})
+
+test_that("preview tables label cells for phone cards and mark blank cells empty", {
+  html <- paste0("<table><thead><tr><th>Model</th><th>Estimate</th><th>p</th><th>Note</th></tr></thead><tbody>",
+    "<tr><td>RE &amp; RVE</td><td>0.18</td><td>0.01</td><td>&nbsp;</td></tr>",
+    "<tr><td>Trim</td><td>0.09</td><td>0.20</td><td>small k</td></tr></tbody></table>")
+  out <- metaUI:::static_stack_table(html)
+  expect_match(out, '<td data-label="Model">RE &amp; RVE</td>', fixed = TRUE)
+  expect_match(out, '<td data-label="Note" data-empty>&nbsp;</td>', fixed = TRUE)
+  expect_match(out, '<td data-label="Note">small k</td>', fixed = TRUE)
+  expect_false(grepl('data-label="p" data-empty', out, fixed = TRUE))
+  narrow <- "<table><thead><tr><th>a</th><th>b</th><th>c</th></tr></thead><tbody><tr><td>1</td><td>2</td><td>3</td></tr></tbody></table>"
+  expect_identical(metaUI:::static_stack_table(narrow), narrow)
 })
