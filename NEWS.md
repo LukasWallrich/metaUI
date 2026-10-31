@@ -16,7 +16,7 @@
   wraps study labels. Static sites also show the precomputed preview at phone
   width, including when filters use selection boxes, which previously prevented
   the preview from being computed.
-* `prepare_data()` decodes HTML escapes such as `&amp;` in text columns, which
+* `prepare_data()` decodes HTML escapes such as `&amp;` in text and factor columns, which
   apps previously showed verbatim (for example, in study labels), and reports
   the columns changed. Study details are matched to the decoded study IDs.
 * Forest plots taller than about a screen repeat the effect-size axis at the top.
