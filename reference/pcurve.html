@@ -43,7 +43,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">pcurve</span><span class="op">(</span><span class="va">x</span>, effect.estimation <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">N</span>, dmin <span class="op">=</span> <span class="fl">0</span>, dmax <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">pcurve</span><span class="op">(</span><span class="va">x</span>, effect.estimation <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">N</span>, dmin <span class="op">=</span> <span class="fl">0</span>, dmax <span class="op">=</span> <span class="fl">1</span>, compact <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -76,6 +76,11 @@ the true effect size should be searched. Must be greater or equal to 0. Default 
 <dt id="arg-dmax">dmax<a class="anchor" aria-label="anchor" href="#arg-dmax"></a></dt>
 <dd><p>If <code>effect.estimation = TRUE</code>: upper limit for the effect size (\(d\)) space in which
 the true effect size should be searched. Must be greater than 0. Default is 1.</p></dd>
+
+
+<dt id="arg-compact">compact<a class="anchor" aria-label="anchor" href="#arg-compact"></a></dt>
+<dd><p>Logical. For narrow (phone-width) plots: if <code>TRUE</code>, the test results and notes
+are left out of the plot and returned as HTML lines in <code>notes</code>. <code>FALSE</code> by default.</p></dd>
 
 </dl></div>
     <div class="section level2">

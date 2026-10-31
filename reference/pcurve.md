@@ -7,7 +7,7 @@ documentation](https://dmetar.protectlab.org/) for examples.
 ## Usage
 
 ``` r
-pcurve(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1)
+pcurve(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact = FALSE)
 ```
 
 ## Arguments
@@ -43,6 +43,12 @@ pcurve(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1)
   If `effect.estimation = TRUE`: upper limit for the effect size (\\d\\)
   space in which the true effect size should be searched. Must be
   greater than 0. Default is 1.
+
+- compact:
+
+  Logical. For narrow (phone-width) plots: if `TRUE`, the test results
+  and notes are left out of the plot and returned as HTML lines in
+  `notes`. `FALSE` by default.
 
 ## Value
 
