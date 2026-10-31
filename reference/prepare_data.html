@@ -164,6 +164,12 @@ or change the models and analyses to be included in the app. Invalid required in
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>tibble with the data from the file/input reformatted for metaUI</p>
     </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>HTML escapes in text and factor columns, such as <code>&amp;amp;</code> or <code>&amp;#8211;</code> left by
+reference managers and web exports, are decoded (to <code>&amp;</code> and an en dash) so that
+apps show plain text; a message names the columns changed.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

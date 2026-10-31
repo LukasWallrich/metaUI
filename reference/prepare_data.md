@@ -151,6 +151,13 @@ prepare_data(
 
 tibble with the data from the file/input reformatted for metaUI
 
+## Details
+
+HTML escapes in text and factor columns, such as `&amp;` or `&#8211;`
+left by reference managers and web exports, are decoded (to `&` and an
+en dash) so that apps show plain text; a message names the columns
+changed.
+
 ## Examples
 
 ``` r
