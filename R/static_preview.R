@@ -242,7 +242,7 @@ static_stack_table <- function(html) {
     row
   }, character(1), USE.NAMES = FALSE)
   for (i in seq_along(rows)) body <- sub(rows[i], labelled[i], body, fixed = TRUE)
-  numeric <- grepl("^[[:space:][:digit:].,%<>=+()\\[\\]−-]*$|^NA$", first)
+  numeric <- grepl("^[[:space:][:digit:].,%<>=+()\\[\\]\u2212-]*$|^NA$", first)
   class <- paste0("metaui-stack", if (length(first) && !any(numeric)) " metaui-stack-named")
   html <- paste0(substring(html, 1L, body_at - 1L), body, substring(html, body_at + attr(body_at, "match.length")))
   sub("<table\\b([^>]*?)class=\"([^\"]*)\"", paste0("<table\\1class=\"\\2 ", class, "\""),
