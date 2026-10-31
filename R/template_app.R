@@ -1014,16 +1014,18 @@ glue_string <- ('
       need(nrow(df) <= <<opts$max_forest_plot_rows>>, forest_limit_message))
     metaUI_forest_rows(df, estimatesfiltered(), models_to_run)
   })
-  forest_plot_for <- function(label_width = NULL) metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1], accent = "<<if (is.null(opts$design)) "#096b74" else opts$design$accent>>", ink = "<<if (is.null(opts$design)) "#182f46" else opts$design$text>>", background = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", interval_colour = "<<if (is.null(opts$design)) "#52616d" else opts$design$text>>", grid_colour = "<<if (is.null(opts$design)) "#EBEBEB" else design_mix(opts$design$text, opts$design$surface, .18)>>", label_width = label_width)
-  forest_plot <- reactive(forest_plot_for())
+  forest_plot_for <- function(label_width = NULL, top_axis = FALSE) metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1], accent = "<<if (is.null(opts$design)) "#096b74" else opts$design$accent>>", ink = "<<if (is.null(opts$design)) "#182f46" else opts$design$text>>", background = "<<if (is.null(opts$design)) "#FFFFFF" else opts$design$surface>>", interval_colour = "<<if (is.null(opts$design)) "#52616d" else opts$design$text>>", grid_colour = "<<if (is.null(opts$design)) "#EBEBEB" else design_mix(opts$design$text, opts$design$surface, .18)>>", label_width = label_width, top_axis = top_axis)
   forest_height <- function() 100 + 23 * nrow(forest_rows())
+  # Plots taller than about a laptop screen repeat the x axis at the top.
+  forest_plot <- reactive(forest_plot_for(top_axis = forest_height() > 700))
   # Phones get the plot at their column width, with wrapped labels on taller rows;
   # downloads keep the full-width layout.
+  forest_narrow_height <- function() 90 + 34 * nrow(forest_rows())
   forest_narrow <- function() isTRUE(session$clientData$output_foreststudies_width < 600)
   output$foreststudies <- renderPlot({
-    if (forest_narrow()) print(forest_plot_for(label_width = 26))
+    if (forest_narrow()) print(forest_plot_for(label_width = 26, top_axis = forest_narrow_height() > 700))
     else print(forest_plot())
-  }, height = function() if (forest_narrow()) 90 + 34 * nrow(forest_rows()) else forest_height(),
+  }, height = function() if (forest_narrow()) forest_narrow_height() else forest_height(),
     width = function() if (forest_narrow()) session$clientData$output_foreststudies_width else max(760, session$clientData$output_foreststudies_width))
   output$forest_pdf <- downloadHandler(filename = function() "forest-plot.pdf", content = function(file) {
     ggplot2::ggsave(file, forest_plot(), device = "pdf", width = 10,

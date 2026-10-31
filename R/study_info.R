@@ -258,16 +258,18 @@ metaUI_apply_abstract_policy <- function(record, abstracts) {
 }
 
 # Plain text from Crossref strings: markup removed, entities decoded.
-metaUI_plain_text <- function(x) {
-  x <- gsub("<[^>]+>", "", x)
-  x <- gsub("&lt;", "<", gsub("&gt;", ">", gsub("&quot;", "\"", gsub("&#39;|&apos;", "'", x))))
-  for (code in unique(regmatches(x, gregexpr("&#x?[0-9A-Fa-f]+;", x))[[1]])) {
+metaUI_plain_text <- function(x) trimws(gsub("[[:space:]]+", " ", metaUI_decode_entities(gsub("<[^>]+>", "", x))))
+
+# Decodes the HTML entities that bibliographic exports leave in text ("&amp;", "&#8211;").
+# &amp; goes last, so "&amp;lt;" becomes the literal "&lt;" rather than "<".
+metaUI_decode_entities <- function(x) {
+  x <- gsub("&lt;", "<", gsub("&gt;", ">", gsub("&quot;", "\"", gsub("&#39;|&apos;", "'", gsub("&nbsp;", " ", x)))))
+  for (code in unique(unlist(regmatches(x, gregexpr("&#(x[0-9A-Fa-f]+|[0-9]+);", x))))) {
     n <- sub("^&#(x?)([0-9A-Fa-f]+);$", "\\2", code)
     value <- if (grepl("^&#x", code)) strtoi(n, 16L) else as.integer(n)
-    x <- gsub(code, intToUtf8(value), x, fixed = TRUE)
+    if (!is.na(value) && value > 0L) x <- gsub(code, intToUtf8(value), x, fixed = TRUE)
   }
-  x <- gsub("&amp;", "&", x)
-  trimws(gsub("[[:space:]]+", " ", x))
+  gsub("&amp;", "&", x)
 }
 
 # JATS abstract to paragraphs separated by blank lines; a lone "Abstract" heading is dropped.
@@ -290,6 +292,7 @@ validate_study_info <- function(info, dataset) {
   if (length(unknown)) stop("Unknown study_info columns: ", paste(unknown, collapse = ", "),
     ". Allowed: ", paste(study_info_fields, collapse = ", "))
   info[] <- lapply(info, function(x) { x <- as.character(x); x[!is.na(x) & !nzchar(trimws(x))] <- NA; x })
+  info$study <- metaUI_decode_entities(info$study) # as prepare_data() does for study IDs
   if (anyNA(info$study) || anyDuplicated(info$study)) stop("study_info needs one row per study, with nonmissing study IDs.")
   unmatched <- setdiff(info$study, as.character(dataset$metaUI__study_id))
   if (length(unmatched)) stop("study_info rows do not match any study ID: ", paste(utils::head(unmatched, 10), collapse = ", "))

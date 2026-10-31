@@ -393,7 +393,8 @@ metaUI_forest_rows <- function(df, estimates, models = NULL) {
 
 # label_width (characters) wraps study labels onto at most two lines for narrow (phone)
 # plots. Longer labels lose their middle, so the end (year, effect) still tells rows apart.
-metaUI_forest_plot <- function(rows, scale, accent = "#096b74", ink = "#182f46", background = "#FFFFFF", interval_colour = "#52616d", grid_colour = "#EBEBEB", label_width = NULL) {
+# top_axis repeats the x axis above plots taller than a screen.
+metaUI_forest_plot <- function(rows, scale, accent = "#096b74", ink = "#182f46", background = "#FFFFFF", interval_colour = "#52616d", grid_colour = "#EBEBEB", label_width = NULL, top_axis = FALSE) {
   if (!is.null(label_width)) rows$label <- vapply(rows$label, function(label) {
     lines <- strwrap(label, label_width)
     if (length(lines) > 2L) {
@@ -409,6 +410,7 @@ metaUI_forest_plot <- function(rows, scale, accent = "#096b74", ink = "#182f46",
     ggplot2::geom_point(ggplot2::aes(shape = .data$kind), size = 2.8, colour = accent, fill = accent) +
     ggplot2::scale_shape_manual(values = c("Selected effect" = 16, "Model summary" = 23), guide = "none") +
     ggplot2::scale_y_continuous(breaks = rows$row, labels = rows$label, expand = ggplot2::expansion(add = .8)) +
+    ggplot2::scale_x_continuous(sec.axis = if (top_axis) ggplot2::dup_axis() else ggplot2::waiver()) +
     ggplot2::labs(x = paste("Effect size (", scale, ")", sep = ""), y = NULL) +
     ggplot2::theme_minimal(base_size = 14) +
     ggplot2::theme(text = ggplot2::element_text(colour = ink),
