@@ -292,7 +292,9 @@ validate_study_info <- function(info, dataset) {
   if (length(unknown)) stop("Unknown study_info columns: ", paste(unknown, collapse = ", "),
     ". Allowed: ", paste(study_info_fields, collapse = ", "))
   info[] <- lapply(info, function(x) { x <- as.character(x); x[!is.na(x) & !nzchar(trimws(x))] <- NA; x })
-  info$study <- metaUI_decode_entities(info$study) # as prepare_data() does for study IDs
+  # Older or hand-written files may keep escapes that prepare_data() decoded in study IDs.
+  escaped <- !info$study %in% as.character(dataset$metaUI__study_id)
+  info$study[escaped] <- metaUI_decode_entities(info$study[escaped])
   if (anyNA(info$study) || anyDuplicated(info$study)) stop("study_info needs one row per study, with nonmissing study IDs.")
   unmatched <- setdiff(info$study, as.character(dataset$metaUI__study_id))
   if (length(unmatched)) stop("study_info rows do not match any study ID: ", paste(utils::head(unmatched, 10), collapse = ", "))

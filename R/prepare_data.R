@@ -50,9 +50,8 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
     data <- read.csv(data, stringsAsFactors = FALSE)
   }
   check_removed_example(data)
+  raw_data <- data # undecoded, as alternatives are prepared (and decoded) from it again
   data <- decode_text_entities(data)
-
-  raw_data <- data
   alternative_base <- list(study_label = study_label, es_field = es_field, se = se,
     pvalue = pvalue, sample_size = sample_size, variance = variance, filters = filters,
     url = url, es_type = es_type, article_label = article_label, es_label = es_label,
@@ -252,7 +251,7 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
       kept$metaUI_original_effect_id <- original_rows[reason == ""]
       args$es_id <- "metaUI_original_effect_id"
     }
-    alt <- tryCatch(do.call(prepare_data, c(list(data = kept), args)), error = function(e)
+    alt <- tryCatch(suppressMessages(do.call(prepare_data, c(list(data = kept), args))), error = function(e)
       stop("Alternative ", names(alternatives)[i], " is invalid for retained effects (original rows ",
         paste(original_rows[reason == ""], collapse = ", "), "): ", conditionMessage(e)))
     if (!identical(as.character(alt$metaUI__study_id), as.character(data$metaUI__study_id)) ||

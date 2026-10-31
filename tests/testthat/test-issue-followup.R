@@ -198,3 +198,12 @@ test_that("tall forest plots repeat the x axis at the top", {
   expect_s3_class(secondary(top_axis = TRUE), "AxisSecondary")
   expect_s3_class(secondary(), "waiver")
 })
+
+test_that("double-escaped IDs are decoded once for alternatives and study details", {
+  raw <- data.frame(study = c("A &amp;lt; B", "C &amp; D"), d = c(.1, .3), vi = c(.02, .03), d2 = c(.12, .28))
+  out <- suppressMessages(prepare_data(raw, "study", "d", variance = "vi",
+    alternatives = list(Alt = list(es_field = "d2", variance = "vi", es_type = "SMD", justification = "Test."))))
+  expect_equal(as.character(out$metaUI__study_id), c("A &lt; B", "C & D"))
+  info <- metaUI:::validate_study_info(data.frame(study = c("A &lt; B", "C &amp; D"), title = c("T1", "T2")), out)
+  expect_setequal(info$study, c("A &lt; B", "C & D"))
+})
