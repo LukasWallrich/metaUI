@@ -250,3 +250,16 @@ test_that("overwrite replaces only recognisable exports and sources cover the sh
     if (nzchar(subdir)) expect_identical(readLines(file.path(site, "sibling.txt")), "sibling")
   }
 })
+
+test_that("preview tables label cells for phone cards and mark blank cells empty", {
+  html <- paste0("<table><thead><tr><th>Model</th><th>Estimate</th><th>p</th><th>Note</th></tr></thead><tbody>",
+    "<tr><td>RE &amp; RVE</td><td>0.18</td><td>0.01</td><td>&nbsp;</td></tr>",
+    "<tr><td>Trim</td><td>0.09</td><td>0.20</td><td>small k</td></tr></tbody></table>")
+  out <- metaUI:::static_stack_table(html)
+  expect_match(out, '<td data-label="Model">RE &amp; RVE</td>', fixed = TRUE)
+  expect_match(out, '<td data-label="Note" data-empty>&nbsp;</td>', fixed = TRUE)
+  expect_match(out, '<td data-label="Note">small k</td>', fixed = TRUE)
+  expect_false(grepl('data-label="p" data-empty', out, fixed = TRUE))
+  narrow <- "<table><thead><tr><th>a</th><th>b</th><th>c</th></tr></thead><tbody><tr><td>1</td><td>2</td><td>3</td></tr></tbody></table>"
+  expect_identical(metaUI:::static_stack_table(narrow), narrow)
+})
