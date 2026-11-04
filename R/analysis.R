@@ -360,6 +360,9 @@ metaUI_pcurve_data <- function(df, selection = "first", require_N = FALSE) {
 metaUI_pcurve_fit <- function(df, selection = "first") {
   x <- metaUI_pcurve_data(df, selection, require_N = TRUE)
   mod <- pcurve(x, effect.estimation = TRUE, N = x$n, dmin = 0, dmax = max(x$TE))
+  # The refinement step in pcurve() can leave the grid range, so dmin = 0 does not bound the result.
+  if (mod$dEstimate < 0) stop("P-curve effect estimate fell below zero, outside the searched range; no estimate is reported.")
+  # The fit is on the magnitude scale; its sign comes only from the declared direction.
   if (df$metaUI__direction[1] == "negative") mod$dEstimate <- -mod$dEstimate
   mod
 }

@@ -29,6 +29,9 @@ get_model_tibble <- function() {
             "Trim-and-fill", TRUE, "mod$b", "mod$ci.lb", "mod$ci.ub", "mod$k",
             "P-uniform star", TRUE, "mod$est", "mod$ci.lb", "mod$ci.ub", "mod$k",
             "Hedges-Vevea Selection Model", TRUE, "as.numeric(mod$output_adj$par[2])", "mod$ci.lb_adj[2]", "mod$ci.ub_adj[2]", "mod$k",
+            # P-curve estimates are off by default. They are Cohen's d (SMD data only), signed by
+            # the declared direction, not by another model. Fisher's z is about d/2, so a d estimate
+            # reads as roughly double next to Fisher's z estimates.
             #"P-Curve (first value)", FALSE, "mod$dEstimate", NA, NA, "mod$kAnalyzed",
             #"P-Curve (last value)", FALSE, "mod$dEstimate", NA, NA, "mod$kAnalyzed",
             "Precision Effect Test", TRUE, "as.numeric(mod$coefficients[1])", "confint(mod)[1, 1]", "confint(mod)[1, 2]", "mod$df+2",
