@@ -233,3 +233,15 @@ test_that("readers get precomputed default results that match a fresh fit", {
   cat("\n# edited\n", file = "models.R", append = TRUE)
   expect_null(env$metaUI_opening_load("."))
 })
+
+test_that("forest rows combine a study's effects as the study-level models do and keep every effect", {
+  d <- prepared()
+  fit <- metaUI:::metaUI_fit_models(d, get_model_tibble(), .6, "aggregate")
+  rows <- metaUI:::metaUI_forest_rows(d, fit$table)
+  studies <- metaUI:::metaUI_forest_studies(fit$df_agg)
+  expect_equal(studies$es, fit$df_agg$metaUI__effect_size)
+  html <- metaUI:::metaUI_forest_html(rows, "SMD", studies)
+  expect_equal(lengths(regmatches(html, gregexpr("metaui-forest-toggle", html, fixed = TRUE))), length(unique(d$metaUI__study_id)))
+  expect_equal(lengths(regmatches(html, gregexpr("metaui-forest-effect metaui-forest-closed", html, fixed = TRUE))), nrow(d))
+  expect_match(html, metaUI:::metaUI_minus(formatC(studies$es[1], format = "f", digits = 2)), fixed = TRUE)
+})

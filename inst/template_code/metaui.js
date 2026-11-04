@@ -196,23 +196,24 @@
   });
 })(jQuery);
 
-/* Phones: the tabs scroll in one row. An edge fade shows there is more; the chosen tab stays in view. */
+/* Forest plot: a study's combined row opens to show its effects. */
 (function ($) {
   'use strict';
-  function cue(strip) { strip.classList.toggle('metaui-more', strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 4); }
-  $(document).on('shown.bs.tab', '.nav-tabs a', function () {
-    if (!window.matchMedia('(max-width: 767px)').matches) return;
-    var strip = this.closest('.nav-tabs');
-    strip.scrollLeft += this.getBoundingClientRect().left - strip.getBoundingClientRect().left - 14;
-    cue(strip);
+  function setStudy(row, open) {
+    var button = row.querySelector('.metaui-forest-toggle');
+    if (button) button.setAttribute('aria-expanded', String(open));
+    for (var next = row.nextElementSibling; next && next.classList.contains('metaui-forest-effect'); next = next.nextElementSibling)
+      next.classList.toggle('metaui-forest-closed', !open);
+  }
+  $(document).on('click', '.metaui-forest-toggle', function () {
+    setStudy(this.closest('tr'), this.getAttribute('aria-expanded') !== 'true');
   });
-  document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.nav-tabs').forEach(function (strip) {
-      strip.addEventListener('scroll', function () { cue(strip); }, { passive: true });
-      cue(strip);
-    });
+  $(document).on('click', '.metaui-forest-all', function () {
+    var open = this.getAttribute('aria-expanded') !== 'true';
+    this.setAttribute('aria-expanded', String(open));
+    this.textContent = open ? 'show studies only' : 'show every effect';
+    this.closest('.shiny-html-output').querySelectorAll('.metaui-forest-study').forEach(function (row) { setStudy(row, open); });
   });
-  window.addEventListener('resize', function () { document.querySelectorAll('.nav-tabs').forEach(cue); });
 })(jQuery);
 
 /* Phones: tables with four or more columns reflow into one card per row (metaui.css).

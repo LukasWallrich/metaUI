@@ -100,11 +100,11 @@ function reproduce(script, workbook, selected) {
   }
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.getByText('Assess practical equivalence', {exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Smallest bound containing'));
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval fits within'));
   await page.locator('#sesoi').fill('1');
   await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval within bounds'));
   const equivalenceHeader = await page.locator('#equivalence thead').innerText();
-  for (const column of ['Assessment','Smallest bound containing']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
+  for (const column of ['Assessment','Interval fits within']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
   assert(await page.locator('#equivalence tbody tr').count() >= 2, 'expected one assessment row per model');
   assert.equal((await page.locator('#apply_state').innerText()).trim(), '');
   await page.getByText('Download data or code, upload data', {exact:true}).click();
@@ -120,7 +120,7 @@ function reproduce(script, workbook, selected) {
   reproduce(script, path.join(evidence,'round-trip.xlsx'), 16);
   // Clear the bound so the upload has to restore it.
   await page.locator('#sesoi').fill('');
-  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Smallest bound containing'));
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval fits within'));
   await page.locator('#uploadData').setInputFiles(path.join(evidence,'round-trip.xlsx'));
   await page.waitForFunction(()=>document.querySelector('#uploadData_progress')?.textContent.includes('Upload complete'));
   await page.locator('#executeUpload').click();

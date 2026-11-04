@@ -67,8 +67,7 @@ metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours()) {
     ggplot2::annotate("path", x = centre + c(-half, 0, half), y = c(ymax, 0, ymax), linetype = 2, linewidth = .4, colour = colours$accent) +
     ggplot2::geom_point(data = data.frame(yi = yi, se = se), ggplot2::aes(.data$yi, .data$se), colour = colours$slate, alpha = .6, size = 2) +
     ggplot2::annotate("text", x = limits[1] + .012 * diff(limits), y = ymax * .05, label = 'italic(p) < ".05"', parse = TRUE, hjust = 0, size = 4.5, colour = colours$slate, family = colours$family) +
-    ggplot2::annotate("text", x = limits[2] - .012 * diff(limits), y = ymax * .05, label = 'italic(p) < ".05"', parse = TRUE, hjust = 1, size = 4.5, colour = colours$slate, family = colours$family) +
-    ggplot2::annotate("text", x = centre - z * ymax * .62, y = ymax * .62, label = "95% limits", hjust = 1.12, size = 4.5, colour = colours$accent, family = colours$family) +
+    ggplot2::annotate("text", x = centre - z * ymax * .62, y = ymax * .62, label = "95% limits", hjust = 1.2, size = 4.5, colour = colours$accent, family = colours$family) +
     ggplot2::annotate("text", x = 0, y = ymax * .96, label = 'italic(p) >= ".05"', parse = TRUE, size = 4.5, colour = colours$slate, family = colours$family) +
     ggplot2::annotate("text", x = centre + z * ymax * .03 + .012 * diff(limits), y = ymax * .03, label = paste0("pooled ", metaUI_minus(formatC(centre, format = "f", digits = 2))), hjust = 0, size = 4.5, colour = colours$accent, family = colours$family) +
     ggplot2::scale_y_reverse(breaks = metaUI_funnel_ticks(se), expand = c(0, 0)) +
@@ -156,13 +155,18 @@ metaUI_zcurve_plot <- function(fit, colours) {
     layer
   })
   curve <- plot$layers[[which(vapply(plot$layers, function(layer) inherits(layer$geom, "GeomLine"), logical(1)))[1]]]$data
-  at <- curve[which.min(abs(curve$x - (threshold + 1.05))), ]
+  at <- curve[which.min(abs(curve$x - (threshold + 2.3))), ]
   plot <- plot + ggplot2::annotate("text", x = threshold + .08, y = Inf, vjust = 1.5, hjust = 0, size = 4.5, colour = colours$ink, family = colours$family, parse = TRUE,
       label = sprintf('italic(z) == "%s" * "," ~ italic(p) == "%s"', round(threshold, 2), sub("^0", "", format(fit$control$sig_level)))) +
     ggplot2::annotate("text", x = threshold - .08, y = Inf, vjust = 3.5, hjust = 1, size = 4.5, colour = colours$slate, family = colours$family, label = "not significant") +
     ggplot2::annotate("text", x = threshold + .08, y = Inf, vjust = 3.5, hjust = 0, size = 4.5, colour = colours$accent, family = colours$family, label = "significant") +
-    ggplot2::annotate("text", x = at$x + .06, y = at$y, vjust = -.5, hjust = 0, size = 4.5, colour = colours$ink, family = colours$family, parse = TRUE, label = 'italic(z) * "-curve fit"') +
+    ggplot2::annotate("text", x = at$x, y = at$y, vjust = -.8, hjust = 0, size = 4.5, colour = colours$ink, family = colours$family, parse = TRUE, label = 'italic(z) * "-curve fit"') +
     metaUI_plot_theme(colours)
+  # Tests beyond the plot's end stay visible as a count at the right edge.
+  right <- max(ggplot2::layer_scales(plot)$x$get_limits())
+  beyond <- sum(fit$data > right)
+  if (beyond > 0L) plot <- plot + ggplot2::annotate("text", x = right, y = at$y, vjust = -3.2, hjust = 1, size = 4.2, colour = colours$slate, family = colours$family,
+    label = paste0(beyond, if (beyond == 1L) " test" else " tests", " beyond ", format(right)))
   x_scale <- plot$scales$get_scales("x")
   if (!is.null(x_scale)) x_scale$name <- expression(italic(z) * "-score")
   y_scale <- plot$scales$get_scales("y")
@@ -192,8 +196,9 @@ metaUI_pcurve_plot <- function(data, colours) {
     ggplot2::geom_line(ggplot2::aes(y = .data$power), colour = colours$slate, linetype = 5, linewidth = .5) +
     ggplot2::geom_line(ggplot2::aes(y = .data$observed), colour = colours$accent, linewidth = .8) +
     ggplot2::geom_point(ggplot2::aes(y = .data$observed), colour = colours$accent, size = 1.8) +
-    text(x = (d$p + ifelse(below, -.0004, .0005))[-5], y = height[-5], label = paste0(round(d$observed), "%")[-5], hjust = ifelse(below, 1, 0)[-5], colour = colours$accent) +
-    text(x = .0511, y = placed[["observed"]], label = paste0("Observed ", round(d$observed[5]), "%"), hjust = 0, colour = colours$accent, fontface = "bold") +
+    # Values label their points; the last ends at its point, leaving the margin to the line names.
+    text(x = d$p + ifelse(below | d$p == .05, -.0004, .0005), y = height, label = paste0(round(d$observed), "%"), hjust = ifelse(below | d$p == .05, 1, 0), colour = colours$accent) +
+    text(x = .0511, y = placed[["observed"]], label = "Observed", hjust = 0, colour = colours$accent, fontface = "bold") +
     text(x = .0511, y = placed[["power"]], label = "33% power", hjust = 0, colour = colours$slate) +
     text(x = .0511, y = placed[["flat"]], label = "No effect", hjust = 0, colour = colours$slate) +
     ggplot2::scale_x_continuous(breaks = d$p, labels = sub("^0", "", format(d$p, nsmall = 2)), name = NULL) +
@@ -307,8 +312,8 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
       '</td><td class="num">', interval, '</td><td class="num metaui-k">', if (is.na(row$k)) "" else row$k,
       '</td><td class="metaui-unit">', unit, '</td><td class="metaui-fit">', fit, "</td>", track, "</tr>")
   }, character(1))
-  others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Rows under the primary analysis are other estimators for the same selection. They answer different questions and are not interchangeable with it',
-    if (!is.null(ref)) "; its estimate is the dashed line", ".</p>")
+  others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Rows under the primary analysis are other estimators for the same selection. They answer different questions and are not interchangeable with it.',
+    if (!is.null(ref)) " Dashed line: the primary estimate.", "</p>")
   interval_head <- if (length(types) == 1L && grepl("^Confidence", types)) "95% CI" else "95% interval"
   notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(table$warnings[warned]), "</li>", collapse = ""), "</ol>")
   paste0('<table class="table metaui-estimates metaui-custom"><thead><tr><th>Model<span class="metaui-level-inline">and level of fit</span></th><th class="num">Estimate</th><th class="num">',
@@ -318,7 +323,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
 
 # The forest plot as a table: the same drawn axis, with exact values beside each interval,
 # effects grouped under their study, and marker area following precision.
-metaUI_forest_html <- function(rows, axis_title) {
+metaUI_forest_html <- function(rows, axis_title, studies = NULL) {
   fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = 2))
   esc <- function(x) htmltools::htmlEscape(as.character(x))
   scale <- metaUI_track_scale(c(rows$es, rows$LCL, rows$UCL))
@@ -331,18 +336,27 @@ metaUI_forest_html <- function(rows, axis_title) {
   grid <- paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, NA_real_, NA_real_, NA_real_, ref = ref), "</td>")
   summary_rows <- if (nrow(summaries)) paste(vapply(seq_len(nrow(summaries)), function(i) paste0('<tr class="metaui-primary-row"><td>', esc(summaries$label[i]), "</td>", values(summaries[i, ]),
     '<td class="metaui-track-cell">', metaUI_track_row(scale, summaries$es[i], summaries$LCL[i], summaries$UCL[i], ref = ref, diamond = TRUE), "</td></tr>"), character(1)), collapse = "")
-  studies <- rle(as.character(effects$study))
-  ends <- cumsum(studies$lengths); starts <- ends - studies$lengths + 1L
+  groups <- rle(as.character(effects$study))
+  ends <- cumsum(groups$lengths); starts <- ends - groups$lengths + 1L
+  if (is.null(studies)) studies <- data.frame(study = character(), es = numeric(), LCL = numeric(), UCL = numeric())
+  study_size <- pmin(13, pmax(6, 7 * stats::median(width) / (studies$UCL - studies$LCL)))
   study_rows <- vapply(seq_along(starts), function(s) {
     index <- starts[s]:ends[s]
     one <- function(i, label, class) paste0('<tr class="', class, '"><td>', label, "</td>", values(effects[i, ]),
       '<td class="metaui-track-cell">', metaUI_track_row(scale, effects$es[i], effects$LCL[i], effects$UCL[i], size = size[i], ref = ref), "</td></tr>")
-    if (length(index) == 1L) return(one(index, esc(studies$values[s]), "metaui-forest-single"))
-    labels <- substring(effects$label[index], nchar(studies$values[s]) + 3L)
-    paste0('<tr class="metaui-forest-study"><td colspan="3">', esc(studies$values[s]), "</td>", grid, "</tr>",
-      paste(vapply(seq_along(index), function(j) one(index[j], paste("Effect", esc(labels[j])), "metaui-forest-effect"), character(1)), collapse = ""))
+    name <- groups$values[s]
+    if (length(index) == 1L) return(one(index, esc(name), "metaui-forest-single"))
+    labels <- substring(effects$label[index], nchar(name) + 3L)
+    # Several effects: one combined row, which opens to show them (metaui.js).
+    combined <- match(name, studies$study)
+    head <- paste0('<button type="button" class="metaui-forest-toggle" aria-expanded="false">', esc(name), ' <span class="metaui-forest-count">', length(index), " effects</span></button>")
+    paste0(if (is.na(combined)) paste0('<tr class="metaui-forest-study"><td colspan="3">', head, "</td>", grid, "</tr>")
+      else paste0('<tr class="metaui-forest-study"><td>', head, "</td>", values(studies[combined, ]), '<td class="metaui-track-cell">',
+        metaUI_track_row(scale, studies$es[combined], studies$LCL[combined], studies$UCL[combined], size = study_size[combined], ref = ref), "</td></tr>"),
+      paste(vapply(seq_along(index), function(j) one(index[j], paste("Effect", esc(labels[j])), "metaui-forest-effect metaui-forest-closed"), character(1)), collapse = ""))
   }, character(1))
   paste0(if (!is.null(ref)) paste0('<p class="metaui-note metaui-key">Observed effects with normal 95% sampling intervals (no shrinkage); larger markers are more precise. Diamonds: model summaries. Dashed line: ', esc(summaries$label[1]), " estimate, ", fmt(ref), ".</p>"),
+    if (any(groups$lengths > 1L)) '<p class="metaui-note metaui-key">A study with several effects shows them combined, as in the study-level models. Open it for its effects, or <button type="button" class="metaui-forest-all" aria-expanded="false">show every effect</button>.</p>',
     '<table class="table metaui-estimates metaui-forest metaui-custom"><thead><tr><th>Study</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", summary_rows, paste(study_rows, collapse = ""),
     '</tbody><tfoot><tr><td colspan="3"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>")
@@ -373,7 +387,7 @@ metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values
       '</td><td class="num">[', fmt(lcl[i]), ", ", fmt(ucl[i]), ']</td><td class="num metaui-k">', k[i], '</td><td class="metaui-track-cell">',
       metaUI_track_row(scale, estimate[i], lcl[i], ucl[i], dots = values[level], dot_labels = labels[level], ref = ref), "</td></tr>")
   }, character(1))
-  paste0('<table class="table metaui-estimates metaui-moderators metaui-custom"><thead><tr><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num"><i>k</i></th><th class="metaui-track-cell">',
+  paste0('<table class="table metaui-estimates metaui-moderators metaui-custom"><thead><tr><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k"><i>k</i></th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", paste(rows, collapse = ""), "</tbody></table>")
 }
 
@@ -695,6 +709,15 @@ metaUI_pcurve_fit <- function(df, selection = "first") {
 # Effect intervals are normal sampling intervals, not shrunk predictions.
 # Summaries are the unaggregated default multilevel/RVE fits, found by their code
 # (`models` rows align with `estimates`) so renamed models are kept.
+# Study-level effects (as used by the study-level models), on the forest plot's display scale.
+metaUI_forest_studies <- function(aggregated) {
+  se <- aggregated$metaUI__se
+  out <- data.frame(study = as.character(aggregated$metaUI__study_id), es = aggregated$metaUI__effect_size,
+    LCL = aggregated$metaUI__effect_size - stats::qnorm(.975) * se, UCL = aggregated$metaUI__effect_size + stats::qnorm(.975) * se)
+  if (identical(aggregated$metaUI__display_scale[1], "r")) out[c("es", "LCL", "UCL")] <- lapply(out[c("es", "LCL", "UCL")], tanh)
+  out
+}
+
 metaUI_forest_rows <- function(df, estimates, models = NULL) {
   df <- df[order(as.character(df$metaUI__study_id), suppressWarnings(as.numeric(as.character(df$metaUI__effect_id))), as.character(df$metaUI__effect_id)), , drop = FALSE]
   label <- if ("metaUI__es_label" %in% names(df)) df$metaUI__es_label else df$metaUI__effect_id

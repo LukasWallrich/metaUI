@@ -100,7 +100,7 @@ input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 
 .metaui-preview-select { margin: 0; padding: 7px 10px; font-size: .9375rem; line-height: 1.43; color: var(--metaui-ink); background: var(--metaui-panel); border: 1px solid var(--metaui-rule); border-radius: var(--metaui-radius); }
 .metaui-preview-select { position: relative; }
 .metaui-preview-select::after { content: ''; position: absolute; right: 12px; top: 50%; margin-top: -2px; border-top: 4px solid var(--metaui-ink); border-left: 4px solid transparent; border-right: 4px solid transparent; }
-.metaui-apply-state.metaui-preview-state { color: var(--metaui-slate); }
+.metaui-preview-state { font-size: .875rem; color: var(--metaui-slate); }
 /* Greyed native ticks would read as unselected: the preview's checked boxes keep their fill. */
 input[type=checkbox][disabled]:checked { appearance: none; margin-top: 3px; border-radius: 2px; background: var(--metaui-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center / 100% no-repeat; }
 .metaui-no-missing { display: none; }
@@ -296,7 +296,7 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-primary-row .metaui-track-ci { border-top-color: var(--metaui-accent); }
 .metaui-forest .metaui-primary-row .metaui-track-diamond { height: 13px; margin-top: -6.5px; }
 .metaui-primary-row .metaui-track-point { width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 0; transform: rotate(45deg); background: var(--metaui-accent); }
-.metaui-track-dot { top: var(--metaui-mark-y); width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: var(--metaui-slate); opacity: .45; }
+.metaui-track-dot { top: var(--metaui-mark-y); width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: var(--metaui-slate); opacity: .6; }
 /* Grid lines run the full row height; rows clip them. */
 .metaui-estimates td.metaui-track-cell { position: relative; }
 .metaui-estimates tbody tr { overflow: hidden; }
@@ -313,12 +313,18 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-forest .metaui-primary-row { --metaui-mark-y: 13.5px; }
 .metaui-forest td { padding-top: 2px !important; padding-bottom: 2px !important; font-size: .875rem; }
 .metaui-forest .metaui-track { min-height: 19px; }
-.metaui-forest tbody tr:not(.metaui-forest-study):not(.metaui-forest-single):not(.metaui-primary-row) td { border-bottom-color: transparent; }
-.metaui-forest tbody tr:has(+ .metaui-forest-study) td, .metaui-forest tbody tr:has(+ .metaui-forest-single) td { border-bottom-color: var(--metaui-rule) !important; }
+.metaui-forest-closed { display: none; }
+.metaui-forest .metaui-forest-effect td { border-bottom-color: transparent; }
+.metaui-forest .metaui-forest-effect:has(+ .metaui-forest-study) td, .metaui-forest .metaui-forest-effect:has(+ .metaui-forest-single) td { border-bottom-color: var(--metaui-rule); }
+.metaui-forest-toggle { border: 0; padding: 0; background: none; color: var(--metaui-ink); text-align: left; cursor: pointer; }
+.metaui-forest-toggle::before { content: ''; display: inline-block; width: 0; height: 0; margin-right: 6px; vertical-align: 1px; border-left: 5px solid var(--metaui-accent); border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
+.metaui-forest-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
+.metaui-forest-toggle:hover { text-decoration: underline; }
+.metaui-forest-count { color: var(--metaui-slate); font-size: .8125rem; }
+.metaui-forest-all { border: 0; padding: 0; background: none; color: var(--metaui-accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .metaui-forest .metaui-primary-row td { padding-top: 4px !important; padding-bottom: 4px !important; }
 .metaui-forest .metaui-primary-row td.metaui-track-cell { padding-top: 0 !important; padding-bottom: 0 !important; }
-.metaui-forest .metaui-forest-study td { padding-top: 5px !important; border-bottom-color: transparent; }
-.metaui-forest .metaui-forest-effect td:first-child { padding-left: 14px; color: var(--metaui-slate); }
+.metaui-forest .metaui-forest-effect td:first-child { padding-left: 16px; color: var(--metaui-slate); }
 .metaui-forest .metaui-track-ci { margin-top: -.5px; border-top-width: 1px; }
 .metaui-forest tfoot td { border: 0; padding-top: 4px !important; }
 .metaui-moderators th.metaui-track-cell, .metaui-moderators td.metaui-track-cell { width: 55%; }
@@ -328,9 +334,7 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-stats tbody tr:first-child td { border-top: 1px solid var(--metaui-ink); }
 .metaui-stats { width: 100% !important; }
 /* Single results read as label and value, at the width of the plots above them. */
-#eggers .table, #heterogeneity .table, .metaui-zstats { width: 100% !important; max-width: 760px; margin-bottom: 14px; }
-#eggers .table td:first-child, #heterogeneity .table td:first-child, .metaui-zstats td:first-child { width: 280px; }
-#eggers .table td:last-child, #heterogeneity .table td:last-child, .metaui-zstats td:last-child { text-align: left !important; }
+#eggers .table, #heterogeneity .table, .metaui-zstats { width: 100% !important; max-width: 480px; margin-bottom: 14px; }
 #eggers .table tbody tr:first-child td, #heterogeneity .table tbody tr:first-child td { border-top: 1px solid var(--metaui-ink); }
 #eggers .table td, #heterogeneity .table td { padding-top: 4px !important; padding-bottom: 4px !important; }
 .metaui-note.metaui-warning-text { color: var(--metaui-attention); }
@@ -370,8 +374,8 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 .metaui-help[open] > summary::before, .metaui-selection-details[open] > summary::before { transform: rotate(90deg); }
 .metaui-help > summary:hover, .metaui-selection-details > summary:hover { color: var(--metaui-hover); text-decoration: underline; }
 .metaui-help dt { margin-top: 8px; font-weight: 600; }
-.metaui-help dd { margin-left: 0; color: var(--metaui-slate); }
-.metaui-help p { margin: 6px 0; font-size: .875rem; line-height: 1.45; color: var(--metaui-slate); }
+.metaui-help dd { margin-left: 0; }
+.metaui-help p { margin: 6px 0; font-size: .875rem; line-height: 1.45; }
 .metaui-key { margin: 0 0 6px; }
 #equivalence td:last-child, #equivalence th:last-child { text-align: right; padding-right: 0; }
 .metaui-equivalence { max-width: none; }
@@ -408,6 +412,8 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 .dataTables_wrapper { max-width: 100%; overflow-x: auto; font-size: .9375rem; color: var(--metaui-ink); }
 .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info { color: var(--metaui-slate); font-size: .875rem; }
 .dataTables_wrapper input, .dataTables_wrapper select { background-color: var(--metaui-panel); color: var(--metaui-ink); border: 1px solid var(--metaui-rule); border-radius: var(--metaui-radius); padding: 2px 6px; }
+.dataTables_wrapper .dataTables_info { padding-top: .35em; }
+.dataTables_wrapper input, .dataTables_wrapper select { height: 30px; }
 .dataTables_wrapper select { appearance: none; padding-right: 22px !important; min-width: 3.6em; background-image: linear-gradient(45deg, transparent 50%, var(--metaui-slate) 50%), linear-gradient(-45deg, transparent 50%, var(--metaui-slate) 50%); background-size: 4px 4px; background-position: right 11px center, right 7px center; background-repeat: no-repeat; }
 body table.dataTable { border-collapse: collapse; font-variant-numeric: lining-nums tabular-nums; }
 body table.dataTable td + td, body table.dataTable thead th + th { padding-left: 14px !important; }
@@ -433,7 +439,8 @@ body .dataTables_wrapper .dataTables_paginate .paginate_button:hover { color: va
 body .dataTables_wrapper .dataTables_paginate .ellipsis { color: var(--metaui-slate); }
 #moderation_table td { white-space: nowrap; }
 #sample_table tbody td:not(:first-child) { white-space: nowrap; }
-#sample_table thead th { white-space: normal; max-width: 7em; }
+#sample_table thead th { white-space: normal; max-width: 7em; text-align: left; }
+#sample_table thead th.dt-right { text-align: right; }
 #sample_table thead th:first-child { max-width: none; }
 body table.dataTable thead th:last-child { padding-right: 14px !important; }
 #pcurve_notes, #zcurve_statistics, #funnel_key, #distribution_note { max-width: 760px; }
@@ -488,7 +495,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
 .irs:focus-within .irs-handle { box-shadow: 0 0 0 2px var(--metaui-tint), 0 0 0 4px var(--metaui-accent) !important; }
 
 /* Author-provided filter help uses an accessible inline disclosure */
-.metaui-filter-help { border: 0; padding: 0 3px; background: transparent; color: var(--metaui-slate); }
+.metaui-filter-help { display: inline-block; width: 16px; height: 16px; margin-left: 3px; padding: 0; border: 1px solid var(--metaui-slate); border-radius: 50%; background: transparent; color: var(--metaui-slate); font-size: .6875rem; font-weight: 600; line-height: 14px; text-align: center; vertical-align: 1px; }
 .metaui-filter-help-panel { padding: 0 0 8px; margin-bottom: 8px; font-size: .875rem; line-height: 1.45; color: var(--metaui-slate); overflow-wrap: anywhere; }
 .metaui-filter-help-panel[hidden] { display: none; }
 .metaui-filter-help-panel table { display: block; overflow-x: auto; max-width: 100%; }
@@ -527,8 +534,6 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   /* Closed, the panel is one row, plus the update button once there is something to apply. */
   .metaui-actions, .well .metaui-share, .well .metaui-data-tools, .well #link_notice:empty { display: none; }
   .well:has(.metaui-open) .metaui-actions, .metaui-actions:has(#go.metaui-needs-run) { display: grid; }
-  .metaui-actions:has(.metaui-preview-state) { display: grid; grid-template-columns: 1fr; margin-top: 8px; }
-  .metaui-actions:has(.metaui-preview-state) #resetFilters { display: none; }
   .well:has(.metaui-open) .metaui-share, .well:has(.metaui-open) .metaui-data-tools { display: block; }
   .metaui-panel-title { display: none; }
   .metaui-filters-toggle { display: block; width: 100%; margin-bottom: 0; text-align: center !important; background: var(--metaui-panel); color: var(--metaui-accent); border: 1px solid var(--metaui-rule); }
@@ -541,12 +546,10 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .metaui-data-tools { padding-bottom: 0; }
   .metaui-share { margin-top: 8px; }
   .container-fluid > .row > .col-sm-9 { padding-top: 12px; padding-bottom: 28px; }
-  /* One row of tabs that scrolls, fading at the edge while more follow (metaui.js). */
-  .nav-tabs { flex-wrap: nowrap; gap: 0 18px; margin: 0 -14px; padding: 0 14px; overflow-x: auto; scrollbar-width: none; }
-  .nav-tabs::-webkit-scrollbar { display: none; }
-  .nav-tabs.metaui-more { mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent); }
-  .nav-tabs > li { flex: 0 0 auto; margin: 0; }
-  .nav-tabs > li > a { padding: 9px 0 8px; margin-bottom: 0; white-space: nowrap; }
+  /* Every section stays in view: the tabs wrap, as plain links with no rule to float above. */
+  .nav-tabs { gap: 0 18px; border-bottom: 0; }
+  .nav-tabs > li { margin: 0; }
+  .nav-tabs > li > a { padding: 4px 0 3px; white-space: nowrap; }
   .metaui-basis { font-size: .875rem; gap: 2px 10px; }
   h3 { font-size: 1.25rem; }
   .metaui-primary-value { font-size: 1.25rem; }
@@ -583,8 +586,9 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   table.metaui-forest > tbody > tr { padding-top: 3px; padding-bottom: 3px; }
   table.metaui-forest > tbody > tr > td:first-child { font-size: .875rem; }
   table.metaui-forest > tbody > tr.metaui-forest-study > td.metaui-track-cell { display: block; }
-  table.metaui-forest > tbody > tr.metaui-forest-study { border-bottom: 0; }
+  .metaui-forest-count { display: inline-block; }
   table.metaui-forest > tbody > tr.metaui-forest-effect > td:first-child { display: inline; padding-left: 0; margin-right: 6px; }
+  table.metaui-forest > tbody > tr.metaui-forest-closed { display: none; }
   table.metaui-forest .metaui-track { min-height: 0; }
   .metaui-axis-tick { font-size: .75rem; }
   .metaui-pcurve-stats { width: 100%; }

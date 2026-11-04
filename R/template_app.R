@@ -81,7 +81,7 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
       help_id <- paste0("metaui-help-", match(filter_col, filter_cols))
       tag <- tags$button(type = "button", class = "metaui-filter-help",
         `aria-expanded` = "false", `aria-controls` = help_id,
-        `aria-label` = paste("Help for", name), icon("info-circle"))
+        `aria-label` = paste("Help for", name), "?")
       panel <- tags$div(id = help_id, class = "metaui-filter-help-panel", hidden = NA,
         filter_popups[[name]])
 
@@ -645,8 +645,8 @@ glue_string <- ('
     bound <- tryCatch(chosen_bound(), error = function(e) NULL)
     # Four decimals: a rounded threshold could claim containment that does not hold.
     threshold <- ifelse(is.na(table$threshold), "", metaUI_minus(formatC(table$threshold, format = "f", digits = 4)))
-    if (is.null(bound)) return(data.frame(Model = table$Model, `Smallest bound containing the interval` = threshold, check.names = FALSE))
-    data.frame(Model = table$Model, Assessment = table$assessment, `Smallest bound containing the interval` = threshold, check.names = FALSE)
+    if (is.null(bound)) return(stats::setNames(data.frame(table$Model, threshold), c("Model", "Interval fits within \\u00b1")))
+    stats::setNames(data.frame(table$Model, table$assessment, threshold), c("Model", "Assessment", "Interval fits within \\u00b1"))
   }, align = "?")
   output$equivalence_note <- renderUI({
     table <- interval_assessment()
@@ -690,13 +690,15 @@ glue_string <- ('
         if (is.na(row$LCL) || is.na(row$UCL)) "no interval reported" else paste0(interval, "\\u00a0[", fmt(row$LCL), ", ", fmt(row$UCL), "]"))))
       else tags$p(class = "metaui-primary-gap", tags$b(paste0("Not estimated for this selection (", row$status, "): ")), row$reason, " The app does not substitute another model."),
       if (row$status == "ok" && !is.na(row$LCL) && !is.na(row$UCL)) tags$p(class = "metaui-primary-reading", paste0(
-        if (row$LCL > 0 || row$UCL < 0) "The interval excludes zero." else "The interval includes zero.",
+        if (row$es > 0) "The average effect is positive" else if (row$es < 0) "The average effect is negative" else "The average effect is zero",
+        if (row$LCL > 0 || row$UCL < 0) ", and its interval excludes zero." else ", but its interval includes zero.",
         { others <- table[-index[1], , drop = FALSE]; others <- others[others$status == "ok", , drop = FALSE]
           if (nrow(others) > 1L) paste0(" Across the ", nrow(others), " other estimators, estimates range from ", fmt(min(others$es)), " to ", fmt(max(others$es)), ".") else "" },
         # An introduction from the authors states the direction in their own words.
         if (nzchar(welcome_text)) "" else switch(metaUI__df$metaUI__direction[1], positive = " Positive values are in the direction the authors expected.",
           negative = " Negative values are in the direction the authors expected.", ""))),
-      tags$p(class = "metaui-primary-label", paste0(row$Model, if (row$status == "ok") paste0(", ", row$k, " ", unit), ". Primary analysis, declared by the authors.")),
+      tags$p(class = "metaui-primary-label", paste0(row$Model, if (row$status == "ok") paste0(", ", row$k, " ", unit), ". Primary analysis, declared by the authors.",
+        if (grepl("hedges|cohen|standardi[sz]ed mean|^smd$", metaUI_eff_size_type_label, ignore.case = TRUE)) " Effects are standardized mean differences, in standard deviations." else "")),
       if (row$status == "ok" && nzchar(row$warnings)) tags$p(class = "metaui-primary-warning", paste("Warnings:", row$warnings)))
   })
 
@@ -838,7 +840,7 @@ glue_string <- ('
   output$moderation_panel <- renderUI({
     if (is.numeric(df_filtered()[[input$moderator]])) div(class = "metaui-moderation-grid",
       shiny::htmlOutput("moderation_table"), shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot", height = 340)),
-      p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise. Line and band: the multilevel moderator model with its 95% CI."))
+      p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise; whole-number moderators are spread slightly so that dots do not stack. Line and band: the multilevel moderator model with its 95% CI."))
     else div(class = "metaui-moderation-wide", shiny::htmlOutput("moderation_table"),
       p(class = "metaui-note metaui-key", "Grey dots: selected effects. Black dot and line: level estimate from the multilevel moderator model, with its 95% CI. Dashed line: overall multilevel estimate."))
   })
@@ -856,9 +858,12 @@ glue_string <- ('
     p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = mod)) +
       ggplot2::geom_hline(yintercept = 0, colour = plot_colours$slate, linewidth = .3) +
       ggplot2::geom_ribbon(data = fitted, ggplot2::aes(x = mod, ymin = ci.lb, ymax = ci.ub), inherit.aes = FALSE, fill = plot_colours$accent, alpha = .14) +
-      suppressWarnings(ggplot2::geom_point(ggplot2::aes(size = 1 / metaUI__se, text = hover), shape = 21, fill = plot_colours$slate, colour = plot_colours$background, stroke = .3, alpha = .65, na.rm = TRUE)) +
+      # Whole-number moderators (years, say) stack their dots: spread them a little, for sight only.
+      suppressWarnings(ggplot2::geom_point(ggplot2::aes(size = 1 / metaUI__se, text = hover), shape = 21, fill = plot_colours$slate, colour = plot_colours$background, stroke = .3, alpha = .65, na.rm = TRUE,
+        position = ggplot2::position_jitter(width = if (all(df$mod == round(df$mod), na.rm = TRUE)) .3 else 0, height = 0, seed = 1))) +
       ggplot2::geom_line(data = fitted, ggplot2::aes(x = mod, y = pred), inherit.aes = FALSE, colour = plot_colours$accent, linewidth = .7) +
       ggplot2::scale_size(range = c(1.8, 3.6), guide = "none") +
+      ggplot2::scale_x_continuous(breaks = { span <- range(df$mod, na.rm = TRUE); ticks <- pretty(span, 8); ticks[ticks >= span[1] & ticks <= span[2]] }) +
       ggplot2::scale_y_continuous(breaks = { span <- range(df$metaUI__effect_size, fitted$ci.lb, fitted$ci.ub); ticks <- pretty(span, 8); ticks[ticks >= span[1] & ticks <= span[2]] }) +
       ggplot2::xlab(input$moderator %>% stringr::str_remove("metaUI__filter_")) +
       ggplot2::ylab(metaUI_eff_size_type_label) +
@@ -1021,7 +1026,7 @@ glue_string <- ('
   # Plots taller than about a laptop screen repeat the x axis at the top.
   forest_plot <- reactive(forest_plot_for(top_axis = forest_height() > 700))
   output$foreststudies <- renderText({
-    metaUI_forest_html(forest_rows(), if (df_filtered()$metaUI__display_scale[1] == "r") "Correlation r" else metaUI_eff_size_type_label)
+    metaUI_forest_html(forest_rows(), if (df_filtered()$metaUI__display_scale[1] == "r") "Correlation r" else metaUI_eff_size_type_label, studies = metaUI_forest_studies(df_agg()))
   })
   output$forest_pdf <- downloadHandler(filename = function() "forest-plot.pdf", content = function(file) {
     ggplot2::ggsave(file, forest_plot_for(top_axis = forest_height() > 700, family = ""), device = "pdf", width = 10,
@@ -1101,7 +1106,7 @@ glue_string <- ('
     tagList(
       tags$table(class = "table metaui-custom metaui-pcurve-stats", tags$thead(tags$tr(tags$th("Line"), tags$th("Test"), tags$th("Result"))),
         tags$tbody(lapply(seq_len(nrow(stats)), function(i) tags$tr(tags$td(HTML(stats$line[i])), tags$td(stats$test[i]), tags$td(HTML(stats$result[i])))))),
-      p(class = "metaui-note", HTML(paste(notes$text, collapse = " "))))
+      p(class = "metaui-note", HTML(gsub("<br */?>", " ", paste(notes$text, collapse = " ")))))
   })
   output$pcurve <- renderPlot({
     pcurve_notes(NULL)
