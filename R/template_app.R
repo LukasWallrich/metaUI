@@ -762,7 +762,7 @@ glue_string <- ('
     df <- df_filtered()
     ggplot2::ggplot(df, ggplot2::aes(x = `{f$col}`)) +
       ggplot2::geom_histogram(na.rm = TRUE, bins = 24, fill = plot_colours$bars, colour = plot_colours$background, linewidth = .3) +
-      ggplot2::scale_y_continuous(breaks = function(x) unique(floor(pretty(x, 3))), name = \'Effects\', expand = ggplot2::expansion(mult = c(0, .05))) +
+      ggplot2::scale_y_continuous(limits = function(x) range(pretty(c(0, x), 3)), breaks = function(x) unique(floor(pretty(x, 3))), name = \'Effects\', expand = ggplot2::expansion(mult = 0)) +
       metaUI_plot_theme(plot_colours) +
       ggplot2::theme(axis.title.x = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank())
   }}, bg = plot_colours$background)
@@ -1220,7 +1220,8 @@ glue_string <- ('
     breaks <- pretty(effects, n = 24)
     counts <- graphics::hist(effects, breaks = breaks, plot = FALSE)$counts
     span <- range(breaks) + c(-1, 1) * diff(range(breaks)) * .02
-    top <- max(counts)
+    # The axis ends on a labelled tick above the tallest bar.
+    top <- max(pretty(c(0, max(counts)), 5))
     ink <- plot_colours$ink
     axis_font <- list(size = 13, color = plot_colours$slate)
     z <- (outliers$metaUI__effect_size - efm) / efsd
