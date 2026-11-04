@@ -78,7 +78,7 @@ test_that("dark palettes keep the forest labels on the selected surface", {
   expect_equal(segment$colour, d$text)
   expect_gte(metaUI:::design_contrast(segment$colour, d$surface), 3)
   expect_equal(plot$theme$plot.background$fill, d$surface)
-  expect_equal(plot$theme$axis.text$colour, d$text)
+  expect_equal(plot$theme$axis.text.y$colour, d$text)
   expect_lt(metaUI:::design_contrast(colours$grid, d$surface), metaUI:::design_contrast(d$text, d$surface))
   expect_equal(plot$data$es, rows$es)
   expect_true(all(metaUI:::design_contrasts(d) >= 4.5))

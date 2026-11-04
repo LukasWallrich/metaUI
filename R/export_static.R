@@ -86,6 +86,8 @@ export_static <- function(app_dir, dest_dir, subdir = "", overwrite = FALSE, pre
       warning("Precomputation failed; exporting without a preview: ", conditionMessage(e), call. = FALSE)
     })
   }
+  # The preview covers startup; the live app then fits in webR, reader's own engine.
+  unlink(file.path(staging, "opening_results.rds"))
   # Preview assets are website files, not files for webR's virtual filesystem.
   preview_copy <- tempfile("metaui-preview-")
   dir.create(preview_copy)

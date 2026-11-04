@@ -109,7 +109,7 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
   intro <- c(
     paste0("This file reproduces one selection from the metaUI app \"", gsub("[\r\n]+", " ", settings$dataset_name),
       "\": its filters, missing-value choices, effect-size computation and equivalence bound, and the model rows on the Summary tab. ",
-      "It was exported on ", settings$exported, " from the selection behind the results then shown (the last Analyze data)."),
+      "It was exported on ", settings$exported, " from the selection behind the results then shown (the last analysis)."),
     paste0("It reads the workbook downloaded from the same analysis (", settings$workbook, "), which holds every row of ", data_kind, ". ",
       "Put the workbook next to this file or set `workbook` below. The code does not need metaUI: the model specifications are the app's models.R, ",
       "and the fitting functions are copied from the app's ", paste(helper_files, collapse = ", "), "."),

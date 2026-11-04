@@ -139,7 +139,7 @@
 })(jQuery);
 
 /* Phones: the filters collapse behind a toggle so that results follow closely, and
-   Analyze data collapses them again and moves to the results. metaui.css hides the
+   updating the results collapses them again and moves to the results. metaui.css hides the
    toggle and keeps the filters open on wider screens. */
 (function ($) {
   'use strict';
@@ -148,14 +148,14 @@
     var toggle = document.querySelector('.metaui-filters-toggle');
     if (!toggle) return;
     toggle.setAttribute('aria-expanded', String(open));
-    toggle.textContent = open ? 'Hide filters' : 'Show filters';
+    toggle.textContent = open ? 'Hide filters and downloads' : 'Filters and downloads';
     document.getElementById(toggle.getAttribute('aria-controls')).classList.toggle('metaui-open', open);
   }
   $(document).on('click', '.metaui-filters-toggle', function () {
     setOpen(this.getAttribute('aria-expanded') !== 'true');
   });
-  $(document).on('click', '#go', function () {
-    if (!phone.matches) return;
+  $(document).on('click', '#go', function (event, detail) {
+    if (!phone.matches || (detail && detail.auto)) return;
     setOpen(false);
     var results = document.getElementById('metaui_results');
     if (!results) return;

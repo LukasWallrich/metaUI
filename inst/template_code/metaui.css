@@ -4,6 +4,7 @@
 @font-face { font-family: "Source Sans 3"; src: url("fonts/source-sans-3-italic.woff2") format("woff2"); font-weight: 200 900; font-style: italic; font-display: swap; }
 @font-face { font-family: "Source Sans 3"; src: url("fonts/source-sans-3-greek.woff2") format("woff2"); font-weight: 200 900; font-style: normal; font-display: swap; unicode-range: U+0370-03FF; }
 @font-face { font-family: "Source Serif 4"; src: url("fonts/source-serif-4.woff2") format("woff2"); font-weight: 200 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Source Serif 4"; src: url("fonts/source-serif-4-italic.woff2") format("woff2"); font-weight: 200 900; font-style: italic; font-display: swap; }
 
 :root {
   --metaui-ink: #1a2530;
@@ -68,7 +69,7 @@ p { margin: 0 0 .6em; }
 .well .shiny-input-container { width: 100%; margin-bottom: 18px; }
 .well .control-label { display: block; font-size: .9375rem; font-weight: 600; margin-bottom: 6px !important; color: var(--metaui-ink); }
 .well .checkbox { margin: 0; }
-.well .shiny-options-group { display: flex; flex-wrap: wrap; gap: 3px 16px; }
+.well .shiny-options-group { display: flex; flex-wrap: wrap; gap: 3px 16px; margin-top: -10px; }
 .well .shiny-options-group .checkbox { margin: 0; }
 .checkbox label { font-size: .9375rem; padding-left: 21px; color: var(--metaui-ink); }
 .checkbox input[type=checkbox] { margin: 3px 0 0 -21px; }
@@ -79,7 +80,21 @@ input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 
 
 .shiny-input-container > .control-label, .tab-pane .control-label { font-size: .9375rem; font-weight: 600; color: var(--metaui-ink); margin-bottom: 5px; }
 
-.metaui-preview-value { margin: 0; font-size: .9375rem; color: var(--metaui-slate); }
+/* The script-free preview draws the default filters as the live app will show them. */
+.shiny-input-container:has(> .metaui-preview-slider) { position: relative; }
+.metaui-preview-value { position: absolute; top: 0; right: 0; margin: 0; font-size: .9375rem; line-height: 1.5; font-variant-numeric: tabular-nums; color: var(--metaui-ink); }
+.metaui-preview-track { position: relative; height: 3px; margin: 10px 16px 0; background: var(--metaui-accent); border-radius: 2px; }
+.metaui-preview-track::before, .metaui-preview-track::after { content: ''; position: absolute; top: -7px; width: 17px; height: 17px; background: var(--metaui-panel); border: 2px solid var(--metaui-accent); border-radius: 50%; }
+.metaui-preview-track::before { left: -8.5px; }
+.metaui-preview-track::after { right: -8.5px; }
+.metaui-preview-ends { display: flex; justify-content: space-between; margin: 9px 5px 0; font-size: .75rem; color: var(--metaui-slate); }
+.metaui-preview-select { margin: 0; padding: 7px 10px; font-size: .9375rem; line-height: 1.43; color: var(--metaui-ink); background: var(--metaui-panel); border: 1px solid var(--metaui-rule); border-radius: var(--metaui-radius); }
+.metaui-preview-select { position: relative; }
+.metaui-preview-select::after { content: ''; position: absolute; right: 12px; top: 50%; margin-top: -2px; border-top: 4px solid var(--metaui-ink); border-left: 4px solid transparent; border-right: 4px solid transparent; }
+.metaui-preview-state { color: var(--metaui-slate); }
+/* Greyed native ticks would read as unselected: the preview's checked boxes keep their fill. */
+input[type=checkbox][disabled]:checked { appearance: none; margin-top: 3px; border-radius: 2px; background: var(--metaui-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center / 100% no-repeat; }
+.metaui-no-missing { display: none; }
 /* Sliders: a track, two handles and the chosen values */
 .well .irs { margin: 0 8px; }
 .irs--shiny { height: 44px; }
@@ -129,20 +144,19 @@ html.metaui-js .irs--shiny .irs-grid { top: 16px; }
 .btn-default:hover, .btn-default:focus, .btn-default:active, .metaui-data-tools .btn:hover, .modal-footer .btn:hover { background: var(--metaui-tint); color: var(--metaui-hover); border-color: var(--metaui-accent); }
 .btn-primary, .btn-primary:focus, .btn-primary:active, .btn-primary[disabled], .btn-primary[disabled]:hover { background: var(--metaui-accent); border-color: var(--metaui-accent); color: var(--metaui-button); }
 .btn-primary:hover { background: var(--metaui-hover); border-color: var(--metaui-hover); color: var(--metaui-button); }
-/* Unapplied filter changes: a cue that does not depend on colour alone. */
-.btn-primary.metaui-needs-run, .btn-primary.metaui-needs-run:focus { outline: 2px dashed var(--metaui-attention); outline-offset: 2px; }
+/* With nothing to apply the button stays quiet; unapplied changes fill it, a cue that does not depend on colour alone. */
+.metaui-actions #go:not(.metaui-needs-run), .metaui-actions #go:not(.metaui-needs-run):focus, .metaui-actions #go:not(.metaui-needs-run):active, .metaui-actions #go:not(.metaui-needs-run):hover { background: transparent; color: var(--metaui-slate); border-color: var(--metaui-rule); opacity: 1; font-weight: 400; cursor: default; }
 .well .btn { white-space: normal; max-width: 100%; }
 
 /* The primary action stays in view while the filters scroll */
-.metaui-actions::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 16px; background: linear-gradient(to bottom, transparent, var(--metaui-surface)); pointer-events: none; }
 .metaui-actions { position: sticky; bottom: 0; z-index: 4; display: grid; grid-template-columns: 1fr auto; gap: 8px; margin: 0 -20px; padding: 10px 20px 12px; background: var(--metaui-surface); border-top: 1px solid var(--metaui-rule); }
 .metaui-actions .btn { margin: 0; }
 .metaui-actions #go { font-size: 1rem; font-weight: 600; text-align: center; padding: 9px 12px; }
 .metaui-actions #resetFilters { background: transparent; border-color: transparent; color: var(--metaui-slate); padding: 9px 4px; }
 .metaui-actions #resetFilters:hover { color: var(--metaui-ink); text-decoration: underline; }
 html.shiny-busy .metaui-actions #go { opacity: .75; }
-/* Above the button, over the panel: the message does not move anything. */
-.metaui-apply-state { position: absolute; left: 0; right: 0; bottom: 100%; padding: 4px 20px; font-size: .875rem; line-height: 1.3; color: var(--metaui-attention); background: var(--metaui-surface); z-index: 1; }
+/* Above the button, inside the bar, so it never covers a filter. */
+.metaui-apply-state { grid-column: 1 / -1; font-size: .875rem; line-height: 1.3; color: var(--metaui-attention); }
 .metaui-apply-state:has(> .shiny-text-output:empty) { display: none; }
 #executeUpload { margin-bottom: 10px; }
 .metaui-share { margin: 10px 0 0; }
@@ -241,6 +255,7 @@ html.shiny-busy #primary_estimate:empty::before { content: "Fitting the models\2
 .metaui-estimates .metaui-reason-cell b { color: var(--metaui-attention); font-weight: 600; }
 .metaui-estimates th { vertical-align: bottom !important; }
 .metaui-estimates td:first-child { font-weight: 400; }
+.metaui-level-inline { display: none; font-size: .8125rem; font-weight: 400; color: var(--metaui-slate); line-height: 1.3; }
 .metaui-estimates .metaui-fit { color: var(--metaui-slate); white-space: nowrap; }
 .metaui-primary-row td:first-child, .metaui-primary-row td.num { font-weight: 600; }
 .metaui-estimates td.metaui-track-cell { overflow: hidden; }
@@ -292,11 +307,16 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-forest .metaui-track-ci { margin-top: -.5px; border-top-width: 1px; }
 .metaui-forest tfoot td { border: 0; padding-top: 4px !important; }
 .metaui-moderators th.metaui-track-cell, .metaui-moderators td.metaui-track-cell { width: 55%; }
-.metaui-pcurve-stats { width: auto; margin: 10px 0; font-size: .875rem; }
+.metaui-pcurve-stats { width: 100%; margin: 10px 0; font-size: .875rem; }
 .metaui-pcurve-stats td:last-child { white-space: nowrap; }
 .metaui-stats td:last-child { padding-right: 0 !important; }
 .metaui-stats tbody tr:first-child td { border-top: 1px solid var(--metaui-ink); }
 .metaui-stats { width: 100% !important; }
+/* Single results read as label and value, at the width of the plots above them. */
+#eggers .table, #heterogeneity .table { width: 100%; max-width: 760px; margin-bottom: 14px; }
+#eggers .table tbody tr:first-child td, #heterogeneity .table tbody tr:first-child td { border-top: 1px solid var(--metaui-ink); }
+#eggers .table td, #heterogeneity .table td { padding-top: 4px !important; padding-bottom: 4px !important; }
+.metaui-warning-text { color: var(--metaui-attention); }
 .metaui-stats td.num, .metaui-stats th.num { text-align: right; }
 .metaui-stats td { padding-top: 4px !important; padding-bottom: 4px !important; }
 /* Plots keep a readable aspect ratio rather than stretching across the page */
@@ -315,7 +335,7 @@ tfoot.metaui-phone-axis { display: none; }
 
 /* Sample breakdown: one block per filter */
 .metaui-breakdowns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 6px 44px; }
-.metaui-breakdown-item h4 { font-family: var(--metaui-serif); font-size: 1.0625rem; margin: 14px 0 6px; }
+.metaui-breakdown-item h4 { margin: 14px 0 6px; }
 .metaui-breakdown-numeric { display: grid; grid-template-columns: minmax(0, 190px) minmax(0, 1fr); gap: 16px; align-items: start; }
 .metaui-breakdown-numeric td:last-child { text-align: right; white-space: nowrap; padding-right: 0 !important; }
 .metaui-breakdown-numeric td:first-child { white-space: nowrap; }
@@ -354,6 +374,7 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 .metaui-moderation-finding b { font-weight: 600; }
 .metaui-moderation-grid { display: grid; grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); gap: 28px; align-items: start; }
 .metaui-moderation-grid .table { width: 100%; }
+.metaui-moderation-grid > .metaui-key { grid-column: 1 / -1; margin-top: -8px; }
 .metaui-moderation-wide .table { width: 100%; }
 .well + .metaui-moderation-grid { margin-top: 12px; }
 .tab-pane .selectize-control, .tab-pane > .shiny-input-container { max-width: 320px; }
@@ -368,9 +389,10 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 /* DataTables */
 .dataTables_wrapper { max-width: 100%; overflow-x: auto; font-size: .9375rem; color: var(--metaui-ink); }
 .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info { color: var(--metaui-slate); font-size: .875rem; }
-.dataTables_wrapper input, .dataTables_wrapper select { background: var(--metaui-panel); color: var(--metaui-ink); border: 1px solid var(--metaui-rule); border-radius: var(--metaui-radius); padding: 2px 6px; }
+.dataTables_wrapper input, .dataTables_wrapper select { background-color: var(--metaui-panel); color: var(--metaui-ink); border: 1px solid var(--metaui-rule); border-radius: var(--metaui-radius); padding: 2px 6px; }
+.dataTables_wrapper select { appearance: none; padding-right: 22px !important; min-width: 3.6em; background-image: linear-gradient(45deg, transparent 50%, var(--metaui-slate) 50%), linear-gradient(-45deg, transparent 50%, var(--metaui-slate) 50%); background-size: 4px 4px; background-position: right 11px center, right 7px center; background-repeat: no-repeat; }
 body table.dataTable { border-collapse: collapse; font-variant-numeric: lining-nums tabular-nums; }
-body table.dataTable td + td, body table.dataTable thead th + th { padding-left: 18px !important; }
+body table.dataTable td + td, body table.dataTable thead th + th { padding-left: 14px !important; }
 #sample th, #sample td, #sample_overview th, #sample_overview td { text-align: left !important; }
 body table.dataTable tbody td:first-child, body table.dataTable thead th:first-child { padding-left: 0 !important; }
 body table.dataTable tbody td { font-size: .9375rem; padding-right: 0 !important; }
@@ -380,9 +402,10 @@ body table.dataTable tbody tr, body table.dataTable.stripe tbody tr.odd, body ta
 body table.dataTable.no-footer { border-bottom: 1px solid var(--metaui-rule); }
 body table.dataTable thead > tr > th.sorting, body table.dataTable thead > tr > th.sorting_asc, body table.dataTable thead > tr > th.sorting_desc { position: relative; background-image: none !important; cursor: pointer; }
 body table.dataTable thead > tr > th.sorting::before, body table.dataTable thead > tr > th.sorting_asc::before, body table.dataTable thead > tr > th.sorting_desc::before { display: none; }
-body table.dataTable thead > tr > th.sorting::after, body table.dataTable thead > tr > th.sorting_asc::after, body table.dataTable thead > tr > th.sorting_desc::after { position: absolute; right: -13px; top: auto; bottom: 6px; transform: none; color: var(--metaui-slate); opacity: 1; font-size: .75rem; }
-body table.dataTable thead > tr > th.sorting::after { content: "\2195"; color: var(--metaui-slate); }
-body table.dataTable thead > tr > th.sorting:hover::after { color: var(--metaui-ink); }
+body table.dataTable thead > tr > th.sorting::after, body table.dataTable thead > tr > th.sorting_asc::after, body table.dataTable thead > tr > th.sorting_desc::after { position: static; display: inline; margin-left: 3px; transform: none; color: var(--metaui-slate); opacity: 1; font-size: .75rem; line-height: 1; }
+/* A sort arrow marks the sorted column; the others show theirs on hover or focus. */
+body table.dataTable thead > tr > th.sorting::after { content: "\2195"; color: transparent; }
+body table.dataTable thead > tr > th.sorting:hover::after, body table.dataTable thead > tr > th.sorting:focus::after { color: var(--metaui-slate); }
 body table.dataTable thead > tr > th.sorting_asc::after { content: "\2191"; color: var(--metaui-accent); }
 body table.dataTable thead > tr > th.sorting_desc::after { content: "\2193"; color: var(--metaui-accent); }
 body .dataTables_wrapper .dataTables_paginate, body .dataTables_wrapper .dataTables_info { font-size: .875rem; }
@@ -392,13 +415,14 @@ body .dataTables_wrapper .dataTables_paginate .paginate_button.current, body .da
 body .dataTables_wrapper .dataTables_paginate .paginate_button:hover { color: var(--metaui-accent) !important; background: none !important; border: 0 !important; text-decoration: underline; }
 body .dataTables_wrapper .dataTables_paginate .ellipsis { color: var(--metaui-slate); }
 #moderation_table td { white-space: nowrap; }
+#sample_table tbody td:not(:first-child) { white-space: nowrap; }
 #pcurve_notes, #zcurve_statistics, #funnel_key, #distribution_note, .metaui-zstats { max-width: 760px; }
 #distribution_note { margin-top: 12px; }
 .metaui-reading { font-size: .9375rem; margin: 4px 0 8px; max-width: 72ch; }
 .metaui-reading b { font-weight: 600; }
 .metaui-methods h4 { margin: 14px 0 4px; }
 .metaui-methods .metaui-note { max-width: none; }
-.metaui-zstats { width: auto !important; min-width: 340px; margin-top: 10px; }
+.metaui-zstats { margin-top: 10px; }
 .metaui-notes b { font-weight: 600; }
 
 /* Study details in the effect-size list (author-supplied; see fetch_study_metadata()) */
@@ -450,8 +474,12 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
 .metaui-filter-help-panel table { display: block; overflow-x: auto; max-width: 100%; }
 
 @media (min-width: 768px) and (max-width: 1199px) {
+  /* The level of fit moves under the model name, which then fits on one line. */
+  .metaui-estimates th.metaui-fit, .metaui-estimates td.metaui-fit { display: none; }
+  .metaui-level-inline { display: block; }
+  .metaui-forest .metaui-level-inline { display: none; }
   .metaui-estimates td:first-child { min-width: 11em; }
-  .metaui-estimates th.metaui-track-cell, .metaui-estimates td.metaui-track-cell { width: 32%; }
+  .metaui-estimates th.metaui-track-cell, .metaui-estimates td.metaui-track-cell { width: 34%; }
   .container-fluid > .row > .col-sm-3:has(> form.well) + .col-sm-9 { padding-left: 20px; padding-right: 20px; }
   .metaui-header { padding-left: 20px; padding-right: 20px; }
   .container-fluid > .row > .col-sm-3:has(> form.well) { flex-basis: 256px; width: 256px; }
@@ -467,27 +495,31 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .metaui-header { grid-template-columns: 1fr; padding: 12px 14px; }
   .metaui-header h2 { font-size: 1.3125rem; }
   .metaui-header .metaui-brand { display: none; }
-  .well { height: auto; padding: 10px 14px 12px; border-right: 0; border-bottom: 1px solid var(--metaui-rule); }
+  .well { height: auto; padding: 10px 14px 10px; border-right: 0; border-bottom: 1px solid var(--metaui-rule); }
+  /* Closed, the panel is one row, plus the update button once there is something to apply. */
+  .metaui-actions, .well .metaui-share, .well .metaui-data-tools, .well #link_notice:empty { display: none; }
+  .well:has(.metaui-open) .metaui-actions, .metaui-actions:has(#go.metaui-needs-run) { display: grid; }
+  .well:has(.metaui-open) .metaui-share, .well:has(.metaui-open) .metaui-data-tools { display: block; }
   .metaui-panel-title { display: none; }
-  .metaui-filters-toggle { display: block; width: 100%; margin-bottom: 8px; text-align: center !important; background: var(--metaui-panel); color: var(--metaui-accent); border: 1px solid var(--metaui-rule); }
+  .metaui-filters-toggle { display: block; width: 100%; margin-bottom: 0; text-align: center !important; background: var(--metaui-panel); color: var(--metaui-accent); border: 1px solid var(--metaui-rule); }
   .metaui-filters-toggle::after { content: ''; display: inline-block; margin-left: 7px; vertical-align: 2px; border-top: 5px solid currentColor; border-left: 4px solid transparent; border-right: 4px solid transparent; }
   .metaui-filters-toggle[aria-expanded="true"]::after { transform: rotate(180deg); }
   .metaui-filter-panel { display: none; }
-  .metaui-filter-panel.metaui-open { display: block; padding-top: 6px; }
+  .metaui-filter-panel.metaui-open { display: block; padding-top: 14px; }
+  .metaui-actions:has(#go.metaui-needs-run) { margin-top: 8px; }
   .metaui-actions { position: relative; margin: 0; padding: 0; background: none; border: 0; }
-  .metaui-apply-state { position: static; grid-column: 1 / -1; order: -1; padding: 5px 8px; border: 0; }
   .metaui-data-tools { padding-bottom: 0; }
   .metaui-share { margin-top: 8px; }
   .container-fluid > .row > .col-sm-9 { padding-top: 12px; padding-bottom: 28px; }
-  .nav-tabs { gap: 0; border-bottom: 0; }
-  .nav-tabs > li { flex: 1 1 auto; margin: 0; border-bottom: 1px solid var(--metaui-rule); }
-  .nav-tabs > li > a { padding: 8px 12px 7px 0; margin-bottom: -1px; white-space: nowrap; }
+  /* Every section stays in view: the tabs wrap, with one rule under the whole block. */
+  .nav-tabs { gap: 0 18px; }
+  .nav-tabs > li { margin: 0; }
+  .nav-tabs > li > a { padding: 6px 0 5px; white-space: nowrap; }
   h3 { font-size: 1.25rem; }
   .metaui-primary-value { font-size: 1.25rem; }
   .metaui-strip .metaui-stack .metaui-track-dot { width: 3px; height: 3px; margin-left: -1.5px; opacity: .7; }
   .metaui-bars td:first-child { white-space: nowrap; }
   .metaui-bars td.metaui-bar-cell, .metaui-bars th.metaui-bar-cell { width: 30%; }
-  .metaui-pcurve-stats td:first-child, .metaui-pcurve-stats td:nth-child(2) { white-space: nowrap; }
   table.metaui-forest > tbody > tr.metaui-forest-scale { display: block; border: 0; }
   table.metaui-forest > tbody > tr.metaui-forest-scale > td:first-child { display: none; }
   .metaui-basis.metaui-stale { margin-left: 0; }
@@ -506,6 +538,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   table.metaui-estimates td.num { text-align: left; font-size: 1rem; }
   table.metaui-estimates td.metaui-k::before { content: 'k = '; font-style: italic; }
   table.metaui-estimates td.metaui-unit { font-size: .875rem; align-self: center; }
+  table.metaui-estimates td.metaui-unit:not(:empty)::after { content: ','; }
   table.metaui-estimates > tbody > tr:not(.metaui-primary-row) > td:first-child { font-weight: 400; }
   table.metaui-forest > tbody > tr:not(.metaui-group-row) { grid-template-columns: 2.9em minmax(0, 1fr); padding: 3px 0; border-bottom-color: var(--metaui-rule); }
   table.metaui-forest > tbody > tr.metaui-forest-study { display: block; padding-top: 8px; border-bottom: 0; }
@@ -523,8 +556,11 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   table.metaui-estimates > tfoot > tr > td { display: none; }
   table.metaui-estimates > tfoot > tr > td.metaui-track-cell { display: block; width: 100% !important; padding: 4px 10px 0 !important; border: 0; overflow: visible; }
   table.metaui-estimates tbody td.metaui-track-cell { padding: 0 10px !important; }
-  .metaui-pcurve-stats { width: 100%; }
-  .metaui-pcurve-stats td:last-child { white-space: normal; }
+  /* P-curve tests: the line names its row, then test and result side by side. */
+  .metaui-pcurve-stats thead { display: none; }
+  .metaui-pcurve-stats tr { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); column-gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--metaui-rule); }
+  .metaui-pcurve-stats td { padding: 0 !important; border: 0 !important; white-space: normal !important; }
+  .metaui-pcurve-stats td:first-child { grid-column: 1 / -1; font-weight: 600; }
 
   /* Other wide tables */
   table.metaui-stack, table.metaui-stack > tbody, table.metaui-stack > tbody > tr, table.metaui-stack > tbody > tr > td { display: block; width: 100% !important; }

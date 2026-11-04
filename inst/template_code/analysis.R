@@ -68,12 +68,23 @@ metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours()) {
     ggplot2::geom_point(data = data.frame(yi = yi, se = se), ggplot2::aes(.data$yi, .data$se), colour = colours$slate, alpha = .6, size = 2) +
     ggplot2::annotate("text", x = limits[1] + .012 * diff(limits), y = ymax * .05, label = 'italic(p) < ".05"', parse = TRUE, hjust = 0, size = 4.5, colour = colours$slate, family = colours$family) +
     ggplot2::annotate("text", x = limits[2] - .012 * diff(limits), y = ymax * .05, label = 'italic(p) < ".05"', parse = TRUE, hjust = 1, size = 4.5, colour = colours$slate, family = colours$family) +
-    ggplot2::annotate("text", x = centre + .012 * diff(limits), y = ymax * .95, label = paste0("pooled ", metaUI_minus(formatC(centre, format = "f", digits = 2))), hjust = 0, size = 4.5, colour = colours$accent, family = colours$family) +
-    ggplot2::scale_y_reverse(breaks = metaUI_funnel_ticks(se), expand = ggplot2::expansion(mult = c(.01, 0))) +
-    ggplot2::scale_x_continuous(limits = limits, expand = c(0, 0), breaks = pretty(limits, 8), labels = function(x) metaUI_minus(format(x, trim = TRUE, drop0trailing = TRUE))) +
-    ggplot2::labs(x = xlab, y = "Standard error") +
+    ggplot2::annotate("text", x = centre + z * ymax * .03 + .012 * diff(limits), y = ymax * .03, label = paste0("pooled ", metaUI_minus(formatC(centre, format = "f", digits = 2))), hjust = 0, size = 4.5, colour = colours$accent, family = colours$family) +
+    ggplot2::scale_y_reverse(breaks = metaUI_funnel_ticks(se), expand = c(0, 0)) +
+    ggplot2::scale_x_continuous(limits = limits, expand = c(0, 0), breaks = pretty(limits, 8), labels = function(x) metaUI_minus(format(x, trim = TRUE))) +
+    ggplot2::labs(x = metaUI_label_expr(xlab), y = "Standard error") +
     metaUI_plot_theme(colours) +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
+}
+
+# Effect-size labels ending in a statistic's single letter ("Hedges g", "Correlation r") set it in italics.
+metaUI_label_html <- function(label) {
+  sub("(^|[[:space:]])([A-Za-z])$", "\\1<i>\\2</i>", htmltools::htmlEscape(label))
+}
+metaUI_label_expr <- function(label) {
+  if (!grepl("(^|[[:space:]])[A-Za-z]$", label)) return(label)
+  rest <- sub("[[:space:]]*[A-Za-z]$", "", label)
+  letter <- sub(".*([A-Za-z])$", "\\1", label)
+  if (nzchar(rest)) bquote(.(rest) ~ italic(.(letter))) else bquote(italic(.(letter)))
 }
 
 # True minus signs for display; downloads keep plain numbers.
@@ -100,7 +111,7 @@ metaUI_plot_family <- function(font_dir = file.path("www", "fonts")) {
 }
 
 metaUI_base_par <- function(colours) {
-  list(family = colours$family, col = colours$ink, col.axis = colours$ink, col.lab = colours$ink, fg = colours$slate,
+  list(family = colours$family, col = colours$ink, col.axis = colours$slate, col.lab = colours$ink, fg = colours$slate,
        bg = colours$background, las = 1, mgp = c(2.7, .6, 0), tcl = -.25, cex = 1.08, cex.axis = 1, cex.lab = 1, font.lab = 1, bty = "n")
 }
 
@@ -114,6 +125,16 @@ metaUI_zcurve_plot <- function(fit, colours) {
   plot$layers <- lapply(plot$layers[!is_text], function(layer) {
     params <- layer$aes_params
     if (inherits(layer$geom, "GeomRect")) {
+      # The package widens the last bin before the threshold. Same density, drawn as regular bins.
+      bins <- layer$data
+      width <- stats::median(bins$xmax - bins$xmin)
+      wide <- bins$xmax - bins$xmin > 1.5 * width
+      if (any(wide)) {
+        extra <- bins[wide, , drop = FALSE]
+        extra$xmin <- bins$xmin[wide] + width
+        bins$xmax[wide] <- bins$xmin[wide] + width
+        layer$data <- rbind(bins, extra)
+      }
       # Both groups opaque, so the significant bars differ in hue rather than weight.
       params$fill <- if (identical(params$colour, "blue")) grDevices::colorRampPalette(c(colours$background, colours$accent))(100)[62] else colours$bars
       params$alpha <- 1
@@ -151,7 +172,7 @@ metaUI_zcurve_plot <- function(fit, colours) {
 metaUI_plot_theme <- function(colours, family = colours$family) {
   ggplot2::theme_minimal(base_size = 13, base_family = family) +
     ggplot2::theme(text = ggplot2::element_text(colour = colours$ink),
-      axis.text = ggplot2::element_text(colour = colours$ink, size = 13),
+      axis.text = ggplot2::element_text(colour = colours$slate, size = 13),
       axis.title = ggplot2::element_text(colour = colours$ink, size = 13.5),
       plot.background = ggplot2::element_rect(fill = colours$background, colour = NA),
       panel.background = ggplot2::element_rect(fill = colours$background, colour = NA),
@@ -188,9 +209,9 @@ metaUI_track_grid <- function(scale, band = NULL) {
 }
 
 metaUI_track_axis <- function(scale, title) {
-  paste0('<div class="metaui-track metaui-axis" aria-hidden="true"><span class="metaui-axis-title">', htmltools::htmlEscape(title), '</span>',
+  paste0('<div class="metaui-track metaui-axis" aria-hidden="true"><span class="metaui-axis-title">', metaUI_label_html(title), '</span>',
     paste(sprintf('<span class="metaui-axis-tick" style="%s">%s</span>', metaUI_track_style(scale$at(scale$ticks)),
-      metaUI_minus(format(scale$ticks, trim = TRUE, drop0trailing = TRUE))), collapse = ""), '</div>')
+      metaUI_minus(format(scale$ticks, trim = TRUE))), collapse = ""), '</div>')
 }
 
 metaUI_track_row <- function(scale, es, lcl, ucl, band = NULL, dots = NULL, dot_labels = NULL, size = NULL, ref = NULL, diamond = FALSE) {
@@ -238,7 +259,8 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     row <- table[i, ]
     ok <- row$status == "ok"
     label <- paste0(esc(row$Model), if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"),
-      if (ok && length(types) > 1L) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"))
+      if (ok && length(types) > 1L) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"),
+      paste0('<span class="metaui-level-inline">', if (row$aggregated) "study-level" else "effect-level", "</span>"))
     interval <- if (is.na(row$LCL) && is.na(row$UCL)) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
     fit <- if (row$aggregated) "study-level" else "effect-level"
     unit <- if (is.na(row$k)) "" else if (row$aggregated || identical(as.numeric(row$k), as.numeric(studies))) "studies" else if ("input_rows" %in% names(row) && identical(as.numeric(row$k), as.numeric(row$input_rows))) "effects" else ""
@@ -254,7 +276,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   rows <- if (length(first)) c(rows[seq_along(first)], group, rows[-seq_along(first)]) else rows
   interval_head <- if (length(types) == 1L && grepl("^Confidence", types)) "95% CI" else "95% interval"
   notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(table$warnings[warned]), "</li>", collapse = ""), "</ol>")
-  paste0('<table class="table metaui-estimates metaui-custom"><thead><tr><th>Model</th><th class="num">Estimate</th><th class="num">',
+  paste0('<table class="table metaui-estimates metaui-custom"><thead><tr><th>Model<span class="metaui-level-inline">and level of fit</span></th><th class="num">Estimate</th><th class="num">',
     interval_head, '</th><th class="num" colspan="2"><i>k</i></th><th class="metaui-fit">Level of fit</th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
     paste(rows, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="6"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", notes)
 }
@@ -374,11 +396,11 @@ metaUI_rve_fit <- function(df) {
 
 # One cache per server session. Exact keys include all data attributes and model
 # code/configuration; no hash collisions, cross-user state, or unbounded history.
-metaUI_fit_cache <- function(max_entries = 3L, limit = 3L) {
+metaUI_fit_cache <- function(max_entries = 3L, limit = 3L, seed = NULL) {
   if (length(max_entries) != 1L || !is.numeric(max_entries) || !is.finite(max_entries) ||
       max_entries < 0 || max_entries > limit || max_entries != as.integer(max_entries))
     stop("fit_cache_entries must be an integer from 0 to ", limit, ".")
-  entries <- list()
+  entries <- if (is.null(seed)) list() else list(seed)
   cached <- function(df, models, correlation = .6, aggregation = "aggregate") {
     started <- proc.time()[["elapsed"]]
     key <- list(data = df, models = models, correlation = correlation, aggregation = aggregation)
@@ -399,6 +421,22 @@ metaUI_fit_cache <- function(max_entries = 3L, limit = 3L) {
   }
   attr(cached, "clear") <- function() entries <<- list()
   cached
+}
+
+# Precomputed default analysis (opening_precompute() in the package). It answers for this
+# app only while the files that determine it are unchanged; ui.R also sets the default
+# filters, but the fit's cache key already checks those, so only the shown HTML depends on it.
+metaUI_opening_files <- function(dir = ".") {
+  files <- c(setdiff(list.files(dir, pattern = "[.]R$"), "ui.R"), "dataset.rds")
+  unname(tools::md5sum(file.path(dir, files)))
+}
+metaUI_opening_load <- function(dir = ".") {
+  path <- file.path(dir, "opening_results.rds")
+  if (!file.exists(path)) return(NULL)
+  saved <- tryCatch(readRDS(path), error = function(e) NULL)
+  if (is.null(saved) || !identical(saved$files, metaUI_opening_files(dir))) return(NULL)
+  if (!identical(saved$ui, unname(tools::md5sum(file.path(dir, "ui.R"))))) saved$html <- NULL
+  saved
 }
 
 metaUI_reuse_fit <- function(results, models, code, df, fallback) {
@@ -685,7 +723,7 @@ metaUI_forest_plot <- function(rows, scale, colours = metaUI_plot_colours(), lab
       labels = function(x) { x <- format(x, trim = TRUE, drop0trailing = TRUE); if (nzchar(family)) metaUI_minus(x) else x }) +
     ggplot2::labs(x = paste("Effect size (", scale, ")", sep = ""), y = NULL) +
     metaUI_plot_theme(colours, family) +
-    ggplot2::theme(axis.text.y = ggplot2::element_text(hjust = 0, size = if (is.null(label_width)) 11.5 else 10.5, lineheight = .9),
+    ggplot2::theme(axis.text.y = ggplot2::element_text(colour = colours$ink, hjust = 0, size = if (is.null(label_width)) 11.5 else 10.5, lineheight = .9),
       panel.grid.major.y = ggplot2::element_blank(), axis.ticks = ggplot2::element_blank())
 }
 

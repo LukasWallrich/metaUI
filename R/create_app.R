@@ -150,6 +150,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
 #'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 200. If more effect sizes are selected, a message is shown instead.
 #'   - `shiny_theme` Character. One of the shinythemes that style the app. Defaults to "yeti", see `?shinythemes::shinythemes` for all options.
+#'   - `intro` Optional HTML shown under the title: one or two sentences stating the question and, for readers new to the scale, what positive values mean.
 #'   - `fit_cache_entries` Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.
 #'   - `selection_list_threshold` Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
 #' @inheritParams create_about
@@ -354,11 +355,12 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   # Could consider keeping all labels in this file - but then ui.R needs less readable glue::glue syntax
   writeLines(labels_and_options(dataset_name, correlation, primary_model, bayesian = !is.null(bayesian), correlations = identical(dataset$metaUI__es_type[1], "ZCOR"), custom_models = !package_models, effects = nrow(dataset), studies = length(unique(dataset$metaUI__study_id)),
     strip = metaUI_effects_strip(dataset$metaUI__effect_size, eff_size_type_label),
-    citation = if (is.null(about_args$citation)) "" else as.character(about_args$citation)), file.path(save_to_folder, "labels_and_options.R"))
+    citation = if (is.null(about_args$citation)) "" else as.character(about_args$citation), intro = if (is.null(opts$intro)) "" else as.character(opts$intro)), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
   writeLines(generate_global.R(eff_size_type_label, bayesian, uses_meta), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
+  opening_precompute(save_to_folder)
 
   if (!is.null(static_folder))
     return(invisible(export_static(save_to_folder, static_folder, overwrite = overwrite)))
@@ -427,6 +429,8 @@ generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL, uses_
   source(file.path(f, 'selection_links.R'), local = TRUE)
   source(file.path(f, 'code_export.R'), local = TRUE)
   metaUI_app_dir <- normalizePath(f) # code export copies models.R and analysis code from here
+  # The default analysis, fitted when the app was built; ignored once the app's files change.
+  metaUI_opening <- metaUI_opening_load(f)
   source(file.path(f, 'bayesian.R'), local = TRUE)
   source(file.path(f, 'models.R'), local = TRUE)
   source(file.path(f, 'labels_and_options.R'), local = TRUE)

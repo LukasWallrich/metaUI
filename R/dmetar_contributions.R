@@ -669,8 +669,11 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact 
   y <- c(0, 25, 50, 75, 100)
   if (compact) { y_ <- y_[y <= ylim[2]]; y <- y[y <= ylim[2]]; abline(h = y[-1], col = grDevices::adjustcolor(par("fg"), .2), lwd = .75) }
   axis(2, at = y, labels = y_, las = 1, col.axis = par("col.axis"), lwd = if (compact) 0 else 1)
-  mtext("Share of significant results", side = 2, line = 3.3, cex = 1, col = par("col.axis"), las = 0)
-  mtext(bquote(italic(p) * "-value"), side = 1, line = 1.9, cex = 1, col = par("col.axis"))
+  mtext("Share of significant results", side = 2, line = 3.3, cex = 1, col = par("col"), las = 0)
+  # Two runs, because plotmath leaves a gap after an italic letter.
+  label_x <- mean(x) - (strwidth("p", font = 3) + strwidth("-value")) / 2
+  mtext("p", side = 1, line = 1.9, cex = 1, col = par("col"), at = label_x, adj = 0, font = 3)
+  mtext("-value", side = 1, line = 1.9, cex = 1, col = par("col"), at = label_x + strwidth("p", font = 3), adj = 0)
   points(x, blue, type = "p", pch = 20, bg = accent, col = accent)
   if (!compact) text(x + .00075, blue + 3.5, percent(round(blue) / 100), col = par("col.axis"), cex = .8)
   lines(x, red, type = "l", col = par("fg"), lwd = 1.5, lty = 3)
@@ -688,12 +691,13 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact 
     labels <- percent(round(blue) / 100)
     # Below the reference lines the label sits down and to the left, under the falling line.
     below <- label_y < blue
-    for (i in 1:4) text(x[i] + if (below[i]) -.0004 else .0005, label_y[i], labels[i], adj = if (below[i]) 1 else 0, col = accent, cex = .9, font = 2)
+    # The last value ends at its point, leaving the right margin to the line names.
+    for (i in 1:5) text(x[i] + if (below[i] || i == 5L) -.0004 else .0005, label_y[i], labels[i], adj = if (below[i] || i == 5L) 1 else 0, col = accent, cex = .9, font = 2)
     ends <- c(blue[5], green[5], red[5])
     gap <- strheight("0", cex = .95) * 2
     placed <- ends
     for (i in order(ends)[-1]) placed[i] <- max(ends[i], max(placed[ends <= ends[i] & seq_along(ends) != i], -Inf) + gap)
-    text(.0511, placed[1], paste("Observed", labels[5]), adj = 0, cex = .95, col = accent, font = 2)
+    text(.0511, placed[1], "Observed", adj = 0, cex = .95, col = accent, font = 2)
     text(.0511, placed[2], "33% power", adj = 0, cex = .95, col = par("fg"))
     text(.0511, placed[3], "No effect", adj = 0, cex = .95, col = par("fg"))
   }

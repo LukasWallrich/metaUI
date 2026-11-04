@@ -47,6 +47,7 @@ test_that("headless app loads and runs the generated server", {
     expect_true(nzchar(output$effectestimate))
     expect_true(nzchar(output$heterogeneity))
     expect_true(nzchar(output$foreststudies))
+    # author.R above changed the app, so the precomputed results no longer apply.
     expect_false(estimatesreactive()$cache_hit)
     # Unapplied edits are flagged; displayed results keep the applied selection.
     session$setInputs(outliers_z_scores = c(0, z_range[2]))

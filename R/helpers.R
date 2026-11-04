@@ -43,6 +43,23 @@ metaUI_slider_input <- function(inputId, label, spec, value = c(spec$min, spec$m
     addAttrs(`data-grid-num` = spec$ticks)$allTags()
 }
 
+# One result's statistics as label and value rows, for two-column display tables.
+metaUI_statistics_rows <- function(row) {
+  data.frame(Statistic = names(row), Value = vapply(row, function(x) as.character(x[1]), character(1)), row.names = NULL)
+}
+
+# Precomputed content inside an output, shown until the server's own value replaces it.
+metaUI_opening_output <- function(output, content) {
+  if (is.null(content)) output else htmltools::tagAppendChildren(output, shiny::HTML(content))
+}
+
+# Keeps missing values in or out. Hidden while the built data have none on this filter;
+# an upload can bring some, so it reappears then.
+metaUI_missing_toggle <- function(inputId, missing) {
+  toggle <- shiny::checkboxInput(inputId, paste0("Include missing values", if (missing) paste0(" (", missing, ")")), value = TRUE)
+  if (missing) toggle else htmltools::tagAppendAttributes(toggle, class = "metaui-no-missing")
+}
+
 # Render width for plots that need room for labels: at least `min_width` on wide
 # screens, but on narrow (phone) columns only up to 1.5 times their width (or 480px,
 # whichever is larger), so that the image scaled to fit by metaui.css keeps legible

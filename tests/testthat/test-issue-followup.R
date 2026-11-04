@@ -1,19 +1,18 @@
 skip_without_app_packages()
 
-test_that("generated sample tabs share values without duplicate output bindings", {
+test_that("the sample overview has one output binding and follows the selection", {
   path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
   d <- prepared()
   generate_shiny(d, "Sample overview", save_to_folder = path, launch_app = FALSE)
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   html <- as.character(env$ui)
-  expect_equal(lengths(regmatches(html, gregexpr('id="sample"', html, fixed = TRUE))), 1L)
   expect_equal(lengths(regmatches(html, gregexpr('id="sample_overview"', html, fixed = TRUE))), 1L)
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
-    expect_identical(output$sample, output$sample_overview)
+    before <- output$sample_overview
     session$setInputs(outliers_z_scores = c(0, 10), go = 2)
-    expect_identical(output$sample, output$sample_overview)
+    expect_false(identical(before, output$sample_overview))
   })
 })
 
@@ -208,4 +207,29 @@ test_that("double-escaped IDs are decoded once for alternatives and study detail
   expect_equal(as.character(out$metaUI__study_id), c("A &lt; B", "C & D"))
   info <- metaUI:::validate_study_info(data.frame(study = c("A &lt; B", "C &amp; D"), title = c("T1", "T2")), out)
   expect_setequal(info$study, c("A &lt; B", "C & D"))
+})
+
+test_that("readers get precomputed default results that match a fresh fit", {
+  path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
+  generate_shiny(prepared(), "Opening", save_to_folder = path, launch_app = FALSE)
+  expect_true(file.exists(file.path(path, "opening_results.rds")))
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
+  env <- new.env(parent = globalenv()); suppressMessages(sys.source("global.R", env))
+  opening <- env$metaUI_opening
+  expect_false(is.null(opening$html$primary_estimate))
+  key <- opening$fit$key
+  fresh <- suppressWarnings(env$metaUI_fit_models(key$data, key$models, key$correlation, key$aggregation))$table
+  saved <- opening$fit$value$table
+  for (column in c("Model", "es", "LCL", "UCL", "k", "status")) expect_equal(saved[[column]], fresh[[column]], info = column)
+  # The server answers the default selection from the saved fit, without refitting.
+  defaults <- metaUI:::static_default_inputs(env); attr(defaults, "z_slider") <- NULL
+  shiny::testServer(env$server, {
+    do.call(session$setInputs, defaults)
+    session$setInputs(go = 1)
+    expect_true(estimatesreactive()$precomputed)
+    expect_match(output$calculation_status, "Precomputed")
+  })
+  # Any edit to the app's analysis files retires the saved results.
+  cat("\n# edited\n", file = "models.R", append = TRUE)
+  expect_null(env$metaUI_opening_load("."))
 })

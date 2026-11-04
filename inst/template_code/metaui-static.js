@@ -80,13 +80,15 @@
     var selection = new URLSearchParams(location.search);
     if (!started) {
       started = true;
-      if (touched || app.$inputValues.uploadData || (app.$inputValues.go || app.$inputValues['go:shiny.action']) > 0 ||
+      if (touched || app.$inputValues.uploadData ||
           (selection.get('metaui') === '1' && selection.has('selection'))) {
         handover(); return;
       }
-      go.click();
+      // Apps that analyze on load have usually started already; the wait below covers both.
+      if (!((app.$inputValues.go || app.$inputValues['go:shiny.action']) > 0)) go.click();
     }
-    if (document.querySelector('.shiny-output-error') &&
+    // Validation messages ("No analysis yet") are expected before the first result.
+    if (document.querySelector('.shiny-output-error:not(.shiny-output-error-validation)') &&
         !document.documentElement.classList.contains('shiny-busy')) { handover(); return; }
     var table = document.getElementById('effectestimate');
     var primary = document.getElementById('primary_estimate');

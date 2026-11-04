@@ -79,7 +79,7 @@ let browser;
     textSize:getComputedStyle(document.body).fontSize,padding:getComputedStyle(document.querySelector('.well')).padding,
     radius:getComputedStyle(document.querySelector('.well')).borderRadius,buttonBackground:getComputedStyle(document.querySelector('#go')).backgroundColor}));
   assert.deepEqual(actual,preview);
-  await page.locator('#go').click(); await page.locator('#sample table').waitFor();
+  await page.locator('#effectestimate table').waitFor();
   assert((await page.locator('#primary_estimate').innerText()).includes('0.24'));
   await page.screenshot({path:path.join(evidence,'generated-design.png')});
   assert.deepEqual(errors,[]);

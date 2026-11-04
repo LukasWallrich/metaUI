@@ -37,7 +37,7 @@ async function readable(locator,label,pseudo=null) {
   const modal=await readable(page.locator('.modal-content'),'Upload-error dialog');
   await page.screenshot({path:path.join(evidence,'dark-dialog.png')});
   await page.getByRole('button',{name:'Dismiss',exact:true}).click();
-  await page.locator('#go').click(); await page.locator('#sample table').waitFor();
+  await page.locator('#effectestimate table').waitFor();
   await readable(page.locator('#go'),'Primary action');
   await page.getByRole('tab',{name:'Sample',exact:true}).click();
   await page.locator('#sample_table .dataTables_paginate .paginate_button').first().waitFor();
@@ -47,8 +47,8 @@ async function readable(locator,label,pseudo=null) {
   await page.locator('#sample_table').scrollIntoViewIfNeeded();
   await page.screenshot({path:path.join(evidence,'dark-sample.png')});
   await page.getByRole('tab',{name:'Publication bias',exact:true}).click();
-  await page.locator('#eggers table thead th').first().waitFor();
-  const biasHeaders=await readable(page.locator('#eggers table thead th'),'Egger headers');
+  await page.locator('#eggers table td').first().waitFor();
+  const biasHeaders=await readable(page.locator('#eggers table td'),'Egger statistics');
   await page.getByRole('tab',{name:'Moderation',exact:true}).click();
   await readable(page.locator('#moderator + .selectize-control .selectize-input'),'Moderator input');
   await page.locator('#moderator + .selectize-control .selectize-input').click();
@@ -74,7 +74,7 @@ async function readable(locator,label,pseudo=null) {
   const staleNotice=await readable(page.locator('#apply_state_box'),'Stale notice');
   await readable(page.locator('#metaui_basis'),'Stale results banner');
   await readable(page.locator('#go'),'Update action');
-  await page.waitForFunction(()=>getComputedStyle(document.querySelector('#go')).outlineStyle==='dashed');
+  await page.waitForFunction(()=>document.querySelector('#go').classList.contains('metaui-needs-run'));
   await page.screenshot({path:path.join(evidence,'dark-stale.png')});
   assert.deepEqual(pageErrors,[],'Dark app raised page-level JavaScript errors');
   fs.writeFileSync(path.join(evidence,'dark-result.json'),JSON.stringify({ok:true,modal,sampleHeaders,paging,biasHeaders,staleNotice},null,2));

@@ -36,11 +36,8 @@ async function waitServer() {
 }
 async function settledSample(effects) {
   await page.waitForFunction(k=> {
-    const table=document.querySelector('#sample table');
-    if (!table) return false;
-    const column=[...table.querySelectorAll('thead th')].findIndex(th=>th.innerText.trim()==='Effects');
-    const cell=table.querySelector('tbody tr')?.children[column];
-    return column >= 0 && cell?.innerText.trim()===String(k) && !document.querySelector('.shiny-busy');
+    const overview=document.querySelector('#selection_overview')?.textContent.trim() ?? '';
+    return overview.startsWith(k+' of ') && !document.querySelector('.shiny-busy');
   }, effects, {timeout:60000});
 }
 async function saveDownload(selector, name) {
@@ -84,10 +81,9 @@ function reproduce(script, workbook, selected) {
   assert((await page.locator('#effectestimate').innerText()).includes('unsupported'));
   await page.locator('#go').click();
   await page.waitForFunction(()=>document.querySelector('#calculation_status')?.textContent.includes('Reused'));
-  const overview = await page.locator('#sample').innerText();
   await page.getByRole('tab',{name:'Sample',exact:true}).click();
   await page.locator('#sample_overview table').waitFor();
-  assert.equal(await page.locator('#sample_overview').innerText(), overview);
+  assert((await page.locator('#sample_overview').innerText()).includes('16'));
   await page.getByRole('tab',{name:'Forest plot',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#foreststudies table'));
   for (const [id, extension] of [['forest_pdf','pdf'], ['forest_png','png'], ['forest_csv','csv']]) {
@@ -104,11 +100,11 @@ function reproduce(script, workbook, selected) {
   }
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.getByText('Assess practical equivalence', {exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval is contained'));
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Smallest bound containing'));
   await page.locator('#sesoi').fill('1');
   await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval within bounds'));
   const equivalenceHeader = await page.locator('#equivalence thead').innerText();
-  for (const column of ['Assessment','Interval is contained']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
+  for (const column of ['Assessment','Smallest bound containing']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
   assert(await page.locator('#equivalence tbody tr').count() >= 2, 'expected one assessment row per model');
   assert.equal((await page.locator('#apply_state').innerText()).trim(), '');
   await page.getByText('Download data or code, upload data', {exact:true}).click();
@@ -124,7 +120,7 @@ function reproduce(script, workbook, selected) {
   reproduce(script, path.join(evidence,'round-trip.xlsx'), 16);
   // Clear the bound so the upload has to restore it.
   await page.locator('#sesoi').fill('');
-  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval is contained'));
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Smallest bound containing'));
   await page.locator('#uploadData').setInputFiles(path.join(evidence,'round-trip.xlsx'));
   await page.waitForFunction(()=>document.querySelector('#uploadData_progress')?.textContent.includes('Upload complete'));
   await page.locator('#executeUpload').click();
@@ -162,7 +158,7 @@ function reproduce(script, workbook, selected) {
   await page.screenshot({path:path.join(evidence,'mobile.png')});
   fs.writeFileSync(path.join(evidence,'result.json'),JSON.stringify({
     ok:true,checks:['standalone startup','analysis','cache disclosure','forest render and PDF/PNG/CSV exports','practical interval assessment',
-      'keyboard inline filter help','sample summary on both tabs','download/upload round trip with equivalence bound','R/Quarto code export reproduced in fresh R (built and uploaded data)','picker and missing-value restoration','numeric filtering','reset'],
+      'keyboard inline filter help','sample summary on its tab','download/upload round trip with equivalence bound','R/Quarto code export reproduced in fresh R (built and uploaded data)','picker and missing-value restoration','numeric filtering','reset'],
     uploaded_selection:selected,js_errors:errors},null,2));
   console.log('Generated-app browser smoke checks passed.');
 })().catch(async error=>{

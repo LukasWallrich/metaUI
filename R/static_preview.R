@@ -4,54 +4,15 @@ static_precompute <- function(app_dir, dest) {
   on.exit(setwd(old), add = TRUE)
   env <- new.env(parent = globalenv())
   sys.source("global.R", env)
-  defaults <- list()
-  # Read defaults from the actual UI, including author-edited selections.
-  inputs <- function(tag) {
-    if (inherits(tag, "shiny.tag")) {
-      a <- tag$attribs
-      if (tag$name == "input") {
-        id <- if (!is.null(a$name)) a$name else a$id
-        if (!is.null(id)) {
-          if (!is.null(a$`data-from`)) defaults[[id]] <<- as.numeric(c(a$`data-from`, a$`data-to`))
-          else if (identical(a$type, "checkbox")) {
-            if (!is.null(a$name)) {
-              if (is.null(defaults[[id]])) defaults[[id]] <<- character()
-              if (!is.null(a$checked)) defaults[[id]] <<- c(defaults[[id]], a$value)
-            } else defaults[[id]] <<- !is.null(a$checked)
-          } else if (identical(a$type, "number")) defaults[[id]] <<- suppressWarnings(as.numeric(a$value))
-        }
-      }
-      if (tag$name == "select" && !is.null(a$id)) {
-        options <- list()
-        collect <- function(x) {
-          if (inherits(x, "shiny.tag") && x$name == "option")
-            options[[length(options) + 1L]] <<- list(value = x$attribs$value, selected = !is.null(x$attribs$selected))
-          # shinyWidgets::pickerInput() supplies its options as one HTML string.
-          else if (is.character(x)) for (o in regmatches(x, gregexpr("<option\\b[^>]*>", x))[[1]])
-            options[[length(options) + 1L]] <<- list(
-              value = static_unescape(sub('.*\\svalue="([^"]*)".*', "\\1", o)),
-              selected = grepl("\\sselected(\\s|=|>)", o))
-          else if (is.list(x)) lapply(if (inherits(x, "shiny.tag")) x$children else x, collect)
-        }
-        collect(tag$children)
-        selected <- Filter(function(x) x$selected, options)
-        if (!length(selected) && is.null(a$multiple)) selected <- utils::head(options, 1)
-        defaults[[a$id]] <<- vapply(selected, function(x) x$value, character(1))
-      }
-      lapply(tag$children, inputs)
-    } else if (is.list(tag)) lapply(tag, inputs)
-    invisible(NULL)
-  }
-  z <- env$metaUI_slider_input("outliers_z_scores", "z-score range",
-    env$metaUI_slider_spec(env$metaUI__df$metaUI__es_z, integer = FALSE))
-  inputs(env$ui); inputs(z)
+  defaults <- static_default_inputs(env)
+  z <- attr(defaults, "z_slider")
   captured <- list()
   session <- output <- NULL # Bound by testServer inside its expression.
   shiny::testServer(env$server, {
     do.call(session$setInputs, defaults)
     session$setInputs(go = 1)
     for (id in c("selection_overview", "selection_status", "primary_estimate",
-                 "scale_note", "effectestimate", "sample"))
+                 "scale_note", "effectestimate"))
       captured[[id]] <<- output[[id]]
   })
   if (is.null(captured$primary_estimate) || !nzchar(captured$effectestimate))
@@ -66,7 +27,7 @@ static_precompute <- function(app_dir, dest) {
         tag$attribs$class <- paste(classes[classes != "shiny-spinner-hideui"], collapse = " ")
       }
       if (!is.null(a$`data-display-if`)) {
-        if (a$`data-display-if` %in% c("!(input.go > 0)", "false")) return(NULL)
+        if (a$`data-display-if` %in% c("!output.metaui_ready", "false")) return(NULL)
         tag$attribs$style <- NULL
       }
       if (!is.null(a$id) && a$id == "z_score_filter") tag$children <- list(z)
@@ -78,6 +39,9 @@ static_precompute <- function(app_dir, dest) {
           else value <- static_stack_table(value)
           tag$children <- list(htmltools::HTML(value))
       }
+      if (identical(a$id, "apply_state_box"))
+        return(htmltools::tagAppendAttributes(htmltools::tagSetChildren(tag,
+          htmltools::tags$span(class = "metaui-preview-note", "Saved results shown. Filters will be ready shortly.")), class = "metaui-preview-state"))
       if (identical(a$id, "go")) {
         tag$children <- list("Loading\u2026")
         tag$attribs$`aria-busy` <- "true"
@@ -85,9 +49,13 @@ static_precompute <- function(app_dir, dest) {
       }
       # Without scripts, sliders and pickers would be blank: state the default choice instead.
       if (tag$name == "input" && !is.null(a$class) && grepl("js-range-slider", a$class, fixed = TRUE))
-        return(htmltools::tags$p(class = "metaui-preview-value", paste(a$`data-from`, "to", a$`data-to`)))
+        return(htmltools::tags$div(class = "metaui-preview-slider",
+          htmltools::tags$p(class = "metaui-preview-value", paste(a$`data-from`, "to", a$`data-to`)),
+          htmltools::tags$div(class = "metaui-preview-track"),
+          htmltools::tags$div(class = "metaui-preview-ends", htmltools::tags$span(a$`data-min`), htmltools::tags$span(a$`data-max`))))
       if (tag$name == "select" && !is.null(a$class) && grepl("selectpicker", a$class, fixed = TRUE))
-        return(htmltools::tags$p(class = "metaui-preview-value", "All selected"))
+        { count <- lengths(regmatches(as.character(tag), gregexpr("<option\\b", as.character(tag))))
+          return(htmltools::tags$p(class = "metaui-preview-select", paste(count, "of", count, "selected"))) }
       if (tag$name %in% c("input", "button", "select", "textarea")) tag$attribs$disabled <- NA
       if (tag$name == "a" && !identical(a$class, "metaui-skip")) {
         tag$attribs$href <- NULL; tag$attribs$`aria-disabled` <- "true"; tag$attribs$tabindex <- "-1"
@@ -136,6 +104,87 @@ static_precompute <- function(app_dir, dest) {
     file.copy(file.path(dest, file), to, overwrite = TRUE)
   }
   invisible(captured)
+}
+
+# Default input values, read from the actual UI so that author-edited selections count.
+static_default_inputs <- function(env) {
+  defaults <- list()
+  # Read defaults from the actual UI, including author-edited selections.
+  inputs <- function(tag) {
+    if (inherits(tag, "shiny.tag")) {
+      a <- tag$attribs
+      if (tag$name == "input") {
+        id <- if (!is.null(a$name)) a$name else a$id
+        if (!is.null(id)) {
+          if (!is.null(a$`data-from`)) defaults[[id]] <<- as.numeric(c(a$`data-from`, a$`data-to`))
+          else if (identical(a$type, "checkbox")) {
+            if (!is.null(a$name)) {
+              if (is.null(defaults[[id]])) defaults[[id]] <<- character()
+              if (!is.null(a$checked)) defaults[[id]] <<- c(defaults[[id]], a$value)
+            } else defaults[[id]] <<- !is.null(a$checked)
+          } else if (identical(a$type, "number")) defaults[[id]] <<- suppressWarnings(as.numeric(a$value))
+        }
+      }
+      if (tag$name == "select" && !is.null(a$id)) {
+        options <- list()
+        collect <- function(x) {
+          if (inherits(x, "shiny.tag") && x$name == "option")
+            options[[length(options) + 1L]] <<- list(value = x$attribs$value, selected = !is.null(x$attribs$selected))
+          # shinyWidgets::pickerInput() supplies its options as one HTML string.
+          else if (is.character(x)) for (o in regmatches(x, gregexpr("<option\\b[^>]*>", x))[[1]])
+            options[[length(options) + 1L]] <<- list(
+              value = static_unescape(sub('.*\\svalue="([^"]*)".*', "\\1", o)),
+              selected = grepl("\\sselected(\\s|=|>)", o))
+          else if (is.list(x)) lapply(if (inherits(x, "shiny.tag")) x$children else x, collect)
+        }
+        collect(tag$children)
+        selected <- Filter(function(x) x$selected, options)
+        if (!length(selected) && is.null(a$multiple)) selected <- utils::head(options, 1)
+        defaults[[a$id]] <<- vapply(selected, function(x) x$value, character(1))
+      }
+      lapply(tag$children, inputs)
+    } else if (is.list(tag)) lapply(tag, inputs)
+    invisible(NULL)
+  }
+  z <- env$metaUI_slider_input("outliers_z_scores", "z-score range",
+    env$metaUI_slider_spec(env$metaUI__df$metaUI__es_z, integer = FALSE))
+  inputs(env$ui); inputs(z)
+  attr(defaults, "z_slider") <- z
+  defaults
+}
+
+# The default analysis, fitted once at build by the generated server itself, so that readers
+# see it at once. Failure is not fatal: the app then fits it when first opened.
+opening_precompute <- function(app_dir) {
+  path <- file.path(app_dir, "opening_results.rds")
+  unlink(path)
+  old <- setwd(app_dir)
+  on.exit(setwd(old), add = TRUE)
+  saved <- tryCatch(suppressMessages({
+    env <- new.env(parent = globalenv())
+    sys.source("global.R", env)
+    defaults <- static_default_inputs(env)
+    attr(defaults, "z_slider") <- NULL
+    captured <- list()
+    session <- output <- NULL # Bound by testServer inside its expression.
+    shiny::testServer(env$server, {
+      do.call(session$setInputs, defaults)
+      session$setInputs(go = 1)
+      captured$key <<- list(data = get("df_filtered")(), models = env$models_to_run,
+        correlation = env$correlation_dependent, aggregation = env$aggregation_method[1])
+      captured$value <<- get("estimatesreactive")()
+      captured$html <<- list(selection_overview = output$selection_overview,
+        primary_estimate = output$primary_estimate$html, effectestimate = output$effectestimate)
+    })
+    captured$value$precomputed <- TRUE
+    list(files = env$metaUI_opening_files("."), ui = unname(tools::md5sum("ui.R")),
+      fit = list(key = captured$key, value = captured$value), html = captured$html)
+  }), error = function(e) {
+    message("Default results not precomputed; the app will fit them when first opened: ", conditionMessage(e))
+    NULL
+  })
+  if (!is.null(saved)) saveRDS(saved, "opening_results.rds")
+  invisible(!is.null(saved))
 }
 
 static_add_preview <- function(target, preview) {

@@ -143,7 +143,7 @@ Authors can supply up to five alternative computations in `prepare_data(alternat
 Each named entry declares `es_field`, `variance` or `se`, `es_type`,
 `variance_scale` for correlations, and a `justification`. `primary_label` names the
 original computation. All alternatives use the same effects and fitting scale.
-Readers apply a computation with Analyze data; the comparison tab fits the
+Readers apply a computation with Update results; the comparison tab fits the
 configured multilevel/RVE models for the same selection. The descriptive z filter
 and source p-values remain anchored to the primary computation.
 

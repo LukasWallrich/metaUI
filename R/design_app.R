@@ -138,7 +138,7 @@ design_preview <- function(d) {
         shiny::tags$label(class = "control-label", "Population"),
         shiny::div(class = "checkbox", shiny::tags$label(shiny::tags$input(type = "checkbox", checked = NA), "Clinical")),
         shiny::div(class = "checkbox", shiny::tags$label(shiny::tags$input(type = "checkbox", checked = NA), "Community")),
-        shiny::div(class = "metaui-actions", shiny::tags$button(type = "button", id = "go", class = "btn btn-primary", "Analyze data"),
+        shiny::div(class = "metaui-actions", shiny::tags$button(type = "button", id = "go", class = "btn btn-primary", "Update results"),
           shiny::tags$button(type = "reset", id = "resetFilters", class = "btn btn-default", "Reset")),
         shiny::tags$details(class = "metaui-help metaui-data-tools", shiny::tags$summary("Download data or code, upload data"), shiny::p("The workbook includes all rows, filters and results.")))),
       shiny::div(class = "col-sm-9",
