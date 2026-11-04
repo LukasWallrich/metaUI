@@ -176,8 +176,6 @@ metaUI_zcurve_plot <- function(fit, colours) {
   if (!is.null(x_scale)) x_scale$name <- expression(italic(z) * "-score")
   y_scale <- plot$scales$get_scales("y")
   if (!is.null(y_scale)) y_scale$expand <- ggplot2::expansion(mult = c(0, .02))
-  # The tallest bar stays under a labelled gridline.
-  plot <- plot + ggplot2::expand_limits(y = ceiling(top))
   attr(plot, "statistics") <- gsub(" ,", ", ", statistics, fixed = TRUE)
   plot
 }
