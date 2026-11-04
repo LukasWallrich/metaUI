@@ -61,7 +61,12 @@ p { margin: 0 0 .6em; }
   .container-fluid > .row > .col-sm-3:has(> form.well) + .col-sm-9 { flex: 1 1 0; width: auto; min-width: 0; float: none; padding: 16px 28px 40px; }
   .row:has(> .col-sm-3 > form.well)::before, .row:has(> .col-sm-3 > form.well)::after { display: none; }
   .container-fluid > .row > .col-sm-3:has(> form.well) { background: var(--metaui-surface); border-right: 1px solid var(--metaui-rule); }
-  form.well { position: sticky; top: 0; height: auto; max-height: var(--metaui-sidebar-height, 100vh); overflow-y: auto; scrollbar-width: thin; border-right: 0; }
+  form.well { height: auto; border-right: 0; }
+}
+
+/* Wide windows keep the filters in view down long tabs; narrower ones scroll with the page. */
+@media (min-width: 1100px) {
+  form.well { position: sticky; top: 0; max-height: var(--metaui-sidebar-height, 100vh); overflow-y: auto; scrollbar-width: thin; }
 }
 
 /* Selection panel */
@@ -95,7 +100,7 @@ input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 
 .metaui-preview-select { margin: 0; padding: 7px 10px; font-size: .9375rem; line-height: 1.43; color: var(--metaui-ink); background: var(--metaui-panel); border: 1px solid var(--metaui-rule); border-radius: var(--metaui-radius); }
 .metaui-preview-select { position: relative; }
 .metaui-preview-select::after { content: ''; position: absolute; right: 12px; top: 50%; margin-top: -2px; border-top: 4px solid var(--metaui-ink); border-left: 4px solid transparent; border-right: 4px solid transparent; }
-.metaui-preview-state { color: var(--metaui-slate); }
+.metaui-apply-state.metaui-preview-state { color: var(--metaui-slate); }
 /* Greyed native ticks would read as unselected: the preview's checked boxes keep their fill. */
 input[type=checkbox][disabled]:checked { appearance: none; margin-top: 3px; border-radius: 2px; background: var(--metaui-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center / 100% no-repeat; }
 .metaui-no-missing { display: none; }
@@ -232,7 +237,9 @@ html.shiny-busy #primary_estimate:empty::before { content: "Fitting the models\2
 .metaui-primary:has(.metaui-primary-value) { margin-top: 16px; }
 .metaui-reason:empty { display: none; }
 .metaui-empty p { max-width: 62ch; }
-.metaui-primary-label { margin-top: 3px !important; font-size: .9375rem; color: var(--metaui-slate); }
+.metaui-primary-reading { margin-top: 4px !important; font-size: 1rem; color: var(--metaui-ink); }
+.metaui-primary-label { margin-top: 2px !important; font-size: .875rem; color: var(--metaui-slate); }
+.metaui-primary-tag { font-size: .8125rem; font-weight: 400; color: var(--metaui-slate); }
 .metaui-primary-warning { margin-top: 3px !important; font-size: .9375rem; color: var(--metaui-attention); }
 .metaui-primary-gap { font-size: 1.0625rem; color: var(--metaui-attention); }
 .metaui-primary-none, .metaui-primary-missing { font-size: .9375rem; color: var(--metaui-slate); max-width: 75ch; }
@@ -270,7 +277,7 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-track-diamond { top: var(--metaui-mark-y); height: 15px; margin-top: -7.5px; background: var(--metaui-accent); }
 .metaui-group-row > td { padding: 12px 0 3px !important; font-size: .875rem; color: var(--metaui-slate); }
 .metaui-group-row > td > div { max-width: 92ch; }
-.metaui-estimates td.metaui-k { padding-right: 4px; }
+.metaui-estimates .metaui-k { padding-right: 4px; }
 .metaui-estimates td.metaui-unit { padding-left: 0; color: var(--metaui-slate); }
 .metaui-note-mark { color: var(--metaui-attention); font-weight: 600; margin-left: 1px; }
 .metaui-warnings { margin: 0 0 10px; padding-left: 1.2em; font-size: .875rem; line-height: 1.4; color: var(--metaui-attention); max-width: 80ch; }
@@ -299,7 +306,7 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-axis-tick { bottom: 0; transform: translateX(-50%); font-weight: 400; color: var(--metaui-slate); font-size: .8125rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
 
 /* Headers stay in view down long tables */
-.metaui-estimates thead th { position: sticky; top: 0; z-index: 2; background: var(--metaui-background); }
+.table.metaui-estimates > thead > tr > th { position: sticky; top: 0; z-index: 2; background: var(--metaui-background); border-bottom: 0; box-shadow: inset 0 -1px 0 var(--metaui-ink); }
 
 /* Forest plot: effects under their study, tight rows */
 .metaui-forest { --metaui-mark-y: 11.5px; }
@@ -321,7 +328,9 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-stats tbody tr:first-child td { border-top: 1px solid var(--metaui-ink); }
 .metaui-stats { width: 100% !important; }
 /* Single results read as label and value, at the width of the plots above them. */
-#eggers .table, #heterogeneity .table, .metaui-zstats { width: 100% !important; max-width: 480px; margin-bottom: 14px; }
+#eggers .table, #heterogeneity .table, .metaui-zstats { width: 100% !important; max-width: 760px; margin-bottom: 14px; }
+#eggers .table td:first-child, #heterogeneity .table td:first-child, .metaui-zstats td:first-child { width: 280px; }
+#eggers .table td:last-child, #heterogeneity .table td:last-child, .metaui-zstats td:last-child { text-align: left !important; }
 #eggers .table tbody tr:first-child td, #heterogeneity .table tbody tr:first-child td { border-top: 1px solid var(--metaui-ink); }
 #eggers .table td, #heterogeneity .table td { padding-top: 4px !important; padding-bottom: 4px !important; }
 .metaui-note.metaui-warning-text { color: var(--metaui-attention); }
@@ -411,7 +420,7 @@ body table.dataTable tbody tr, body table.dataTable.stripe tbody tr.odd, body ta
 body table.dataTable.no-footer { border-bottom: 1px solid var(--metaui-rule); }
 body table.dataTable thead > tr > th.sorting, body table.dataTable thead > tr > th.sorting_asc, body table.dataTable thead > tr > th.sorting_desc { position: relative; background-image: none !important; cursor: pointer; }
 body table.dataTable thead > tr > th.sorting::before, body table.dataTable thead > tr > th.sorting_asc::before, body table.dataTable thead > tr > th.sorting_desc::before { display: none; }
-body table.dataTable thead > tr > th.sorting::after, body table.dataTable thead > tr > th.sorting_asc::after, body table.dataTable thead > tr > th.sorting_desc::after { position: absolute; right: auto; top: auto; display: inline; margin-left: 2px; transform: none; color: var(--metaui-slate); opacity: 1; font-size: .75rem; line-height: 1.6; }
+body table.dataTable thead > tr > th.sorting::after, body table.dataTable thead > tr > th.sorting_asc::after, body table.dataTable thead > tr > th.sorting_desc::after { position: absolute; right: auto; top: auto; display: inline; margin-left: 2px; transform: none; color: var(--metaui-slate); opacity: 1; font-size: .6875rem; line-height: 1.75; }
 body table.dataTable thead > tr > th.sorting::after { content: "\2195"; color: var(--metaui-slate); }
 body table.dataTable thead > tr > th.sorting:hover::after { color: var(--metaui-ink); }
 body table.dataTable thead > tr > th.sorting_asc::after { content: "\2191"; color: var(--metaui-accent); }
@@ -424,9 +433,12 @@ body .dataTables_wrapper .dataTables_paginate .paginate_button:hover { color: va
 body .dataTables_wrapper .dataTables_paginate .ellipsis { color: var(--metaui-slate); }
 #moderation_table td { white-space: nowrap; }
 #sample_table tbody td:not(:first-child) { white-space: nowrap; }
+#sample_table thead th { white-space: normal; max-width: 7em; }
+#sample_table thead th:first-child { max-width: none; }
+body table.dataTable thead th:last-child { padding-right: 14px !important; }
 #pcurve_notes, #zcurve_statistics, #funnel_key, #distribution_note { max-width: 760px; }
 #distribution_note { margin-top: 12px; }
-.metaui-reading { font-size: .9375rem; margin: 4px 0 8px; max-width: 72ch; }
+.metaui-reading { font-size: .9375rem; margin: 4px 0 8px; max-width: 760px; }
 .metaui-reading b { font-weight: 600; }
 .metaui-methods h4 { margin: 14px 0 4px; }
 .metaui-methods .metaui-note { max-width: none; }
@@ -485,6 +497,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   /* The level of fit moves under the model name, which then fits on one line. */
   .metaui-estimates th.metaui-fit, .metaui-estimates td.metaui-fit { display: none; }
   .metaui-level-inline { display: block; }
+  .metaui-estimates .metaui-primary-tag { display: none; }
   .metaui-forest .metaui-level-inline { display: none; }
   .metaui-estimates td:first-child { min-width: 11em; }
   .metaui-estimates th.metaui-track-cell, .metaui-estimates td.metaui-track-cell { width: 34%; }
@@ -514,7 +527,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   /* Closed, the panel is one row, plus the update button once there is something to apply. */
   .metaui-actions, .well .metaui-share, .well .metaui-data-tools, .well #link_notice:empty { display: none; }
   .well:has(.metaui-open) .metaui-actions, .metaui-actions:has(#go.metaui-needs-run) { display: grid; }
-  .metaui-actions:has(.metaui-preview-state) { display: grid; margin-top: 8px; }
+  .metaui-actions:has(.metaui-preview-state) { display: grid; grid-template-columns: 1fr; margin-top: 8px; }
   .metaui-actions:has(.metaui-preview-state) #resetFilters { display: none; }
   .well:has(.metaui-open) .metaui-share, .well:has(.metaui-open) .metaui-data-tools { display: block; }
   .metaui-panel-title { display: none; }
@@ -528,10 +541,13 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .metaui-data-tools { padding-bottom: 0; }
   .metaui-share { margin-top: 8px; }
   .container-fluid > .row > .col-sm-9 { padding-top: 12px; padding-bottom: 28px; }
-  /* Every section stays in view: the tabs wrap, with one rule under the whole block. */
-  .nav-tabs { gap: 0 18px; border-bottom: 0; }
-  .nav-tabs > li { margin: 0; }
-  .nav-tabs > li > a { padding: 6px 0 5px; white-space: nowrap; }
+  /* One row of tabs that scrolls, fading at the edge while more follow (metaui.js). */
+  .nav-tabs { flex-wrap: nowrap; gap: 0 18px; margin: 0 -14px; padding: 0 14px; overflow-x: auto; scrollbar-width: none; }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tabs.metaui-more { mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent); }
+  .nav-tabs > li { flex: 0 0 auto; margin: 0; }
+  .nav-tabs > li > a { padding: 9px 0 8px; margin-bottom: 0; white-space: nowrap; }
+  .metaui-basis { font-size: .875rem; gap: 2px 10px; }
   h3 { font-size: 1.25rem; }
   .metaui-primary-value { font-size: 1.25rem; }
   .metaui-strip .metaui-stack .metaui-track-dot { width: 3px; height: 3px; margin-left: -1.5px; opacity: .7; }
@@ -543,36 +559,36 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .metaui-breakdown-numeric { grid-template-columns: 1fr; }
   .metaui-moderation-grid { grid-template-columns: 1fr; }
 
-  /* Estimates become one stacked block per model; the axis stays above them. */
-  table.metaui-estimates, table.metaui-estimates > tbody, table.metaui-estimates > tbody > tr { display: block; width: 100% !important; }
-  table.metaui-estimates > thead { display: block; }
-  table.metaui-estimates > thead > tr { display: block; }
-  table.metaui-estimates > thead > tr > th:not(.metaui-track-cell) { display: none; }
-  table.metaui-estimates > thead > tr > th.metaui-track-cell { display: block; width: 100% !important; border-bottom: 1px solid var(--metaui-ink); padding: 0 10px 4px !important; }
-  table.metaui-estimates > tbody > tr:not(.metaui-group-row) { display: grid; grid-template-columns: 2.9em 8.2em auto auto minmax(0, 1fr); column-gap: 6px; padding: 8px 0 0; border-bottom: 1px solid var(--metaui-rule); }
-  table.metaui-estimates > tbody > tr > td { display: block; padding: 0 !important; border: 0 !important; width: auto !important; min-width: 0 !important; background: none; box-shadow: none !important; }
-  table.metaui-estimates > tbody > tr > td:first-child { grid-column: 1 / -1; font-weight: 600; margin-bottom: 2px; }
-  table.metaui-estimates td.num { text-align: left; font-size: 1rem; }
-  table.metaui-estimates td.metaui-k::before { content: 'k = '; font-style: italic; }
-  table.metaui-estimates td.metaui-unit { font-size: .875rem; align-self: center; }
-  table.metaui-estimates td.metaui-unit:not(:empty)::after { content: ','; }
-  table.metaui-estimates > tbody > tr:not(.metaui-primary-row) > td:first-child { font-weight: 400; }
-  table.metaui-forest > tbody > tr:not(.metaui-group-row) { grid-template-columns: 2.9em minmax(0, 1fr); padding: 3px 0; border-bottom-color: var(--metaui-rule); }
-  table.metaui-forest > tbody > tr.metaui-forest-study { display: block; padding-top: 8px; border-bottom: 0; }
-  table.metaui-forest > tbody > tr.metaui-forest-study > td.metaui-track-cell { display: none; }
-  table.metaui-moderators > tbody > tr { grid-template-columns: 2.9em 8.2em minmax(0, 1fr); }
-  table.metaui-estimates td.metaui-track-cell { grid-column: 1 / -1; padding: 0 10px !important; overflow: hidden; }
-  table.metaui-estimates td.metaui-reason-cell { grid-column: 1 / -1; padding: 2px 0 8px !important; }
-  table.metaui-estimates .metaui-fit { display: block; font-size: .875rem; align-self: center; }
-  table.metaui-estimates > tbody > tr.metaui-group-row > td:first-child { display: block; padding: 12px 0 2px !important; font-weight: 400; margin: 0; }
-  table.metaui-estimates { table-layout: auto; --metaui-mark-y: 50%; }
-  table.metaui-forest { --metaui-mark-y: 50%; }
-  table.metaui-forest .metaui-primary-row { --metaui-mark-y: 50%; }
-  table.metaui-estimates > tfoot.metaui-phone-axis, table.metaui-forest > tfoot { display: block; }
-  table.metaui-estimates > tfoot > tr { display: block; }
-  table.metaui-estimates > tfoot > tr > td { display: none; }
-  table.metaui-estimates > tfoot > tr > td.metaui-track-cell { display: block; width: 100% !important; padding: 4px 10px 0 !important; border: 0; overflow: visible; }
-  table.metaui-estimates tbody td.metaui-track-cell { padding: 0 10px !important; }
+  /* Estimates: text on the left of each row, one continuous plot column on the right, so
+     the zero and primary lines and the axis stay unbroken from the first row to the last. */
+  table.metaui-estimates { --metaui-mark-y: 50%; }
+  table.metaui-estimates, table.metaui-estimates > thead, table.metaui-estimates > tbody, table.metaui-estimates > tfoot { display: block; width: 100% !important; }
+  table.metaui-estimates > thead > tr, table.metaui-estimates > tfoot > tr { display: block; padding-left: 58%; }
+  table.metaui-estimates > thead > tr > th:not(.metaui-track-cell), table.metaui-estimates > tfoot > tr > td:not(.metaui-track-cell) { display: none; }
+  table.metaui-estimates > thead > tr > th.metaui-track-cell, table.metaui-estimates > tfoot > tr > td.metaui-track-cell { display: block; width: 100% !important; min-width: 0; padding: 0 6px 4px !important; overflow: visible; }
+  table.metaui-estimates > tfoot > tr > td.metaui-track-cell { border: 0; padding: 4px 6px 0 !important; }
+  table.metaui-estimates > tbody > tr { display: block; position: relative; padding: 6px 42% 6px 0; border-bottom: 1px solid var(--metaui-rule); }
+  table.metaui-estimates > tbody > tr > td { display: inline; padding: 0 !important; border: 0 !important; width: auto !important; min-width: 0 !important; background: none; box-shadow: none !important; }
+  table.metaui-estimates > tbody > tr > td:first-child { display: block; margin-bottom: 1px; line-height: 1.25; }
+  table.metaui-estimates > tbody > tr > td.num { font-size: .875rem; white-space: nowrap; }
+  table.metaui-estimates > tbody > tr > td.num:nth-child(2) { margin-right: 6px; }
+  table.metaui-estimates > tbody > tr > td.metaui-k, table.metaui-estimates > tbody > tr > td.metaui-unit, table.metaui-estimates > tbody > tr > td.metaui-fit { font-size: .8125rem; color: var(--metaui-slate); font-weight: 400; }
+  table.metaui-estimates > tbody > tr > td.metaui-k::before { content: '\A k = '; white-space: pre; font-style: italic; }
+  table.metaui-estimates > tbody > tr > td.metaui-unit:not(:empty)::after { content: ','; }
+  table.metaui-estimates > tbody > tr > td.metaui-track-cell { display: block; position: absolute; top: 0; bottom: 0; right: 0; width: 42% !important; padding: 0 6px !important; overflow: hidden; }
+  table.metaui-estimates > tbody > tr > td.metaui-reason-cell { display: block; padding: 2px 0 0 !important; }
+  table.metaui-estimates > tbody > tr:has(> td.metaui-reason-cell) { padding-right: 0; }
+  .metaui-estimates td .metaui-track:not(.metaui-axis) { height: 100%; }
+  table.metaui-estimates > tbody > tr > td.metaui-unit, table.metaui-estimates > tbody > tr > td.metaui-fit { margin-left: .25em; }
+  table.metaui-forest > tbody > tr { padding-top: 3px; padding-bottom: 3px; }
+  table.metaui-forest > tbody > tr > td:first-child { font-size: .875rem; }
+  table.metaui-forest > tbody > tr.metaui-forest-study > td.metaui-track-cell { display: block; }
+  table.metaui-forest > tbody > tr.metaui-forest-study { border-bottom: 0; }
+  table.metaui-forest > tbody > tr.metaui-forest-effect > td:first-child { display: inline; padding-left: 0; margin-right: 6px; }
+  table.metaui-forest .metaui-track { min-height: 0; }
+  .metaui-axis-tick { font-size: .75rem; }
+  .metaui-pcurve-stats { width: 100%; }
+
   /* P-curve tests: the line names its row, then test and result side by side. */
   .metaui-pcurve-stats thead { display: none; }
   .metaui-pcurve-stats tr { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); column-gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--metaui-rule); }

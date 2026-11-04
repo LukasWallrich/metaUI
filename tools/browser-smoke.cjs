@@ -77,7 +77,7 @@ function reproduce(script, workbook, selected) {
   await page.keyboard.press('Escape');
   await helpPanel.waitFor({state:'hidden'});
   await page.locator('#go').click(); await settledSample(16);
-  await page.getByText('Selection details', {exact:true}).click();
+  await page.getByText('Details', {exact:true}).click();
   assert((await page.locator('#effectestimate').innerText()).includes('unsupported'));
   await page.locator('#go').click();
   await page.waitForFunction(()=>document.querySelector('#calculation_status')?.textContent.includes('Reused'));

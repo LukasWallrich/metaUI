@@ -51,7 +51,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       diagnostics_main <- HTML("<h3>Distribution of effect sizes</h3><p class=\'metaui-note\'>Dots mark effects more than 1.5 interquartile ranges (IQR) beyond the middle 50%. Hover over a dot for its study and <i>z</i>-score.</p>")
       diagnostics_het <- HTML("<h3>Heterogeneity (REML multilevel model)</h3>")
 
-      forest_note <- HTML("<p class=\'metaui-note\'>Observed effects with normal 95% sampling intervals (no shrinkage), grouped by study. Diamonds: multilevel and robust variance estimation (RVE) summaries. Effects keep their numbers from the full dataset, so a selection can leave gaps.{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
+      forest_note <- HTML("<p class=\'metaui-note\'>Summaries: multilevel and robust variance estimation (RVE). Effects are grouped by study and keep their numbers from the full dataset, so a selection can leave gaps.{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
       zscore_help <- HTML("<p class=\'metaui-help-text\'>z = (effect - mean of all built effects) / their SD, on the fitting scale. Descriptive only.</p>")
       # Result tabs show not_analysed until the first analysis has finished. A tab with
       # precomputed content (opening = TRUE) shows it from the first paint instead.
@@ -263,7 +263,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
         conditionalPanel(if (is.null(metaUI_opening$html)) "output.metaui_ready" else "true",
         div(id = "metaui_basis", class = "metaui-basis", role = "status", `aria-live` = "polite",
           metaUI_opening_output(textOutput("selection_overview"), metaUI_opening$html$selection_overview),
-          tags$details(class = "metaui-selection-details", tags$summary("Selection details"), textOutput("selection_status"), textOutput("calculation_status")))),
+          tags$details(class = "metaui-selection-details", tags$summary("Details"), textOutput("selection_status"), textOutput("calculation_status")))),
         tabsetPanel(
           type = "tabs",
           tabPanel(
@@ -689,13 +689,14 @@ glue_string <- ('
       if (row$status == "ok") tags$p(class = "metaui-primary-value", HTML(paste0("Estimated effect: ", metaUI_label_html(if (metaUI__df$metaUI__es_type[1] == "ZCOR") "r" else metaUI_eff_size_type_label), " = <b>", fmt(row$es), "</b>, ",
         if (is.na(row$LCL) || is.na(row$UCL)) "no interval reported" else paste0(interval, "\\u00a0[", fmt(row$LCL), ", ", fmt(row$UCL), "]"))))
       else tags$p(class = "metaui-primary-gap", tags$b(paste0("Not estimated for this selection (", row$status, "): ")), row$reason, " The app does not substitute another model."),
-      tags$p(class = "metaui-primary-label", paste0(row$Model, if (row$status == "ok") paste0(", ", row$k, " ", unit), ". Primary analysis, declared by the authors.")),
-      if (row$status == "ok" && !is.na(row$LCL) && !is.na(row$UCL)) tags$p(class = "metaui-primary-label", paste0(
+      if (row$status == "ok" && !is.na(row$LCL) && !is.na(row$UCL)) tags$p(class = "metaui-primary-reading", paste0(
         if (row$LCL > 0 || row$UCL < 0) "The interval excludes zero." else "The interval includes zero.",
         { others <- table[-index[1], , drop = FALSE]; others <- others[others$status == "ok", , drop = FALSE]
           if (nrow(others) > 1L) paste0(" Across the ", nrow(others), " other estimators, estimates range from ", fmt(min(others$es)), " to ", fmt(max(others$es)), ".") else "" },
-        switch(metaUI__df$metaUI__direction[1], positive = " Positive values are in the direction the authors expected.",
+        # An introduction from the authors states the direction in their own words.
+        if (nzchar(welcome_text)) "" else switch(metaUI__df$metaUI__direction[1], positive = " Positive values are in the direction the authors expected.",
           negative = " Negative values are in the direction the authors expected.", ""))),
+      tags$p(class = "metaui-primary-label", paste0(row$Model, if (row$status == "ok") paste0(", ", row$k, " ", unit), ". Primary analysis, declared by the authors.")),
       if (row$status == "ok" && nzchar(row$warnings)) tags$p(class = "metaui-primary-warning", paste("Warnings:", row$warnings)))
   })
 
@@ -709,7 +710,7 @@ glue_string <- ('
     direction <- metaUI__df$metaUI__direction[1]
     scale_text <- if (metric == "ZCOR") paste("Correlations are fitted as Fisher z. Summary estimates and forest-plot effects are back-transformed to r;",
       "diagnostics, heterogeneity and moderator results stay on the Fisher z scale.") else
-      paste0("Effects are fitted and shown on the scale declared by the authors: ", metaUI_eff_size_type_label, ".")
+      paste0("Effects are fitted and shown on the scale declared by the authors: ", metaUI_label_html(metaUI_eff_size_type_label), ".")
     direction_text <- if (direction == "unspecified") paste("No expected direction was declared. Methods that need one (by default p-uniform*,",
       "the Hedges-Vevea selection model and p-curve) are reported as unsupported rather than guessed.") else
       paste0("Expected direction declared by the authors: ", direction, ". Direction-dependent methods (p-uniform*, the Hedges-Vevea selection model, p-curve) analyze effects in that direction",
@@ -717,7 +718,7 @@ glue_string <- ('
     dependence_text <- paste0(if (aggregation_method[1] == "first") "Study-level models use only the first selected effect from each study." else
       paste0("Study-level models first combine the effects within each study (GLS average, assumed correlation of ", correlation_dependent,
       " between effects from the same study)."), " Effect-level models (by default multilevel and RVE) use every selected effect. Studies are assumed independent.")
-    tagList(tags$h4("Scale, direction and dependence"), tags$p(scale_text), tags$p(direction_text), tags$p(dependence_text))
+    tagList(tags$h4("Scale, direction and dependence"), tags$p(HTML(scale_text)), tags$p(direction_text), tags$p(dependence_text))
   })
 
   # MODEL COMPARISON TABLE -------------------------------------------------------------------
@@ -855,9 +856,9 @@ glue_string <- ('
     p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = mod)) +
       ggplot2::geom_hline(yintercept = 0, colour = plot_colours$slate, linewidth = .3) +
       ggplot2::geom_ribbon(data = fitted, ggplot2::aes(x = mod, ymin = ci.lb, ymax = ci.ub), inherit.aes = FALSE, fill = plot_colours$accent, alpha = .14) +
-      suppressWarnings(ggplot2::geom_point(ggplot2::aes(size = 1 / metaUI__se, text = hover), shape = 21, fill = plot_colours$slate, colour = plot_colours$background, stroke = .3, alpha = .55, na.rm = TRUE)) +
+      suppressWarnings(ggplot2::geom_point(ggplot2::aes(size = 1 / metaUI__se, text = hover), shape = 21, fill = plot_colours$slate, colour = plot_colours$background, stroke = .3, alpha = .65, na.rm = TRUE)) +
       ggplot2::geom_line(data = fitted, ggplot2::aes(x = mod, y = pred), inherit.aes = FALSE, colour = plot_colours$accent, linewidth = .7) +
-      ggplot2::scale_size(range = c(1.2, 3.4), guide = "none") +
+      ggplot2::scale_size(range = c(1.8, 3.6), guide = "none") +
       ggplot2::scale_y_continuous(breaks = { span <- range(df$metaUI__effect_size, fitted$ci.lb, fitted$ci.ub); ticks <- pretty(span, 8); ticks[ticks >= span[1] & ticks <= span[2]] }) +
       ggplot2::xlab(input$moderator %>% stringr::str_remove("metaUI__filter_")) +
       ggplot2::ylab(metaUI_eff_size_type_label) +
@@ -1137,16 +1138,22 @@ glue_string <- ('
   output$zcurve_warnings <- renderText({
     value <- zcurve_fit()
     paste(if (inherits(value$result, "error")) paste("Not estimated:", conditionMessage(value$result)) else "",
-          if (length(value$warnings)) paste(if (length(value$warnings) == 1L) "Warning:" else "Warnings:", paste(value$warnings, collapse = "; ")) else "")
+          if (length(value$warnings)) paste(if (length(value$warnings) == 1L) "Warning:" else "Warnings:", gsub("EDR", "the expected discovery rate", paste(value$warnings, collapse = "; "), fixed = TRUE)) else "")
   })
 
   output$zcurve_reading <- renderUI({
     value <- zcurve_fit()
     req(!inherits(value$result, "error"))
     lines <- attr(metaUI_zcurve_plot(value$result, plot_colours), "statistics")
-    rate <- function(i) regmatches(lines[i], regexpr("[0-9.]+", lines[i]))
-    p(class = "metaui-reading", HTML(paste0("<b>", rate(4), "</b> of these tests are significant (observed discovery rate). Without selective reporting, the fit expects <b>", rate(6),
-      "</b> (expected discovery rate); a lower value suggests selection. It expects <b>", rate(8), "</b> of the significant results to be significant again in exact replications (expected replicability rate).")))
+    # The first number is the rate; a confidence interval may follow it.
+    numbers <- function(i) as.numeric(regmatches(lines[i], gregexpr("[0-9]*[.][0-9]+", lines[i]))[[1]])
+    percent <- function(x) paste0(round(100 * x), "%")
+    observed <- numbers(4); expected <- numbers(6)[1]; replicable <- numbers(8)[1]
+    verdict <- if (length(observed) < 3L) "" else if (expected < observed[2]) "This is below the observed rate\\u2019s 95% CI, which suggests selective reporting."
+      else if (expected <= observed[3]) "This is within the observed rate\\u2019s 95% CI, so it gives no clear sign of selective reporting."
+      else "This is above the observed rate\\u2019s 95% CI, so it gives no sign of selective reporting."
+    p(class = "metaui-reading", HTML(paste0("<b>", percent(observed[1]), "</b> of these tests are significant (observed discovery rate); without selective reporting, the fit expects <b>", percent(expected),
+      "</b> (expected discovery rate). ", verdict, " Of the significant results, an estimated <b>", percent(replicable), "</b> would be significant again in exact replications (expected replicability rate).")))
   })
 
   output$zcurve_statistics <- renderUI({

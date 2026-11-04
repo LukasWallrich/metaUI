@@ -196,6 +196,25 @@
   });
 })(jQuery);
 
+/* Phones: the tabs scroll in one row. An edge fade shows there is more; the chosen tab stays in view. */
+(function ($) {
+  'use strict';
+  function cue(strip) { strip.classList.toggle('metaui-more', strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 4); }
+  $(document).on('shown.bs.tab', '.nav-tabs a', function () {
+    if (!window.matchMedia('(max-width: 767px)').matches) return;
+    var strip = this.closest('.nav-tabs');
+    strip.scrollLeft += this.getBoundingClientRect().left - strip.getBoundingClientRect().left - 14;
+    cue(strip);
+  });
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.nav-tabs').forEach(function (strip) {
+      strip.addEventListener('scroll', function () { cue(strip); }, { passive: true });
+      cue(strip);
+    });
+  });
+  window.addEventListener('resize', function () { document.querySelectorAll('.nav-tabs').forEach(cue); });
+})(jQuery);
+
 /* Phones: tables with four or more columns reflow into one card per row (metaui.css).
    Each cell is labelled with its column heading. Tables whose first column names the
    row (models, studies) use it as the card title. static_stack_table() in the package

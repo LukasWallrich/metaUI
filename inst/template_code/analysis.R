@@ -156,12 +156,12 @@ metaUI_zcurve_plot <- function(fit, colours) {
     layer
   })
   curve <- plot$layers[[which(vapply(plot$layers, function(layer) inherits(layer$geom, "GeomLine"), logical(1)))[1]]]$data
-  at <- curve[which.min(abs(curve$x - (threshold + 2.3))), ]
+  at <- curve[which.min(abs(curve$x - (threshold + 1.05))), ]
   plot <- plot + ggplot2::annotate("text", x = threshold + .08, y = Inf, vjust = 1.5, hjust = 0, size = 4.5, colour = colours$ink, family = colours$family, parse = TRUE,
       label = sprintf('italic(z) == "%s" * "," ~ italic(p) == "%s"', round(threshold, 2), sub("^0", "", format(fit$control$sig_level)))) +
     ggplot2::annotate("text", x = threshold - .08, y = Inf, vjust = 3.5, hjust = 1, size = 4.5, colour = colours$slate, family = colours$family, label = "not significant") +
     ggplot2::annotate("text", x = threshold + .08, y = Inf, vjust = 3.5, hjust = 0, size = 4.5, colour = colours$accent, family = colours$family, label = "significant") +
-    ggplot2::annotate("text", x = at$x, y = at$y, vjust = -1.2, hjust = 0, size = 4.5, colour = colours$ink, family = colours$family, parse = TRUE, label = 'italic(z) * "-curve fit"') +
+    ggplot2::annotate("text", x = at$x + .06, y = at$y, vjust = -.5, hjust = 0, size = 4.5, colour = colours$ink, family = colours$family, parse = TRUE, label = 'italic(z) * "-curve fit"') +
     metaUI_plot_theme(colours)
   x_scale <- plot$scales$get_scales("x")
   if (!is.null(x_scale)) x_scale$name <- expression(italic(z) * "-score")
@@ -192,18 +192,18 @@ metaUI_pcurve_plot <- function(data, colours) {
     ggplot2::geom_line(ggplot2::aes(y = .data$power), colour = colours$slate, linetype = 5, linewidth = .5) +
     ggplot2::geom_line(ggplot2::aes(y = .data$observed), colour = colours$accent, linewidth = .8) +
     ggplot2::geom_point(ggplot2::aes(y = .data$observed), colour = colours$accent, size = 1.8) +
-    text(x = d$p + ifelse(below, -.0004, .0005), y = height, label = paste0(round(d$observed), "%"), hjust = ifelse(below, 1, 0), colour = colours$accent) +
-    text(x = .0511, y = placed[["observed"]], label = "Observed", hjust = 0, colour = colours$accent, fontface = "bold") +
+    text(x = (d$p + ifelse(below, -.0004, .0005))[-5], y = height[-5], label = paste0(round(d$observed), "%")[-5], hjust = ifelse(below, 1, 0)[-5], colour = colours$accent) +
+    text(x = .0511, y = placed[["observed"]], label = paste0("Observed ", round(d$observed[5]), "%"), hjust = 0, colour = colours$accent, fontface = "bold") +
     text(x = .0511, y = placed[["power"]], label = "33% power", hjust = 0, colour = colours$slate) +
     text(x = .0511, y = placed[["flat"]], label = "No effect", hjust = 0, colour = colours$slate) +
     ggplot2::scale_x_continuous(breaks = d$p, labels = sub("^0", "", format(d$p, nsmall = 2)), name = NULL) +
     ggplot2::scale_y_continuous(breaks = seq(0, 100, 25), labels = function(x) paste0(x, "%"), name = "Share of significant results", expand = c(0, 0)) +
     # Two runs for the axis title, because plotmath leaves a gap after an italic letter.
-    ggplot2::annotate("text", x = .03, y = -Inf, vjust = 3.1, hjust = 1, label = "p", fontface = "italic", size = 4.75, colour = colours$ink, family = colours$family) +
-    ggplot2::annotate("text", x = .03, y = -Inf, vjust = 3.1, hjust = 0, label = "-value", size = 4.75, colour = colours$ink, family = colours$family) +
+    ggplot2::annotate("text", x = .03, y = -Inf, vjust = 3.7, hjust = 1, label = "p", fontface = "italic", size = 4.75, colour = colours$ink, family = colours$family) +
+    ggplot2::annotate("text", x = .03, y = -Inf, vjust = 3.7, hjust = 0, label = "-value", size = 4.75, colour = colours$ink, family = colours$family) +
     ggplot2::coord_cartesian(xlim = c(.0095, .0505), ylim = c(0, top), expand = FALSE, clip = "off") +
     metaUI_plot_theme(colours) +
-    ggplot2::theme(plot.margin = ggplot2::margin(6, 76, 24, 4))
+    ggplot2::theme(plot.margin = ggplot2::margin(6, 92, 28, 4))
 }
 
 metaUI_plot_theme <- function(colours, family = colours$family) {
@@ -295,9 +295,9 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   rows <- vapply(order, function(i) {
     row <- table[i, ]
     ok <- row$status == "ok"
-    label <- paste0(esc(row$Model), if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"),
+    label <- paste0(esc(row$Model), if (i %in% first) ' <span class="metaui-primary-tag">primary</span>', if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"),
       if (ok && length(types) > 1L) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"),
-      paste0('<span class="metaui-level-inline">', if (row$aggregated) "study-level" else "effect-level", "</span>"))
+      paste0('<span class="metaui-level-inline">', if (i %in% first) "primary, ", if (row$aggregated) "study-level" else "effect-level", "</span>"))
     interval <- if (is.na(row$LCL) && is.na(row$UCL)) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
     fit <- if (row$aggregated) "study-level" else "effect-level"
     unit <- if (is.na(row$k)) "" else if (row$aggregated || identical(as.numeric(row$k), as.numeric(studies))) "studies" else if ("input_rows" %in% names(row) && identical(as.numeric(row$k), as.numeric(row$input_rows))) "effects" else ""
@@ -312,7 +312,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   interval_head <- if (length(types) == 1L && grepl("^Confidence", types)) "95% CI" else "95% interval"
   notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(table$warnings[warned]), "</li>", collapse = ""), "</ol>")
   paste0('<table class="table metaui-estimates metaui-custom"><thead><tr><th>Model<span class="metaui-level-inline">and level of fit</span></th><th class="num">Estimate</th><th class="num">',
-    interval_head, '</th><th class="num"><i>k</i></th><th></th><th class="metaui-fit">Level of fit</th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
+    interval_head, '</th><th class="num metaui-k"><i>k</i></th><th></th><th class="metaui-fit">Level of fit</th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
     paste(rows, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="6"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", others, notes)
 }
 
@@ -326,7 +326,7 @@ metaUI_forest_html <- function(rows, axis_title) {
   effects <- rows[rows$kind == "Selected effect", , drop = FALSE]
   ref <- if (nrow(summaries)) summaries$es[1] else NULL
   width <- effects$UCL - effects$LCL
-  size <- pmin(14, pmax(5, 7 * stats::median(width) / width))
+  size <- pmin(13, pmax(6, 7 * stats::median(width) / width))
   values <- function(row) paste0('<td class="num">', fmt(row$es), '</td><td class="num">[', fmt(row$LCL), ", ", fmt(row$UCL), "]</td>")
   grid <- paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, NA_real_, NA_real_, NA_real_, ref = ref), "</td>")
   summary_rows <- if (nrow(summaries)) paste(vapply(seq_len(nrow(summaries)), function(i) paste0('<tr class="metaui-primary-row"><td>', esc(summaries$label[i]), "</td>", values(summaries[i, ]),
@@ -342,7 +342,7 @@ metaUI_forest_html <- function(rows, axis_title) {
     paste0('<tr class="metaui-forest-study"><td colspan="3">', esc(studies$values[s]), "</td>", grid, "</tr>",
       paste(vapply(seq_along(index), function(j) one(index[j], paste("Effect", esc(labels[j])), "metaui-forest-effect"), character(1)), collapse = ""))
   }, character(1))
-  paste0(if (!is.null(ref)) paste0('<p class="metaui-note metaui-key">Dashed line: ', esc(summaries$label[1]), " estimate, ", fmt(ref), ". Diamonds: model summaries. Larger markers: more precise effects.</p>"),
+  paste0(if (!is.null(ref)) paste0('<p class="metaui-note metaui-key">Observed effects with normal 95% sampling intervals (no shrinkage); larger markers are more precise. Diamonds: model summaries. Dashed line: ', esc(summaries$label[1]), " estimate, ", fmt(ref), ".</p>"),
     '<table class="table metaui-estimates metaui-forest metaui-custom"><thead><tr><th>Study</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", summary_rows, paste(study_rows, collapse = ""),
     '</tbody><tfoot><tr><td colspan="3"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>")
