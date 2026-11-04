@@ -1,5 +1,8 @@
 # metaUI (development version)
 
+* Author-enabled p-curve effect estimates now report a failed fit, with the reason,
+  when the estimate falls below zero. Previously such an estimate was reported
+  with a sign opposite to the declared direction.
 * Publish apps without a Shiny server. `generate_shiny(static_folder = ...)` and
   the JSON `static_folder` field write a static website that runs R in the
   reader's browser (shinylive/webR); `export_static()` re-exports an app after

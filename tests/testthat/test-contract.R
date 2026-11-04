@@ -159,6 +159,38 @@ test_that("p-curve statistics reflect declared direction without N imputation", 
   expect_error(fit(prepared()[0,]),"No eligible rows")
 })
 
+test_that("p-curve effect estimates take their sign only from the declared direction", {
+  grDevices::pdf(NULL); on.exit(grDevices::dev.off())
+  rows <- tibble::tibble(name = c("Renamed first", "Renamed last"), aggregated = FALSE,
+    es = "mod$dEstimate", LCL = NA_character_, UCL = NA_character_, k = "mod$kAnalyzed",
+    code = unname(metaUI:::metaUI_default_code[c("P-Curve (first value)", "P-Curve (last value)")]))
+  run <- function(yi, direction, ...) {
+    x <- data.frame(study = sprintf("S%02d", seq_along(yi)), id = 1L, yi = yi, vi = .04, N = 100)
+    d <- prepare_data(x, "study", "yi", variance = "vi", es_id = "id", sample_size = "N", direction = direction, ...)
+    fit(d, rows)$table
+  }
+  yi <- seq(.45, 1, length.out = 30)
+  plus <- run(yi, "positive")
+  expect_equal(plus$status, c("ok", "ok"))
+  expect_true(all(plus$es > 0))
+  minus <- run(-yi, "negative")
+  expect_equal(minus$status, c("ok", "ok"))
+  expect_identical(minus$es, -plus$es)
+
+  wrong <- run(-yi, "positive")
+  expect_equal(wrong$status, c("unsupported", "unsupported")); expect_true(all(is.na(wrong$es)))
+  expect_equal(run(yi, "unspecified")$status, c("unsupported", "unsupported"))
+  expect_match(run(yi, "positive", es_type = "ZCOR", variance_scale = "z")$reason, "only supported for SMD")
+
+  # p-values bunched just below .05 push the optimiser below the dmin = 0 search range.
+  bunched <- c(seq(.405, .415, length.out = 57), rep(.6, 3))
+  for (result in list(run(bunched, "positive"), run(-bunched, "negative"))) {
+    expect_equal(result$status, c("failed", "failed"))
+    expect_true(all(is.na(result$es)))
+    expect_match(result$reason, "below zero")
+  }
+})
+
 test_that("slider bounds enclose all effects and never silently filter extremes", {
   for (x in list(c(-1.817429, 1.689891), c(-.001817, 0, .0021), c(0, 1817.429), prepared()$metaUI__es_z)) {
     spec <- metaUI:::metaUI_slider_spec(x, integer = FALSE)
