@@ -853,7 +853,7 @@ glue_string <- ('
       shiny::htmlOutput("moderation_table"), shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot", height = 340)),
       p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise; whole-number moderators are spread slightly so that dots do not stack. Line and band: the multilevel moderator model with its 95% CI."))
     else div(class = "metaui-moderation-wide", shiny::htmlOutput("moderation_table"),
-      p(class = "metaui-note metaui-key", "Green diamond and line: level estimate from the multilevel moderator model, with its 95% CI. Grey dots beneath: selected effects, larger when more precise; their height within the row carries no meaning. Dashed line: overall multilevel estimate."))
+      p(class = "metaui-note metaui-key", "Green diamond: level estimate from the multilevel moderator model; its width is the 95% CI. Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another. Dashed line: overall multilevel estimate."))
   })
 
   output$moderation_plot <- plotly::renderPlotly({
@@ -1074,7 +1074,7 @@ glue_string <- ('
   output$funnel <- renderPlot({
     meta_agg <- meta_agg()
 
-    metaUI_funnel(meta_agg, xlab = metaUI_eff_size_type_label, colours = plot_colours)
+    metaUI_funnel(meta_agg, xlab = metaUI_eff_size_type_label, colours = plot_colours, width = session$clientData$output_funnel_width)
   }, height = 400) # fixed: after an error the collapsed container would otherwise set the next plot height
 
   output$eggers_reading <- renderUI({

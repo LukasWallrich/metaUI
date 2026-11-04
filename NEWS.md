@@ -4,6 +4,7 @@
 - The forest plot opens on one row per study: a study with several effects shows its combined study-level effect (filled square) and opens to show them, labelled by what differs within the study. It can show every effect and sort by estimate. Downloads are unchanged.
 - P-curve and z-curve open with a plain reading of their tests. The p-curve is drawn in the shared plot style from the same values, and z-curve rates appear as percentages.
 - New `options = list(intro = ...)` adds a short introduction under the title.
+- A diamond now always spans a 95% CI, on the Summary, on moderator levels and in the forest plot's PDF and PNG downloads. Moderator rows stack their effects so that no dot covers another, and funnel labels move clear of the points.
 
 * Redesigned the generated apps' reader interface. The Summary now leads with one
   sentence stating the primary estimate. A single table draws every model's interval on

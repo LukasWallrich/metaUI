@@ -214,6 +214,46 @@
   $(document).on('click', '.metaui-forest-toggle', function () {
     setStudy(this.closest('tr'), this.getAttribute('aria-expanded') !== 'true');
   });
+  // Effects under each moderator level: no dot covers another, at whatever width the row has.
+  function spreadDots(again) {
+    var moved = false;
+    document.querySelectorAll('.metaui-moderators').forEach(function (table) {
+      // One shrink per table, so a dot's size means the same in every row.
+      var largest = Math.max.apply(null, Array.prototype.map.call(table.tBodies[0].rows, function (row) { return row.querySelectorAll('.metaui-track-dot').length; }));
+      var crowd = Math.max(.7, Math.min(1, Math.sqrt(60 / Math.max(largest, 1))));
+      table.querySelectorAll('tbody .metaui-track').forEach(function (track) {
+        var width = track.clientWidth;
+        if (!width || track.dataset.spreadWidth === String(width)) return;
+        track.dataset.spreadWidth = width;
+        var shrink = crowd * (width < 220 ? .75 : 1), placed = [], lowest = 0;
+        var dots = Array.prototype.map.call(track.querySelectorAll('.metaui-track-dot'), function (dot) {
+          if (!dot.dataset.size) dot.dataset.size = parseFloat(dot.style.width) || 6;
+          return { el: dot, x: parseFloat(dot.style.left) / 100 * width, d: dot.dataset.size * shrink };
+        }).sort(function (a, b) { return b.d - a.d || a.x - b.x; });
+        dots.forEach(function (dot) {
+          var y = 0;
+          var clash = function (other) { return Math.hypot(other.x - dot.x, other.y - y) < (other.d + dot.d) / 2 + 1; };
+          while (placed.some(clash)) y += .5;
+          dot.y = y;
+          placed.push(dot);
+          lowest = Math.max(lowest, y + dot.d);
+          dot.el.style.width = dot.el.style.height = dot.d + 'px';
+          dot.el.style.margin = (-dot.d / 2) + 'px 0 0 ' + (-dot.d / 2) + 'px';
+          dot.el.style.transform = 'translateY(' + (9 + dot.d / 2 + y) + 'px)';
+        });
+        var height = (parseFloat(getComputedStyle(track).getPropertyValue('--metaui-mark-y')) || 19) + 9 + lowest + 3;
+        track.style.minHeight = height + 'px';
+        track.closest('tr').style.minHeight = height + 'px';
+        // Taller rows can bring in a scrollbar, which narrows the track.
+        if (track.clientWidth !== width) moved = true;
+      });
+    });
+    if (moved && !again) spreadDots(true);
+  }
+  var spreadTimer;
+  $(document).on('shiny:value shown.bs.tab', function () { setTimeout(function () { spreadDots(); }, 0); });
+  // Covers window resizes and a scrollbar arriving as later outputs render.
+  new ResizeObserver(function () { clearTimeout(spreadTimer); spreadTimer = setTimeout(function () { spreadDots(); }, 120); }).observe(document.documentElement);
   $(document).on('click', '.metaui-forest-all', function () {
     var open = this.getAttribute('aria-expanded') !== 'true';
     this.setAttribute('aria-expanded', String(open));
