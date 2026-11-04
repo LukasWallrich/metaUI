@@ -297,7 +297,7 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
 #'
 #'
 #' @import stringr poibin
-#' @importFrom graphics abline axis lines mtext par plot points rect segments strheight text
+#' @importFrom graphics abline axis lines mtext par plot points rect segments strheight strwidth text
 #' @importFrom stats as.formula hat influence ks.test optimize pbinom pchisq pf pnorm pt punif qchisq qf qnorm qt reformulate reorder setNames uniroot
 #'
 

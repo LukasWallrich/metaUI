@@ -328,7 +328,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     if (any(grepl("trim", table$Model, ignore.case = TRUE))) "; trim-and-fill includes imputed studies", ". Study-level fits first combine the effects within each study.</p>")
   interval_head <- if (length(types) == 1L && grepl("^Confidence", types)) "95% CI" else "95% interval"
   notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(table$warnings[warned]), "</li>", collapse = ""), "</ol>")
-  paste0('<table class="table metaui-estimates metaui-custom"><thead><tr data-head="Estimate [', interval_head, ']"><th>Model<span class="metaui-level-inline">and level of fit</span></th><th class="num">Estimate</th><th class="num">',
+  paste0('<table class="table metaui-estimates metaui-custom"><thead><tr data-head="Model, estimate [', interval_head, ']"><th>Model<span class="metaui-level-inline">and level of fit</span></th><th class="num">Estimate</th><th class="num">',
     interval_head, '</th><th class="num metaui-k" title="Number of effects or studies the model reports; trim-and-fill includes imputed studies."><i>k</i></th><th></th><th class="metaui-fit" title="Effect-level fits use every selected effect; study-level fits first combine the effects within each study.">Level of fit</th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
     paste(rows, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="6"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", others, notes)
 }
@@ -388,7 +388,7 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL)
     '<p class="metaui-note metaui-key metaui-forest-controls">',
     if (any(groups$lengths > 1L)) '<button type="button" class="metaui-forest-all" aria-expanded="false">Show every effect</button>',
     '<button type="button" class="metaui-forest-sort" aria-pressed="false">Sort by estimate</button></p>',
-    '<table class="table metaui-estimates metaui-forest metaui-custom"><thead><tr data-head="Estimate [95% CI]"><th>Study</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="metaui-track-cell">',
+    '<table class="table metaui-estimates metaui-forest metaui-custom"><thead><tr data-head="Study, estimate [95% CI]"><th>Study</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", summary_rows, paste(study_rows, collapse = ""),
     '</tbody><tfoot><tr><td colspan="3"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>")
 }
@@ -421,7 +421,7 @@ metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values
       '</td><td class="num">[', fmt(lcl[i]), ", ", fmt(ucl[i]), ']</td><td class="num metaui-k">', k[i], '</td><td class="metaui-track-cell">',
       metaUI_track_row(scale, estimate[i], lcl[i], ucl[i], dots = values[level], dot_labels = labels[level], ref = ref, dot_sizes = sizes[level], dot_shift = TRUE), "</td></tr>")
   }, character(1))
-  paste0('<table class="table metaui-estimates metaui-moderators metaui-custom"><thead><tr data-head="Estimate [95% CI]"><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k"><i>k</i></th><th class="metaui-track-cell">',
+  paste0('<table class="table metaui-estimates metaui-moderators metaui-custom"><thead><tr data-head="Level, estimate [95% CI]"><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k"><i>k</i></th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", paste(rows, collapse = ""), "</tbody></table>")
 }
 

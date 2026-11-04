@@ -282,6 +282,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             htmltools::tagAppendAttributes(numericInput("sesoi", "Smallest effect size of interest (\\u00b1)",
               value = NA_real_, min = 0), placeholder = "Enter a bound", .cssSelector = "input"),
             p(class = "metaui-note", "A symmetric bound, on the scale of the estimates. There is no universal default; justify it substantively. Changing it reassesses the existing intervals without refitting. The last column gives the smallest bound that contains each interval, rounded up."),
+            uiOutput("equivalence_verdict"),
             div(class = "metaui-scroll", tableOutput("equivalence")),
             uiOutput("equivalence_note")))
             )
@@ -648,12 +649,17 @@ glue_string <- ('
     if (is.null(bound)) return(stats::setNames(data.frame(table$Model, threshold), c("Model", "Smallest bound (\\u00b1)")))
     stats::setNames(data.frame(table$Model, table$assessment, threshold), c("Model", "Assessment", "Smallest bound (\\u00b1)"))
   }, align = "?")
+  # The answer leads, directly under the bound it answers.
+  output$equivalence_verdict <- renderUI({
+    table <- interval_assessment()
+    bound <- tryCatch(chosen_bound(), error = function(e) NULL)
+    req(!is.null(bound), "assessment" %in% names(table))
+    p(class = "metaui-reading", HTML(paste0("<b>", sum(grepl("within bounds", table$assessment, fixed = TRUE)), " of ", nrow(table), "</b> intervals lie within \\u00b1", format(bound), ".")))
+  })
   output$equivalence_note <- renderUI({
     table <- interval_assessment()
     tagList(
       if ("reason" %in% names(table)) p(class = "metaui-reason", table$reason),
-      { bound <- tryCatch(chosen_bound(), error = function(e) NULL)
-        if (!is.null(bound) && "assessment" %in% names(table)) p(class = "metaui-reading", HTML(paste0("<b>", sum(grepl("within bounds", table$assessment, fixed = TRUE)), " of ", nrow(table), "</b> intervals lie within \\u00b1", format(bound), "."))) },
       tags$details(class = "metaui-help", tags$summary("How to read this assessment"), tags$p("For unchanged default models, strict containment of the reported 95% CI corresponds to two one-sided tests at nominal alpha = .025 each, given the model assumptions; this is stricter than the conventional alpha = .05 TOST. Custom intervals have unknown coverage. For Bayesian rows, containment implies at least 95% posterior probability within the bounds; it depends on the prior and is not a TOST. The multilevel model uses residual degrees of freedom; RVE has no small-sample correction, so its intervals can be too narrow. Bias-adjusted models rest on their own assumptions. This assesses the average effect; individual true effects can still exceed the bound.")))
   })
 

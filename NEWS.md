@@ -1,5 +1,10 @@
 # metaUI (development version)
 
+- Generated apps open on results: `generate_shiny()` fits the default analysis at build and saves it as `opening_results.rds`, so no reader waits and no reader triggers a fit. Any later edit to the app's analysis files retires the saved results, and the app then fits on opening. The button is now **Update results**, quiet until filters change.
+- The forest plot opens on one row per study: a study with several effects shows its combined study-level effect (filled square) and opens to show them, labelled by what differs within the study. It can show every effect and sort by estimate. Downloads are unchanged.
+- P-curve and z-curve open with a plain reading of their tests. The p-curve is drawn in the shared plot style from the same values, and z-curve rates appear as percentages.
+- New `options = list(intro = ...)` adds a short introduction under the title.
+
 * Redesigned the generated apps' reader interface. The Summary now leads with one
   sentence stating the primary estimate. A single table draws every model's interval on
   a shared axis, replacing the separate plot and table, and gives reasons in the row

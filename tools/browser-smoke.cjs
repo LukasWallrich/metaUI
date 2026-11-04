@@ -80,7 +80,7 @@ function reproduce(script, workbook, selected) {
   await page.getByText('Selection details', {exact:true}).click();
   assert((await page.locator('#effectestimate').innerText()).includes('unsupported'));
   await page.locator('#go').click();
-  await page.waitForFunction(()=>document.querySelector('#calculation_status')?.textContent.includes('Reused'));
+  await page.waitForFunction(()=>/Reused|Precomputed/.test(document.querySelector('#calculation_status')?.textContent));
   await page.getByRole('tab',{name:'Sample',exact:true}).click();
   await page.locator('#sample_overview table').waitFor();
   assert((await page.locator('#sample_overview').innerText()).includes('16'));
