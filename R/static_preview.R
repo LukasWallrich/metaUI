@@ -40,7 +40,7 @@ static_precompute <- function(app_dir, dest) {
           tag$children <- list(htmltools::HTML(value))
       }
       if (identical(a$id, "metaui_basis")) tag <- htmltools::tagAppendChildren(tag,
-        htmltools::tags$span(class = "metaui-preview-state", "Showing saved results for all effects; the filters are loading."))
+        htmltools::tags$span(class = "metaui-preview-state", "Saved results for all effects; the filters are loading."))
       if (identical(a$id, "go")) {
         tag$children <- list("Loading\u2026")
         tag$attribs$`aria-busy` <- "true"

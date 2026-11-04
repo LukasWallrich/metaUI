@@ -211,8 +211,23 @@
   $(document).on('click', '.metaui-forest-all', function () {
     var open = this.getAttribute('aria-expanded') !== 'true';
     this.setAttribute('aria-expanded', String(open));
-    this.textContent = open ? 'show studies only' : 'show every effect';
+    this.textContent = open ? 'Show studies only' : 'Show every effect';
     this.closest('.shiny-html-output').querySelectorAll('.metaui-forest-study').forEach(function (row) { setStudy(row, open); });
+  });
+  // Studies move with their effects; a second click restores the order by name.
+  $(document).on('click', '.metaui-forest-sort', function () {
+    var byEstimate = this.getAttribute('aria-pressed') !== 'true';
+    this.setAttribute('aria-pressed', String(byEstimate));
+    this.textContent = byEstimate ? 'Sort by study name' : 'Sort by estimate';
+    var body = this.closest('.shiny-html-output').querySelector('.metaui-forest tbody');
+    var groups = [];
+    Array.prototype.forEach.call(body.rows, function (row) {
+      if (row.classList.contains('metaui-primary-row')) return;
+      if (row.classList.contains('metaui-forest-effect')) groups[groups.length - 1].rows.push(row);
+      else groups.push({ rows: [row], es: Number(row.dataset.es), name: row.cells[0].textContent });
+    });
+    groups.sort(function (a, b) { return byEstimate ? b.es - a.es : a.name.localeCompare(b.name); });
+    groups.forEach(function (group) { group.rows.forEach(function (row) { body.appendChild(row); }); });
   });
 })(jQuery);
 

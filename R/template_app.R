@@ -22,7 +22,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       summary_overview_main <- HTML("<h3>Selected sample</h3>")
       summary_table_main <- HTML("<h3>Effect size estimates</h3>")
        # Confidence level needs to be changed in all entries in model.R if you want to adjust it
-      summary_table_notes <- HTML(glue::glue("<p class=\'metaui-note metaui-notes\'><i>k</i> counts the effects or studies each model reports; trim-and-fill includes imputed studies. Effect-level fits use every selected effect, and study-level fits first combine the effects within each study. CI = <<ci_width>> confidence interval; its actual coverage depends on each model\\\'s assumptions.{if (bayesian) " Bayesian rows show central credible intervals." else ""}</p>", .open = "<<", .close = ">>"))
+      summary_table_notes <- HTML(glue::glue("<p><i>k</i> counts the effects or studies each model reports; trim-and-fill includes imputed studies. Effect-level fits use every selected effect, and study-level fits first combine the effects within each study. CI = <<ci_width>> confidence interval; its actual coverage depends on each model\\\'s assumptions.{if (bayesian) " Bayesian rows show central credible intervals." else ""}</p>", .open = "<<", .close = ">>"))
       model_help <- HTML("<h4>Default models</h4><dl>
         <dt>Random-Effects Multilevel Model</dt><dd>metafor::rma.mv with REML, random effects for studies and for effects within studies, independent sampling errors and t-based intervals. Uses every selected effect.</dd>
         <dt>Robust Variance Estimation</dt><dd>robumeta::robu with correlated-effects weights (rho = .8) and no small-sample correction, so intervals can be too narrow with few studies.</dd>
@@ -273,15 +273,15 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             metaUI_opening_output(uiOutput("primary_estimate"), metaUI_opening$html$primary_estimate),
             conditionalPanel("!output.no_effects",
             div(id = "effectestimate_box", role = "region", `aria-label` = "Model estimates", metaUI_opening_output(htmlOutput("effectestimate"), metaUI_opening$html$effectestimate)),
-            summary_table_notes,
             tags$details(class = "metaui-help metaui-methods", tags$summary("Methods and assumptions"),
+              tags$h4("Reading the table"), summary_table_notes,
               uiOutput("scale_note"),
               tags$p("The downloaded summary also holds fitting-scale values and fit times."),
               model_help),
             tags$details(class = "metaui-help metaui-equivalence", tags$summary("Assess practical equivalence"),
             htmltools::tagAppendAttributes(numericInput("sesoi", "Smallest effect size of interest",
               value = NA_real_, min = 0), placeholder = "Enter a bound", .cssSelector = "input"),
-            p(class = "metaui-note", "A symmetric bound, on the scale of the estimates. There is no universal default; justify it substantively. Changing it reassesses the existing intervals without refitting."),
+            p(class = "metaui-note", "A symmetric bound, on the scale of the estimates: each interval would fit inside any bound larger than its value below. There is no universal default; justify it substantively. Changing it reassesses the existing intervals without refitting."),
             div(class = "metaui-scroll", tableOutput("equivalence")),
             uiOutput("equivalence_note")))
             )
@@ -820,6 +820,7 @@ glue_string <- ('
       rownames = FALSE, style = "default", class = "compact",
       options = list(autoWidth = FALSE, columnDefs = list(list(targets = ncol(out) - 1, visible = FALSE, searchable = FALSE),
           list(targets = match(decimals, names(out)) - 1, render = two_decimals, className = "dt-right"),
+          list(targets = which(vapply(out, is.numeric, logical(1))) - 1, className = "dt-right"),
           list(targets = "_all", defaultContent = "(Missing)")),
         language = list(search = "Search effects", lengthMenu = "Show _MENU_ per page", info = "_START_ to _END_ of _TOTAL_ effects", infoFiltered = "(from _MAX_)")),
       escape = setdiff(names(out), c("URL", "Study", "metaUI__details")), # built (and escaped) above
@@ -842,7 +843,7 @@ glue_string <- ('
       shiny::htmlOutput("moderation_table"), shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot", height = 340)),
       p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise; whole-number moderators are spread slightly so that dots do not stack. Line and band: the multilevel moderator model with its 95% CI."))
     else div(class = "metaui-moderation-wide", shiny::htmlOutput("moderation_table"),
-      p(class = "metaui-note metaui-key", "Grey dots: selected effects. Black dot and line: level estimate from the multilevel moderator model, with its 95% CI. Dashed line: overall multilevel estimate."))
+      p(class = "metaui-note metaui-key", "Grey dots: selected effects, larger when more precise. Black dot and line: level estimate from the multilevel moderator model, with its 95% CI. Dashed line: overall multilevel estimate."))
   })
 
   output$moderation_plot <- plotly::renderPlotly({
@@ -874,8 +875,8 @@ glue_string <- ('
     built$x$layout$xaxis$ticktext <- metaUI_minus(built$x$layout$xaxis$ticktext)
     built %>%
       plotly::config(displayModeBar = FALSE) %>%
-      plotly::layout(xaxis = list(fixedrange = TRUE, showgrid = FALSE, tickfont = list(size = 13, color = plot_colours$slate), title = list(font = list(size = 13.5))),
-        yaxis = list(fixedrange = TRUE, tickfont = list(size = 13, color = plot_colours$slate), title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 13.5)), nticks = 8), font = list(family = metaui_plotly_font), margin = list(t = 6),
+      plotly::layout(xaxis = list(fixedrange = TRUE, showgrid = FALSE, tickfont = list(size = 12, color = plot_colours$slate), title = list(font = list(size = 12.5))),
+        yaxis = list(fixedrange = TRUE, tickfont = list(size = 12, color = plot_colours$slate), title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 12.5)), nticks = 8), font = list(family = metaui_plotly_font), margin = list(t = 6),
         paper_bgcolor = plot_colours$background, plot_bgcolor = plot_colours$background)
   })
 
@@ -961,7 +962,7 @@ glue_string <- ('
     metaUI_moderator_html(levels, as.numeric(model$b), model$ci.lb, model$ci.ub,
       as.integer(counts[levels]), x, df$metaUI__effect_size,
       paste0(df$metaUI__study_id, ": ", round(df$metaUI__effect_size, 2)), metaUI_eff_size_type_label,
-      ref = if (length(overall)) overall[1] else NULL)
+      ref = if (length(overall)) overall[1] else NULL, se = df$metaUI__se)
   })
 
   output$moderation_text <- shiny::renderText({
@@ -1104,7 +1105,7 @@ glue_string <- ('
     if (!length(notes)) return(NULL)
     stats <- notes$stats
     tagList(
-      tags$table(class = "table metaui-custom metaui-pcurve-stats", tags$thead(tags$tr(tags$th("Line"), tags$th("Test"), tags$th("Result"))),
+      tags$table(class = "table metaui-custom metaui-pcurve-stats", tags$thead(tags$tr(tags$th("Curve"), tags$th("Test"), tags$th("Result"))),
         tags$tbody(lapply(seq_len(nrow(stats)), function(i) tags$tr(tags$td(HTML(stats$line[i])), tags$td(stats$test[i]), tags$td(HTML(stats$result[i])))))),
       p(class = "metaui-note", HTML(gsub("<br */?>", " ", paste(notes$text, collapse = " ")))))
   })
@@ -1118,7 +1119,7 @@ glue_string <- ('
     grDevices::pdf(NULL)
     result <- tryCatch(pcurve(selected, effect.estimation = FALSE, compact = TRUE, accent = plot_colours$accent), error = function(e) e, finally = grDevices::dev.off())
     validate(need(!inherits(result, "error"), if (inherits(result, "error")) conditionMessage(result) else ""))
-    pcurve_notes(list(stats = result$stats, text = c(result$notes, paste0("Direction-contrary exclusions: ", attr(selected, "direction_exclusions"), ".")),
+    pcurve_notes(list(stats = result$stats, text = c(result$notes, paste0("Excluded because the effect ran against the expected direction: ", attr(selected, "direction_exclusions"), ".")),
       present = result$EvidencePresent, absent = result$EvidenceAbsent))
     metaUI_pcurve_plot(result$PlotData, plot_colours)
   }, width = function() max(420, session$clientData$output_pcurve_width),
@@ -1167,7 +1168,13 @@ glue_string <- ('
     lines <- attr(metaUI_zcurve_plot(value$result, plot_colours), "statistics")
     # The package pairs each label with the value on the next line.
     labels <- c(sub(":$", "", lines[c(3, 5, 7)]))
+    # Rates as percentages, as in the sentence above.
     values <- gsub("  ", ", ", lines[c(4, 6, 8)])
+    values <- vapply(values, function(line) {
+      found <- gregexpr("[0-9]*[.][0-9]+", line)
+      regmatches(line, found) <- list(paste0(round(100 * as.numeric(regmatches(line, found)[[1]])), "%"))
+      line
+    }, character(1), USE.NAMES = FALSE)
     tags$table(class = "table metaui-custom metaui-stats metaui-zstats", tags$tbody(
       tags$tr(tags$td(HTML("Range of <i>z</i>-scores")), tags$td(class = "num", sub("^Range: ", "", lines[1]),
         { top <- max(ggplot2::layer_scales(metaUI_zcurve_plot(value$result, plot_colours))$x$get_limits()); if (max(value$result$data) > top) paste0(" (plot ends at ", format(top), ")") else "" })),
@@ -1205,7 +1212,7 @@ glue_string <- ('
     span <- range(breaks) + c(-1, 1) * diff(range(breaks)) * .02
     top <- max(counts)
     ink <- plot_colours$ink
-    axis_font <- list(size = 13, color = plot_colours$slate)
+    axis_font <- list(size = 12, color = plot_colours$slate)
     z <- (outliers$metaUI__effect_size - efm) / efsd
     strip <- top * 1.13
 
@@ -1213,7 +1220,7 @@ glue_string <- ('
         marker = list(color = plot_colours$bars, line = list(color = plot_colours$background, width = 1)),
         hovertemplate = "%{y} effects around %{x:.2f}<extra></extra>", showlegend = FALSE) %>%
       plotly::add_trace(x = outliers$metaUI__effect_size, y = rep(strip, nrow(outliers)), type = "scatter", mode = "markers", inherit = FALSE, showlegend = FALSE,
-        marker = list(color = plot_colours$ink, size = 7), text = paste0(outliers$metaUI__study_id, ": ", round(outliers$metaUI__effect_size, 2), " (z = ", round(z, 2), ")"),
+        marker = list(color = plot_colours$slate, size = 6), text = paste0(outliers$metaUI__study_id, ": ", round(outliers$metaUI__effect_size, 2), " (z = ", round(z, 2), ")"),
         hovertemplate = "%{text}<extra></extra>") %>%
       plotly::config(displayModeBar = FALSE) %>%
       plotly::layout(bargap = 0, font = list(family = metaui_plotly_font, color = ink),
@@ -1223,10 +1230,10 @@ glue_string <- ('
           list(type = "line", x0 = qs[[1]], x1 = qs[[3]], y0 = strip, y1 = strip, line = list(color = plot_colours$slate, width = 5)),
           list(type = "line", x0 = qs[[2]], x1 = qs[[2]], y0 = strip - top * .03, y1 = strip + top * .03, line = list(color = ink, width = 2))),
         annotations = list(
-          list(x = qs[[2]], y = strip, yshift = 9, text = paste0("middle 50%, median ", metaUI_minus(round_(qs[[2]], 2))), showarrow = FALSE, xanchor = "center", yanchor = "bottom", font = list(size = 13, color = ink)),
-          if (nrow(outliers)) list(x = min(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "left", yanchor = "bottom", font = list(size = 13, color = ink))),
-        xaxis = list(title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 13.5)), range = span, tickformat = if (diff(breaks)[1] < 1 && max(abs(pretty(span, 6)) %% 1) > 0) ".1f" else "", tickfont = axis_font, zeroline = FALSE, showgrid = FALSE, fixedrange = TRUE, showline = TRUE, linecolor = plot_colours$slate, linewidth = 1, ticks = "outside", ticklen = 3, tickcolor = plot_colours$slate),
-        yaxis = list(title = list(text = "Effects", font = list(size = 13.5)), tickfont = axis_font, gridcolor = plot_colours$grid, zeroline = FALSE, fixedrange = TRUE, range = c(0, top * 1.3), rangemode = "normal", tick0 = 0, tickvals = pretty(c(0, top), 5)[pretty(c(0, top), 5) <= top]))
+          list(x = qs[[2]], y = strip, yshift = 9, text = paste0("middle 50%, median ", metaUI_minus(round_(qs[[2]], 2))), showarrow = FALSE, xanchor = "center", yanchor = "bottom", font = list(size = 12, color = plot_colours$slate)),
+          if (nrow(outliers)) list(x = min(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "left", yanchor = "bottom", font = list(size = 12, color = plot_colours$slate))),
+        xaxis = list(title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 12.5)), range = span, tickformat = if (diff(breaks)[1] < 1 && max(abs(pretty(span, 6)) %% 1) > 0) ".1f" else "", tickfont = axis_font, zeroline = FALSE, showgrid = FALSE, fixedrange = TRUE, showline = TRUE, linecolor = plot_colours$slate, linewidth = 1, ticks = "outside", ticklen = 3, tickcolor = plot_colours$slate),
+        yaxis = list(title = list(text = "Effects", font = list(size = 12.5)), tickfont = axis_font, gridcolor = plot_colours$grid, zeroline = FALSE, fixedrange = TRUE, range = c(0, top * 1.3), rangemode = "normal", tick0 = 0, tickvals = pretty(c(0, top), 5)[pretty(c(0, top), 5) <= top]))
     p
   })
 

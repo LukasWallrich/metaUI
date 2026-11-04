@@ -101,6 +101,7 @@ input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 
 .metaui-preview-select { position: relative; }
 .metaui-preview-select::after { content: ''; position: absolute; right: 12px; top: 50%; margin-top: -2px; border-top: 4px solid var(--metaui-ink); border-left: 4px solid transparent; border-right: 4px solid transparent; }
 .metaui-preview-state { font-size: .875rem; color: var(--metaui-slate); }
+.well:has(#go[aria-busy="true"]) .shiny-input-container { opacity: .6; }
 /* Greyed native ticks would read as unselected: the preview's checked boxes keep their fill. */
 input[type=checkbox][disabled]:checked { appearance: none; margin-top: 3px; border-radius: 2px; background: var(--metaui-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center / 100% no-repeat; }
 .metaui-no-missing { display: none; }
@@ -314,6 +315,11 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-forest td { padding-top: 2px !important; padding-bottom: 2px !important; font-size: .875rem; }
 .metaui-forest .metaui-track { min-height: 19px; }
 .metaui-forest-closed { display: none; }
+.metaui-track-combined { border-radius: 0; background: var(--metaui-background); border: 1.5px solid var(--metaui-ink); box-sizing: border-box; }
+.metaui-forest .metaui-forest-single td:first-child { padding-left: 11px; }
+.metaui-forest-key { max-width: 110ch; }
+.metaui-forest-controls { display: flex; gap: 6px 18px; flex-wrap: wrap; }
+.metaui-forest-sort { border: 0; padding: 0; background: none; color: var(--metaui-accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .metaui-forest .metaui-forest-effect td { border-bottom-color: transparent; }
 .metaui-forest .metaui-forest-effect:has(+ .metaui-forest-study) td, .metaui-forest .metaui-forest-effect:has(+ .metaui-forest-single) td { border-bottom-color: var(--metaui-rule); }
 .metaui-forest-toggle { border: 0; padding: 0; background: none; color: var(--metaui-ink); text-align: left; cursor: pointer; }
@@ -324,7 +330,7 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-forest-all { border: 0; padding: 0; background: none; color: var(--metaui-accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .metaui-forest .metaui-primary-row td { padding-top: 4px !important; padding-bottom: 4px !important; }
 .metaui-forest .metaui-primary-row td.metaui-track-cell { padding-top: 0 !important; padding-bottom: 0 !important; }
-.metaui-forest .metaui-forest-effect td:first-child { padding-left: 16px; color: var(--metaui-slate); }
+.metaui-forest .metaui-forest-effect td:first-child { padding-left: 30px; color: var(--metaui-slate); }
 .metaui-forest .metaui-track-ci { margin-top: -.5px; border-top-width: 1px; }
 .metaui-forest tfoot td { border: 0; padding-top: 4px !important; }
 .metaui-moderators th.metaui-track-cell, .metaui-moderators td.metaui-track-cell { width: 55%; }
@@ -441,11 +447,12 @@ body .dataTables_wrapper .dataTables_paginate .ellipsis { color: var(--metaui-sl
 #sample_table tbody td:not(:first-child) { white-space: nowrap; }
 #sample_table thead th { white-space: normal; max-width: 7em; text-align: left; }
 #sample_table thead th.dt-right { text-align: right; }
+#sample_table tbody td.dt-right + td:not(.dt-right), #sample_table thead th.dt-right + th:not(.dt-right) { padding-left: 24px !important; }
 #sample_table thead th:first-child { max-width: none; }
 body table.dataTable thead th:last-child { padding-right: 14px !important; }
 #pcurve_notes, #zcurve_statistics, #funnel_key, #distribution_note { max-width: 760px; }
 #distribution_note { margin-top: 12px; }
-.metaui-reading { font-size: .9375rem; margin: 4px 0 8px; max-width: 760px; }
+.metaui-reading { font-size: .9375rem; margin: 4px 0 8px; max-width: 76ch; }
 .metaui-reading b { font-weight: 600; }
 .metaui-methods h4 { margin: 14px 0 4px; }
 .metaui-methods .metaui-note { max-width: none; }
@@ -529,6 +536,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .container-fluid > .row > .col-sm-3:has(> form.well) { padding: 0; }
   .metaui-header { grid-template-columns: 1fr; padding: 12px 14px; }
   .metaui-header h2 { font-size: 1.3125rem; }
+  .metaui-intro { font-size: .875rem; line-height: 1.35; margin-top: 4px; }
   .metaui-header .metaui-brand { display: none; }
   .well { height: auto; padding: 10px 14px 10px; border-right: 0; border-bottom: 1px solid var(--metaui-rule); }
   /* Closed, the panel is one row, plus the update button once there is something to apply. */
@@ -570,7 +578,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   table.metaui-estimates > thead > tr > th:not(.metaui-track-cell), table.metaui-estimates > tfoot > tr > td:not(.metaui-track-cell) { display: none; }
   table.metaui-estimates > thead > tr > th.metaui-track-cell, table.metaui-estimates > tfoot > tr > td.metaui-track-cell { display: block; width: 100% !important; min-width: 0; padding: 0 6px 4px !important; overflow: visible; }
   table.metaui-estimates > tfoot > tr > td.metaui-track-cell { border: 0; padding: 4px 6px 0 !important; }
-  table.metaui-estimates > tbody > tr { display: block; position: relative; padding: 6px 42% 6px 0; border-bottom: 1px solid var(--metaui-rule); }
+  table.metaui-estimates > tbody > tr { display: block; position: relative; padding: 5px 42% 5px 0; border-bottom: 1px solid var(--metaui-rule); }
   table.metaui-estimates > tbody > tr > td { display: inline; padding: 0 !important; border: 0 !important; width: auto !important; min-width: 0 !important; background: none; box-shadow: none !important; }
   table.metaui-estimates > tbody > tr > td:first-child { display: block; margin-bottom: 1px; line-height: 1.25; }
   table.metaui-estimates > tbody > tr > td.num { font-size: .875rem; white-space: nowrap; }
@@ -587,8 +595,14 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   table.metaui-forest > tbody > tr > td:first-child { font-size: .875rem; }
   table.metaui-forest > tbody > tr.metaui-forest-study > td.metaui-track-cell { display: block; }
   .metaui-forest-count { display: inline-block; }
-  table.metaui-forest > tbody > tr.metaui-forest-effect > td:first-child { display: inline; padding-left: 0; margin-right: 6px; }
+  table.metaui-forest > tbody > tr.metaui-forest-effect > td:first-child { display: inline; padding-left: 0 !important; margin-right: 6px; }
+  table.metaui-forest > tbody > tr.metaui-forest-single > td:first-child { padding-left: 0 !important; }
   table.metaui-forest > tbody > tr.metaui-forest-closed { display: none; }
+.metaui-track-combined { border-radius: 0; background: var(--metaui-background); border: 1.5px solid var(--metaui-ink); box-sizing: border-box; }
+.metaui-forest .metaui-forest-single td:first-child { padding-left: 11px; }
+.metaui-forest-key { max-width: 110ch; }
+.metaui-forest-controls { display: flex; gap: 6px 18px; flex-wrap: wrap; }
+.metaui-forest-sort { border: 0; padding: 0; background: none; color: var(--metaui-accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
   table.metaui-forest .metaui-track { min-height: 0; }
   .metaui-axis-tick { font-size: .75rem; }
   .metaui-pcurve-stats { width: 100%; }
