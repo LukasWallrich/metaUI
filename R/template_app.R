@@ -22,7 +22,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       summary_overview_main <- HTML("<h3>Selected sample</h3>")
       summary_table_main <- HTML("<h3>Effect size estimates</h3>")
        # Confidence level needs to be changed in all entries in model.R if you want to adjust it
-      summary_table_notes <- HTML(glue::glue("<p><i>k</i> counts the effects or studies each model reports; trim-and-fill includes imputed studies. Effect-level fits use every selected effect, and study-level fits first combine the effects within each study. CI = <<ci_width>> confidence interval; its actual coverage depends on each model\\\'s assumptions.{if (bayesian) " Bayesian rows show central credible intervals." else ""}</p>", .open = "<<", .close = ">>"))
+      summary_table_notes <- HTML(glue::glue("<p>CI = <<ci_width>> confidence interval; its actual coverage depends on each model\\\'s assumptions.{if (bayesian) " Bayesian rows show central credible intervals." else ""}</p>", .open = "<<", .close = ">>"))
       model_help <- HTML("<h4>Default models</h4><dl>
         <dt>Random-Effects Multilevel Model</dt><dd>metafor::rma.mv with REML, random effects for studies and for effects within studies, independent sampling errors and t-based intervals. Uses every selected effect.</dd>
         <dt>Robust Variance Estimation</dt><dd>robumeta::robu with correlated-effects weights (rho = .8) and no small-sample correction, so intervals can be too narrow with few studies.</dd>
@@ -51,7 +51,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       diagnostics_main <- HTML("<h3>Distribution of effect sizes</h3><p class=\'metaui-note\'>Dots mark effects more than 1.5 interquartile ranges (IQR) beyond the middle 50%. Hover over a dot for its study and <i>z</i>-score.</p>")
       diagnostics_het <- HTML("<h3>Heterogeneity (REML multilevel model)</h3>")
 
-      forest_note <- HTML("<p class=\'metaui-note\'>Summaries: multilevel and robust variance estimation (RVE). Effects are grouped by study and keep their numbers from the full dataset, so a selection can leave gaps.{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
+      forest_note <- HTML("<p class=\'metaui-note\'>Effects: observed, with normal 95% sampling intervals and no shrinkage. Combined rows: the study-level effects used by the study-level models (see Methods); with correlated effects of unequal precision they can lie away from the simple average. Summaries: multilevel and robust variance estimation (RVE). Effects keep their numbers from the full dataset, so a selection can leave gaps.{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
       zscore_help <- HTML("<p class=\'metaui-help-text\'>z = (effect - mean of all built effects) / their SD, on the fitting scale. Descriptive only.</p>")
       # Result tabs show not_analysed until the first analysis has finished. A tab with
       # precomputed content (opening = TRUE) shows it from the first paint instead.
@@ -263,7 +263,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
         conditionalPanel(if (is.null(metaUI_opening$html)) "output.metaui_ready" else "true",
         div(id = "metaui_basis", class = "metaui-basis", role = "status", `aria-live` = "polite",
           metaUI_opening_output(textOutput("selection_overview"), metaUI_opening$html$selection_overview),
-          tags$details(class = "metaui-selection-details", tags$summary("Details"), textOutput("selection_status"), textOutput("calculation_status")))),
+          tags$details(class = "metaui-selection-details", tags$summary("Selection details"), textOutput("selection_status"), textOutput("calculation_status")))),
         tabsetPanel(
           type = "tabs",
           tabPanel(
@@ -274,14 +274,14 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             conditionalPanel("!output.no_effects",
             div(id = "effectestimate_box", role = "region", `aria-label` = "Model estimates", metaUI_opening_output(htmlOutput("effectestimate"), metaUI_opening$html$effectestimate)),
             tags$details(class = "metaui-help metaui-methods", tags$summary("Methods and assumptions"),
-              tags$h4("Reading the table"), summary_table_notes,
+              summary_table_notes,
               uiOutput("scale_note"),
               tags$p("The downloaded summary also holds fitting-scale values and fit times."),
               model_help),
             tags$details(class = "metaui-help metaui-equivalence", tags$summary("Assess practical equivalence"),
-            htmltools::tagAppendAttributes(numericInput("sesoi", "Smallest effect size of interest",
+            htmltools::tagAppendAttributes(numericInput("sesoi", "Smallest effect size of interest (\\u00b1)",
               value = NA_real_, min = 0), placeholder = "Enter a bound", .cssSelector = "input"),
-            p(class = "metaui-note", "A symmetric bound, on the scale of the estimates: each interval would fit inside any bound of at least its value below, rounded up. There is no universal default; justify it substantively. Changing it reassesses the existing intervals without refitting."),
+            p(class = "metaui-note", "A symmetric bound, on the scale of the estimates. There is no universal default; justify it substantively. Changing it reassesses the existing intervals without refitting. The last column gives the smallest bound that contains each interval, rounded up."),
             div(class = "metaui-scroll", tableOutput("equivalence")),
             uiOutput("equivalence_note")))
             )
@@ -468,7 +468,7 @@ glue_string <- ('
     studies <- length(unique(df$metaUI__study_id))
     if (filters_changed()) paste0("Results below are for the previous selection: ", counts$retained_rows, " of ", counts$available_rows,
       " effects.")
-    else paste0(counts$retained_rows, " of ", counts$available_rows, " effects selected, from ", studies, if (studies == 1L) " study" else " studies")
+    else paste0(counts$retained_rows, " of ", counts$available_rows, " effects, ", studies, if (studies == 1L) " study" else " studies")
   })
 
   output$selection_status <- renderText({
@@ -645,13 +645,15 @@ glue_string <- ('
     bound <- tryCatch(chosen_bound(), error = function(e) NULL)
     # Rounded up, so that the shown bound still contains the interval; downloads keep every digit.
     threshold <- ifelse(is.na(table$threshold), "", formatC(ceiling(table$threshold * 1000 + 1e-9) / 1000, format = "f", digits = 3))
-    if (is.null(bound)) return(stats::setNames(data.frame(table$Model, threshold), c("Model", "Interval fits within \\u00b1")))
-    stats::setNames(data.frame(table$Model, table$assessment, threshold), c("Model", "Assessment", "Interval fits within \\u00b1"))
+    if (is.null(bound)) return(stats::setNames(data.frame(table$Model, threshold), c("Model", "Smallest bound (\\u00b1)")))
+    stats::setNames(data.frame(table$Model, table$assessment, threshold), c("Model", "Assessment", "Smallest bound (\\u00b1)"))
   }, align = "?")
   output$equivalence_note <- renderUI({
     table <- interval_assessment()
     tagList(
       if ("reason" %in% names(table)) p(class = "metaui-reason", table$reason),
+      { bound <- tryCatch(chosen_bound(), error = function(e) NULL)
+        if (!is.null(bound) && "assessment" %in% names(table)) p(class = "metaui-reading", HTML(paste0("<b>", sum(grepl("within bounds", table$assessment, fixed = TRUE)), " of ", nrow(table), "</b> intervals lie within \\u00b1", format(bound), "."))) },
       tags$details(class = "metaui-help", tags$summary("How to read this assessment"), tags$p("For unchanged default models, strict containment of the reported 95% CI corresponds to two one-sided tests at nominal alpha = .025 each, given the model assumptions; this is stricter than the conventional alpha = .05 TOST. Custom intervals have unknown coverage. For Bayesian rows, containment implies at least 95% posterior probability within the bounds; it depends on the prior and is not a TOST. The multilevel model uses residual degrees of freedom; RVE has no small-sample correction, so its intervals can be too narrow. Bias-adjusted models rest on their own assumptions. This assesses the average effect; individual true effects can still exceed the bound.")))
   })
 
@@ -819,7 +821,7 @@ glue_string <- ('
 
     table <- out %>% DT::datatable(
       rownames = FALSE, style = "default", class = "compact",
-      options = list(autoWidth = FALSE, pagingType = "simple", columnDefs = list(list(targets = ncol(out) - 1, visible = FALSE, searchable = FALSE),
+      options = list(autoWidth = FALSE, columnDefs = list(list(targets = ncol(out) - 1, visible = FALSE, searchable = FALSE),
           list(targets = match(setdiff(decimals, "Effect size"), names(out)) - 1, render = two_decimals, className = "dt-right"),
           list(targets = match("Effect size", names(out)) - 1, render = three_decimals, className = "dt-right"),
           list(targets = unname(which(vapply(out, is.numeric, logical(1)))) - 1, className = "dt-right"),
@@ -877,8 +879,8 @@ glue_string <- ('
     built$x$layout$xaxis$ticktext <- metaUI_minus(built$x$layout$xaxis$ticktext)
     built %>%
       plotly::config(displayModeBar = FALSE) %>%
-      plotly::layout(xaxis = list(fixedrange = TRUE, showgrid = FALSE, tickfont = list(size = 12, color = plot_colours$slate), title = list(font = list(size = 12.5))),
-        yaxis = list(fixedrange = TRUE, tickfont = list(size = 12, color = plot_colours$slate), title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 12.5)), nticks = 8), font = list(family = metaui_plotly_font), margin = list(t = 6),
+      plotly::layout(xaxis = list(fixedrange = TRUE, showgrid = FALSE, tickfont = list(size = 13, color = plot_colours$slate), title = list(font = list(size = 13.5))),
+        yaxis = list(fixedrange = TRUE, tickfont = list(size = 13, color = plot_colours$slate), title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 13.5)), nticks = 8), font = list(family = metaui_plotly_font), margin = list(t = 6),
         paper_bgcolor = plot_colours$background, plot_bgcolor = plot_colours$background)
   })
 
@@ -1214,7 +1216,7 @@ glue_string <- ('
     span <- range(breaks) + c(-1, 1) * diff(range(breaks)) * .02
     top <- max(counts)
     ink <- plot_colours$ink
-    axis_font <- list(size = 12, color = plot_colours$slate)
+    axis_font <- list(size = 13, color = plot_colours$slate)
     z <- (outliers$metaUI__effect_size - efm) / efsd
     strip <- top * 1.13
 
@@ -1232,11 +1234,11 @@ glue_string <- ('
           list(type = "line", x0 = qs[[1]], x1 = qs[[3]], y0 = strip, y1 = strip, line = list(color = plot_colours$slate, width = 5)),
           list(type = "line", x0 = qs[[2]], x1 = qs[[2]], y0 = strip - top * .03, y1 = strip + top * .03, line = list(color = ink, width = 2))),
         annotations = list(
-          list(x = qs[[2]], y = strip, yshift = 9, text = paste0("middle 50%, median ", metaUI_minus(round_(qs[[2]], 2))), showarrow = FALSE, xanchor = "center", yanchor = "bottom", font = list(size = 12, color = plot_colours$slate)),
-          if (any(outliers$metaUI__effect_size < qs[[1]])) list(x = min(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "left", yanchor = "bottom", font = list(size = 12, color = plot_colours$slate)),
-          if (any(outliers$metaUI__effect_size > qs[[3]])) list(x = max(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "right", yanchor = "bottom", font = list(size = 12, color = plot_colours$slate))),
-        xaxis = list(title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 12.5)), range = span, tickformat = if (diff(breaks)[1] < 1 && max(abs(pretty(span, 6)) %% 1) > 0) ".1f" else "", tickfont = axis_font, zeroline = FALSE, showgrid = FALSE, fixedrange = TRUE, showline = TRUE, linecolor = plot_colours$slate, linewidth = 1, ticks = "outside", ticklen = 3, tickcolor = plot_colours$slate),
-        yaxis = list(title = list(text = "Effects", font = list(size = 12.5)), tickfont = axis_font, gridcolor = plot_colours$grid, zeroline = FALSE, fixedrange = TRUE, range = c(0, top * 1.3), rangemode = "normal", tick0 = 0, tickvals = pretty(c(0, top), 5)[pretty(c(0, top), 5) <= top]))
+          list(x = qs[[2]], y = strip, yshift = 9, text = paste0("middle 50%, median ", metaUI_minus(round_(qs[[2]], 2))), showarrow = FALSE, xanchor = "center", yanchor = "bottom", font = list(size = 13, color = plot_colours$slate)),
+          if (any(outliers$metaUI__effect_size < qs[[1]])) list(x = min(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "left", yanchor = "bottom", font = list(size = 13, color = plot_colours$slate)),
+          if (any(outliers$metaUI__effect_size > qs[[3]])) list(x = max(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "right", yanchor = "bottom", font = list(size = 13, color = plot_colours$slate))),
+        xaxis = list(title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 13.5)), range = span, tickformat = if (diff(breaks)[1] < 1 && max(abs(pretty(span, 6)) %% 1) > 0) ".1f" else "", tickfont = axis_font, zeroline = FALSE, showgrid = FALSE, fixedrange = TRUE, showline = TRUE, linecolor = plot_colours$slate, linewidth = 1, ticks = "outside", ticklen = 3, tickcolor = plot_colours$slate),
+        yaxis = list(title = list(text = "Effects", font = list(size = 13.5)), tickfont = axis_font, gridcolor = plot_colours$grid, zeroline = FALSE, fixedrange = TRUE, range = c(0, top * 1.3), rangemode = "normal", tick0 = 0, tickvals = pretty(c(0, top), 5)[pretty(c(0, top), 5) <= top]))
     p
   })
 
