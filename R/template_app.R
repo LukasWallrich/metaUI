@@ -281,7 +281,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             tags$details(class = "metaui-help metaui-equivalence", tags$summary("Assess practical equivalence"),
             htmltools::tagAppendAttributes(numericInput("sesoi", "Smallest effect size of interest",
               value = NA_real_, min = 0), placeholder = "Enter a bound", .cssSelector = "input"),
-            p(class = "metaui-note", "A symmetric bound, on the scale of the estimates: each interval would fit inside any bound larger than its value below. There is no universal default; justify it substantively. Changing it reassesses the existing intervals without refitting."),
+            p(class = "metaui-note", "A symmetric bound, on the scale of the estimates: each interval would fit inside any bound of at least its value below, rounded up. There is no universal default; justify it substantively. Changing it reassesses the existing intervals without refitting."),
             div(class = "metaui-scroll", tableOutput("equivalence")),
             uiOutput("equivalence_note")))
             )
@@ -643,8 +643,8 @@ glue_string <- ('
     table <- interval_assessment()
     if (!"threshold" %in% names(table)) return(table)
     bound <- tryCatch(chosen_bound(), error = function(e) NULL)
-    # Four decimals: a rounded threshold could claim containment that does not hold.
-    threshold <- ifelse(is.na(table$threshold), "", metaUI_minus(formatC(table$threshold, format = "f", digits = 4)))
+    # Rounded up, so that the shown bound still contains the interval; downloads keep every digit.
+    threshold <- ifelse(is.na(table$threshold), "", formatC(ceiling(table$threshold * 1000 + 1e-9) / 1000, format = "f", digits = 3))
     if (is.null(bound)) return(stats::setNames(data.frame(table$Model, threshold), c("Model", "Interval fits within \\u00b1")))
     stats::setNames(data.frame(table$Model, table$assessment, threshold), c("Model", "Assessment", "Interval fits within \\u00b1"))
   }, align = "?")
@@ -672,7 +672,7 @@ glue_string <- ('
       labels <- c(stats::setNames(sub("^metaUI__filter_", "", filter_cols), gsub(" ", "_", filter_cols)), outliers_z_scores = "z-score range")
       last <- names(counts)[max(which(unlist(counts) > 0), 0)]
       return(div(class = "metaui-empty", role = "status", tags$p(class = "metaui-empty-title", "No effects match this selection"),
-        tags$p(if (length(last)) paste0("The ", unname(labels[last]), " filter removed the last remaining effects. "), "Change it, or use Reset to select every effect again.")))
+        tags$p(if (length(last)) paste0("The ", unname(labels[last]), " filter removed the last remaining effects. "), "Change it, or ", tags$button(type = "button", class = "metaui-reset-link", "reset the filters"), " to select every effect again.")))
     }
     table <- estimatesfiltered()
     req(table)
@@ -814,13 +814,15 @@ glue_string <- ('
     # Round non-integer numeric columns to 2 decimals, with true minus signs, and leave sorting on the numbers.
     decimals <- names(out)[vapply(out, function(x) is.numeric(x) && any(x != round(x), na.rm = TRUE), logical(1))]
     decimals <- union("Effect size", decimals)
+    three_decimals <- DT::JS("function(data, type) { return type === \'display\' && data !== null && data !== \'\' ? Number(data).toFixed(3).replace(\'-\', \'\\u2212\') : data; }")
     two_decimals <- DT::JS("function(data, type) { return type === \'display\' && data !== null && data !== \'\' ? Number(data).toFixed(2).replace(\'-\', \'\\u2212\') : data; }")
 
     table <- out %>% DT::datatable(
       rownames = FALSE, style = "default", class = "compact",
-      options = list(autoWidth = FALSE, columnDefs = list(list(targets = ncol(out) - 1, visible = FALSE, searchable = FALSE),
-          list(targets = match(decimals, names(out)) - 1, render = two_decimals, className = "dt-right"),
-          list(targets = which(vapply(out, is.numeric, logical(1))) - 1, className = "dt-right"),
+      options = list(autoWidth = FALSE, pagingType = "simple", columnDefs = list(list(targets = ncol(out) - 1, visible = FALSE, searchable = FALSE),
+          list(targets = match(setdiff(decimals, "Effect size"), names(out)) - 1, render = two_decimals, className = "dt-right"),
+          list(targets = match("Effect size", names(out)) - 1, render = three_decimals, className = "dt-right"),
+          list(targets = unname(which(vapply(out, is.numeric, logical(1)))) - 1, className = "dt-right"),
           list(targets = "_all", defaultContent = "(Missing)")),
         language = list(search = "Search effects", lengthMenu = "Show _MENU_ per page", info = "_START_ to _END_ of _TOTAL_ effects", infoFiltered = "(from _MAX_)")),
       escape = setdiff(names(out), c("URL", "Study", "metaUI__details")), # built (and escaped) above
@@ -843,7 +845,7 @@ glue_string <- ('
       shiny::htmlOutput("moderation_table"), shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot", height = 340)),
       p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise; whole-number moderators are spread slightly so that dots do not stack. Line and band: the multilevel moderator model with its 95% CI."))
     else div(class = "metaui-moderation-wide", shiny::htmlOutput("moderation_table"),
-      p(class = "metaui-note metaui-key", "Grey dots: selected effects, larger when more precise. Black dot and line: level estimate from the multilevel moderator model, with its 95% CI. Dashed line: overall multilevel estimate."))
+      p(class = "metaui-note metaui-key", "Green diamond and line: level estimate from the multilevel moderator model, with its 95% CI. Grey dots beneath: selected effects, larger when more precise; their height within the row carries no meaning. Dashed line: overall multilevel estimate."))
   })
 
   output$moderation_plot <- plotly::renderPlotly({
@@ -1027,7 +1029,7 @@ glue_string <- ('
   # Plots taller than about a laptop screen repeat the x axis at the top.
   forest_plot <- reactive(forest_plot_for(top_axis = forest_height() > 700))
   output$foreststudies <- renderText({
-    metaUI_forest_html(forest_rows(), if (df_filtered()$metaUI__display_scale[1] == "r") "Correlation r" else metaUI_eff_size_type_label, studies = metaUI_forest_studies(df_agg()))
+    metaUI_forest_html(forest_rows(), if (df_filtered()$metaUI__display_scale[1] == "r") "Correlation r" else metaUI_eff_size_type_label, studies = metaUI_forest_studies(df_agg()), details = metaUI_effect_details(df_filtered()))
   })
   output$forest_pdf <- downloadHandler(filename = function() "forest-plot.pdf", content = function(file) {
     ggplot2::ggsave(file, forest_plot_for(top_axis = forest_height() > 700, family = ""), device = "pdf", width = 10,
@@ -1119,7 +1121,7 @@ glue_string <- ('
     grDevices::pdf(NULL)
     result <- tryCatch(pcurve(selected, effect.estimation = FALSE, compact = TRUE, accent = plot_colours$accent), error = function(e) e, finally = grDevices::dev.off())
     validate(need(!inherits(result, "error"), if (inherits(result, "error")) conditionMessage(result) else ""))
-    pcurve_notes(list(stats = result$stats, text = c(result$notes, paste0("Excluded because the effect ran against the expected direction: ", attr(selected, "direction_exclusions"), ".")),
+    pcurve_notes(list(stats = result$stats, text = c(result$notes, paste0(attr(selected, "direction_exclusions"), " further results were excluded because they ran against the expected direction.")),
       present = result$EvidencePresent, absent = result$EvidenceAbsent))
     metaUI_pcurve_plot(result$PlotData, plot_colours)
   }, width = function() max(420, session$clientData$output_pcurve_width),
@@ -1231,7 +1233,8 @@ glue_string <- ('
           list(type = "line", x0 = qs[[2]], x1 = qs[[2]], y0 = strip - top * .03, y1 = strip + top * .03, line = list(color = ink, width = 2))),
         annotations = list(
           list(x = qs[[2]], y = strip, yshift = 9, text = paste0("middle 50%, median ", metaUI_minus(round_(qs[[2]], 2))), showarrow = FALSE, xanchor = "center", yanchor = "bottom", font = list(size = 12, color = plot_colours$slate)),
-          if (nrow(outliers)) list(x = min(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "left", yanchor = "bottom", font = list(size = 12, color = plot_colours$slate))),
+          if (any(outliers$metaUI__effect_size < qs[[1]])) list(x = min(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "left", yanchor = "bottom", font = list(size = 12, color = plot_colours$slate)),
+          if (any(outliers$metaUI__effect_size > qs[[3]])) list(x = max(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "right", yanchor = "bottom", font = list(size = 12, color = plot_colours$slate))),
         xaxis = list(title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 12.5)), range = span, tickformat = if (diff(breaks)[1] < 1 && max(abs(pretty(span, 6)) %% 1) > 0) ".1f" else "", tickfont = axis_font, zeroline = FALSE, showgrid = FALSE, fixedrange = TRUE, showline = TRUE, linecolor = plot_colours$slate, linewidth = 1, ticks = "outside", ticklen = 3, tickcolor = plot_colours$slate),
         yaxis = list(title = list(text = "Effects", font = list(size = 12.5)), tickfont = axis_font, gridcolor = plot_colours$grid, zeroline = FALSE, fixedrange = TRUE, range = c(0, top * 1.3), rangemode = "normal", tick0 = 0, tickvals = pretty(c(0, top), 5)[pretty(c(0, top), 5) <= top]))
     p

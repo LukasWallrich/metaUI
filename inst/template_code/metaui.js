@@ -196,6 +196,12 @@
   });
 })(jQuery);
 
+/* The empty state's reset link uses the panel's Reset button. */
+(function ($) {
+  'use strict';
+  $(document).on('click', '.metaui-reset-link', function () { document.getElementById('resetFilters').click(); });
+})(jQuery);
+
 /* Forest plot: a study's combined row opens to show its effects. */
 (function ($) {
   'use strict';

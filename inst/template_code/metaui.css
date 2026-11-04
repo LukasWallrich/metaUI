@@ -162,8 +162,9 @@ html.metaui-js .irs--shiny .irs-grid { top: 16px; }
 .metaui-actions { position: sticky; bottom: 0; z-index: 4; display: grid; grid-template-columns: 1fr auto; gap: 8px; margin: 0 -20px; padding: 10px 20px 12px; background: var(--metaui-surface); border-top: 1px solid var(--metaui-rule); }
 .metaui-actions .btn { margin: 0; }
 .metaui-actions #go { font-size: 1rem; font-weight: 600; text-align: center; padding: 9px 12px; }
-.metaui-actions #resetFilters { background: transparent; border-color: transparent; color: var(--metaui-slate); padding: 9px 4px; }
-.metaui-actions #resetFilters:hover { color: var(--metaui-ink); text-decoration: underline; }
+.metaui-actions #resetFilters { background: transparent; border-color: transparent; color: var(--metaui-accent); padding: 9px 4px; text-decoration: underline; text-underline-offset: 2px; }
+.metaui-actions #resetFilters:hover { color: var(--metaui-hover); }
+.metaui-reset-link { border: 0; padding: 0; background: none; color: var(--metaui-accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 html.shiny-busy .metaui-actions #go { opacity: .75; }
 /* Above the button, inside the bar, so it never covers a filter. */
 .metaui-apply-state { grid-column: 1 / -1; font-size: .875rem; line-height: 1.3; color: var(--metaui-attention); }
@@ -239,7 +240,7 @@ html.shiny-busy #primary_estimate:empty::before { content: "Fitting the models\2
 .metaui-reason:empty { display: none; }
 .metaui-empty p { max-width: 62ch; }
 .metaui-primary-reading { margin-top: 4px !important; font-size: 1rem; color: var(--metaui-ink); }
-.metaui-primary-label { margin-top: 2px !important; font-size: .875rem; color: var(--metaui-slate); }
+.metaui-primary-label { margin-top: 6px !important; font-size: .875rem; color: var(--metaui-slate); }
 .metaui-primary-tag { font-size: .8125rem; font-weight: 400; color: var(--metaui-slate); }
 .metaui-primary-warning { margin-top: 3px !important; font-size: .9375rem; color: var(--metaui-attention); }
 .metaui-primary-gap { font-size: 1.0625rem; color: var(--metaui-attention); }
@@ -317,7 +318,12 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-forest-closed { display: none; }
 .metaui-track-combined { border-radius: 0; background: var(--metaui-background); border: 1.5px solid var(--metaui-ink); box-sizing: border-box; }
 .metaui-forest .metaui-forest-single td:first-child { padding-left: 11px; }
-.metaui-forest-key { max-width: 110ch; }
+.metaui-forest-key { display: flex; flex-wrap: wrap; gap: 3px 18px; max-width: none; }
+.metaui-glyph { display: inline-block; vertical-align: 1px; margin-right: 6px; box-sizing: border-box; }
+.metaui-glyph-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--metaui-ink); }
+.metaui-glyph-square { width: 9px; height: 9px; border: 1.5px solid var(--metaui-ink); }
+.metaui-glyph-diamond { width: 9px; height: 9px; transform: rotate(45deg); background: var(--metaui-accent); }
+.metaui-glyph-dash { width: 0; height: 12px; vertical-align: -1px; border-left: 1px dashed var(--metaui-accent); }
 .metaui-forest-controls { display: flex; gap: 6px 18px; flex-wrap: wrap; }
 .metaui-forest-sort { border: 0; padding: 0; background: none; color: var(--metaui-accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .metaui-forest .metaui-forest-effect td { border-bottom-color: transparent; }
@@ -334,6 +340,11 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-forest .metaui-track-ci { margin-top: -.5px; border-top-width: 1px; }
 .metaui-forest tfoot td { border: 0; padding-top: 4px !important; }
 .metaui-moderators th.metaui-track-cell, .metaui-moderators td.metaui-track-cell { width: 55%; }
+/* Level estimate in green on the row's centreline; the effects sit lighter, just beneath it. */
+.metaui-moderators .metaui-track-point { background: var(--metaui-accent); border-radius: 0; transform: rotate(45deg); }
+.metaui-moderators .metaui-track-ci { border-top-color: var(--metaui-accent); }
+.metaui-moderators .metaui-track-dot { opacity: .5; }
+.metaui-moderators .metaui-track { min-height: 34px; }
 .metaui-pcurve-stats { width: 100%; margin: 10px 0; font-size: .875rem; }
 .metaui-pcurve-stats td:last-child { white-space: nowrap; }
 .metaui-stats td:last-child { padding-right: 0 !important; }
@@ -433,8 +444,9 @@ body table.dataTable.no-footer { border-bottom: 1px solid var(--metaui-rule); }
 body table.dataTable thead > tr > th.sorting, body table.dataTable thead > tr > th.sorting_asc, body table.dataTable thead > tr > th.sorting_desc { position: relative; background-image: none !important; cursor: pointer; }
 body table.dataTable thead > tr > th.sorting::before, body table.dataTable thead > tr > th.sorting_asc::before, body table.dataTable thead > tr > th.sorting_desc::before { display: none; }
 body table.dataTable thead > tr > th.sorting::after, body table.dataTable thead > tr > th.sorting_asc::after, body table.dataTable thead > tr > th.sorting_desc::after { position: absolute; right: auto; top: auto; display: inline; margin-left: 2px; transform: none; color: var(--metaui-slate); opacity: 1; font-size: .6875rem; line-height: 1.75; }
-body table.dataTable thead > tr > th.sorting::after { content: "\2195"; color: var(--metaui-slate); }
-body table.dataTable thead > tr > th.sorting:hover::after { color: var(--metaui-ink); }
+/* Arrows mark the sorted column; the others show theirs on hover and keyboard focus. */
+body table.dataTable thead > tr > th.sorting::after { content: "\2195"; color: var(--metaui-slate); display: none; }
+body table.dataTable thead > tr > th.sorting:hover::after, body table.dataTable thead > tr > th.sorting:focus::after { display: inline; }
 body table.dataTable thead > tr > th.sorting_asc::after { content: "\2191"; color: var(--metaui-accent); }
 body table.dataTable thead > tr > th.sorting_desc::after { content: "\2193"; color: var(--metaui-accent); }
 body .dataTables_wrapper .dataTables_paginate, body .dataTables_wrapper .dataTables_info { font-size: .875rem; }
@@ -575,6 +587,8 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   table.metaui-estimates { --metaui-mark-y: 50%; }
   table.metaui-estimates, table.metaui-estimates > thead, table.metaui-estimates > tbody, table.metaui-estimates > tfoot { display: block; width: 100% !important; }
   table.metaui-estimates > thead > tr, table.metaui-estimates > tfoot > tr { display: block; padding-left: 58%; }
+  table.metaui-estimates > thead > tr { position: relative; }
+  table.metaui-estimates > thead > tr::before { content: 'Estimate [95% interval]'; position: absolute; left: 0; bottom: 5px; width: 56%; font-size: .75rem; font-weight: 600; line-height: 1.2; color: var(--metaui-slate); }
   table.metaui-estimates > thead > tr > th:not(.metaui-track-cell), table.metaui-estimates > tfoot > tr > td:not(.metaui-track-cell) { display: none; }
   table.metaui-estimates > thead > tr > th.metaui-track-cell, table.metaui-estimates > tfoot > tr > td.metaui-track-cell { display: block; width: 100% !important; min-width: 0; padding: 0 6px 4px !important; overflow: visible; }
   table.metaui-estimates > tfoot > tr > td.metaui-track-cell { border: 0; padding: 4px 6px 0 !important; }
@@ -584,7 +598,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   table.metaui-estimates > tbody > tr > td.num { font-size: .875rem; white-space: nowrap; }
   table.metaui-estimates > tbody > tr > td.num:nth-child(2) { margin-right: 6px; }
   table.metaui-estimates > tbody > tr > td.metaui-k, table.metaui-estimates > tbody > tr > td.metaui-unit, table.metaui-estimates > tbody > tr > td.metaui-fit { font-size: .8125rem; color: var(--metaui-slate); font-weight: 400; }
-  table.metaui-estimates > tbody > tr > td.metaui-k::before { content: '\A k = '; white-space: pre; font-style: italic; }
+  table.metaui-estimates > tbody > tr > td.metaui-k::before { content: '\A'; white-space: pre; }
   table.metaui-estimates > tbody > tr > td.metaui-unit:not(:empty)::after { content: ','; }
   table.metaui-estimates > tbody > tr > td.metaui-track-cell { display: block; position: absolute; top: 0; bottom: 0; right: 0; width: 42% !important; padding: 0 6px !important; overflow: hidden; }
   table.metaui-estimates > tbody > tr > td.metaui-reason-cell { display: block; padding: 2px 0 0 !important; }
@@ -600,7 +614,12 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   table.metaui-forest > tbody > tr.metaui-forest-closed { display: none; }
 .metaui-track-combined { border-radius: 0; background: var(--metaui-background); border: 1.5px solid var(--metaui-ink); box-sizing: border-box; }
 .metaui-forest .metaui-forest-single td:first-child { padding-left: 11px; }
-.metaui-forest-key { max-width: 110ch; }
+.metaui-forest-key { display: flex; flex-wrap: wrap; gap: 3px 18px; max-width: none; }
+.metaui-glyph { display: inline-block; vertical-align: 1px; margin-right: 6px; box-sizing: border-box; }
+.metaui-glyph-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--metaui-ink); }
+.metaui-glyph-square { width: 9px; height: 9px; border: 1.5px solid var(--metaui-ink); }
+.metaui-glyph-diamond { width: 9px; height: 9px; transform: rotate(45deg); background: var(--metaui-accent); }
+.metaui-glyph-dash { width: 0; height: 12px; vertical-align: -1px; border-left: 1px dashed var(--metaui-accent); }
 .metaui-forest-controls { display: flex; gap: 6px 18px; flex-wrap: wrap; }
 .metaui-forest-sort { border: 0; padding: 0; background: none; color: var(--metaui-accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
   table.metaui-forest .metaui-track { min-height: 0; }
