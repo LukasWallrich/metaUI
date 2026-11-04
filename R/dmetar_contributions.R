@@ -691,7 +691,6 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact 
     labels <- percent(round(blue) / 100)
     # Below the reference lines the label sits down and to the left, under the falling line.
     below <- label_y < blue
-    # The last value ends at its point, leaving the right margin to the line names.
     for (i in 1:5) text(x[i] + if (below[i] || i == 5L) -.0004 else .0005, label_y[i], labels[i], adj = if (below[i] || i == 5L) 1 else 0, col = accent, cex = .9, font = 2)
     ends <- c(blue[5], green[5], red[5])
     gap <- strheight("0", cex = .95) * 2

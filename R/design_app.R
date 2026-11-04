@@ -131,7 +131,7 @@ body{background:#edf3f7;color:#182f46;font-family:"Segoe UI",Arial,sans-serif;fo
 design_preview <- function(d) {
   # A fixed illustrative selection, using the generated UI's classes and CSS.
   html <- shiny::tagList(shiny::div(class = "container-fluid",
-    shiny::div(class = "metaui-header", shiny::h2("Example meta-analysis"), shiny::div(class = "metaui-brand", "Built with metaUI")),
+    shiny::div(class = "metaui-header", shiny::h2("Example meta-analysis")),
     shiny::div(class = "row",
       shiny::div(class = "col-sm-3", shiny::tags$form(class = "well", role = "complementary",
         shiny::h2(class = "metaui-panel-title", "Select effects"),

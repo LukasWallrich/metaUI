@@ -56,6 +56,19 @@
   });
 })();
 
+/* Wide screens: the filters stay in view down long tabs, in the height left under the header. */
+(function () {
+  function fit() {
+    var form = document.querySelector('form.well');
+    if (!form || !form.parentElement) return;
+    var top = Math.max(0, form.parentElement.getBoundingClientRect().top);
+    form.style.setProperty('--metaui-sidebar-height', (window.innerHeight - top) + 'px');
+  }
+  window.addEventListener('scroll', fit, { passive: true });
+  window.addEventListener('resize', fit);
+  document.addEventListener('DOMContentLoaded', fit);
+})();
+
 /* Expandable author-written filter help; independent of Bootstrap version. */
 (function ($) {
   'use strict';

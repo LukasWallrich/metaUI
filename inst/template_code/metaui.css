@@ -49,7 +49,7 @@ p { margin: 0 0 .6em; }
 .metaui-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; align-items: baseline; padding: 16px 28px 14px; border-bottom: 1px solid var(--metaui-rule); }
 .metaui-header h2 { font-size: 1.625rem; line-height: 1.2; margin: 0; max-width: 60ch; grid-column: 1; }
 .metaui-header .metaui-brand { grid-column: 2; grid-row: 1; font-size: .8125rem; color: var(--metaui-slate); white-space: nowrap; }
-.metaui-intro { grid-column: 1; margin-top: 6px; color: var(--metaui-slate); max-width: 80ch; }
+.metaui-intro { grid-column: 1; margin-top: 6px; color: var(--metaui-slate); max-width: 110ch; }
 .metaui-intro p { margin: 0; }
 .metaui-header h2, .metaui-header .metaui-brand { color: inherit; }
 .metaui-header h2 { color: var(--metaui-ink); }
@@ -60,6 +60,8 @@ p { margin: 0 0 .6em; }
   .container-fluid > .row > .col-sm-3:has(> form.well) { flex: 0 0 292px; width: 292px; float: none; padding: 0; }
   .container-fluid > .row > .col-sm-3:has(> form.well) + .col-sm-9 { flex: 1 1 0; width: auto; min-width: 0; float: none; padding: 16px 28px 40px; }
   .row:has(> .col-sm-3 > form.well)::before, .row:has(> .col-sm-3 > form.well)::after { display: none; }
+  .container-fluid > .row > .col-sm-3:has(> form.well) { background: var(--metaui-surface); border-right: 1px solid var(--metaui-rule); }
+  form.well { position: sticky; top: 0; height: auto; max-height: var(--metaui-sidebar-height, 100vh); overflow-y: auto; scrollbar-width: thin; border-right: 0; }
 }
 
 /* Selection panel */
@@ -87,7 +89,9 @@ input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 
 .metaui-preview-track::before, .metaui-preview-track::after { content: ''; position: absolute; top: -7px; width: 17px; height: 17px; background: var(--metaui-panel); border: 2px solid var(--metaui-accent); border-radius: 50%; }
 .metaui-preview-track::before { left: -8.5px; }
 .metaui-preview-track::after { right: -8.5px; }
-.metaui-preview-ends { display: flex; justify-content: space-between; margin: 9px 5px 0; font-size: .75rem; color: var(--metaui-slate); }
+.metaui-preview-ends span:first-child { transform: translateX(-50%); }
+.metaui-preview-ends span:last-child { transform: translateX(50%); }
+.metaui-preview-ends { display: flex; justify-content: space-between; margin: 9px 16px 0; font-size: .75rem; color: var(--metaui-slate); }
 .metaui-preview-select { margin: 0; padding: 7px 10px; font-size: .9375rem; line-height: 1.43; color: var(--metaui-ink); background: var(--metaui-panel); border: 1px solid var(--metaui-rule); border-radius: var(--metaui-radius); }
 .metaui-preview-select { position: relative; }
 .metaui-preview-select::after { content: ''; position: absolute; right: 12px; top: 50%; margin-top: -2px; border-top: 4px solid var(--metaui-ink); border-left: 4px solid transparent; border-right: 4px solid transparent; }
@@ -195,7 +199,8 @@ html.shiny-busy .metaui-actions #go { opacity: .75; }
 .nav-tabs > li { float: none; margin: 0 0 -1px; }
 .nav-tabs > li > a { text-decoration: none; margin: 0; padding: 8px 0 7px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--metaui-slate); font-size: .9375rem; font-weight: 400; }
 .nav-tabs > li > a:hover, .nav-tabs > li > a:focus { background: none; border: 0; border-bottom: 2px solid var(--metaui-rule); color: var(--metaui-ink); }
-.nav-tabs > li.active > a, .nav-tabs > li.active > a:hover, .nav-tabs > li.active > a:focus { background: none; border: 0; border-bottom: 2px solid var(--metaui-accent); color: var(--metaui-ink); font-weight: 600; }
+/* Colour and rule mark the tab; a bolder word would nudge the tabs after it. */
+.nav-tabs > li.active > a, .nav-tabs > li.active > a:hover, .nav-tabs > li.active > a:focus { background: none; border: 0; border-bottom: 2px solid var(--metaui-accent); color: var(--metaui-ink); }
 .tab-content { padding: 4px 0 0; background: none; }
 .tab-content h3:first-child, .tab-content .shiny-panel-conditional > h3:first-child { margin-top: 18px; }
 
@@ -258,6 +263,8 @@ html.shiny-busy #primary_estimate:empty::before { content: "Fitting the models\2
 .metaui-level-inline { display: none; font-size: .8125rem; font-weight: 400; color: var(--metaui-slate); line-height: 1.3; }
 .metaui-estimates .metaui-fit { color: var(--metaui-slate); white-space: nowrap; }
 .metaui-primary-row td:first-child, .metaui-primary-row td.num { font-weight: 600; }
+.metaui-primary-row > td { border-bottom-color: var(--metaui-slate) !important; }
+.metaui-other-estimators { margin-top: 2px; }
 .metaui-estimates td.metaui-track-cell { overflow: hidden; }
 tfoot.metaui-phone-axis { display: none; }
 .metaui-track-diamond { top: var(--metaui-mark-y); height: 15px; margin-top: -7.5px; background: var(--metaui-accent); }
@@ -302,6 +309,7 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-forest tbody tr:not(.metaui-forest-study):not(.metaui-forest-single):not(.metaui-primary-row) td { border-bottom-color: transparent; }
 .metaui-forest tbody tr:has(+ .metaui-forest-study) td, .metaui-forest tbody tr:has(+ .metaui-forest-single) td { border-bottom-color: var(--metaui-rule) !important; }
 .metaui-forest .metaui-primary-row td { padding-top: 4px !important; padding-bottom: 4px !important; }
+.metaui-forest .metaui-primary-row td.metaui-track-cell { padding-top: 0 !important; padding-bottom: 0 !important; }
 .metaui-forest .metaui-forest-study td { padding-top: 5px !important; border-bottom-color: transparent; }
 .metaui-forest .metaui-forest-effect td:first-child { padding-left: 14px; color: var(--metaui-slate); }
 .metaui-forest .metaui-track-ci { margin-top: -.5px; border-top-width: 1px; }
@@ -313,10 +321,10 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-stats tbody tr:first-child td { border-top: 1px solid var(--metaui-ink); }
 .metaui-stats { width: 100% !important; }
 /* Single results read as label and value, at the width of the plots above them. */
-#eggers .table, #heterogeneity .table { width: 100%; max-width: 760px; margin-bottom: 14px; }
+#eggers .table, #heterogeneity .table, .metaui-zstats { width: 100% !important; max-width: 480px; margin-bottom: 14px; }
 #eggers .table tbody tr:first-child td, #heterogeneity .table tbody tr:first-child td { border-top: 1px solid var(--metaui-ink); }
 #eggers .table td, #heterogeneity .table td { padding-top: 4px !important; padding-bottom: 4px !important; }
-.metaui-warning-text { color: var(--metaui-attention); }
+.metaui-note.metaui-warning-text { color: var(--metaui-attention); }
 .metaui-stats td.num, .metaui-stats th.num { text-align: right; }
 .metaui-stats td { padding-top: 4px !important; padding-bottom: 4px !important; }
 /* Plots keep a readable aspect ratio rather than stretching across the page */
@@ -381,6 +389,7 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 
 /* Forest plot downloads */
 .metaui-export-actions { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 6px 0 12px; }
+@media (min-width: 1000px) { .metaui-export-actions { justify-content: flex-end; margin-top: -40px; margin-bottom: 18px; } }
 .metaui-export-actions .btn { padding: 0; background: none; border: 0; color: var(--metaui-accent); text-decoration: underline; text-underline-offset: 2px; }
 .metaui-export-actions .btn:hover { background: none; color: var(--metaui-hover); }
 .metaui-export-actions .btn i, .metaui-export-actions .btn svg { display: none; }
@@ -402,10 +411,9 @@ body table.dataTable tbody tr, body table.dataTable.stripe tbody tr.odd, body ta
 body table.dataTable.no-footer { border-bottom: 1px solid var(--metaui-rule); }
 body table.dataTable thead > tr > th.sorting, body table.dataTable thead > tr > th.sorting_asc, body table.dataTable thead > tr > th.sorting_desc { position: relative; background-image: none !important; cursor: pointer; }
 body table.dataTable thead > tr > th.sorting::before, body table.dataTable thead > tr > th.sorting_asc::before, body table.dataTable thead > tr > th.sorting_desc::before { display: none; }
-body table.dataTable thead > tr > th.sorting::after, body table.dataTable thead > tr > th.sorting_asc::after, body table.dataTable thead > tr > th.sorting_desc::after { position: static; display: inline; margin-left: 3px; transform: none; color: var(--metaui-slate); opacity: 1; font-size: .75rem; line-height: 1; }
-/* A sort arrow marks the sorted column; the others show theirs on hover or focus. */
-body table.dataTable thead > tr > th.sorting::after { content: "\2195"; color: transparent; }
-body table.dataTable thead > tr > th.sorting:hover::after, body table.dataTable thead > tr > th.sorting:focus::after { color: var(--metaui-slate); }
+body table.dataTable thead > tr > th.sorting::after, body table.dataTable thead > tr > th.sorting_asc::after, body table.dataTable thead > tr > th.sorting_desc::after { position: absolute; right: auto; top: auto; display: inline; margin-left: 2px; transform: none; color: var(--metaui-slate); opacity: 1; font-size: .75rem; line-height: 1.6; }
+body table.dataTable thead > tr > th.sorting::after { content: "\2195"; color: var(--metaui-slate); }
+body table.dataTable thead > tr > th.sorting:hover::after { color: var(--metaui-ink); }
 body table.dataTable thead > tr > th.sorting_asc::after { content: "\2191"; color: var(--metaui-accent); }
 body table.dataTable thead > tr > th.sorting_desc::after { content: "\2193"; color: var(--metaui-accent); }
 body .dataTables_wrapper .dataTables_paginate, body .dataTables_wrapper .dataTables_info { font-size: .875rem; }
@@ -416,7 +424,7 @@ body .dataTables_wrapper .dataTables_paginate .paginate_button:hover { color: va
 body .dataTables_wrapper .dataTables_paginate .ellipsis { color: var(--metaui-slate); }
 #moderation_table td { white-space: nowrap; }
 #sample_table tbody td:not(:first-child) { white-space: nowrap; }
-#pcurve_notes, #zcurve_statistics, #funnel_key, #distribution_note, .metaui-zstats { max-width: 760px; }
+#pcurve_notes, #zcurve_statistics, #funnel_key, #distribution_note { max-width: 760px; }
 #distribution_note { margin-top: 12px; }
 .metaui-reading { font-size: .9375rem; margin: 4px 0 8px; max-width: 72ch; }
 .metaui-reading b { font-weight: 600; }
@@ -486,6 +494,13 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .metaui-moderation-grid { grid-template-columns: 1fr; }
 }
 
+/* Short windows: tighter filters, so more of them fit above the update bar. */
+@media (min-width: 768px) and (max-height: 760px) {
+  .well { padding-top: 12px; }
+  .metaui-panel-title { margin-bottom: 8px; }
+  .well .shiny-input-container { margin-bottom: 10px; }
+}
+
 /* Phones: filters collapse behind a toggle (metaui.js); wide tables become one card per row. */
 .metaui-filters-toggle { display: none; }
 @media (max-width: 767px) {
@@ -499,6 +514,8 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   /* Closed, the panel is one row, plus the update button once there is something to apply. */
   .metaui-actions, .well .metaui-share, .well .metaui-data-tools, .well #link_notice:empty { display: none; }
   .well:has(.metaui-open) .metaui-actions, .metaui-actions:has(#go.metaui-needs-run) { display: grid; }
+  .metaui-actions:has(.metaui-preview-state) { display: grid; margin-top: 8px; }
+  .metaui-actions:has(.metaui-preview-state) #resetFilters { display: none; }
   .well:has(.metaui-open) .metaui-share, .well:has(.metaui-open) .metaui-data-tools { display: block; }
   .metaui-panel-title { display: none; }
   .metaui-filters-toggle { display: block; width: 100%; margin-bottom: 0; text-align: center !important; background: var(--metaui-panel); color: var(--metaui-accent); border: 1px solid var(--metaui-rule); }
@@ -512,7 +529,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .metaui-share { margin-top: 8px; }
   .container-fluid > .row > .col-sm-9 { padding-top: 12px; padding-bottom: 28px; }
   /* Every section stays in view: the tabs wrap, with one rule under the whole block. */
-  .nav-tabs { gap: 0 18px; }
+  .nav-tabs { gap: 0 18px; border-bottom: 0; }
   .nav-tabs > li { margin: 0; }
   .nav-tabs > li > a { padding: 6px 0 5px; white-space: nowrap; }
   h3 { font-size: 1.25rem; }

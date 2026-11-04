@@ -51,7 +51,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       diagnostics_main <- HTML("<h3>Distribution of effect sizes</h3><p class=\'metaui-note\'>Dots mark effects more than 1.5 interquartile ranges (IQR) beyond the middle 50%. Hover over a dot for its study and <i>z</i>-score.</p>")
       diagnostics_het <- HTML("<h3>Heterogeneity (REML multilevel model)</h3>")
 
-      forest_note <- HTML("<p class=\'metaui-note\'>Observed effects with normal 95% sampling intervals (no shrinkage), grouped by study. Larger markers are more precise effects. Diamonds: multilevel and robust variance estimation (RVE) summaries. Effects keep their numbers from the full dataset, so a selection can leave gaps.{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
+      forest_note <- HTML("<p class=\'metaui-note\'>Observed effects with normal 95% sampling intervals (no shrinkage), grouped by study. Diamonds: multilevel and robust variance estimation (RVE) summaries. Effects keep their numbers from the full dataset, so a selection can leave gaps.{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
       zscore_help <- HTML("<p class=\'metaui-help-text\'>z = (effect - mean of all built effects) / their SD, on the fitting scale. Descriptive only.</p>")
       # Result tabs show not_analysed until the first analysis has finished. A tab with
       # precomputed content (opening = TRUE) shows it from the first paint instead.
@@ -217,7 +217,6 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
     titlePanel(
     windowTitle = {paste(deparse(paste0(dataset_name, " - metaUI")), collapse = "\n")},
     title = {get_favicon_tag(dataset_name)}),
-    div(class = "metaui-brand", "Built with metaUI"),
     if (nzchar(welcome_text)) div(class = "metaui-intro", welcome_text)),
     sidebarLayout(
       sidebarPanel(
@@ -281,7 +280,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
               model_help),
             tags$details(class = "metaui-help metaui-equivalence", tags$summary("Assess practical equivalence"),
             htmltools::tagAppendAttributes(numericInput("sesoi", "Smallest effect size of interest",
-              value = NA_real_, min = 0), placeholder = "for example 0.20", .cssSelector = "input"),
+              value = NA_real_, min = 0), placeholder = "Enter a bound", .cssSelector = "input"),
             p(class = "metaui-note", "A symmetric bound, on the scale of the estimates. There is no universal default; justify it substantively. Changing it reassesses the existing intervals without refitting."),
             div(class = "metaui-scroll", tableOutput("equivalence")),
             uiOutput("equivalence_note")))
@@ -302,13 +301,13 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
           {if (!is.null(opts$bayesian)) \'tabPanel("Bayesian sensitivity", results_panel(p(class = "metaui-note", "Study-level normal-normal model: flat prior on the mean; half-normal prior on heterogeneity at half, baseline and double its scale. Effects are combined within studies by the declared correlation or first effect per study. tau is on the fitting scale. Intervals are 95% central credible intervals and depend on the prior."), tableOutput("bayesian_sensitivity"))),\' else ""}
           {if (length(metaUI_computation_specs(data))) \'tabPanel("Effect computations", results_panel(p(class = "metaui-note", "The selected effects under each author-defined computation; multilevel and RVE models only. The z-score filter uses the primary computation."), div(class = "metaui-scroll", tableOutput("computation_comparison")))),\' else ""}
           {generate_mod_tab(data, any_filters)}
-          tabPanel("Forest plot", results_panel(tags$h3("Effects by study"), forest_note, uiOutput("forest_panel"))),
+          tabPanel("Forest plot", results_panel(tags$h3("Effects by study"), uiOutput("forest_panel"), forest_note)),
           tabPanel(
             "Publication bias", results_panel(qrppb_main, funnel_main, uiOutput("funnel_key"), div(class = "metaui-plot", plotOutput("funnel", width = "100%", height = 400) %>% shinycssloaders::withSpinner()),
             eggers_main, uiOutput("eggers_reading"), div(class = "metaui-scroll", tableOutput("eggers")),
             firstvalues,
-            pcurve_main, div(class = "metaui-scroll metaui-plot", plotOutput("pcurve", height = "auto") %>% shinycssloaders::withSpinner()), uiOutput("pcurve_notes"),
-            zcurve_main, div(class = "metaui-scroll metaui-plot", plotOutput("zcurve", height = "auto") %>% shinycssloaders::withSpinner()),
+            pcurve_main, uiOutput("pcurve_reading"), div(class = "metaui-scroll metaui-plot", plotOutput("pcurve", height = "auto") %>% shinycssloaders::withSpinner()), uiOutput("pcurve_notes"),
+            zcurve_main, uiOutput("zcurve_reading"), div(class = "metaui-scroll metaui-plot", plotOutput("zcurve", height = "auto") %>% shinycssloaders::withSpinner()),
             uiOutput("zcurve_statistics"),
             div(class = "metaui-note metaui-warning-text", textOutput("zcurve_warnings")))
           ),
@@ -694,7 +693,7 @@ glue_string <- ('
       if (row$status == "ok" && !is.na(row$LCL) && !is.na(row$UCL)) tags$p(class = "metaui-primary-label", paste0(
         if (row$LCL > 0 || row$UCL < 0) "The interval excludes zero." else "The interval includes zero.",
         { others <- table[-index[1], , drop = FALSE]; others <- others[others$status == "ok", , drop = FALSE]
-          if (nrow(others) > 1L) paste0(" Across the ", nrow(others), " explorations, estimates range from ", fmt(min(others$es)), " to ", fmt(max(others$es)), ".") else "" },
+          if (nrow(others) > 1L) paste0(" Across the ", nrow(others), " other estimators, estimates range from ", fmt(min(others$es)), " to ", fmt(max(others$es)), ".") else "" },
         switch(metaUI__df$metaUI__direction[1], positive = " Positive values are in the direction the authors expected.",
           negative = " Negative values are in the direction the authors expected.", ""))),
       if (row$status == "ok" && nzchar(row$warnings)) tags$p(class = "metaui-primary-warning", paste("Warnings:", row$warnings)))
@@ -1075,10 +1074,9 @@ glue_string <- ('
     eggers <- metaUI_egger(as.numeric(meta_agg$yi), sqrt(meta_agg$vi))
     shiny::validate(shiny::need(!is.null(eggers$estimate),
       "Egger test requires at least three studies."))
+    # t and p are in the sentence above.
     metaUI_statistics_rows(data.frame(
       "Intercept" = round_(eggers$estimate[1], 3), "Residual variance (&tau;<sup>2</sup>)" = round_(eggers$tau^2, 3),
-      "<i>t</i>" = round_(eggers$statistic, 3),
-      "<i>p</i>" = ifelse(round(eggers$p.value, 3) == 0, "< .001", sub("^0", "", round_(eggers$p.value, 3))),
       check.names = FALSE
     ))
   }, colnames = FALSE, sanitize.text.function = function(x) x, align = "lr")
@@ -1088,6 +1086,13 @@ glue_string <- ('
 
   # Phone-width p-curves show their notes and test results as text below the plot.
   pcurve_notes <- reactiveVal(NULL)
+  output$pcurve_reading <- renderUI({
+    notes <- pcurve_notes()
+    req(notes)
+    p(class = "metaui-reading", HTML(if (identical(notes$present, "yes")) "The <i>p</i>-curve <b>indicates evidential value</b>: it is right-skewed, as expected when significant results reflect real effects rather than selective reporting alone."
+      else if (identical(notes$absent, "yes")) "The <i>p</i>-curve <b>indicates that evidential value is absent or inadequate</b>: it is flatter than expected at 33% power."
+      else "The <i>p</i>-curve is <b>inconclusive</b>: it neither shows clear right skew nor rejects 33% power."))
+  })
   output$pcurve_notes <- renderUI({
     notes <- pcurve_notes()
     if (!length(notes)) return(NULL)
@@ -1103,10 +1108,13 @@ glue_string <- ('
     selected <- tryCatch(metaUI_pcurve_data(df), error = function(e) e)
     validate(need(!inherits(selected, "error"), if (inherits(selected, "error")) conditionMessage(selected) else ""))
     message("P-curve direction-contrary exclusions: ", attr(selected, "direction_exclusions"))
-    graphics::par(metaUI_base_par(plot_colours))
-    result <- tryCatch(pcurve(selected, effect.estimation = FALSE, compact = TRUE, accent = plot_colours$accent), error = function(e) e)
+    # pcurve() draws as it computes; its drawing goes nowhere, the plot below uses its values.
+    grDevices::pdf(NULL)
+    result <- tryCatch(pcurve(selected, effect.estimation = FALSE, compact = TRUE, accent = plot_colours$accent), error = function(e) e, finally = grDevices::dev.off())
     validate(need(!inherits(result, "error"), if (inherits(result, "error")) conditionMessage(result) else ""))
-    pcurve_notes(list(stats = result$stats, text = c(result$notes, paste0("Direction-contrary exclusions: ", attr(selected, "direction_exclusions"), "."))))
+    pcurve_notes(list(stats = result$stats, text = c(result$notes, paste0("Direction-contrary exclusions: ", attr(selected, "direction_exclusions"), ".")),
+      present = result$EvidencePresent, absent = result$EvidenceAbsent))
+    metaUI_pcurve_plot(result$PlotData, plot_colours)
   }, width = function() max(420, session$clientData$output_pcurve_width),
     height = function() if (isTRUE(session$clientData$output_pcurve_width < 600)) 380 else 400)
 
@@ -1130,6 +1138,15 @@ glue_string <- ('
     value <- zcurve_fit()
     paste(if (inherits(value$result, "error")) paste("Not estimated:", conditionMessage(value$result)) else "",
           if (length(value$warnings)) paste(if (length(value$warnings) == 1L) "Warning:" else "Warnings:", paste(value$warnings, collapse = "; ")) else "")
+  })
+
+  output$zcurve_reading <- renderUI({
+    value <- zcurve_fit()
+    req(!inherits(value$result, "error"))
+    lines <- attr(metaUI_zcurve_plot(value$result, plot_colours), "statistics")
+    rate <- function(i) regmatches(lines[i], regexpr("[0-9.]+", lines[i]))
+    p(class = "metaui-reading", HTML(paste0("<b>", rate(4), "</b> of these tests are significant (observed discovery rate). Without selective reporting, the fit expects <b>", rate(6),
+      "</b> (expected discovery rate); a lower value suggests selection. It expects <b>", rate(8), "</b> of the significant results to be significant again in exact replications (expected replicability rate).")))
   })
 
   output$zcurve_statistics <- renderUI({
