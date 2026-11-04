@@ -90,8 +90,8 @@ summarise_numeric <- function(x, name) {
   }
   tibble::tribble(
     ~Var, ~`Mean (SD)`, ~`Min`, ~`Max`, ~`Share missing`,
-    name, paste0(round(mean(x, na.rm = TRUE), 2), " (", round(sd(x, na.rm = TRUE), 2), ")"),
-    round(min(x, na.rm = TRUE), 2), round(max(x, na.rm = TRUE), 2), paste0(round(mean(is.na(x))*100, 2), " %")
+    name, paste0(round(mean(x, na.rm = TRUE), if (abs(mean(x, na.rm = TRUE)) >= 100) 1 else 2), " (", round(sd(x, na.rm = TRUE), if (abs(mean(x, na.rm = TRUE)) >= 100) 1 else 2), ")"),
+    round(min(x, na.rm = TRUE), 2), round(max(x, na.rm = TRUE), 2), paste0(round(mean(is.na(x))*100, 1), "%")
   )  %>% dplyr::mutate(dplyr::across(dplyr::everything(), as.character))  %>%
     tidyr::pivot_longer(dplyr::everything(), names_to = "Statistic", values_to = "Value")
 }

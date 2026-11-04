@@ -1,5 +1,18 @@
 # metaUI (development version)
 
+* Redesigned the generated apps' reader interface. The Summary now leads with one
+  sentence stating the primary estimate. A single table draws every model's interval on
+  a shared axis, replacing the separate plot and table, and gives reasons in the row
+  when a model was not estimated. The forest plot and categorical moderators use the
+  same table form; the forest plot's PDF and PNG downloads are unchanged in content.
+  Effect distributions are histograms rather than violin plots, and numeric moderator
+  plots now draw the fitted multilevel model rather than an unweighted line. The first
+  screen shows the effects as a dot histogram without fitting any model. An empty
+  selection is explained in the page instead of a dialog.
+* Apps bundle the open-licensed Source Sans 3 and Source Serif 4 fonts (about 200 KB).
+  Plots use Source Sans where `ragg` and `systemfonts` are installed. `app_design()`
+  now defaults to these fonts and a forest green accent, and gains `font = "source"`.
+  The earlier palette remains available as `accent = "#096B74"`.
 * Author-enabled p-curve effect estimates now report a failed fit, with the reason,
   when the estimate falls below zero. Previously such an estimate was reported
   with a sign opposite to the declared direction.

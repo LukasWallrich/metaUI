@@ -3,6 +3,17 @@
 // slider's range. Hide any label that would overlap a neighbour, keeping both ends.
 (function () {
   function declutter() {
+    // The chosen range is written beside the filter name; the scale ends stay under the track.
+    document.documentElement.classList.add('metaui-js');
+    document.querySelectorAll('.irs').forEach(function (slider) {
+      var from = slider.querySelector('.irs-from'), to = slider.querySelector('.irs-to');
+      var container = slider.closest('.shiny-input-container');
+      var label = container && container.querySelector('.control-label');
+      if (!from || !to || !label) return;
+      var range = label.querySelector('.metaui-range');
+      if (!range) { range = document.createElement('span'); range.className = 'metaui-range'; label.appendChild(range); }
+      range.textContent = from.textContent + ' to ' + to.textContent;
+    });
     document.querySelectorAll('.irs').forEach(function (slider) {
       var labels = Array.prototype.slice.call(slider.querySelectorAll(':scope > .irs-grid > .irs-grid-text'));
       if (labels.length < 3) return;
@@ -207,7 +218,7 @@
     // DataTables headers stay visible on phones as sort buttons when sorting is useful.
     table.classList.toggle('metaui-stack-sortable', rows.length > 1 && !!head.querySelector('.sorting, .sorting_asc, .sorting_desc, .dt-orderable-asc, .dt-orderable-desc'));
   }
-  function stackAll() { document.querySelectorAll('.tab-content table').forEach(stack); }
+  function stackAll() { document.querySelectorAll('.tab-content table:not(.metaui-custom)').forEach(stack); }
   var timer;
   function schedule() { clearTimeout(timer); timer = setTimeout(stackAll, 30); }
   $(document).on('draw.dt', function (event, settings) { if (settings && settings.nTable) stack(settings.nTable); });

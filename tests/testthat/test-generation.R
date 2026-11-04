@@ -22,7 +22,7 @@ test_that("headless app loads and runs the generated server", {
   # insertUI() fills a plain div; an unrendered uiOutput() would stay greyed out
   expect_match(as.character(env$ui), '<div id="z_score_filter"></div>', fixed = TRUE)
   server_code <- readLines("server.R")
-  expect_true(any(grepl('formatRound("Effect size", digits = 3)', server_code, fixed = TRUE)))
+  expect_true(any(grepl('union("Effect size", decimals)', server_code, fixed = TRUE)))
   # need() evaluates its message eagerly, so condition messages must be built only on failure
   expect_false(any(grepl("need(!inherits(", server_code, fixed = TRUE) & grepl("attr(", server_code, fixed = TRUE)))
   expect_true(any(grepl("shiny::validate(shiny::need(FALSE, paste(", server_code, fixed = TRUE)))
@@ -46,7 +46,7 @@ test_that("headless app loads and runs the generated server", {
     expect_equal(table$fit_es[1], as.numeric(ref$b), tolerance=1e-8)
     expect_true(nzchar(output$effectestimate))
     expect_true(nzchar(output$heterogeneity))
-    expect_true(is.list(output$foreststudies))
+    expect_true(nzchar(output$foreststudies))
     expect_false(estimatesreactive()$cache_hit)
     # Unapplied edits are flagged; displayed results keep the applied selection.
     session$setInputs(outliers_z_scores = c(0, z_range[2]))
@@ -59,7 +59,7 @@ test_that("headless app loads and runs the generated server", {
     expect_true(estimatesreactive()$cache_hit)
     expect_match(output$calculation_status, "Reused")
     expect_identical(estimatesfiltered()$fit_es, table$fit_es)
-    expect_match(output$effectestimate, "95% interval")
+    expect_match(output$effectestimate, "95% CI")
   })
   # A separate reader starts with a separate cache.
   shiny::testServer(env$server, {
@@ -205,7 +205,7 @@ test_that("categorical CSV filters are explicitly mapped and deterministic", {
     expect_equal(estimatesfiltered()$input_rows[1],16)
     expect_true(nzchar(output$summary_metaUI__filter_Region_table))
     expect_true(nzchar(output$summary_metaUI__filter_Year_table))
-    expect_true(is.list(output$summary_metaUI__filter_Region_plot))
+    expect_true(is.list(output$summary_metaUI__filter_Year_plot))
   })
 })
 
@@ -271,15 +271,14 @@ test_that("authors can declare one primary model that is never substituted", {
       expect_match(card, "Primary analysis, declared by the authors")
       expect_match(card, primary, fixed = TRUE)
       # The declared model is listed first in the reader table.
-      expect_match(table, paste0("<tbody>\\s*<tr>\\s*<td> primary </td>\\s*<td> ", primary, " </td>"))
-      expect_true(is.list(output$model_comparison))
+      expect_match(table, paste0('<tbody><tr class="metaui-primary-row"><td>', primary), fixed = TRUE)
       if (primary == "P-uniform star") {
         expect_match(card, "Not estimated for this selection \\(unsupported\\)")
         expect_match(card, "does not substitute another model")
         expect_false(grepl("CI \\[", card))
       } else {
         rve <- estimatesfiltered()[estimatesfiltered()$Model == primary, ]
-        expect_match(card, formatC(rve$es, format = "f", digits = 2), fixed = TRUE)
+        expect_match(card, metaUI:::metaUI_minus(formatC(rve$es, format = "f", digits = 2)), fixed = TRUE)
       }
       provenance <- data_list()$provenance
       expect_identical(provenance$value[provenance$field == "primary_model"], primary)
@@ -293,7 +292,7 @@ test_that("authors can declare one primary model that is never substituted", {
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
     expect_match(as.character(output$primary_estimate$html), "have not marked a primary model")
-    expect_false(grepl("Role", output$effectestimate))
+    expect_false(grepl("metaui-primary-row", output$effectestimate))
   })
 })
 
@@ -322,7 +321,7 @@ test_that("status and summaries show filter labels with spaces, not input IDs", 
     session$setInputs(outliers_z_scores = c(-10, 10), `metaUI__filter_Risk_of_bias` = c(0, 1),
       `metaUI__filter_Risk_of_bias_include_NA` = TRUE, go = 1)
     expect_match(output$selection_status, "Risk of bias: 0", fixed = TRUE)
-    expect_match(output$summary_metaUI__filter_Risk_of_bias_table, "Risk of bias", fixed = TRUE)
+    expect_false(grepl("Risk_of_bias", output$summary_metaUI__filter_Risk_of_bias_table, fixed = TRUE))
   })
 })
 
@@ -336,7 +335,7 @@ test_that("filters with quoted levels and URL columns generate a working app", {
     save_to_folder = path, launch_app = FALSE, date = "2026-10-05")
   server_code <- readLines(file.path(path, "server.R"))
   # dom = "t" hides the pager, so paging would silently drop levels beyond the 10th
-  expect_true(any(grepl('dom = "t", paging = FALSE', server_code, fixed = TRUE)))
+  expect_true(any(grepl("metaUI_moderator_html(", server_code, fixed = TRUE)))
   # URL and Study cells are built (and escaped) with htmltools and must not be re-escaped
   expect_true(any(grepl('escape = setdiff(names(out), c("URL", "Study", "metaUI__details"))', server_code, fixed = TRUE)))
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
@@ -348,7 +347,6 @@ test_that("filters with quoted levels and URL columns generate a working app", {
       metaUI__filter_Age = c(0, 100), metaUI__filter_Age_include_NA = TRUE, go = 1)
     expect_equal(nrow(df_filtered()), 16)
     # Numeric moderators are rounded to 2 decimals, effect sizes to 3
-    expect_match(output$sample_table, "formatRound(data, 2, 3", fixed = TRUE)
-    expect_match(output$sample_table, "formatRound(data, 3, 3", fixed = TRUE)
+    expect_match(output$sample_table, "toFixed(2)", fixed = TRUE)
   })
 })

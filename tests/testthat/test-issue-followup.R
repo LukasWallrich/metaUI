@@ -33,7 +33,7 @@ test_that("oversized forest selections show HTML without creating a plot output"
     state_values$uploaded_data <- d[1:8, ]
     session$setInputs(go = 2)
     expect_match(output$forest_panel$html, 'id="foreststudies"', fixed = TRUE)
-    expect_true(is.list(output$foreststudies))
+    expect_true(nzchar(output$foreststudies))
   })
 })
 

@@ -46,7 +46,7 @@ async function readable(locator,label,pseudo=null) {
   const paging=await readable(page.locator('#sample_table .dataTables_paginate .paginate_button'),'Pagination');
   await page.locator('#sample_table').scrollIntoViewIfNeeded();
   await page.screenshot({path:path.join(evidence,'dark-sample.png')});
-  await page.getByRole('tab',{name:'Publication Bias',exact:true}).click();
+  await page.getByRole('tab',{name:'Publication bias',exact:true}).click();
   await page.locator('#eggers table thead th').first().waitFor();
   const biasHeaders=await readable(page.locator('#eggers table thead th'),'Egger headers');
   await page.getByRole('tab',{name:'Moderation',exact:true}).click();
@@ -58,13 +58,12 @@ async function readable(locator,label,pseudo=null) {
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.getByText('Assess practical equivalence',{exact:true}).click();
   await readable(page.locator('#sesoi'),'Equivalence input');
-  const beforeBound=await page.locator('#model_comparison img').getAttribute('src');
-  await page.locator('#sesoi').fill('0.3');
-  await page.waitForFunction(before=>{const img=document.querySelector('#model_comparison img');return img?.naturalWidth>0&&img.src!==before;},beforeBound);
+    await page.locator('#sesoi').fill('0.3');
+  await page.waitForFunction(()=>document.querySelector('#effectestimate .metaui-track-band'));
   await page.evaluate(()=>window.scrollTo(0,0));
   await page.screenshot({path:path.join(evidence,'dark-equivalence.png')});
-  await page.getByRole('tab',{name:'Forest Plot',exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('#foreststudies img')?.naturalWidth>0);
+  await page.getByRole('tab',{name:'Forest plot',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#foreststudies table'));
   await page.screenshot({path:path.join(evidence,'dark-forest.png')});
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.evaluate(()=>{

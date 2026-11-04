@@ -165,8 +165,8 @@ test_that("study information is stored at build time and shown as escaped, keybo
   expect_identical(cells$details, c(details[1], "", details[2]))
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
-    expect_match(output$sample_table, '{"targets":5,"visible":false,"searchable":false}', fixed = TRUE)
-    expect_match(output$sample_table, '"name":"metaUI__details","targets":5', fixed = TRUE)
+    expect_match(output$sample_table, '[{]"targets":[0-9]+,"visible":false,"searchable":false[}]')
+    expect_match(output$sample_table, '"name":"metaUI__details","targets":[0-9]+')
   })
   setwd(wd)
   # Rebuilding without study information removes the stored file.

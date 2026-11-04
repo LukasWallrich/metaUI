@@ -88,8 +88,8 @@ function reproduce(script, workbook, selected) {
   await page.getByRole('tab',{name:'Sample',exact:true}).click();
   await page.locator('#sample_overview table').waitFor();
   assert.equal(await page.locator('#sample_overview').innerText(), overview);
-  await page.getByRole('tab',{name:'Forest Plot',exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('#foreststudies img')?.naturalWidth>0);
+  await page.getByRole('tab',{name:'Forest plot',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#foreststudies table'));
   for (const [id, extension] of [['forest_pdf','pdf'], ['forest_png','png'], ['forest_csv','csv']]) {
     const pending = page.waitForEvent('download');
     await page.locator('#' + id).click();
@@ -104,11 +104,11 @@ function reproduce(script, workbook, selected) {
   }
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.getByText('Assess practical equivalence', {exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('No bound chosen'));
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval is contained'));
   await page.locator('#sesoi').fill('1');
   await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval within bounds'));
   const equivalenceHeader = await page.locator('#equivalence thead').innerText();
-  for (const column of ['assessment','threshold','bound']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
+  for (const column of ['Assessment','Interval is contained']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
   assert(await page.locator('#equivalence tbody tr').count() >= 2, 'expected one assessment row per model');
   assert.equal((await page.locator('#apply_state').innerText()).trim(), '');
   await page.getByText('Download data or code, upload data', {exact:true}).click();
@@ -124,7 +124,7 @@ function reproduce(script, workbook, selected) {
   reproduce(script, path.join(evidence,'round-trip.xlsx'), 16);
   // Clear the bound so the upload has to restore it.
   await page.locator('#sesoi').fill('');
-  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('No bound chosen'));
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval is contained'));
   await page.locator('#uploadData').setInputFiles(path.join(evidence,'round-trip.xlsx'));
   await page.waitForFunction(()=>document.querySelector('#uploadData_progress')?.textContent.includes('Upload complete'));
   await page.locator('#executeUpload').click();

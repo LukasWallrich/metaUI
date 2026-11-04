@@ -65,7 +65,7 @@ test_that("shipped empirical example builds and runs its actual generated server
     # build.R declares the source-reference row as primary; it is shown first.
     card <- as.character(output$primary_estimate$html)
     expect_match(card, "Source-reference: REML / Hartung-Knapp (rounded inputs)", fixed = TRUE)
-    expect_match(card, "-0.38", fixed = TRUE); expect_match(card, "[-0.69, -0.08]", fixed = TRUE)
+    expect_match(card, "\u22120.38", fixed = TRUE); expect_match(card, "[\u22120.69, \u22120.08]", fixed = TRUE)
     expect_match(output$heterogeneity, "not identified")
     expect_error(output$pcurve, "requires explicit effect direction")
     # The estimator rejects this sparse significant-z subset; report its actual

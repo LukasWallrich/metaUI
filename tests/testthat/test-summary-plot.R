@@ -1,4 +1,4 @@
-test_that("Summary plot recovers from startup with webR Shiny error handling", {
+test_that("Summary table recovers from startup with webR Shiny error handling", {
   skip_without_app_packages()
   fixture_env <- new.env()
   sys.source(test_path("fixtures", "webr-hybrid-chain.R"), fixture_env)
@@ -13,23 +13,21 @@ test_that("Summary plot recovers from startup with webR Shiny error handling", {
   wd <- setwd(path); on.exit(setwd(wd), add = TRUE)
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   shiny::testServer(env$server, {
-    # Evaluate before Analyze, just as a connected browser does. The height
-    # must not abort inside renderPlot's isolated getDims() call.
-    expect_error(output$model_comparison, class = "shiny.silent.error")
+    # Evaluate before Analyze, just as a connected browser does: it must not abort.
+    expect_error(output$effectestimate, class = "shiny.silent.error")
     session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
-    image <- output$model_comparison
-    expect_match(image$src, "^data:image/png;base64,")
-    expect_equal(image$height, 65 + 38 * max(1, sum(estimatesfiltered()$status == "ok")))
+    table <- output$effectestimate
+    expect_match(table, "metaui-track-point", fixed = TRUE)
     session$setInputs(outliers_z_scores = c(-1.5, 1), go = 2)
-    changed <- output$model_comparison
-    expect_match(changed$src, "^data:image/png;base64,")
-    expect_false(identical(image$src, changed$src))
-    expect_equal(changed$height, 65 + 38 * max(1, sum(estimatesfiltered()$status == "ok")))
-    # An empty selection blanks the plot; it must redraw once rows are selected again.
+    changed <- output$effectestimate
+    expect_match(changed, "metaui-track-point", fixed = TRUE)
+    expect_false(identical(table, changed))
+    # An empty selection blanks the table; it must redraw once rows are selected again.
     session$setInputs(outliers_z_scores = c(9, 10), go = 3)
-    expect_error(output$model_comparison, class = "shiny.silent.error")
+    expect_error(output$effectestimate, class = "shiny.silent.error")
+    expect_match(as.character(output$primary_estimate$html), "No effects match this selection", fixed = TRUE)
     session$setInputs(outliers_z_scores = c(-10, 10), go = 4)
-    expect_match(output$model_comparison$src, "^data:image/png;base64,")
+    expect_match(output$effectestimate, "metaui-track-point", fixed = TRUE)
   })
 })
 

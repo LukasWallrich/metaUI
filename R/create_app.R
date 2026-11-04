@@ -79,7 +79,7 @@ check_app_packages <- function(bayesian = FALSE, meta = FALSE) {
 
 create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE,
                          bayesian = FALSE, meta = FALSE) {
-  out <- glue::glue("<h3>Interactive multiverse meta-analysis of {dataset_name}</h3>
+  out <- glue::glue("<h3>About this analysis</h3><p>An interactive multiverse meta-analysis of {dataset_name}. Readers can select effects, refit the models and download the data and code.</p>
           <p><b>Last update:</b> {date}</p>
           {if (citation != '') glue::glue('<p><b>Citation:</b> {citation}</p>') else ''}
           {if (osf_link != '') glue::glue('<p><b>Data and materials:</b> <a href=\"{osf_link}\">{osf_link}</a></p>') else ''}
@@ -99,7 +99,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
     package_versions <- purrr::map_chr(req_packages, \(p) tryCatch(as.character(utils::packageVersion(p)), error = function(e) "not installed"))
 
     HTML(paste0(
-      out, "<h4>R packages used</h4><div class='metaui-packages'>",
+      out, "<details class='metaui-help'><summary>Software versions</summary><h4>R packages used</h4><div class='metaui-packages'>",
       purrr::map(1:3, \(i) {
         start <- (i - 1) * ceiling(length(req_packages) / 3) + 1
         end <- min(i * ceiling(length(req_packages) / 3), length(req_packages))
@@ -108,7 +108,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
           purrr::map2(req_packages[start:end], package_versions[start:end], \(p, v) glue::glue("<tr><td>{p}</td><td>{v}</td></tr>")) %>% glue::glue_collapse("\n"),
           "</table>"
         )
-      }) %>% glue::glue_collapse("\n"), "</div>"
+      }) %>% glue::glue_collapse("\n"), "</div></details>"
     ))
   } else {
     out
@@ -283,8 +283,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   }, error = function(e) list(status = "unsupported", reason = conditionMessage(e)))
   report$study_info <- study_info_report(study_info, dataset)
   report$zcurve <- "First effect per study; normal Wald |effect/SE|, not supplied source p-values. Independence across study IDs is an author assumption."
-  about <- paste0(about, "<h4>Input and analysis contract</h4><pre>",
-                  htmltools::htmlEscape(jsonlite::toJSON(report, auto_unbox = TRUE, pretty = TRUE, na = "null"), attribute = TRUE), "</pre>")
+  about <- paste0(about, "<details class='metaui-help'><summary>Data mapping and analysis settings</summary><pre>",
+                  htmltools::htmlEscape(jsonlite::toJSON(report, auto_unbox = TRUE, pretty = TRUE, na = "null"), attribute = TRUE), "</pre></details>")
   defaults_models <- get_model_tibble()
   opts$known_interval_models <- models_to_run$name[vapply(seq_len(nrow(models_to_run)), function(i) {
     idx <- match(models_to_run$name[i], defaults_models$name)
@@ -308,6 +308,9 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   for (asset in c("metaui.css", "metaui.js"))
     file.copy(system.file("template_code", asset, package="metaUI"),
               file.path(save_to_folder, "www", asset), overwrite = TRUE)
+  dir.create(file.path(save_to_folder, "www", "fonts"), showWarnings = FALSE)
+  file.copy(list.files(system.file("template_code", "fonts", package = "metaUI"), full.names = TRUE),
+            file.path(save_to_folder, "www", "fonts"), overwrite = TRUE)
   if (!is.null(opts$design)) writeLines(design_css(opts$design), file.path(save_to_folder, "www", "app-design.css"))
   # Rebuilding without design settings must not retain a previous theme.
   if (is.null(opts$design) && file.exists(file.path(save_to_folder, "www", "app-design.css")))
@@ -349,7 +352,9 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
   file.copy(system.file("COPYRIGHTS", package = "metaUI"), file.path(save_to_folder, "COPYRIGHTS"), overwrite = TRUE)
   # Could consider keeping all labels in this file - but then ui.R needs less readable glue::glue syntax
-  writeLines(labels_and_options(dataset_name, correlation, primary_model), file.path(save_to_folder, "labels_and_options.R"))
+  writeLines(labels_and_options(dataset_name, correlation, primary_model, bayesian = !is.null(bayesian), correlations = identical(dataset$metaUI__es_type[1], "ZCOR"), custom_models = !package_models, effects = nrow(dataset), studies = length(unique(dataset$metaUI__study_id)),
+    strip = metaUI_effects_strip(dataset$metaUI__effect_size, eff_size_type_label),
+    citation = if (is.null(about_args$citation)) "" else as.character(about_args$citation)), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
   writeLines(generate_global.R(eff_size_type_label, bayesian, uses_meta), file.path(save_to_folder, "global.R"))

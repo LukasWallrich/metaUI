@@ -52,21 +52,275 @@ metaUI_funnel_ticks <- function(se) {
   ticks[ticks >= 0 & ticks <= upper]
 }
 
-metaUI_funnel <- function(fit, xlab) {
+metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours()) {
   centre <- as.numeric(fit$b)
-  metafor::funnel(fit, xlab = xlab, refline = centre, level = 95,
-                  shade = "white", back = "white", hlines = NA, lty = 0, steps = 0)
-  ticks <- metaUI_funnel_ticks(sqrt(fit$vi))
-  graphics::axis(2, at = ticks, labels = ticks)
-  bounds <- graphics::par("usr")
-  ymax <- max(bounds[3:4]); z <- stats::qnorm(.975)
-  graphics::polygon(c(bounds[1], bounds[1], -z * ymax, 0),
-                    c(0, ymax, ymax, 0), col = "light grey", border = NA)
-  graphics::polygon(c(bounds[2], bounds[2], z * ymax, 0),
-                    c(0, ymax, ymax, 0), col = "light grey", border = NA)
-  graphics::abline(v = centre, lty = 9)
-  graphics::lines(centre + c(-z * ymax, 0, z * ymax), c(ymax, 0, ymax), lty = 9)
-  graphics::points(fit$yi, sqrt(fit$vi), pch = 21, bg = "darkgray")
+  se <- sqrt(fit$vi); yi <- as.numeric(fit$yi)
+  z <- stats::qnorm(.975)
+  ymax <- max(se) * 1.05; half <- z * ymax
+  limits <- range(yi, centre - half, centre + half, -half, half)
+  limits <- limits + c(-1, 1) * .04 * diff(limits)
+  region <- data.frame(x = c(limits[1], limits[1], -half, 0, limits[2], limits[2], half, 0),
+    y = c(0, ymax, ymax, 0, 0, ymax, ymax, 0), side = rep(1:2, each = 4))
+  ggplot2::ggplot() +
+    ggplot2::geom_polygon(data = region, ggplot2::aes(.data$x, .data$y, group = .data$side), fill = colours$shade) +
+    ggplot2::annotate("segment", x = centre, xend = centre, y = 0, yend = ymax, linetype = 2, linewidth = .4, colour = colours$accent) +
+    ggplot2::annotate("path", x = centre + c(-half, 0, half), y = c(ymax, 0, ymax), linetype = 2, linewidth = .4, colour = colours$accent) +
+    ggplot2::geom_point(data = data.frame(yi = yi, se = se), ggplot2::aes(.data$yi, .data$se), colour = colours$slate, alpha = .6, size = 2) +
+    ggplot2::annotate("text", x = limits[1] + .012 * diff(limits), y = ymax * .05, label = 'italic(p) < ".05"', parse = TRUE, hjust = 0, size = 4.5, colour = colours$slate, family = colours$family) +
+    ggplot2::annotate("text", x = limits[2] - .012 * diff(limits), y = ymax * .05, label = 'italic(p) < ".05"', parse = TRUE, hjust = 1, size = 4.5, colour = colours$slate, family = colours$family) +
+    ggplot2::annotate("text", x = centre + .012 * diff(limits), y = ymax * .95, label = paste0("pooled ", metaUI_minus(formatC(centre, format = "f", digits = 2))), hjust = 0, size = 4.5, colour = colours$accent, family = colours$family) +
+    ggplot2::scale_y_reverse(breaks = metaUI_funnel_ticks(se), expand = ggplot2::expansion(mult = c(.01, 0))) +
+    ggplot2::scale_x_continuous(limits = limits, expand = c(0, 0), breaks = pretty(limits, 8), labels = function(x) metaUI_minus(format(x, trim = TRUE, drop0trailing = TRUE))) +
+    ggplot2::labs(x = xlab, y = "Standard error") +
+    metaUI_plot_theme(colours) +
+    ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
+}
+
+# True minus signs for display; downloads keep plain numbers.
+metaUI_minus <- function(x) gsub("-", "\u2212", x, fixed = TRUE)
+
+# Colours and font shared by every plot. The font applies on screen only: PDF devices
+# reject system font names, so downloads use their device default.
+metaUI_plot_colours <- function(accent = "#1d5c48", ink = "#1a2530", grid = "#e3e7ea", background = "#FFFFFF",
+                                slate = "#55626e", shade = "#eceff1", bars = "#b4bcc4", attention = "#8a4b00", family = metaUI_plot_family()) {
+  list(accent = accent, ink = ink, grid = grid, background = background, slate = slate,
+       shade = shade, bars = bars, attention = attention, family = family)
+}
+
+# Plots use the interface font where the graphics device can load it (ragg, on a server);
+# elsewhere, including webR, Arial or the device default stands in.
+metaUI_plot_family <- function(font_dir = file.path("www", "fonts")) {
+  regular <- file.path(font_dir, "plot-regular.ttf")
+  if (!file.exists(regular) || !requireNamespace("systemfonts", quietly = TRUE) || !requireNamespace("ragg", quietly = TRUE)) return("Arial")
+  tryCatch({
+    systemfonts::register_font("metaUI Sans", plain = regular, bold = file.path(font_dir, "plot-bold.ttf"),
+      italic = file.path(font_dir, "plot-italic.ttf"), bolditalic = file.path(font_dir, "plot-bold.ttf"))
+    "metaUI Sans"
+  }, error = function(e) "Arial")
+}
+
+metaUI_base_par <- function(colours) {
+  list(family = colours$family, col = colours$ink, col.axis = colours$ink, col.lab = colours$ink, fg = colours$slate,
+       bg = colours$background, las = 1, mgp = c(2.7, .6, 0), tcl = -.25, cex = 1.08, cex.axis = 1, cex.lab = 1, font.lab = 1, bty = "n")
+}
+
+# The zcurve package draws fixed colours; recolour its own ggplot layers. Statistics are
+# untouched: its annotations move out of the plot, into the "statistics" attribute.
+metaUI_zcurve_plot <- function(fit, colours) {
+  plot <- zcurve::plot.zcurve(fit, annotation = TRUE, plot_type = "ggplot", main = "")
+  is_text <- vapply(plot$layers, function(layer) inherits(layer$geom, "GeomText"), logical(1))
+  statistics <- unlist(lapply(plot$layers[is_text], function(layer) as.character(layer$data$label)))
+  threshold <- stats::qnorm(fit$control$sig_level / 2, lower.tail = FALSE)
+  plot$layers <- lapply(plot$layers[!is_text], function(layer) {
+    params <- layer$aes_params
+    if (inherits(layer$geom, "GeomRect")) {
+      # Both groups opaque, so the significant bars differ in hue rather than weight.
+      params$fill <- if (identical(params$colour, "blue")) grDevices::colorRampPalette(c(colours$background, colours$accent))(100)[62] else colours$bars
+      params$alpha <- 1
+      params$colour <- colours$background
+      params$linewidth <- .3
+    } else if (inherits(layer$geom, "GeomVline")) {
+      # The fitting threshold coincides with the significance line by default: draw one line.
+      if (identical(params$colour, "blue") && isTRUE(all.equal(fit$control$a, threshold))) params$alpha <- 0
+      params$colour <- colours$ink
+      params$linewidth <- .4
+      params$linetype <- 2
+    } else {
+      params$colour <- colours$ink
+      params$linewidth <- .8
+    }
+    layer$aes_params <- params
+    layer
+  })
+  curve <- plot$layers[[which(vapply(plot$layers, function(layer) inherits(layer$geom, "GeomLine"), logical(1)))[1]]]$data
+  at <- curve[which.min(abs(curve$x - (threshold + 2.3))), ]
+  plot <- plot + ggplot2::annotate("text", x = threshold + .08, y = Inf, vjust = 1.5, hjust = 0, size = 4.5, colour = colours$ink, family = colours$family, parse = TRUE,
+      label = sprintf('italic(z) == "%s" * "," ~ italic(p) == "%s"', round(threshold, 2), sub("^0", "", format(fit$control$sig_level)))) +
+    ggplot2::annotate("text", x = threshold - .08, y = Inf, vjust = 3.5, hjust = 1, size = 4.5, colour = colours$slate, family = colours$family, label = "not significant") +
+    ggplot2::annotate("text", x = threshold + .08, y = Inf, vjust = 3.5, hjust = 0, size = 4.5, colour = colours$accent, family = colours$family, label = "significant") +
+    ggplot2::annotate("text", x = at$x, y = at$y, vjust = -1.2, hjust = 0, size = 4.5, colour = colours$ink, family = colours$family, parse = TRUE, label = 'italic(z) * "-curve fit"') +
+    metaUI_plot_theme(colours)
+  x_scale <- plot$scales$get_scales("x")
+  if (!is.null(x_scale)) x_scale$name <- expression(italic(z) * "-score")
+  y_scale <- plot$scales$get_scales("y")
+  if (!is.null(y_scale)) y_scale$expand <- ggplot2::expansion(mult = c(0, .02))
+  attr(plot, "statistics") <- gsub(" ,", ", ", statistics, fixed = TRUE)
+  plot
+}
+
+metaUI_plot_theme <- function(colours, family = colours$family) {
+  ggplot2::theme_minimal(base_size = 13, base_family = family) +
+    ggplot2::theme(text = ggplot2::element_text(colour = colours$ink),
+      axis.text = ggplot2::element_text(colour = colours$ink, size = 13),
+      axis.title = ggplot2::element_text(colour = colours$ink, size = 13.5),
+      plot.background = ggplot2::element_rect(fill = colours$background, colour = NA),
+      panel.background = ggplot2::element_rect(fill = colours$background, colour = NA),
+      panel.grid.minor = ggplot2::element_blank(),
+      panel.grid.major.x = ggplot2::element_blank(),
+      panel.grid.major.y = ggplot2::element_line(colour = colours$grid, linewidth = .4),
+      axis.line.x = ggplot2::element_line(colour = colours$slate, linewidth = .3),
+      axis.ticks.x = ggplot2::element_line(colour = colours$slate, linewidth = .3))
+}
+
+# Shared axis for intervals drawn in table rows. Positions are percentages of the cell,
+# so the drawing follows the column width and stays sharp at any pixel density.
+metaUI_track_scale <- function(values) {
+  values <- c(0, values[is.finite(values)])
+  ticks <- pretty(values, n = 5)
+  limits <- range(values)
+  pad <- max(diff(limits), .1) * .04
+  limits <- limits + c(-pad, pad)
+  ticks <- ticks[ticks >= limits[1] & ticks <= limits[2]]
+  list(limits = limits, ticks = ticks, at = function(x) 100 * (x - limits[1]) / diff(limits))
+}
+
+metaUI_track_style <- function(left, width = NULL) {
+  paste0("left:", round(left, 2), "%", if (!is.null(width)) paste0(";width:", round(width, 2), "%"))
+}
+
+metaUI_track_grid <- function(scale, band = NULL) {
+  paste0(
+    if (!is.null(band)) sprintf('<i class="metaui-track-band" style="%s"></i>',
+      metaUI_track_style(scale$at(max(-band, scale$limits[1])), scale$at(min(band, scale$limits[2])) - scale$at(max(-band, scale$limits[1])))),
+    paste(sprintf('<i class="%s" style="%s"></i>', ifelse(scale$ticks == 0, "metaui-track-zero", "metaui-track-grid"),
+      metaUI_track_style(scale$at(scale$ticks))), collapse = ""),
+    if (!0 %in% scale$ticks) sprintf('<i class="metaui-track-zero" style="%s"></i>', metaUI_track_style(scale$at(0))))
+}
+
+metaUI_track_axis <- function(scale, title) {
+  paste0('<div class="metaui-track metaui-axis" aria-hidden="true"><span class="metaui-axis-title">', htmltools::htmlEscape(title), '</span>',
+    paste(sprintf('<span class="metaui-axis-tick" style="%s">%s</span>', metaUI_track_style(scale$at(scale$ticks)),
+      metaUI_minus(format(scale$ticks, trim = TRUE, drop0trailing = TRUE))), collapse = ""), '</div>')
+}
+
+metaUI_track_row <- function(scale, es, lcl, ucl, band = NULL, dots = NULL, dot_labels = NULL, size = NULL, ref = NULL, diamond = FALSE) {
+  # A diamond spans the interval, with its tallest point at the estimate.
+  if (diamond && is.finite(es) && is.finite(lcl) && is.finite(ucl) && ucl > lcl)
+    return(paste0('<div class="metaui-track" aria-hidden="true">', metaUI_track_grid(scale, band),
+      if (!is.null(ref) && is.finite(ref)) sprintf('<i class="metaui-track-ref" style="%s"></i>', metaUI_track_style(scale$at(ref))),
+      sprintf('<i class="metaui-track-diamond" style="%1$s;clip-path:polygon(0 50%%,%2$.1f%% 0,100%% 50%%,%2$.1f%% 100%%)"></i>',
+        metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl)), 100 * (es - lcl) / (ucl - lcl)), "</div>"))
+  paste0('<div class="metaui-track" aria-hidden="true">', metaUI_track_grid(scale, band),
+    if (!is.null(ref) && is.finite(ref)) sprintf('<i class="metaui-track-ref" style="%s"></i>', metaUI_track_style(scale$at(ref))),
+    if (length(dots)) paste(sprintf('<i class="metaui-track-dot" style="%s"%s></i>', metaUI_track_style(scale$at(dots)),
+      if (length(dot_labels)) sprintf(' title="%s"', htmltools::htmlEscape(dot_labels, attribute = TRUE)) else ""), collapse = ""),
+    if (is.finite(lcl) && is.finite(ucl)) sprintf('<i class="metaui-track-ci" style="%s"></i>', metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl))),
+    if (is.finite(es)) sprintf('<i class="metaui-track-point" style="%s%s"></i>', metaUI_track_style(scale$at(es)),
+      if (!is.null(size)) sprintf(";width:%1$.1fpx;height:%1$.1fpx;margin:%2$.2fpx 0 0 %2$.2fpx", size, -size / 2) else ""), '</div>')
+}
+
+# First screen: the selected effects themselves, before any model is fitted.
+metaUI_effects_strip <- function(values, axis_title) {
+  scale <- metaUI_track_scale(values)
+  # A dot histogram: one dot per effect, stacked within narrow bins.
+  width <- diff(scale$limits) / 120
+  bins <- round(values / width) * width
+  rank <- stats::ave(seq_along(bins), bins, FUN = seq_along)
+  step <- min(5.5, 110 / max(rank))
+  height <- ceiling(max(rank) * step + 6)
+  dots <- paste(sprintf('<i class="metaui-track-dot" style="%s;bottom:%.1fpx"></i>', metaUI_track_style(scale$at(bins)), (rank - 1) * step + 1), collapse = "")
+  paste0('<div class="metaui-strip" role="img" aria-label="Dot histogram of every effect size in the dataset">',
+    sprintf('<div class="metaui-track metaui-stack" style="height:%dpx">%s%s</div>', height, metaUI_track_grid(scale), dots), metaUI_track_axis(scale, axis_title), "</div>")
+}
+
+# Reader table of model estimates: one row per model, every model named, with reasons
+# where a model was not estimated. Downloads keep the full table.
+metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect size", bound = NULL, studies = NA) {
+  fmt <- function(x) if (is.na(x)) "" else metaUI_minus(formatC(x, format = "f", digits = 2))
+  esc <- function(x) htmltools::htmlEscape(as.character(x))
+  order <- c(first, setdiff(seq_len(nrow(table)), first))
+  scale <- metaUI_track_scale(c(table$es, table$LCL, table$UCL, if (!is.null(bound)) c(-bound, bound)))
+  types <- unique(stats::na.omit(table$interval_type[table$status == "ok"]))
+  ref <- if (length(first) && table$status[first[1]] == "ok") table$es[first[1]] else NULL
+  # Warnings are footnotes, so that one long message does not break the rows.
+  warned <- order[nzchar(table$warnings[order])]
+  rows <- vapply(order, function(i) {
+    row <- table[i, ]
+    ok <- row$status == "ok"
+    label <- paste0(esc(row$Model), if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"),
+      if (ok && length(types) > 1L) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"))
+    interval <- if (is.na(row$LCL) && is.na(row$UCL)) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
+    fit <- if (row$aggregated) "study-level" else "effect-level"
+    unit <- if (is.na(row$k)) "" else if (row$aggregated || identical(as.numeric(row$k), as.numeric(studies))) "studies" else if ("input_rows" %in% names(row) && identical(as.numeric(row$k), as.numeric(row$input_rows))) "effects" else ""
+    track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = i %in% first), "</td>")
+      else paste0('<td class="metaui-reason-cell"><b>Not estimated (', esc(row$status), "):</b> ", esc(row$reason), "</td>")
+    paste0('<tr', if (i %in% first) ' class="metaui-primary-row"', "><td>", label, '</td><td class="num">', fmt(row$es),
+      '</td><td class="num">', interval, '</td><td class="num metaui-k">', if (is.na(row$k)) "" else row$k,
+      '</td><td class="metaui-unit">', unit, '</td><td class="metaui-fit">', fit, "</td>", track, "</tr>")
+  }, character(1))
+  group <- if (length(first) && nrow(table) > 1L) paste0('<tr class="metaui-group-row"><td colspan="7"><div>Explorations: different estimators for the same selection. ',
+    "They answer different questions and are not interchangeable with the primary analysis",
+    if (!is.null(ref)) ", whose estimate is the dashed line", ".</div></td></tr>")
+  rows <- if (length(first)) c(rows[seq_along(first)], group, rows[-seq_along(first)]) else rows
+  interval_head <- if (length(types) == 1L && grepl("^Confidence", types)) "95% CI" else "95% interval"
+  notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(table$warnings[warned]), "</li>", collapse = ""), "</ol>")
+  paste0('<table class="table metaui-estimates metaui-custom"><thead><tr><th>Model</th><th class="num">Estimate</th><th class="num">',
+    interval_head, '</th><th class="num" colspan="2"><i>k</i></th><th class="metaui-fit">Level of fit</th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
+    paste(rows, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="6"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", notes)
+}
+
+# The forest plot as a table: the same drawn axis, with exact values beside each interval,
+# effects grouped under their study, and marker area following precision.
+metaUI_forest_html <- function(rows, axis_title) {
+  fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = 2))
+  esc <- function(x) htmltools::htmlEscape(as.character(x))
+  scale <- metaUI_track_scale(c(rows$es, rows$LCL, rows$UCL))
+  summaries <- rows[rows$kind == "Model summary", , drop = FALSE]
+  effects <- rows[rows$kind == "Selected effect", , drop = FALSE]
+  ref <- if (nrow(summaries)) summaries$es[1] else NULL
+  width <- effects$UCL - effects$LCL
+  size <- pmin(14, pmax(5, 7 * stats::median(width) / width))
+  values <- function(row) paste0('<td class="num">', fmt(row$es), '</td><td class="num">[', fmt(row$LCL), ", ", fmt(row$UCL), "]</td>")
+  grid <- paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, NA_real_, NA_real_, NA_real_, ref = ref), "</td>")
+  summary_rows <- if (nrow(summaries)) paste(vapply(seq_len(nrow(summaries)), function(i) paste0('<tr class="metaui-primary-row"><td>', esc(summaries$label[i]), "</td>", values(summaries[i, ]),
+    '<td class="metaui-track-cell">', metaUI_track_row(scale, summaries$es[i], summaries$LCL[i], summaries$UCL[i], ref = ref, diamond = TRUE), "</td></tr>"), character(1)), collapse = "")
+  studies <- rle(as.character(effects$study))
+  ends <- cumsum(studies$lengths); starts <- ends - studies$lengths + 1L
+  study_rows <- vapply(seq_along(starts), function(s) {
+    index <- starts[s]:ends[s]
+    one <- function(i, label, class) paste0('<tr class="', class, '"><td>', label, "</td>", values(effects[i, ]),
+      '<td class="metaui-track-cell">', metaUI_track_row(scale, effects$es[i], effects$LCL[i], effects$UCL[i], size = size[i], ref = ref), "</td></tr>")
+    if (length(index) == 1L) return(one(index, esc(studies$values[s]), "metaui-forest-single"))
+    labels <- substring(effects$label[index], nchar(studies$values[s]) + 3L)
+    paste0('<tr class="metaui-forest-study"><td colspan="3">', esc(studies$values[s]), "</td>", grid, "</tr>",
+      paste(vapply(seq_along(index), function(j) one(index[j], paste("Effect", esc(labels[j])), "metaui-forest-effect"), character(1)), collapse = ""))
+  }, character(1))
+  # Long plots repeat the scale, roughly every 40 rows.
+  repeat_at <- which(diff(floor((ends + seq_along(ends)) / 40)) > 0)
+  study_rows[repeat_at] <- paste0(study_rows[repeat_at], '<tr class="metaui-forest-scale"><td colspan="3"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr>")
+  paste0(if (!is.null(ref)) paste0('<p class="metaui-note metaui-key">Dashed line: ', esc(summaries$label[1]), " estimate, ", fmt(ref), ".</p>"),
+    '<table class="table metaui-estimates metaui-forest metaui-custom"><thead><tr><th>Study</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="metaui-track-cell">',
+    metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", summary_rows, paste(study_rows, collapse = ""),
+    '</tbody><tfoot><tr><td colspan="3"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>")
+}
+
+# Category counts with bars in the table, including levels the selection leaves empty.
+metaUI_bars_html <- function(counts, name) {
+  counts <- counts[order(as.character(counts[[name]]) == "(Missing)"), , drop = FALSE]
+  levels <- as.character(counts[[name]])
+  largest <- max(counts$Count, 1)
+  rows <- sprintf('<tr%s><td>%s</td><td class="num">%s</td><td class="num">%s</td><td class="metaui-bar-cell" aria-hidden="true"><span class="metaui-bar" style="width:%s%%"></span></td></tr>',
+    ifelse(counts$Count == 0, ' class="metaui-zero"', ifelse(levels == "(Missing)", ' class="metaui-missing"', "")), htmltools::htmlEscape(levels), counts$Count,
+    sprintf("%.1f%%", 100 * counts$Count / max(sum(counts$Count), 1)), round(100 * counts$Count / largest, 1))
+  paste0('<table class="table metaui-bars metaui-custom"><thead><tr><th><span class="sr-only">', htmltools::htmlEscape(name),
+    '</span></th><th class="num">Effects</th><th class="num">Share</th><th class="metaui-bar-cell"></th></tr></thead><tbody>', paste(rows, collapse = ""), "</tbody></table>")
+}
+
+# Moderator levels on the same drawn axis; the dots are the selected effects themselves.
+metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values, labels, axis_title, ref = NULL) {
+  fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = 2))
+  scale <- metaUI_track_scale(c(estimate, lcl, ucl, values))
+  # Largest estimate first; a missing-data level stays at the end.
+  order <- order(levels == "(Missing)", -estimate)
+  rows <- vapply(order, function(i) {
+    level <- as.character(effects) == as.character(levels[i])
+    level[is.na(level)] <- FALSE
+    paste0("<tr><td>", htmltools::htmlEscape(levels[i]), '</td><td class="num">', fmt(estimate[i]),
+      '</td><td class="num">[', fmt(lcl[i]), ", ", fmt(ucl[i]), ']</td><td class="num metaui-k">', k[i], '</td><td class="metaui-track-cell">',
+      metaUI_track_row(scale, estimate[i], lcl[i], ucl[i], dots = values[level], dot_labels = labels[level], ref = ref), "</td></tr>")
+  }, character(1))
+  paste0('<table class="table metaui-estimates metaui-moderators metaui-custom"><thead><tr><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num"><i>k</i></th><th class="metaui-track-cell">',
+    metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", paste(rows, collapse = ""), "</tbody></table>")
 }
 
 # Duval-Tweedie L0, adapted from meta 8.5.0 trimfill.meta and estimate.missing
@@ -372,7 +626,7 @@ metaUI_pcurve_fit <- function(df, selection = "first") {
 # Summaries are the unaggregated default multilevel/RVE fits, found by their code
 # (`models` rows align with `estimates`) so renamed models are kept.
 metaUI_forest_rows <- function(df, estimates, models = NULL) {
-  df <- df[order(as.character(df$metaUI__study_id), as.character(df$metaUI__effect_id)), , drop = FALSE]
+  df <- df[order(as.character(df$metaUI__study_id), suppressWarnings(as.numeric(as.character(df$metaUI__effect_id))), as.character(df$metaUI__effect_id)), , drop = FALSE]
   label <- if ("metaUI__es_label" %in% names(df)) df$metaUI__es_label else df$metaUI__effect_id
   rows <- data.frame(label = paste(df$metaUI__study_id, label, sep = ": "),
     kind = "Selected effect", study = as.character(df$metaUI__study_id),
@@ -397,7 +651,7 @@ metaUI_forest_rows <- function(df, estimates, models = NULL) {
 # label_width (characters) wraps study labels onto at most two lines for narrow (phone)
 # plots. Longer labels lose their middle, so the end (year, effect) still tells rows apart.
 # top_axis repeats the x axis above plots taller than a screen.
-metaUI_forest_plot <- function(rows, scale, accent = "#096b74", ink = "#182f46", background = "#FFFFFF", interval_colour = "#52616d", grid_colour = "#EBEBEB", label_width = NULL, top_axis = FALSE) {
+metaUI_forest_plot <- function(rows, scale, colours = metaUI_plot_colours(), label_width = NULL, top_axis = FALSE, family = colours$family) {
   if (!is.null(label_width)) rows$label <- vapply(rows$label, function(label) {
     lines <- strwrap(label, label_width)
     if (length(lines) > 2L) {
@@ -407,20 +661,32 @@ metaUI_forest_plot <- function(rows, scale, accent = "#096b74", ink = "#182f46",
     }
     paste(lines, collapse = "\n")
   }, character(1), USE.NAMES = FALSE)
+  # Bands group the effects of one study; model summaries stand apart in the accent colour.
+  effects <- rows[rows$kind == "Selected effect", , drop = FALSE]
+  studies <- rle(as.character(if (is.null(effects$study)) effects$label else effects$study))
+  ends <- cumsum(studies$lengths); starts <- ends - studies$lengths + 1L
+  shaded <- seq_along(starts) %% 2L == 0L
+  bands <- data.frame(ymin = effects$row[ends[shaded]] - .5, ymax = effects$row[starts[shaded]] + .5)
+  summaries <- rows[rows$kind == "Model summary", , drop = FALSE]
   ggplot2::ggplot(rows, ggplot2::aes(x = .data$es, y = .data$row)) +
-    ggplot2::geom_vline(xintercept = 0, colour = "grey70", linetype = 2) +
-    ggplot2::geom_segment(ggplot2::aes(x = .data$LCL, xend = .data$UCL, yend = .data$row), colour = interval_colour) +
-    ggplot2::geom_point(ggplot2::aes(shape = .data$kind), size = 2.8, colour = accent, fill = accent) +
+    ggplot2::geom_rect(data = bands, ggplot2::aes(xmin = -Inf, xmax = Inf, ymin = .data$ymin, ymax = .data$ymax), inherit.aes = FALSE, fill = colours$shade, colour = NA) +
+    ggplot2::geom_vline(xintercept = 0, colour = colours$slate, linewidth = .4) +
+    {if (nrow(summaries)) ggplot2::geom_hline(yintercept = max(summaries$row) + .5, colour = colours$ink, linewidth = .4)} +
+    ggplot2::geom_segment(ggplot2::aes(x = .data$LCL, xend = .data$UCL, yend = .data$row, colour = .data$kind, linewidth = .data$kind)) +
+    ggplot2::geom_point(ggplot2::aes(shape = .data$kind, size = .data$kind, colour = .data$kind, fill = .data$kind)) +
     ggplot2::scale_shape_manual(values = c("Selected effect" = 16, "Model summary" = 23), guide = "none") +
+    ggplot2::scale_size_manual(values = c("Selected effect" = 1.9, "Model summary" = 3.4), guide = "none") +
+    ggplot2::scale_linewidth_manual(values = c("Selected effect" = .4, "Model summary" = .8), guide = "none") +
+    ggplot2::scale_colour_manual(values = c("Selected effect" = colours$ink, "Model summary" = colours$accent), guide = "none") +
+    ggplot2::scale_fill_manual(values = c("Selected effect" = colours$ink, "Model summary" = colours$accent), guide = "none") +
     ggplot2::scale_y_continuous(breaks = rows$row, labels = rows$label, expand = ggplot2::expansion(add = .8)) +
-    ggplot2::scale_x_continuous(sec.axis = if (top_axis) ggplot2::dup_axis() else ggplot2::waiver()) +
+    ggplot2::scale_x_continuous(sec.axis = if (top_axis) ggplot2::dup_axis() else ggplot2::waiver(),
+      # The PDF device's default font has no true minus sign.
+      labels = function(x) { x <- format(x, trim = TRUE, drop0trailing = TRUE); if (nzchar(family)) metaUI_minus(x) else x }) +
     ggplot2::labs(x = paste("Effect size (", scale, ")", sep = ""), y = NULL) +
-    ggplot2::theme_minimal(base_size = 14) +
-    ggplot2::theme(text = ggplot2::element_text(colour = ink),
-      axis.text = ggplot2::element_text(size = if (is.null(label_width)) 12 else 11, colour = ink, lineheight = .9),
-      plot.background = ggplot2::element_rect(fill = background, colour = NA),
-      panel.background = ggplot2::element_rect(fill = background, colour = NA),
-      panel.grid.major.x = ggplot2::element_line(colour = grid_colour), panel.grid.major.y = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank())
+    metaUI_plot_theme(colours, family) +
+    ggplot2::theme(axis.text.y = ggplot2::element_text(hjust = 0, size = if (is.null(label_width)) 11.5 else 10.5, lineheight = .9),
+      panel.grid.major.y = ggplot2::element_blank(), axis.ticks = ggplot2::element_blank())
 }
 
 # Descriptive containment of existing intervals, without refitting or assuming

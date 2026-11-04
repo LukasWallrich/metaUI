@@ -47,24 +47,12 @@ static_precompute <- function(app_dir, dest) {
   inputs(env$ui); inputs(z)
   captured <- list()
   session <- output <- NULL # Bound by testServer inside its expression.
-  # Test sessions report every output as 600px wide at 1x. Plots render at 2x for
-  # sharp phone and high-density screens, and phones get a second rendering at their
-  # column width, reusing the cached fits.
-  plot_width <- 600
-  for (accessor in c("$", "[["))
-    registerS3method(accessor, "metaui_preview_clientdata", function(x, name)
-      if (grepl("^output_.+_width$", name)) plot_width else if (identical(name, "pixelratio")) 2 else NextMethod())
   shiny::testServer(env$server, {
-    session$clientData <- structure(session$clientData,
-      class = c("metaui_preview_clientdata", class(session$clientData)))
     do.call(session$setInputs, defaults)
     session$setInputs(go = 1)
-    for (id in c("selection_overview", "selection_status", "primary_estimate", "estimate_gaps",
-                 "scale_note", "effectestimate", "sample", "model_comparison"))
+    for (id in c("selection_overview", "selection_status", "primary_estimate",
+                 "scale_note", "effectestimate", "sample"))
       captured[[id]] <<- output[[id]]
-    plot_width <<- 360
-    session$setInputs(go = 2)
-    captured$model_comparison_phone <<- output$model_comparison
   })
   if (is.null(captured$primary_estimate) || !nzchar(captured$effectestimate))
     stop("The generated server did not render default results.")
@@ -84,26 +72,22 @@ static_precompute <- function(app_dir, dest) {
       if (!is.null(a$id) && a$id == "z_score_filter") tag$children <- list(z)
       if (!is.null(a$id) && a$id %in% names(captured)) {
         value <- captured[[a$id]]
-        if (a$id == "model_comparison") {
-          tag$children <- list(htmltools::tags$picture(
-            htmltools::tags$source(media = "(max-width: 767px)", srcset = captured$model_comparison_phone$src),
-            htmltools::tags$img(src = value$src, width = value$width,
-              alt = "Model estimates and 95% intervals for the authors' full dataset",
-              style = "max-width:100%;height:auto")))
-          tag$attribs$style <- "width:100%;height:auto"
-        } else {
           if (is.list(value)) value <- value$html
           if (is.null(value)) value <- ""
           if (a$id %in% c("selection_overview", "selection_status")) value <- htmltools::htmlEscape(value)
           else value <- static_stack_table(value)
           tag$children <- list(htmltools::HTML(value))
-        }
       }
       if (identical(a$id, "go")) {
         tag$children <- list("Loading\u2026")
         tag$attribs$`aria-busy` <- "true"
         tag$attribs$`aria-disabled` <- "true"
       }
+      # Without scripts, sliders and pickers would be blank: state the default choice instead.
+      if (tag$name == "input" && !is.null(a$class) && grepl("js-range-slider", a$class, fixed = TRUE))
+        return(htmltools::tags$p(class = "metaui-preview-value", paste(a$`data-from`, "to", a$`data-to`)))
+      if (tag$name == "select" && !is.null(a$class) && grepl("selectpicker", a$class, fixed = TRUE))
+        return(htmltools::tags$p(class = "metaui-preview-value", "All selected"))
       if (tag$name %in% c("input", "button", "select", "textarea")) tag$attribs$disabled <- NA
       if (tag$name == "a" && !identical(a$class, "metaui-skip")) {
         tag$attribs$href <- NULL; tag$attribs$`aria-disabled` <- "true"; tag$attribs$tabindex <- "-1"
@@ -219,6 +203,7 @@ static_unescape <- function(x) {
 # The preview has no scripts, so tables get the phone card labels that metaui.js adds
 # in the live app: the same rule (four or more columns, named first column) in R.
 static_stack_table <- function(html) {
+  if (grepl("metaui-custom", html, fixed = TRUE)) return(html)
   head <- regmatches(html, regexpr("(?s)<thead\\b.*?</thead>", html, perl = TRUE))
   body_at <- regexpr("(?s)<tbody\\b.*?</tbody>", html, perl = TRUE)
   if (!length(head) || body_at < 0) return(html)

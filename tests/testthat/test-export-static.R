@@ -98,7 +98,7 @@ test_that("precomputation uses the app server and writes an inert Summary", {
   expect_equal(provenance$date, as.character(Sys.Date()))
   expect_equal(provenance$metaUI, as.character(packageVersion("metaUI")))
   expect_match(html, as.character(rendered$primary_estimate$html), fixed = TRUE)
-  expect_match(html, 'data:image/png;base64,', fixed = TRUE)
+  expect_match(html, "metaui-estimates", fixed = TRUE)
   expect_match(html, 'disabled', fixed = TRUE)
   expect_false(grepl("<(input|button|select|textarea)\\b(?![^>]*\\sdisabled)", html, perl = TRUE))
   expect_false(grepl('<script', html, fixed = TRUE))
