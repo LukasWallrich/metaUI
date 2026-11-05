@@ -510,10 +510,12 @@ metaUI_bars_html <- function(counts, name) {
 }
 
 # Moderator levels on the same drawn axis; the dots are the selected effects themselves.
-metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values, labels, axis_title, ref = NULL, se = NULL) {
+# Without the individual effects, the axis fits the level estimates and their intervals; with
+# them, it covers every effect, which can leave narrow intervals as slivers.
+metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values, labels, axis_title, ref = NULL, se = NULL, show_effects = TRUE) {
   digits <- metaUI_digits(lcl, ucl)
   fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = digits))
-  scale <- metaUI_track_scale(c(estimate, lcl, ucl, values))
+  scale <- metaUI_track_scale(c(estimate, lcl, ucl, ref, if (show_effects) values))
   # Largest estimate first; a missing-data level stays at the end.
   order <- order(levels == "(Missing)", -estimate)
   # Dots follow precision, as in the numeric moderator's plot.
@@ -523,10 +525,17 @@ metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values
     level[is.na(level)] <- FALSE
     paste0("<tr><td>", htmltools::htmlEscape(levels[i]), '</td><td class="num">', fmt(estimate[i]),
       '</td><td class="num">[', fmt(lcl[i]), ", ", fmt(ucl[i]), ']</td><td class="num metaui-k">', k[i], '</td><td class="metaui-track-cell">',
-      metaUI_track_row(scale, estimate[i], lcl[i], ucl[i], dots = values[level], dot_labels = labels[level], ref = ref, dot_sizes = sizes[level], diamond = TRUE), "</td></tr>")
+      metaUI_track_row(scale, estimate[i], lcl[i], ucl[i], dots = if (show_effects) values[level], dot_labels = if (show_effects) labels[level], ref = ref, dot_sizes = if (show_effects) sizes[level], diamond = TRUE), "</td></tr>")
   }, character(1))
-  paste0('<table class="table metaui-estimates metaui-moderators metaui-custom"><thead><tr data-head="Level, estimate [95% CI]"><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k"><i>k</i></th><th class="metaui-track-cell">',
-    metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", paste(rows, collapse = ""), "</tbody></table>")
+  paste0('<p class="metaui-note metaui-key metaui-forest-controls"><button type="button" class="metaui-moderator-effects" aria-pressed="', if (show_effects) "true" else "false", '">',
+    if (show_effects) "Hide individual effects" else "Show individual effects", "</button></p>",
+    '<table class="table metaui-estimates metaui-moderators', if (!show_effects) " metaui-moderators-plain", ' metaui-custom"><thead><tr data-head="Level, estimate [95% CI]"><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k"><i>k</i></th><th class="metaui-track-cell">',
+    metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", paste(rows, collapse = ""), "</tbody></table>",
+    '<p class="metaui-note metaui-key">Green diamond: level estimate from the multilevel moderator model; its width is the 95% CI.',
+    if (show_effects) " Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another.",
+    if (!is.null(ref)) " Dashed line: overall multilevel estimate.",
+    if (show_effects) '<span class="metaui-hist-note" hidden> Grey bars: levels with many effects, showing how many fall in each small range, on one scale across levels; the tallest bar is <span class="metaui-hist-max"></span> effects.</span>',
+    "</p>")
 }
 
 # Duval-Tweedie L0, adapted from meta 8.5.0 trimfill.meta and estimate.missing

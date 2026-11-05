@@ -340,9 +340,9 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-forest-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
 .metaui-forest-toggle:hover { text-decoration: underline; }
 .metaui-forest-count { color: var(--metaui-slate); font-size: .8125rem; }
-.metaui-forest-all, .metaui-forest-sort, .metaui-forest-prev, .metaui-forest-next { padding: 3px 10px; border: 1px solid var(--metaui-slate); border-radius: 4px; background: var(--metaui-background); color: var(--metaui-ink); font-size: .875rem; line-height: 1.35; cursor: pointer; }
-.metaui-forest-all:hover, .metaui-forest-sort:hover, .metaui-forest-prev:hover, .metaui-forest-next:hover { background: var(--metaui-tint); border-color: var(--metaui-accent); }
-.metaui-forest-all[aria-expanded="true"], .metaui-forest-sort[aria-pressed="true"] { background: var(--metaui-tint); border-color: var(--metaui-accent); color: var(--metaui-accent); }
+.metaui-forest-all, .metaui-moderator-effects, .metaui-forest-sort, .metaui-forest-prev, .metaui-forest-next { padding: 3px 10px; border: 1px solid var(--metaui-slate); border-radius: 4px; background: var(--metaui-background); color: var(--metaui-ink); font-size: .875rem; line-height: 1.35; cursor: pointer; }
+.metaui-forest-all:hover, .metaui-moderator-effects:hover, .metaui-forest-sort:hover, .metaui-forest-prev:hover, .metaui-forest-next:hover { background: var(--metaui-tint); border-color: var(--metaui-accent); }
+.metaui-forest-all[aria-expanded="true"], .metaui-moderator-effects[aria-pressed="true"], .metaui-forest-sort[aria-pressed="true"] { background: var(--metaui-tint); border-color: var(--metaui-accent); color: var(--metaui-accent); }
 .metaui-forest .metaui-primary-row td { padding-top: 4px !important; padding-bottom: 4px !important; }
 .metaui-forest .metaui-primary-row td.metaui-track-cell { padding-top: 0 !important; padding-bottom: 0 !important; }
 .metaui-forest .metaui-forest-effect td:first-child { padding-left: 30px; color: var(--metaui-slate); }
@@ -361,6 +361,8 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-track-hist { left: 0; right: 0; height: 30px; }
 .metaui-track-bar { position: absolute; bottom: 0; width: 3.5px; background: var(--metaui-slate); opacity: .8; }
 .metaui-moderators { --metaui-mark-y: 19px; }
+.metaui-moderators-plain .metaui-track { min-height: 26px; }
+table.metaui-moderators-plain { --metaui-mark-y: 50%; }
 .metaui-pcurve-stats { width: 100%; margin: 10px 0; font-size: .875rem; }
 .metaui-pcurve-stats td:last-child { white-space: nowrap; }
 .metaui-stats td:last-child { padding-right: 0 !important; }

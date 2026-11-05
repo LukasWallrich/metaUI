@@ -246,6 +246,7 @@
         var width = track.clientWidth;
         if (!width || track.dataset.spreadWidth === String(width)) return;
         track.dataset.spreadWidth = width;
+        if (!dotCount(track)) return;
         var oldBars = track.querySelector('.metaui-track-hist');
         if (oldBars) oldBars.remove();
         var markY = parseFloat(getComputedStyle(track).getPropertyValue('--metaui-mark-y')) || 19;
@@ -337,7 +338,7 @@
       if (plot.clientWidth && plot.parentElement.clientWidth !== plot.querySelector('.main-svg').clientWidth) window.Plotly.Plots.resize(plot);
     });
   }
-  $(document).on('shiny:value shown.bs.tab', function () { setTimeout(function () { markTables(); spreadDots(); fitPlots(); restoreForest(); thinAxes(); }, 0); });
+  $(document).on('shiny:value shown.bs.tab', function () { setTimeout(function () { markTables(); spreadDots(); fitPlots(); restoreForest(); restoreModerators(); thinAxes(); }, 0); });
   $(document).on('plotly_afterplot shiny:visualchange', function () { setTimeout(fitPlots, 0); });
   // Covers window resizes and a scrollbar arriving as later outputs render.
   new ResizeObserver(function () { clearTimeout(spreadTimer); spreadTimer = setTimeout(function () { spreadDots(); thinAxes(); }, 120); }).observe(document.documentElement);
@@ -376,6 +377,17 @@
     forestFocus = { selector: selector, index: Array.prototype.indexOf.call(this.closest('.shiny-html-output').querySelectorAll(selector), this) };
     Shiny.setInputValue('forest_page', Number(this.dataset.page), { priority: 'event' });
   });
+  var moderatorFocus = false;
+  $(document).on('click', '.metaui-moderator-effects', function () {
+    moderatorFocus = true;
+    Shiny.setInputValue('moderator_effects', this.getAttribute('aria-pressed') !== 'true', { priority: 'event' });
+  });
+  function restoreModerators() {
+    if (!moderatorFocus) return;
+    var button = document.querySelector('.metaui-moderator-effects');
+    if (button) button.focus({ preventScroll: true });
+    moderatorFocus = false;
+  }
   // A second click restores the order by name.
   $(document).on('click', '.metaui-forest-sort', function () {
     forestFocus = { selector: '.metaui-forest-sort', index: 0 };

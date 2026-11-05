@@ -5,6 +5,7 @@
 - P-curve and z-curve open with a plain reading of their tests. The p-curve is drawn in the shared plot style from the same values, and z-curve rates appear as percentages.
 - New `options = list(intro = ...)` adds a short introduction under the title.
 - A diamond now always spans a 95% CI, on the Summary, on moderator levels and in the forest plot's PDF and PNG downloads. Moderator rows stack their effects so that no dot covers another, and funnel labels move clear of the points.
+- Categorical moderator tables open on the level estimates, on an axis that fits them, with a button to show the individual effects.
 - Categorical moderator levels with many effects (25 or more on phones, 100 or more on larger screens) show a small histogram instead of stacked dots, which keeps those rows short and the page responsive.
 - Correlations are shown as *r* everywhere readers see effect sizes: moderator tables and plots, histograms, the effects table and the first screen. The funnel keeps its straight limits on the Fisher z scale with its axis labelled in *r*. Slopes, variances and Egger's test stay on Fisher z and say so.
 - Estimates show three decimals where an interval is narrower than 0.05.

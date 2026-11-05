@@ -87,8 +87,6 @@ test_that("a moderator with one value in the selection is explained, not an erro
   # Caching off: nothing saved for the opening, so readers always get a fresh fit.
   generate_shiny(x, "Edge", save_to_folder = path, launch_app = FALSE, options = list(fit_cache_entries = 0L))
   expect_false(file.exists(file.path(path, "opening_results.rds")))
-  # The note covers the phone histogram, hidden until metaui.js draws one.
-  expect_match(paste(readLines(file.path(path, "server.R")), collapse = "\n"), "metaui-hist-note", fixed = TRUE)
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
   env <- new.env(parent = globalenv()); suppressMessages(sys.source("global.R", env))
   defaults <- metaUI:::static_default_inputs(env); attr(defaults, "z_slider") <- NULL
@@ -250,4 +248,20 @@ test_that("an invalid forest page falls back to the first page", {
 
 test_that("a value rounding to zero drops its sign", {
   expect_equal(metaUI:::metaUI_minus(c("-0.000", "-0", "-0.001", "0.000")), c("0.000", "0", "\u22120.001", "0.000"))
+})
+
+test_that("moderator effects can be toggled, and the axis fits what is shown", {
+  args <- list(levels = c("a", "b"), estimate = c(.02, .04), lcl = c(.01, .03), ucl = c(.03, .05), k = c(2L, 1L),
+    effects = c("a", "a", "b"), values = c(-.9, .8, .03), labels = c("x", "y", "z"), axis_title = "r", ref = .03)
+  off <- do.call(metaUI:::metaUI_moderator_html, c(args, show_effects = FALSE))
+  on <- do.call(metaUI:::metaUI_moderator_html, c(args, show_effects = TRUE))
+  expect_no_match(off, "metaui-track-dot", fixed = TRUE)
+  expect_match(off, 'aria-pressed="false">Show individual effects', fixed = TRUE)
+  expect_no_match(off, "Grey dots", fixed = TRUE)
+  expect_equal(lengths(regmatches(on, gregexpr("metaui-track-dot", on, fixed = TRUE))), 3)
+  expect_match(on, 'aria-pressed="true">Hide individual effects', fixed = TRUE)
+  expect_match(on, "metaui-hist-note", fixed = TRUE)
+  # Off: only the estimates set the axis, so a 0.02-wide interval takes a visible share of it.
+  width <- function(html) { x <- regmatches(html, regexpr('metaui-track-diamond" style="left:[0-9.]+%;width:[0-9.]+', html)); as.numeric(sub(".*width:", "", x)) }
+  expect_gt(width(off), 5 * width(on))
 })

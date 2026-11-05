@@ -872,8 +872,7 @@ glue_string <- ('
     else if (is.numeric(df_filtered()[[input$moderator]])) div(class = "metaui-moderation-grid",
       shiny::htmlOutput("moderation_table"), shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot", height = 340)),
       p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise; whole-number moderators are spread slightly so that dots do not stack. Line and band: the multilevel moderator model with its 95% CI."))
-    else div(class = "metaui-moderation-wide", shiny::htmlOutput("moderation_table"),
-      p(class = "metaui-note metaui-key", "Green diamond: level estimate from the multilevel moderator model; its width is the 95% CI. Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another. Dashed line: overall multilevel estimate.", tags$span(class = "metaui-hist-note", hidden = NA, " Grey bars: levels with many effects, showing how many fall in each small range, on one scale across levels; the tallest bar is ", tags$span(class = "metaui-hist-max"), " effects.")))
+    else div(class = "metaui-moderation-wide", shiny::htmlOutput("moderation_table"))
   })
 
   output$moderation_plot <- plotly::renderPlotly({
@@ -1001,7 +1000,7 @@ glue_string <- ('
     metaUI_moderator_html(levels, metaUI_show(as.numeric(model$b), df), metaUI_show(model$ci.lb, df), metaUI_show(model$ci.ub, df),
       as.integer(counts[levels]), x, shown,
       paste0(df$metaUI__study_id, ": ", round(shown, 2)), metaUI_eff_size_type_label,
-      ref = if (length(overall)) overall[1] else NULL, se = df$metaUI__se)
+      ref = if (length(overall)) overall[1] else NULL, se = df$metaUI__se, show_effects = isTRUE(input$moderator_effects))
   })
 
   output$moderation_text <- shiny::renderText({
