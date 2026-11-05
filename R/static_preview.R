@@ -40,7 +40,7 @@ static_precompute <- function(app_dir, dest) {
           tag$children <- list(htmltools::HTML(value))
       }
       if (identical(a$id, "metaui_basis")) tag <- htmltools::tagAppendChildren(tag,
-        htmltools::tags$span(class = "metaui-preview-state", "Saved results for all effects; the filters are loading."))
+        htmltools::tags$span(class = "metaui-preview-state", "Saved results for the default selection; the filters are loading."))
       if (identical(a$id, "go")) {
         tag$children <- list("Loading\u2026")
         tag$attribs$`aria-busy` <- "true"
@@ -53,8 +53,8 @@ static_precompute <- function(app_dir, dest) {
           htmltools::tags$div(class = "metaui-preview-track"),
           htmltools::tags$div(class = "metaui-preview-ends", htmltools::tags$span(a$`data-min`), htmltools::tags$span(a$`data-max`))))
       if (tag$name == "select" && !is.null(a$class) && grepl("selectpicker", a$class, fixed = TRUE))
-        { count <- lengths(regmatches(as.character(tag), gregexpr("<option\\b", as.character(tag))))
-          return(htmltools::tags$p(class = "metaui-preview-select", paste(count, "of", count, "selected"))) }
+        { count <- function(pattern) lengths(regmatches(as.character(tag), gregexpr(pattern, as.character(tag), perl = TRUE)))
+          return(htmltools::tags$p(class = "metaui-preview-select", paste(count("<option\\b[^>]*\\bselected\\b"), "of", count("<option\\b"), "selected"))) }
       if (tag$name %in% c("input", "button", "select", "textarea")) tag$attribs$disabled <- NA
       if (tag$name == "a" && !identical(a$class, "metaui-skip")) {
         tag$attribs$href <- NULL; tag$attribs$`aria-disabled` <- "true"; tag$attribs$tabindex <- "-1"
@@ -154,9 +154,11 @@ static_default_inputs <- function(env) {
 
 # The default analysis, fitted once at build by the generated server itself, so that readers
 # see it at once. Failure is not fatal: the app then fits it when first opened.
-opening_precompute <- function(app_dir) {
+opening_precompute <- function(app_dir, enabled = TRUE) {
   path <- file.path(app_dir, "opening_results.rds")
   unlink(path)
+  # An app that opts out of caching fits afresh for every reader, including at opening.
+  if (!enabled) return(invisible(FALSE))
   old <- setwd(app_dir)
   on.exit(setwd(old), add = TRUE)
   saved <- tryCatch(suppressMessages({

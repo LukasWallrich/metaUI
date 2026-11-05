@@ -360,7 +360,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   writeLines(server, file.path(save_to_folder, "server.R"))
   writeLines(generate_global.R(eff_size_type_label, bayesian, uses_meta), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
-  opening_precompute(save_to_folder)
+  opening_precompute(save_to_folder, enabled = opts$fit_cache_entries > 0L)
 
   if (!is.null(static_folder))
     return(invisible(export_static(save_to_folder, static_folder, overwrite = overwrite)))

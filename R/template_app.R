@@ -692,7 +692,7 @@ glue_string <- ('
     row <- table[index[1], ]
     fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = 2))
     interval <- gsub(" ", "\\u00a0", if (grepl("^Confidence", row$interval_type)) ci_label else "95% interval", fixed = TRUE)
-    unit <- if (row$aggregated) "studies" else "effects"
+    unit <- metaUI_count_unit(row, length(unique(df_filtered()$metaUI__study_id)))
     div(class = "metaui-primary", role = "region", `aria-label` = "Primary analysis",
       if (row$status == "ok") tags$p(class = "metaui-primary-value", HTML(paste0("Estimated effect: ", metaUI_label_html(if (metaUI__df$metaUI__es_type[1] == "ZCOR") "r" else metaUI_eff_size_type_label), " = <b>", fmt(row$es), "</b>, ",
         if (is.na(row$LCL) || is.na(row$UCL)) "no interval reported" else paste0(interval, "\\u00a0[", fmt(row$LCL), ", ", fmt(row$UCL), "]"))))
@@ -705,7 +705,7 @@ glue_string <- ('
         # An introduction from the authors states the direction in their own words.
         if (nzchar(welcome_text)) "" else switch(metaUI__df$metaUI__direction[1], positive = " Positive values are in the direction the authors expected.",
           negative = " Negative values are in the direction the authors expected.", ""))),
-      tags$p(class = "metaui-primary-label", paste0(row$Model, if (row$status == "ok") paste0(", ", row$k, " ", unit), ". Primary analysis, declared by the authors.",
+      tags$p(class = "metaui-primary-label", paste0(row$Model, if (row$status == "ok") paste0(", ", row$k, if (nzchar(unit)) " ", unit), ". Primary analysis, declared by the authors.",
         if (grepl("hedges|cohen|standardi[sz]ed mean|^smd$", metaUI_eff_size_type_label, ignore.case = TRUE)) " Effects are standardized mean differences, in standard deviations." else "")),
       if (row$status == "ok" && nzchar(row$warnings)) tags$p(class = "metaui-primary-warning", paste("Warnings:", row$warnings)))
   })
@@ -849,7 +849,8 @@ glue_string <- ('
 
   # Categorical moderators are drawn in their table; numeric ones get a scatter beside theirs.
   output$moderation_panel <- renderUI({
-    if (is.numeric(df_filtered()[[input$moderator]])) div(class = "metaui-moderation-grid",
+    if (isTRUE(moderator_model()$constant)) NULL
+    else if (is.numeric(df_filtered()[[input$moderator]])) div(class = "metaui-moderation-grid",
       shiny::htmlOutput("moderation_table"), shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot", height = 340)),
       p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise; whole-number moderators are spread slightly so that dots do not stack. Line and band: the multilevel moderator model with its 95% CI."))
     else div(class = "metaui-moderation-wide", shiny::htmlOutput("moderation_table"),
@@ -893,6 +894,9 @@ glue_string <- ('
 
   moderator_model <- reactive({
     df <- df_filtered()
+    # A moderator with one value has nothing to fit, test or draw.
+    if (length(unique(stats::na.omit(df[[input$moderator]]))) < 2L)
+      return(list(constant = TRUE, moderation_text = HTML(paste0(\'<p class="metaui-moderation-finding">The selected effects do not vary on <b>\', htmltools::htmlEscape(stringr::str_remove(input$moderator, "metaUI__filter_")), \'</b>, so its relationship with the effect sizes cannot be tested. Widen the selection to test it.</p>\'))))
 
     if (is.numeric(df[[input$moderator]])) {
 
@@ -949,6 +953,7 @@ glue_string <- ('
 
   output$moderation_table <- shiny::renderText({
     model <- moderator_model()
+    if (isTRUE(model$constant)) return("")
     df <- df_filtered()
     x <- df[[input$moderator]]
     if (is.numeric(x)) {
@@ -1220,6 +1225,9 @@ glue_string <- ('
     breaks <- pretty(effects, n = 24)
     counts <- graphics::hist(effects, breaks = breaks, plot = FALSE)$counts
     span <- range(breaks) + c(-1, 1) * diff(range(breaks)) * .02
+    # Ticks carry the decimals their spacing needs, so small ranges keep distinct labels.
+    ticks <- pretty(span, 6); ticks <- ticks[ticks >= span[1] & ticks <= span[2]]
+    tick_digits <- max(0L, ceiling(-log10(diff(ticks)[1] * (1 + 1e-9))))
     # The axis ends on a labelled tick above the tallest bar.
     top <- max(pretty(c(0, max(counts)), 5))
     ink <- plot_colours$ink
@@ -1244,7 +1252,7 @@ glue_string <- ('
           list(x = qs[[2]], y = strip, yshift = 9, text = paste0("middle 50%, median ", metaUI_minus(round_(qs[[2]], 2))), showarrow = FALSE, xanchor = "center", yanchor = "bottom", font = list(size = 13, color = plot_colours$slate)),
           if (any(outliers$metaUI__effect_size < qs[[1]])) list(x = min(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "left", yanchor = "bottom", font = list(size = 13, color = plot_colours$slate)),
           if (any(outliers$metaUI__effect_size > qs[[3]])) list(x = max(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "right", yanchor = "bottom", font = list(size = 13, color = plot_colours$slate))),
-        xaxis = list(title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 13.5)), range = span, tickformat = if (diff(breaks)[1] < 1 && max(abs(pretty(span, 6)) %% 1) > 0) ".1f" else "", tickfont = axis_font, zeroline = FALSE, showgrid = FALSE, fixedrange = TRUE, showline = TRUE, linecolor = plot_colours$slate, linewidth = 1, ticks = "outside", ticklen = 3, tickcolor = plot_colours$slate),
+        xaxis = list(title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 13.5)), range = span, tickmode = "array", tickvals = ticks, ticktext = metaUI_minus(formatC(ticks, format = "f", digits = tick_digits)), tickfont = axis_font, zeroline = FALSE, showgrid = FALSE, fixedrange = TRUE, showline = TRUE, linecolor = plot_colours$slate, linewidth = 1, ticks = "outside", ticklen = 3, tickcolor = plot_colours$slate),
         yaxis = list(title = list(text = "Effects", font = list(size = 13.5)), tickfont = axis_font, gridcolor = plot_colours$grid, zeroline = FALSE, fixedrange = TRUE, range = c(0, top * 1.3), rangemode = "normal", tick0 = 0, tickvals = pretty(c(0, top), 5)[pretty(c(0, top), 5) <= top]))
     p
   })

@@ -353,6 +353,14 @@ metaUI_effects_strip <- function(values, axis_title) {
     sprintf('<div class="metaui-track metaui-stack" style="height:%dpx">%s%s</div>', height, metaUI_track_grid(scale), dots), metaUI_track_axis(scale, axis_title), "</div>")
 }
 
+# What a model's k counts. Study-level fits and RVE report studies, whatever their level of fit.
+metaUI_count_unit <- function(row, studies = NA) {
+  if (is.na(row$k)) return("")
+  if (row$aggregated || identical(as.numeric(row$k), as.numeric(studies))) return("studies")
+  if ("input_rows" %in% names(row) && identical(as.numeric(row$k), as.numeric(row$input_rows))) return("effects")
+  ""
+}
+
 # Reader table of model estimates: one row per model, every model named, with reasons
 # where a model was not estimated. Downloads keep the full table.
 metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect size", bound = NULL, studies = NA) {
@@ -372,7 +380,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
       paste0('<span class="metaui-level-inline">', if (i %in% first) "primary, ", if (row$aggregated) "study-level" else "effect-level", "</span>"))
     interval <- if (is.na(row$LCL) && is.na(row$UCL)) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
     fit <- if (row$aggregated) "study-level" else "effect-level"
-    unit <- if (is.na(row$k)) "" else if (row$aggregated || identical(as.numeric(row$k), as.numeric(studies))) "studies" else if ("input_rows" %in% names(row) && identical(as.numeric(row$k), as.numeric(row$input_rows))) "effects" else ""
+    unit <- metaUI_count_unit(row, studies)
     track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = i %in% first), "</td>")
       else paste0('<td class="metaui-reason-cell"><b>Not estimated (', esc(row$status), "):</b> ", esc(row$reason), "</td>")
     paste0('<tr', if (i %in% first) ' class="metaui-primary-row"', "><td>", label, '</td><td class="num">', fmt(row$es),
@@ -406,7 +414,8 @@ metaUI_effect_details <- function(df) {
 metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL) {
   fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = 2))
   esc <- function(x) htmltools::htmlEscape(as.character(x))
-  scale <- metaUI_track_scale(c(rows$es, rows$LCL, rows$UCL))
+  # Combined rows count too: correlated weights can put them beyond their effects.
+  scale <- metaUI_track_scale(c(rows$es, rows$LCL, rows$UCL, studies$es, studies$LCL, studies$UCL))
   summaries <- rows[rows$kind == "Model summary", , drop = FALSE]
   effects <- rows[rows$kind == "Selected effect", , drop = FALSE]
   ref <- if (nrow(summaries)) summaries$es[1] else NULL
@@ -470,7 +479,7 @@ metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values
   # Largest estimate first; a missing-data level stays at the end.
   order <- order(levels == "(Missing)", -estimate)
   # Dots follow precision, as in the numeric moderator's plot.
-  sizes <- if (is.null(se)) NULL else pmin(6.5, pmax(3.5, 4.5 * stats::median(se, na.rm = TRUE) / se))
+  sizes <- if (is.null(se)) NULL else pmin(6.5, pmax(4, 4.5 * stats::median(se, na.rm = TRUE) / se))
   rows <- vapply(order, function(i) {
     level <- as.character(effects) == as.character(levels[i])
     level[is.na(level)] <- FALSE
@@ -537,7 +546,8 @@ metaUI_fit_cache <- function(max_entries = 3L, limit = 3L, seed = NULL) {
   if (length(max_entries) != 1L || !is.numeric(max_entries) || !is.finite(max_entries) ||
       max_entries < 0 || max_entries > limit || max_entries != as.integer(max_entries))
     stop("fit_cache_entries must be an integer from 0 to ", limit, ".")
-  entries <- if (is.null(seed)) list() else list(seed)
+  # Zero means every analysis runs afresh, so a saved fit must not answer either.
+  entries <- if (is.null(seed) || max_entries == 0L) list() else list(seed)
   cached <- function(df, models, correlation = .6, aggregation = "aggregate") {
     started <- proc.time()[["elapsed"]]
     key <- list(data = df, models = models, correlation = correlation, aggregation = aggregation)

@@ -220,7 +220,7 @@
     document.querySelectorAll('.metaui-moderators').forEach(function (table) {
       // One shrink per table, so a dot's size means the same in every row.
       var largest = Math.max.apply(null, Array.prototype.map.call(table.tBodies[0].rows, function (row) { return row.querySelectorAll('.metaui-track-dot').length; }));
-      var crowd = Math.max(.7, Math.min(1, Math.sqrt(60 / Math.max(largest, 1))));
+      var crowd = Math.max(.75, Math.min(1, Math.sqrt(60 / Math.max(largest, 1))));
       table.querySelectorAll('tbody .metaui-track').forEach(function (track) {
         var width = track.clientWidth;
         if (!width || track.dataset.spreadWidth === String(width)) return;
@@ -250,8 +250,19 @@
     });
     if (moved && !again) spreadDots(true);
   }
+  // These tables are restyled as blocks on phones, which would otherwise hide that they are tables.
+  function markTables() {
+    document.querySelectorAll('table.metaui-estimates:not([role])').forEach(function (table) {
+      table.setAttribute('role', 'table');
+      table.querySelectorAll('thead, tbody, tfoot').forEach(function (part) { part.setAttribute('role', 'rowgroup'); });
+      table.querySelectorAll('tr').forEach(function (row) { row.setAttribute('role', 'row'); });
+      table.querySelectorAll('th').forEach(function (cell) { cell.setAttribute('role', 'columnheader'); });
+      table.querySelectorAll('td').forEach(function (cell) { cell.setAttribute('role', 'cell'); });
+    });
+  }
+  $(markTables);
   var spreadTimer;
-  $(document).on('shiny:value shown.bs.tab', function () { setTimeout(function () { spreadDots(); }, 0); });
+  $(document).on('shiny:value shown.bs.tab', function () { setTimeout(function () { markTables(); spreadDots(); }, 0); });
   // Covers window resizes and a scrollbar arriving as later outputs render.
   new ResizeObserver(function () { clearTimeout(spreadTimer); spreadTimer = setTimeout(function () { spreadDots(); }, 120); }).observe(document.documentElement);
   $(document).on('click', '.metaui-forest-all', function () {

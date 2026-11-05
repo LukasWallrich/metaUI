@@ -5,6 +5,8 @@
 - P-curve and z-curve open with a plain reading of their tests. The p-curve is drawn in the shared plot style from the same values, and z-curve rates appear as percentages.
 - New `options = list(intro = ...)` adds a short introduction under the title.
 - A diamond now always spans a 95% CI, on the Summary, on moderator levels and in the forest plot's PDF and PNG downloads. Moderator rows stack their effects so that no dot covers another, and funnel labels move clear of the points.
+- Apps with `fit_cache_entries = 0`, the default for custom model code, no longer save or reuse build-time fits: they fit afresh when opened.
+- A moderator with one value in the selection now says it cannot be tested, instead of failing. Declaring RVE as primary now reports its *k* as studies. Static previews state the actual default selection.
 
 * Redesigned the generated apps' reader interface. The Summary now leads with one
   sentence stating the primary estimate. A single table draws every model's interval on

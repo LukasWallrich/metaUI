@@ -16,12 +16,16 @@ test_that("funnel labels stay clear of the points across selections and widths",
     is_label <- vapply(plot$layers, function(layer) inherits(layer$geom, "GeomText"), logical(1))
     labels <- do.call(rbind, lapply(which(is_label), function(i) ggplot2::layer_data(plot, i)[c("x", "y", "label", "hjust")]))
     expect_equal(nrow(labels), 4)
-    limit <- labels[labels$label == "95% limits", ]
     span <- diff(ggplot2::layer_scales(plot)$x$get_limits())
-    label_width <- 10 * 7 / (width - 70) * span
-    left <- limit$x - limit$hjust * label_width
-    inside <- fit$yi >= left & fit$yi <= left + label_width & abs(sqrt(fit$vi) - abs(limit$y)) <= .0375 * max(sqrt(fit$vi)) * 1.05
-    expect_lte(sum(inside), if (width < 500) 1 else 0)
+    # Every label, not just one. Phones are crowded: the least covered spot may hold a point.
+    for (i in seq_len(nrow(labels))) {
+      # A parsed label holds plotmath source; it renders as six characters ("p < .05").
+      chars <- if (grepl("italic", labels$label[i], fixed = TRUE)) 6 else nchar(labels$label[i])
+      label_width <- chars * 7 / (width - 70) * span
+      left <- labels$x[i] - labels$hjust[i] * label_width
+      inside <- fit$yi >= left & fit$yi <= left + label_width & abs(sqrt(fit$vi) - abs(labels$y[i])) <= .0375 * max(sqrt(fit$vi)) * 1.05
+      expect_lte(sum(inside), if (width < 500) 1 else 0)
+    }
   }
 })
 
@@ -43,4 +47,58 @@ test_that("a diamond always spans the interval, including on moderator rows", {
   expect_match(row, "metaui-track-dot", fixed = TRUE)
   expect_no_match(row, "metaui-track-ci", fixed = TRUE)
   expect_no_match(metaUI:::metaUI_track_row(scale, .2, .2, .2, diamond = TRUE), "metaui-track-diamond", fixed = TRUE)
+})
+
+test_that("forest intervals include combined rows the effects do not reach", {
+  rows <- data.frame(kind = "Selected effect", study = "A", effect_id = 1:2, label = c("1", "2"), es = c(0, 10), LCL = c(-.2, 8), UCL = c(.2, 12))
+  studies <- data.frame(study = "A", es = -.56, LCL = -.73, UCL = -.4)
+  html <- metaUI:::metaUI_forest_html(rows, "g", studies = studies)
+  left <- as.numeric(unlist(regmatches(html, gregexpr("(?<=left:)-?[0-9.]+(?=%)", html, perl = TRUE))))
+  expect_gt(length(left), 0)
+  expect_true(all(left >= 0 & left <= 100))
+})
+
+test_that("RVE counts studies even though it is fitted to effects", {
+  row <- data.frame(k = 97, aggregated = FALSE, input_rows = 286)
+  expect_equal(metaUI:::metaUI_count_unit(row, 97), "studies")
+  row$k <- 286
+  expect_equal(metaUI:::metaUI_count_unit(row, 97), "effects")
+  row$aggregated <- TRUE; row$k <- 103
+  expect_equal(metaUI:::metaUI_count_unit(row, 97), "studies")
+})
+
+test_that("a saved fit does not answer when caching is off", {
+  df <- data.frame(a = 1)
+  seed <- list(key = list(data = df, models = "m", correlation = .6, aggregation = "aggregate"), value = list(table = data.frame(es = 1)))
+  on <- metaUI:::metaUI_fit_cache(3L, seed = seed)
+  expect_true(on(df, "m")$cache_hit)
+  off <- metaUI:::metaUI_fit_cache(0L, seed = seed)
+  expect_error(off(df, "m"))
+})
+
+test_that("a moderator with one value in the selection is explained, not an error", {
+  skip_without_app_packages()
+  set.seed(1)
+  d <- data.frame(study = rep(paste0("S", 1:8), each = 2), id = 1:16, yi = rnorm(16, .3, .3), vi = runif(16, .02, .08),
+    same = 2005, one = "only", cat = rep(c("a", "b"), 8))
+  x <- suppressMessages(prepare_data(d, "study", "yi", variance = "vi", es_id = "id",
+    filters = c(Same = "same", One = "one", Cat = "cat"), categorical_filters = c("one", "cat")))
+  path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
+  # Caching off: nothing saved for the opening, so readers always get a fresh fit.
+  generate_shiny(x, "Edge", save_to_folder = path, launch_app = FALSE, options = list(fit_cache_entries = 0L))
+  expect_false(file.exists(file.path(path, "opening_results.rds")))
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
+  env <- new.env(parent = globalenv()); suppressMessages(sys.source("global.R", env))
+  defaults <- metaUI:::static_default_inputs(env); attr(defaults, "z_slider") <- NULL
+  shiny::testServer(env$server, {
+    do.call(session$setInputs, defaults)
+    session$setInputs(go = 1)
+    for (moderator in c("metaUI__filter_Same", "metaUI__filter_One")) {
+      session$setInputs(moderator = moderator)
+      expect_match(output$moderation_text, "do not vary", fixed = TRUE)
+      expect_equal(as.character(output$moderation_table), "")
+    }
+    session$setInputs(moderator = "metaUI__filter_Cat")
+    expect_match(output$moderation_table, "metaui-moderators", fixed = TRUE)
+  })
 })

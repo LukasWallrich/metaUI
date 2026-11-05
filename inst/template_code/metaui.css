@@ -194,7 +194,7 @@ html.shiny-busy .metaui-actions #go { opacity: .75; }
 #calculation_status { font-size: .875rem; color: var(--metaui-slate); padding-top: 2px; }
 .metaui-basis .shiny-text-output { display: block; }
 .metaui-basis .shiny-output-error-validation { color: var(--metaui-slate); padding: 0; font-size: inherit; }
-#metaui_results:has(.metaui-basis.metaui-stale) .tab-content { opacity: .55; }
+#metaui_results:has(.metaui-basis.metaui-stale) .tab-content { opacity: .82; }
 .metaui-basis.metaui-stale #selection_overview { font-weight: 400; }
 .metaui-basis.metaui-stale #selection_overview { color: var(--metaui-attention); }
 .metaui-selection-details { font-size: .875rem; }
@@ -346,7 +346,7 @@ tfoot.metaui-phone-axis { display: none; }
 /* Level estimate in green on the row's centreline; the effects sit lighter, just beneath it. */
 .metaui-moderators .metaui-track-diamond { height: 12px; margin-top: -6px; }
 .metaui-moderators .metaui-track-point { background: var(--metaui-accent); border-radius: 0; transform: rotate(45deg); }
-.metaui-moderators .metaui-track-dot { opacity: .6; }
+.metaui-moderators .metaui-track-dot { opacity: .8; }
 .metaui-moderators .metaui-track { min-height: 38px; }
 .metaui-moderators { --metaui-mark-y: 19px; }
 .metaui-pcurve-stats { width: 100%; margin: 10px 0; font-size: .875rem; }
@@ -530,6 +530,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .metaui-forest .metaui-level-inline { display: none; }
   .metaui-estimates td:first-child { min-width: 11em; }
   .metaui-estimates th.metaui-track-cell, .metaui-estimates td.metaui-track-cell { width: 34%; }
+  .metaui-moderators th.metaui-track-cell, .metaui-moderators td.metaui-track-cell { width: 50%; }
   .container-fluid > .row > .col-sm-3:has(> form.well) + .col-sm-9 { padding-left: 20px; padding-right: 20px; }
   .metaui-header { padding-left: 20px; padding-right: 20px; }
   .container-fluid > .row > .col-sm-3:has(> form.well) { flex-basis: 256px; width: 256px; }
@@ -593,7 +594,9 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   table.metaui-estimates > thead > tr, table.metaui-estimates > tfoot > tr { display: block; padding-left: calc(100% - var(--metaui-phone-track)); }
   table.metaui-estimates > thead > tr { position: relative; }
   table.metaui-estimates > thead > tr::before { content: attr(data-head); position: absolute; left: 0; bottom: 5px; width: calc(98% - var(--metaui-phone-track)); font-size: .75rem; font-weight: 600; line-height: 1.2; color: var(--metaui-slate); }
-  table.metaui-estimates > thead > tr > th:not(.metaui-track-cell), table.metaui-estimates > tfoot > tr > td:not(.metaui-track-cell) { display: none; }
+  /* The row above shows the column names; screen readers keep the real headers. */
+  table.metaui-estimates > thead > tr > th:not(.metaui-track-cell) { position: absolute; width: 1px; height: 1px; padding: 0 !important; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  table.metaui-estimates > tfoot > tr > td:not(.metaui-track-cell) { display: none; }
   table.metaui-estimates > thead > tr > th.metaui-track-cell, table.metaui-estimates > tfoot > tr > td.metaui-track-cell { display: block; width: 100% !important; min-width: 0; padding: 0 6px 4px !important; overflow: visible; }
   table.metaui-estimates > tfoot > tr > td.metaui-track-cell { border: 0; padding: 4px 6px 0 !important; }
   table.metaui-estimates > tbody > tr { display: block; position: relative; padding: 5px var(--metaui-phone-track) 5px 0; line-height: 1.22; border-bottom: 1px solid var(--metaui-rule); }
