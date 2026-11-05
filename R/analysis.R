@@ -61,8 +61,18 @@ metaUI_label_spot <- function(spots, width, height, obstacles, pad = 0) {
   spots[which.min(inside), , drop = FALSE]
 }
 
+# Correlations are fitted as Fisher z; readers see r. Slopes and variances have no r equivalent.
+metaUI_show <- function(x, df) if (identical(as.character(df$metaUI__es_type[1]), "ZCOR")) tanh(x) else x
+
+# Two decimals, or three where an interval is too narrow for two to show it.
+metaUI_digits <- function(lcl, ucl) {
+  width <- ucl - lcl
+  if (any(is.finite(width) & width < .05)) 3L else 2L
+}
+
 # width: the plot's width on screen in pixels, which sets how much of the axis a label covers.
-metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours(), width = NULL) {
+# back: draw on the fitting scale, where the limits are straight, with the axis labelled in r.
+metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours(), width = NULL, back = FALSE) {
   if (is.null(width)) width <- 700
   centre <- as.numeric(fit$b)
   se <- sqrt(fit$vi); yi <- as.numeric(fit$yi)
@@ -97,7 +107,7 @@ metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours(), width = NU
   # Beside a limit line, the text clears the line at the box's lower edge, where the line is furthest out.
   beside <- function(y) c(centre + z * (y + text_height / 2) + gap, centre - z * (y + text_height / 2) - gap)
   y_pooled <- text_height / 2 + .005 * ymax
-  pooled_text <- paste0("pooled ", metaUI_minus(formatC(centre, format = "f", digits = 2)))
+  pooled_text <- paste0("pooled ", metaUI_minus(formatC(if (back) tanh(centre) else centre, format = "f", digits = metaUI_digits(fit$ci.lb, fit$ci.ub))))
   # Near the apex if there is room there, else lower down the centre line, where large datasets thin out.
   down <- seq(.3, .95, by = .13) * ymax
   pooled <- place(rbind(data.frame(x = beside(y_pooled), y = y_pooled, hjust = c(0, 1)),
@@ -125,8 +135,11 @@ metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours(), width = NU
     label(above, 'italic(p) >= ".05"', colours$slate, parse = TRUE) +
     label(pooled, pooled_text, colours$accent) +
     ggplot2::scale_y_reverse(breaks = metaUI_funnel_ticks(se), expand = c(0, 0)) +
-    ggplot2::scale_x_continuous(limits = limits, expand = c(0, 0), breaks = pretty(limits, 8), labels = function(x) metaUI_minus(format(x, trim = TRUE))) +
-    ggplot2::labs(x = metaUI_label_expr(xlab), y = "Standard error") +
+    (if (back) {
+      ticks <- pretty(tanh(limits), 8); ticks <- ticks[abs(ticks) < 1]
+      ggplot2::scale_x_continuous(limits = limits, expand = c(0, 0), breaks = atanh(ticks), labels = metaUI_minus(format(ticks, trim = TRUE)))
+    } else ggplot2::scale_x_continuous(limits = limits, expand = c(0, 0), breaks = pretty(limits, 8), labels = function(x) metaUI_minus(format(x, trim = TRUE)))) +
+    ggplot2::labs(x = metaUI_label_expr(xlab), y = if (back) "Standard error (Fisher z)" else "Standard error") +
     metaUI_plot_theme(colours) +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 }
@@ -367,7 +380,8 @@ metaUI_count_unit <- function(row, studies = NA) {
 # Reader table of model estimates: one row per model, every model named, with reasons
 # where a model was not estimated. Downloads keep the full table.
 metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect size", bound = NULL, studies = NA) {
-  fmt <- function(x) if (is.na(x)) "" else metaUI_minus(formatC(x, format = "f", digits = 2))
+  digits <- metaUI_digits(table$LCL[table$status == "ok"], table$UCL[table$status == "ok"])
+  fmt <- function(x) if (is.na(x)) "" else metaUI_minus(formatC(x, format = "f", digits = digits))
   esc <- function(x) htmltools::htmlEscape(as.character(x))
   order <- c(first, setdiff(seq_len(nrow(table)), first))
   scale <- metaUI_track_scale(c(table$es, table$LCL, table$UCL, if (!is.null(bound)) c(-bound, bound)))
@@ -395,7 +409,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     if (!is.null(ref)) " Diamond and dashed line: the primary estimate; the diamond's width is its 95% CI.", "</p>",
     '<p class="metaui-note metaui-other-estimators"><i>k</i>: effects or studies the model reports',
     if (any(grepl("trim", table$Model, ignore.case = TRUE))) "; trim-and-fill includes imputed studies", ". Study-level fits first combine the effects within each study.</p>")
-  interval_head <- if (length(types) == 1L && grepl("^Confidence", types)) "95% CI" else "95% interval"
+  interval_head <- if (length(types) && all(grepl("^Confidence", types))) "95% CI" else "95% interval"
   notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(table$warnings[warned]), "</li>", collapse = ""), "</ol>")
   paste0('<table class="table metaui-estimates metaui-custom"><thead><tr data-head="Model, estimate [', interval_head, ']"><th>Model<span class="metaui-level-inline">and level of fit</span></th><th class="num">Estimate</th><th class="num">',
     interval_head, '</th><th class="num metaui-k" title="Number of effects or studies the model reports; trim-and-fill includes imputed studies."><i>k</i></th><th></th><th class="metaui-fit" title="Effect-level fits use every selected effect; study-level fits first combine the effects within each study.">Level of fit</th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
@@ -416,7 +430,7 @@ metaUI_effect_details <- function(df) {
 }
 
 metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL) {
-  fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = 2))
+  fmt <- function(x, digits = 2L) metaUI_minus(formatC(x, format = "f", digits = digits))
   esc <- function(x) htmltools::htmlEscape(as.character(x))
   # Combined rows count too: correlated weights can put them beyond their effects.
   scale <- metaUI_track_scale(c(rows$es, rows$LCL, rows$UCL, studies$es, studies$LCL, studies$UCL))
@@ -425,9 +439,12 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL)
   ref <- if (nrow(summaries)) summaries$es[1] else NULL
   width <- effects$UCL - effects$LCL
   size <- pmin(13, pmax(6, 7 * stats::median(width) / width))
-  values <- function(row) paste0('<td class="num">', fmt(row$es), '</td><td class="num">[', fmt(row$LCL), ", ", fmt(row$UCL), "]</td>")
+  # Only model summaries are narrow enough to need more decimals; study rows stay aligned.
+  values <- function(row, digits = 2L) {
+    paste0('<td class="num">', fmt(row$es, digits), '</td><td class="num">[', fmt(row$LCL, digits), ", ", fmt(row$UCL, digits), "]</td>")
+  }
   grid <- paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, NA_real_, NA_real_, NA_real_, ref = ref), "</td>")
-  summary_rows <- if (nrow(summaries)) paste(vapply(seq_len(nrow(summaries)), function(i) paste0('<tr class="metaui-primary-row"><td>', esc(summaries$label[i]), "</td>", values(summaries[i, ]),
+  summary_rows <- if (nrow(summaries)) paste(vapply(seq_len(nrow(summaries)), function(i) paste0('<tr class="metaui-primary-row"><td>', esc(summaries$label[i]), "</td>", values(summaries[i, ], metaUI_digits(summaries$LCL[i], summaries$UCL[i])),
     '<td class="metaui-track-cell">', metaUI_track_row(scale, summaries$es[i], summaries$LCL[i], summaries$UCL[i], ref = ref, diamond = TRUE), "</td></tr>"), character(1)), collapse = "")
   groups <- rle(as.character(effects$study))
   ends <- cumsum(groups$lengths); starts <- ends - groups$lengths + 1L
@@ -451,16 +468,19 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL)
         one(index[j], paste0("Effect ", esc(labels[j]), if (!is.na(detail) && nzchar(detail)) paste0(' <span class="metaui-forest-count">', esc(detail), "</span>")), "metaui-forest-effect metaui-forest-closed")
       }, character(1)), collapse = ""))
   }, character(1))
+  # metaui.js shows this when the studies fill more than one page.
+  pager <- paste0('<p class="metaui-note metaui-key metaui-forest-controls metaui-forest-pager" hidden><button type="button" class="metaui-forest-prev">Previous</button>',
+    '<button type="button" class="metaui-forest-next">Next</button><span class="metaui-forest-status" aria-live="polite"></span></p>')
   paste0('<p class="metaui-note metaui-key metaui-forest-key"><span><i class="metaui-glyph metaui-glyph-dot"></i>One effect; larger is more precise</span>',
     if (any(groups$lengths > 1L)) '<span><i class="metaui-glyph metaui-glyph-square"></i>A study\'s effects combined</span>',
     '<span><i class="metaui-glyph metaui-glyph-diamond"></i>Model summary; its width is the 95% CI</span>',
-    if (!is.null(ref)) paste0('<span><i class="metaui-glyph metaui-glyph-dash"></i>', esc(summaries$label[1]), ", ", fmt(ref), "</span>"), "</p>",
+    if (!is.null(ref)) paste0('<span><i class="metaui-glyph metaui-glyph-dash"></i>', esc(summaries$label[1]), ", ", fmt(ref, metaUI_digits(summaries$LCL[1], summaries$UCL[1])), "</span>"), "</p>",
     '<p class="metaui-note metaui-key metaui-forest-controls">',
     if (any(groups$lengths > 1L)) '<button type="button" class="metaui-forest-all" aria-expanded="false">Show every effect</button>',
-    '<button type="button" class="metaui-forest-sort" aria-pressed="false">Sort by estimate</button></p>',
+    '<button type="button" class="metaui-forest-sort" aria-pressed="false">Sort by estimate</button></p>', pager,
     '<table class="table metaui-estimates metaui-forest metaui-custom"><thead><tr data-head="Study, estimate [95% CI]"><th>Study</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", summary_rows, paste(study_rows, collapse = ""),
-    '</tbody><tfoot><tr><td colspan="3"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>")
+    '</tbody><tfoot><tr><td colspan="3"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", pager)
 }
 
 # Category counts with bars in the table, including levels the selection leaves empty.
@@ -478,7 +498,8 @@ metaUI_bars_html <- function(counts, name) {
 
 # Moderator levels on the same drawn axis; the dots are the selected effects themselves.
 metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values, labels, axis_title, ref = NULL, se = NULL) {
-  fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = 2))
+  digits <- metaUI_digits(lcl, ucl)
+  fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = digits))
   scale <- metaUI_track_scale(c(estimate, lcl, ucl, values))
   # Largest estimate first; a missing-data level stays at the end.
   order <- order(levels == "(Missing)", -estimate)
@@ -714,6 +735,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
                       collapsed_rows = nrow(df) - nrow(x), aggregated = spec$aggregated,
                       fit_seconds = elapsed, reflected = reflected, row.names = NULL)
     row$interval_type <- if (bayesian) "95% central credible interval (prior-dependent)" else
+      if (!is.null(spec[["interval_type"]]) && !is.na(spec[["interval_type"]])) as.character(spec[["interval_type"]]) else
       if (is.na(metaUI_model_role(spec, NA_character_))) "Author-defined interval (type and coverage unknown)" else
       "Confidence interval (coverage model-dependent)"
     row$fit_es <- row$es; row$fit_LCL <- row$LCL; row$fit_UCL <- row$UCL

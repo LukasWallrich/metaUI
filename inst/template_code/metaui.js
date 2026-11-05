@@ -314,7 +314,7 @@
       if (plot.clientWidth && plot.parentElement.clientWidth !== plot.querySelector('.main-svg').clientWidth) window.Plotly.Plots.resize(plot);
     });
   }
-  $(document).on('shiny:value shown.bs.tab', function () { setTimeout(function () { markTables(); spreadDots(); fitPlots(); }, 0); });
+  $(document).on('shiny:value shown.bs.tab', function () { setTimeout(function () { markTables(); spreadDots(); fitPlots(); pageForests(); }, 0); });
   $(document).on('plotly_afterplot shiny:visualchange', function () { setTimeout(fitPlots, 0); });
   // Covers window resizes and a scrollbar arriving as later outputs render.
   new ResizeObserver(function () { clearTimeout(spreadTimer); spreadTimer = setTimeout(function () { spreadDots(); }, 120); }).observe(document.documentElement);
@@ -324,20 +324,55 @@
     this.textContent = open ? 'Show studies only' : 'Show every effect';
     this.closest('.shiny-html-output').querySelectorAll('.metaui-forest-study').forEach(function (row) { setStudy(row, open); });
   });
-  // Studies move with their effects; a second click restores the order by name.
-  $(document).on('click', '.metaui-forest-sort', function () {
-    var byEstimate = this.getAttribute('aria-pressed') !== 'true';
-    this.setAttribute('aria-pressed', String(byEstimate));
-    this.textContent = byEstimate ? 'Sort by study name' : 'Sort by estimate';
-    var body = this.closest('.shiny-html-output').querySelector('.metaui-forest tbody');
+  function forestGroups(body) {
     var groups = [];
     Array.prototype.forEach.call(body.rows, function (row) {
       if (row.classList.contains('metaui-primary-row')) return;
       if (row.classList.contains('metaui-forest-effect')) groups[groups.length - 1].rows.push(row);
       else groups.push({ rows: [row], es: Number(row.dataset.es), name: row.cells[0].textContent });
     });
+    return groups;
+  }
+  // Model summaries stay on every page; a study keeps its effects on its own page.
+  var forestPageSize = 50;
+  function forestPage(box, page) {
+    var groups = forestGroups(box.querySelector('.metaui-forest tbody'));
+    var pages = Math.max(1, Math.ceil(groups.length / forestPageSize));
+    page = Math.max(0, Math.min(page, pages - 1));
+    box.dataset.forestPage = page;
+    groups.forEach(function (group, i) {
+      var off = Math.floor(i / forestPageSize) !== page;
+      group.rows.forEach(function (row) { row.classList.toggle('metaui-forest-offpage', off); });
+    });
+    box.querySelectorAll('.metaui-forest-pager').forEach(function (pager) {
+      pager.hidden = pages < 2;
+      pager.querySelector('.metaui-forest-prev').disabled = page === 0;
+      pager.querySelector('.metaui-forest-next').disabled = page === pages - 1;
+      pager.querySelector('.metaui-forest-status').textContent = 'Studies ' + (page * forestPageSize + 1) + '\u2013' + Math.min((page + 1) * forestPageSize, groups.length) + ' of ' + groups.length;
+    });
+  }
+  function pageForests() {
+    document.querySelectorAll('.metaui-forest:not([data-paged])').forEach(function (table) {
+      table.dataset.paged = 'true';
+      forestPage(table.closest('.shiny-html-output'), 0);
+    });
+  }
+  $(document).on('click', '.metaui-forest-prev, .metaui-forest-next', function () {
+    var box = this.closest('.shiny-html-output');
+    forestPage(box, Number(box.dataset.forestPage) + (this.classList.contains('metaui-forest-next') ? 1 : -1));
+    // From the pager under the table, the new page starts back at the top.
+    if (this.closest('.metaui-forest-pager').previousElementSibling === box.querySelector('.metaui-forest')) box.querySelector('.metaui-forest').scrollIntoView();
+  });
+  // Studies move with their effects; a second click restores the order by name.
+  $(document).on('click', '.metaui-forest-sort', function () {
+    var byEstimate = this.getAttribute('aria-pressed') !== 'true';
+    this.setAttribute('aria-pressed', String(byEstimate));
+    this.textContent = byEstimate ? 'Sort by study name' : 'Sort by estimate';
+    var box = this.closest('.shiny-html-output'), body = box.querySelector('.metaui-forest tbody');
+    var groups = forestGroups(body);
     groups.sort(function (a, b) { return byEstimate ? b.es - a.es : a.name.localeCompare(b.name); });
     groups.forEach(function (group) { group.rows.forEach(function (row) { body.appendChild(row); }); });
+    forestPage(box, 0);
   });
 })(jQuery);
 

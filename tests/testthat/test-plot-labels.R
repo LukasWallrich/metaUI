@@ -110,13 +110,46 @@ test_that("crowded moderator levels become histograms, sooner on phones", {
   expect_match(js, "dotCount(track) >= (phone.matches ? 25 : 100)", fixed = TRUE)
 })
 
-test_that("a correlation's plot label says the values are Fisher z", {
-  skip_without_app_packages()
-  d <- data.frame(study = paste0("S", 1:6), yi = c(.1, .2, .3, .1, .2, .4), vi = .02)
-  x <- suppressMessages(prepare_data(d, "study", "yi", variance = "vi", es_type = "COR", variance_scale = "r"))
-  path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
-  generate_shiny(x, "Cor", eff_size_type_label = "r (corrected)", save_to_folder = path, launch_app = FALSE)
-  expect_match(paste(readLines(file.path(path, "global.R")), collapse = "\n"), "Fisher z of r (corrected)", fixed = TRUE)
+test_that("correlations are shown as r, and a funnel keeps straight limits with an r axis", {
+  df <- data.frame(metaUI__es_type = "ZCOR")
+  expect_equal(metaUI:::metaUI_show(atanh(.5), df), .5)
+  expect_equal(metaUI:::metaUI_show(.5, data.frame(metaUI__es_type = "SMD")), .5)
+  set.seed(1)
+  fit <- metafor::rma(yi = atanh(runif(30, -.6, .7)), sei = runif(30, .05, .3))
+  plot <- metaUI:::metaUI_funnel(fit, "Correlation r", back = TRUE)
+  scale <- plot$scales$get_scales("x")
+  expect_equal(tanh(scale$breaks), as.numeric(gsub("\u2212", "-", scale$labels)))
+  expect_match(plot$labels$y, "Fisher z", fixed = TRUE)
+})
+
+test_that("narrow intervals get three decimals", {
+  expect_equal(metaUI:::metaUI_digits(.016, .033), 3L)
+  expect_equal(metaUI:::metaUI_digits(c(.1, NA), c(.3, NA)), 2L)
+})
+
+test_that("links save only what narrows the data, and read older links too", {
+  x <- data.frame(study = rep(LETTERS[1:6], each = 2), yi = rnorm(12), vi = .02, year = rep(2001:2006, 2), group = factor(rep(c("a", "b", "c"), 4)))
+  d <- suppressMessages(prepare_data(x, "study", "yi", variance = "vi", filters = c(Year = "year", Group = "group")))
+  filters <- list(list(id = "y", type = "numeric", col = "metaUI__filter_Year"), list(id = "g", type = "categorical", col = "metaUI__filter_Group"))
+  full <- metaUI:::metaUI_full_selection(d, filters)
+  records <- function(g) do.call(rbind, lapply(names(full), function(id) data.frame(id = id, selection = as.character(if (id == "g") g else full[[id]]))))
+  everything <- metaUI:::metaUI_selection_query(records(c("a", "b", "c")), "key", NULL, d, filters)
+  expect_no_match(utils::URLdecode(everything), "metaUI__|\"g\"|outliers")
+  expect_setequal(metaUI:::metaUI_parse_selection(everything, "key", d, filters)$filters$g$selection, c("a", "b", "c"))
+  narrowed <- metaUI:::metaUI_selection_query(records("b"), "key", NULL, d, filters)
+  parsed <- metaUI:::metaUI_parse_selection(narrowed, "key", d, filters)
+  expect_equal(parsed$filters$g$selection, "b")
+  expect_equal(as.numeric(parsed$filters$y$selection), as.numeric(full$y))
+  old <- paste0("?metaui=1&selection=", utils::URLencode(jsonlite::toJSON(list(dataset = "key", filters = records("b"), sesoi = NULL), auto_unbox = TRUE, null = "null"), reserved = TRUE))
+  expect_equal(metaUI:::metaUI_parse_selection(old, "key", d, filters)$filters$g$selection, "b")
+})
+
+test_that("an author can name a custom model's interval", {
+  table <- data.frame(Model = c("Custom", "Default"), es = c(.1, .2), LCL = c(0, .1), UCL = c(.2, .3), k = 5, status = "ok", reason = "", warnings = "", aggregated = FALSE,
+    interval_type = c("Confidence interval", "Confidence interval (coverage model-dependent)"))
+  html <- metaUI:::metaUI_estimates_html(table)
+  expect_match(html, "95% CI", fixed = TRUE)
+  expect_no_match(html, "metaui-row-note", fixed = TRUE)
 })
 
 test_that("confidence intervals carry no row note beside an author-defined one", {

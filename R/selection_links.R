@@ -1,10 +1,37 @@
 # Links contain only a built-dataset identity and validated reader selections.
-metaUI_selection_query <- function(selections, dataset_key, bound = NULL) {
-  payload <- list(dataset = dataset_key, filters = selections, sesoi = bound)
+metaUI_selection_query <- function(selections, dataset_key, bound = NULL, built = NULL, filters = list()) {
+  # Only what narrows the data is saved; anything left out means "everything" (metaUI_full_selection).
+  saved <- split(as.character(selections$selection), selections$id)
+  full <- if (is.null(built)) list() else metaUI_full_selection(built, filters)
+  ranges <- c("outliers_z_scores", vapply(Filter(function(x) x$type == "numeric", filters), function(x) x$id, character(1)))
+  untouched <- vapply(names(saved), function(id) {
+    if (is.null(full[[id]])) return(FALSE)
+    if (id %in% ranges) return(length(saved[[id]]) == 2L && isTRUE(all.equal(as.numeric(saved[[id]]), as.numeric(full[[id]]), tolerance = 1e-8)))
+    setequal(saved[[id]], full[[id]])
+  }, logical(1))
+  saved <- lapply(saved[!untouched], I)
+  if (!length(saved)) saved <- stats::setNames(list(), character())
+  payload <- list(dataset = dataset_key, filters = saved, sesoi = bound)
   encoded <- utils::URLencode(jsonlite::toJSON(payload, auto_unbox = TRUE, na = "null", null = "null", digits = I(17)), reserved = TRUE, repeated = TRUE)
   query <- paste0("?metaui=1&selection=", encoded)
   if (nchar(query, type = "bytes") > 6000L) stop("This selection is too large for a shareable URL; use the workbook download.")
   query
+}
+
+# What a link means by a filter it does not mention: nothing excluded.
+metaUI_full_selection <- function(built, filters = list()) {
+  full <- list()
+  if (any(is.finite(built$metaUI__es_z))) {
+    spec <- metaUI_slider_spec(built$metaUI__es_z, integer = FALSE)
+    full$outliers_z_scores <- c(spec$min, spec$max)
+  }
+  for (filter in filters) {
+    if (filter$type == "numeric") {
+      full[[paste0(filter$id, "_include_NA")]] <- "TRUE"
+      if (any(is.finite(built[[filter$col]]))) { spec <- metaUI_slider_spec(built[[filter$col]]); full[[filter$id]] <- c(spec$min, spec$max) }
+    } else full[[filter$id]] <- levels(built[[filter$col]])
+  }
+  full
 }
 
 metaUI_parse_selection <- function(query, dataset_key, built, filters = list()) {
@@ -17,6 +44,9 @@ metaUI_parse_selection <- function(query, dataset_key, built, filters = list()) 
   if (!is.list(payload) || !setequal(names(payload), c("dataset", "filters", "sesoi")) ||
       !identical(payload$dataset, dataset_key)) stop("This link belongs to a different dataset/build or has an invalid payload.")
   records <- payload$filters
+  # Links now hold one array per changed filter; older ones hold a row per value.
+  if (is.list(records) && !is.data.frame(records)) records <- data.frame(
+    id = rep(as.character(names(records)), lengths(records)), selection = as.character(unlist(records, use.names = FALSE)))
   if (!is.data.frame(records) || !setequal(names(records), c("id", "selection")) ||
       !is.character(records$id) || anyNA(records$id) || !is.atomic(records$selection))
     stop("Invalid saved selection records.")
@@ -24,7 +54,10 @@ metaUI_parse_selection <- function(query, dataset_key, built, filters = list()) 
   ids <- c("outliers_z_scores", vapply(filters, function(x) x$id, character(1)),
     vapply(Filter(function(x) x$type == "numeric", filters), function(x) paste0(x$id, "_include_NA"), character(1)))
   if (length(metaUI_computation_specs(built))) ids <- c(ids, "computation")
-  if (!setequal(names(saved), ids)) stop("Missing or unknown saved filter IDs.")
+  if (length(setdiff(names(saved), ids))) stop("Unknown saved filter IDs.")
+  full <- metaUI_full_selection(built, filters)
+  for (id in setdiff(intersect(ids, names(full)), names(saved))) saved[[id]] <- data.frame(id = id, selection = as.character(full[[id]]))
+  if (length(setdiff(ids, names(saved)))) stop("Missing saved filter IDs.")
   ranges <- c("outliers_z_scores", vapply(Filter(function(x) x$type == "numeric", filters), function(x) x$id, character(1)))
   for (id in ranges) {
     x <- suppressWarnings(as.numeric(saved[[id]]$selection))

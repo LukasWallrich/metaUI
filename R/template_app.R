@@ -690,7 +690,8 @@ glue_string <- ('
     if (!length(index)) return(div(class = "metaui-primary metaui-primary-missing", role = "alert",
       tags$p(tags$b("Declared primary model not found: "), primary_model, ". Check the name in labels_and_options.R against models.R.")))
     row <- table[index[1], ]
-    fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = 2))
+    digits <- metaUI_digits(table$LCL[table$status == "ok"], table$UCL[table$status == "ok"])
+    fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = digits))
     interval <- gsub(" ", "\\u00a0", if (grepl("^Confidence", row$interval_type)) ci_label else "95% interval", fixed = TRUE)
     unit <- metaUI_count_unit(row, length(unique(df_filtered()$metaUI__study_id)))
     div(class = "metaui-primary", role = "region", `aria-label` = "Primary analysis",
@@ -718,8 +719,8 @@ glue_string <- ('
   output$scale_note <- renderUI({
     metric <- metaUI__df$metaUI__es_type[1]
     direction <- metaUI__df$metaUI__direction[1]
-    scale_text <- if (metric == "ZCOR") paste("Correlations are fitted as Fisher z. Summary estimates and forest-plot effects are back-transformed to r;",
-      "diagnostics, heterogeneity and moderator results stay on the Fisher z scale.") else
+    scale_text <- if (metric == "ZCOR") paste("Correlations are fitted as Fisher z and shown as r.",
+      "Slopes of numeric moderators, heterogeneity variances and the Egger test have no r equivalent and stay on the Fisher z scale.") else
       paste0("Effects are fitted and shown on the scale declared by the authors: ", metaUI_label_html(metaUI_eff_size_type_label), ".")
     direction_text <- if (direction == "unspecified") paste("No expected direction was declared. Methods that need one (by default p-uniform*,",
       "the Hedges-Vevea selection model and p-curve) are reported as unsupported rather than guessed.") else
@@ -738,7 +739,7 @@ glue_string <- ('
     table <- estimatesfiltered()
     req(table)
     metaUI_estimates_html(table, primary_index(table),
-      axis_title = if (metaUI__df$metaUI__es_type[1] == "ZCOR") "Correlation r (back-transformed from Fisher z)" else metaUI_eff_size_type_label,
+      axis_title = metaUI_eff_size_type_label,
       bound = tryCatch(chosen_bound(), error = function(e) NULL),
       studies = length(unique(df_filtered()$metaUI__study_id)))
   })
@@ -794,7 +795,8 @@ glue_string <- ('
       dplyr::rename_with(~ stringr::str_replace(.x, "metaUI__filter_", "") %>%
         stringr::str_replace("metaUI__article_label", "Source") %>%
         stringr::str_replace("metaUI__url", "URL")) %>%
-      dplyr::mutate(`Source p (primary)` = fmt_p(.data[["Source p (primary)"]], include_equal = FALSE)) %>%
+      dplyr::mutate(`Source p (primary)` = fmt_p(.data[["Source p (primary)"]], include_equal = FALSE),
+        `Effect size` = metaUI_show(.data[["Effect size"]], df)) %>%
       dplyr::arrange(.data$Study)
 
     if ("Source" %in% names(out)) {
@@ -866,8 +868,10 @@ glue_string <- ('
     grid <- seq(min(df$mod, na.rm = TRUE), max(df$mod, na.rm = TRUE), length.out = 40)
     fitted <- as.data.frame(stats::predict(model, newmods = grid))
     fitted$mod <- grid
-    df$hover <- paste0(df$metaUI__study_id, ": ", round(df$metaUI__effect_size, 2))
-    p <- ggplot2::ggplot(data = df, ggplot2::aes(y = metaUI__effect_size, x = mod)) +
+    fitted[c("pred", "ci.lb", "ci.ub")] <- lapply(fitted[c("pred", "ci.lb", "ci.ub")], metaUI_show, df)
+    df$shown <- metaUI_show(df$metaUI__effect_size, df)
+    df$hover <- paste0(df$metaUI__study_id, ": ", round(df$shown, 2))
+    p <- ggplot2::ggplot(data = df, ggplot2::aes(y = shown, x = mod)) +
       ggplot2::geom_hline(yintercept = 0, colour = plot_colours$slate, linewidth = .3) +
       ggplot2::geom_ribbon(data = fitted, ggplot2::aes(x = mod, ymin = ci.lb, ymax = ci.ub), inherit.aes = FALSE, fill = plot_colours$accent, alpha = .14) +
       # Whole-number moderators (years, say) stack their dots: spread them a little, for sight only.
@@ -876,7 +880,7 @@ glue_string <- ('
       ggplot2::geom_line(data = fitted, ggplot2::aes(x = mod, y = pred), inherit.aes = FALSE, colour = plot_colours$accent, linewidth = .7) +
       ggplot2::scale_size(range = c(1.8, 3.6), guide = "none") +
       ggplot2::scale_x_continuous(breaks = { span <- range(df$mod, na.rm = TRUE); ticks <- pretty(span, 8); ticks[ticks >= span[1] & ticks <= span[2]] }) +
-      ggplot2::scale_y_continuous(breaks = { span <- range(df$metaUI__effect_size, fitted$ci.lb, fitted$ci.ub); ticks <- pretty(span, 8); ticks[ticks >= span[1] & ticks <= span[2]] }) +
+      ggplot2::scale_y_continuous(breaks = { span <- range(df$shown, fitted$ci.lb, fitted$ci.ub); ticks <- pretty(span, 8); ticks[ticks >= span[1] & ticks <= span[2]] }) +
       ggplot2::xlab(input$moderator %>% stringr::str_remove("metaUI__filter_")) +
       ggplot2::ylab(metaUI_eff_size_type_label) +
       metaUI_plot_theme(plot_colours, family = "") +
@@ -964,19 +968,22 @@ glue_string <- ('
       stat <- function(value) metaUI_minus(trimws(formatC(value, format = "f", digits = places)))
       whole <- all(x == round(x), na.rm = TRUE)
       range_text <- if (whole) paste0(min(x, na.rm = TRUE), "\\u2013", max(x, na.rm = TRUE)) else paste0(stat(min(x, na.rm = TRUE)), " to ", stat(max(x, na.rm = TRUE)))
+      # These coefficients have no r equivalent.
+      fisher <- if (df$metaUI__es_type[1] == "ZCOR") " (Fisher <i>z</i>)" else ""
       row <- function(label, value) paste0("<tr><td>", label, \'</td><td class="num">\', value, "</td></tr>")
       return(paste0(\'<table class="table metaui-custom metaui-stats"><tbody>\',
-        row("Intercept", coefficient(model$b[1])), row(paste0("Slope, per unit of ", input$moderator %>% stringr::str_remove("metaUI__filter_")), coefficient(model$b[2])), row("<i>k</i>", sum(!is.na(x))),
+        row(paste0("Intercept", fisher), coefficient(model$b[1])), row(paste0("Slope, per unit of ", input$moderator %>% stringr::str_remove("metaUI__filter_"), fisher), coefficient(model$b[2])), row("<i>k</i>", sum(!is.na(x))),
         row("Moderator mean (SD)", paste0(stat(mean(x, na.rm = TRUE)), " (", stat(stats::sd(x, na.rm = TRUE)), ")")),
         row("Moderator range", range_text), "</tbody></table>"))
     }
     levels <- rownames(model$b) %>% stringr::str_remove(input$moderator) %>% stringr::str_remove_all("`") #Needed to support spaces in moderator names
     counts <- table(x)
     summary <- estimatesfiltered()
-    overall <- summary$fit_es[models_to_run$code == metaUI_code_multilevel & summary$status == "ok"]
-    metaUI_moderator_html(levels, as.numeric(model$b), model$ci.lb, model$ci.ub,
-      as.integer(counts[levels]), x, df$metaUI__effect_size,
-      paste0(df$metaUI__study_id, ": ", round(df$metaUI__effect_size, 2)), metaUI_eff_size_type_label,
+    overall <- summary$es[models_to_run$code == metaUI_code_multilevel & summary$status == "ok"]
+    shown <- metaUI_show(df$metaUI__effect_size, df)
+    metaUI_moderator_html(levels, metaUI_show(as.numeric(model$b), df), metaUI_show(model$ci.lb, df), metaUI_show(model$ci.ub, df),
+      as.integer(counts[levels]), x, shown,
+      paste0(df$metaUI__study_id, ": ", round(shown, 2)), metaUI_eff_size_type_label,
       ref = if (length(overall)) overall[1] else NULL, se = df$metaUI__se)
   })
 
@@ -1018,31 +1025,34 @@ glue_string <- ('
   }, colnames = FALSE, sanitize.text.function = function(x) x, align = "lr")
 
   # FOREST PLOT FOR ALL INCLUDED STUDIES ------------------------------------
-  forest_limit_message <- "Forest plots are limited to <<opts$max_forest_plot_rows>> effects. Narrow the selection, or download the data to plot them elsewhere."
+  forest_limit_message <- "PDF and PNG downloads are limited to <<opts$max_forest_plot_rows>> effects. Narrow the selection to get them."
   output$forest_panel <- renderUI({
     df <- df_filtered()
     if (!nrow(df)) return(p(class = "metaui-reason", role = "status", "No effects selected."))
-    if (nrow(df) > <<opts$max_forest_plot_rows>>) {
-      return(p(class = "metaui-reason", role = "status", forest_limit_message))
-    }
+    small <- nrow(df) <= <<opts$max_forest_plot_rows>>
     tagList(
-      div(class = "metaui-export-actions", downloadButton("forest_pdf", "Download PDF"),
-      downloadButton("forest_png", "Download PNG"),
+      div(class = "metaui-export-actions", if (small) downloadButton("forest_pdf", "Download PDF"),
+      if (small) downloadButton("forest_png", "Download PNG"),
       downloadButton("forest_csv", "Download plot data")),
+      if (!small) p(class = "metaui-note", forest_limit_message),
       shiny::htmlOutput("foreststudies"))
   })
   forest_rows <- reactive({
     df <- df_filtered()
-    validate(need(nrow(df) > 0, "No effects selected."),
-      need(nrow(df) <= <<opts$max_forest_plot_rows>>, forest_limit_message))
+    validate(need(nrow(df) > 0, "No effects selected."))
     metaUI_forest_rows(df, estimatesfiltered(), models_to_run)
   })
-  forest_plot_for <- function(label_width = NULL, top_axis = FALSE, family = plot_colours$family) metaUI_forest_plot(forest_rows(), df_filtered()$metaUI__display_scale[1], colours = plot_colours, label_width = label_width, top_axis = top_axis, family = family)
-  forest_height <- function() 90 + 20 * nrow(forest_rows())
+  # A drawn page grows with every row, so only the image downloads keep a limit.
+  forest_image_rows <- reactive({
+    validate(need(nrow(df_filtered()) <= <<opts$max_forest_plot_rows>>, forest_limit_message))
+    forest_rows()
+  })
+  forest_plot_for <- function(label_width = NULL, top_axis = FALSE, family = plot_colours$family) metaUI_forest_plot(forest_image_rows(), df_filtered()$metaUI__display_scale[1], colours = plot_colours, label_width = label_width, top_axis = top_axis, family = family)
+  forest_height <- function() 90 + 20 * nrow(forest_image_rows())
   # Plots taller than about a laptop screen repeat the x axis at the top.
   forest_plot <- reactive(forest_plot_for(top_axis = forest_height() > 700))
   output$foreststudies <- renderText({
-    metaUI_forest_html(forest_rows(), if (df_filtered()$metaUI__display_scale[1] == "r") "Correlation r" else metaUI_eff_size_type_label, studies = metaUI_forest_studies(df_agg()), details = metaUI_effect_details(df_filtered()))
+    metaUI_forest_html(forest_rows(), metaUI_eff_size_type_label, studies = metaUI_forest_studies(df_agg()), details = metaUI_effect_details(df_filtered()))
   })
   output$forest_pdf <- downloadHandler(filename = function() "forest-plot.pdf", content = function(file) {
     ggplot2::ggsave(file, forest_plot_for(top_axis = forest_height() > 700, family = ""), device = "pdf", width = 10,
@@ -1073,13 +1083,14 @@ glue_string <- ('
 
   output$funnel_key <- renderUI({
     p(class = "metaui-note metaui-key", HTML(paste0("Shaded regions: <i>p</i> &lt; .05 against zero. Dashed lines: the random-effects estimate from the study-level effects shown here (",
-      metaUI_minus(round_(as.numeric(meta_agg()$b), 2)), "), with its 95% limits.")))
+      metaUI_minus(round_(metaUI_show(as.numeric(meta_agg()$b), metaUI__df), metaUI_digits(meta_agg()$ci.lb, meta_agg()$ci.ub))), "), with its 95% limits.",
+      if (metaUI__df$metaUI__es_type[1] == "ZCOR") " Positions follow the Fisher <i>z</i> scale, on which standard errors do not depend on the effect, so the <i>r</i> ticks are unevenly spaced." else "")))
   })
 
   output$funnel <- renderPlot({
     meta_agg <- meta_agg()
 
-    metaUI_funnel(meta_agg, xlab = metaUI_eff_size_type_label, colours = plot_colours, width = session$clientData$output_funnel_width)
+    metaUI_funnel(meta_agg, xlab = metaUI_eff_size_type_label, colours = plot_colours, width = session$clientData$output_funnel_width, back = metaUI__df$metaUI__es_type[1] == "ZCOR")
   }, height = 400) # fixed: after an error the collapsed container would otherwise set the next plot height
 
   output$eggers_reading <- renderUI({
@@ -1206,7 +1217,7 @@ glue_string <- ('
   # DISTRIBUTION OF EFFECTS -------------------------------------------------
   output$distribution_note <- renderUI({
     p(class = "metaui-note", HTML(paste0("The Exclude extreme effects filter uses <i>z</i> = (effect ", { centre <- mean(metaUI__df$metaUI__effect_size); paste(if (centre < 0) "+" else metaUI_minus("-"), round_(abs(centre), 2)) },
-      ") / ", round_(sd(metaUI__df$metaUI__effect_size), 2), ", from the full dataset.")))
+      ") / ", round_(sd(metaUI__df$metaUI__effect_size), 2), ", from the full dataset", if (metaUI__df$metaUI__es_type[1] == "ZCOR") ", on the Fisher <i>z</i> scale" else "", ".")))
   })
 
   output$violin <- plotly::renderPlotly({
@@ -1221,6 +1232,10 @@ glue_string <- ('
     qs <- quantile(effects, c(.25, .5, .75))
     bounds <- c(qs[[1]] - 1.5 * diff(qs[c(1, 3)]), qs[[3]] + 1.5 * diff(qs[c(1, 3)]))
     outliers <- df[effects < bounds[1] | effects > bounds[2], , drop = FALSE]
+    # Which effects stand out is settled on the fitting scale; the plot shows them as readers read them.
+    z <- (outliers$metaUI__effect_size - efm) / efsd
+    effects <- metaUI_show(effects, df); qs[] <- metaUI_show(qs, df)
+    outliers$metaUI__effect_size <- metaUI_show(outliers$metaUI__effect_size, df)
 
     breaks <- pretty(effects, n = 24)
     counts <- graphics::hist(effects, breaks = breaks, plot = FALSE)$counts
@@ -1232,7 +1247,6 @@ glue_string <- ('
     top <- max(pretty(c(0, max(counts)), 5))
     ink <- plot_colours$ink
     axis_font <- list(size = 13, color = plot_colours$slate)
-    z <- (outliers$metaUI__effect_size - efm) / efsd
     strip <- top * 1.13
 
     p <- plotly::plot_ly(x = (breaks[-1] + breaks[-length(breaks)]) / 2, y = counts, width = diff(breaks), type = "bar",
@@ -1510,7 +1524,7 @@ glue_string <- ('
     req(isTruthy(input$go))
     if (!is.null(attr(df_filtered(), "metaUI_upload_info"))) return(NULL)
     bound <- tryCatch(chosen_bound(), error = function(e) NULL)
-    metaUI_selection_query(attr(df_filtered(), "metaUI_applied_filters"), metaUI_dataset_key, bound)
+    metaUI_selection_query(attr(df_filtered(), "metaUI_applied_filters"), metaUI_dataset_key, bound, metaUI__df, filters)
   })
   observeEvent(list(input$go, input$sesoi), {
     req(isTruthy(input$go))

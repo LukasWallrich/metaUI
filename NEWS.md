@@ -6,7 +6,11 @@
 - New `options = list(intro = ...)` adds a short introduction under the title.
 - A diamond now always spans a 95% CI, on the Summary, on moderator levels and in the forest plot's PDF and PNG downloads. Moderator rows stack their effects so that no dot covers another, and funnel labels move clear of the points.
 - Categorical moderator levels with many effects (25 or more on phones, 100 or more on larger screens) show a small histogram instead of stacked dots, which keeps those rows short and the page responsive.
-- When a correlation is fitted as Fisher z, plots that show fitted values now say so, whatever label the author chose.
+- Correlations are shown as *r* everywhere readers see effect sizes: moderator tables and plots, histograms, the effects table and the first screen. The funnel keeps its straight limits on the Fisher z scale with its axis labelled in *r*. Slopes, variances and Egger's test stay on Fisher z and say so.
+- Estimates show three decimals where an interval is narrower than 0.05.
+- The forest plot shows any number of effects, 50 studies to a page; `max_forest_plot_rows` now limits only its PDF and PNG downloads.
+- Selection links save only the filters that narrow the data, so they stay short with many filters. Older links still work.
+- Custom models can name their interval in an `interval_type` column.
 - Apps with `fit_cache_entries = 0`, the default for custom model code, no longer save or reuse build-time fits: they fit afresh when opened.
 - A moderator with one value in the selection now says it cannot be tested, instead of failing. Declaring RVE as primary now reports its *k* as studies. Static previews state the actual default selection.
 

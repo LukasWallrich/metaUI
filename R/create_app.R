@@ -123,7 +123,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'
 #' @param dataset Dataframe as returned from [prepare_data()]
 #' @param eff_size_type_label The label to be used to describe the effect size. If NA, effect type code from dataset is used.
-#' @param models The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. If you want to change the default models, have a look at the vignette and/or the [get_model_tibble()] documentation.
+#' @param models The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. Custom models can add an `interval_type` column naming their interval, such as "Confidence interval"; otherwise the app says that its type is unknown. If you want to change the default models, have a look at the vignette and/or the [get_model_tibble()] documentation.
 #' Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 #' this must assign the tibble to a variable called models_to_run (i.e. using <-).
 #' @param primary_model Optional name of the one model (a `name` in `models`) that the authors treat as their
@@ -148,7 +148,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
 #' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA and static_folder is NULL, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.
 #' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
-#'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 200. If more effect sizes are selected, a message is shown instead.
+#'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for the forest plot's PDF and PNG downloads? Defaults to 200. The plot on screen shows any number of studies, 50 to a page.
 #'   - `shiny_theme` Character. One of the shinythemes that style the app. Defaults to "yeti", see `?shinythemes::shinythemes` for all options.
 #'   - `intro` Optional HTML shown under the title: one or two sentences stating the question and, for readers new to the scale, what positive values mean.
 #'   - `fit_cache_entries` Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.
@@ -209,11 +209,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   metaUI_validate_prepared(dataset)
   if (!is.null(study_info)) study_info <- validate_study_info(study_info, dataset)
 
-  # Plots show the fitted Fisher z values, whatever the correlation is called; model summaries convert to r.
-  if (!is.na(eff_size_type_label) && dataset$metaUI__es_type[1] == "ZCOR" && !grepl("fisher|\\bz\\b", eff_size_type_label, ignore.case = TRUE))
-    eff_size_type_label <- paste("Fisher z of", eff_size_type_label)
   if (is.na(eff_size_type_label)) {
-    eff_size_type_label <- if (dataset$metaUI__es_type[1] == "ZCOR") "Fisher z (model summaries: r)" else dataset$metaUI__es_type[1]
+    eff_size_type_label <- if (dataset$metaUI__es_type[1] == "ZCOR") "Correlation r" else dataset$metaUI__es_type[1]
   }
 
   models_from_function <- models
@@ -357,7 +354,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   file.copy(system.file("COPYRIGHTS", package = "metaUI"), file.path(save_to_folder, "COPYRIGHTS"), overwrite = TRUE)
   # Could consider keeping all labels in this file - but then ui.R needs less readable glue::glue syntax
   writeLines(labels_and_options(dataset_name, correlation, primary_model, bayesian = !is.null(bayesian), correlations = identical(dataset$metaUI__es_type[1], "ZCOR"), custom_models = !package_models, effects = nrow(dataset), studies = length(unique(dataset$metaUI__study_id)),
-    strip = metaUI_effects_strip(dataset$metaUI__effect_size, eff_size_type_label),
+    strip = metaUI_effects_strip(metaUI_show(dataset$metaUI__effect_size, dataset), eff_size_type_label),
     citation = if (is.null(about_args$citation)) "" else as.character(about_args$citation), intro = if (is.null(opts$intro)) "" else as.character(opts$intro)), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))

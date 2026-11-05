@@ -307,6 +307,11 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-track-cell:has(.metaui-track-dot) .metaui-track { min-height: 30px; }
 .metaui-axis { height: 34px; min-height: 0; }
 .metaui-axis-title { left: 0; right: 0; top: 0; font-weight: 400; font-size: .875rem; color: var(--metaui-ink); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* A long author label wraps upwards over the ticks rather than being cut off. */
+@media (max-width: 1199px) {
+  .metaui-estimates .metaui-axis { height: 50px; }
+  .metaui-estimates .metaui-axis-title { top: auto; bottom: 18px; white-space: normal; line-height: 1.15; }
+}
 .metaui-axis-tick { bottom: 0; transform: translateX(-50%); font-weight: 400; color: var(--metaui-slate); font-size: .8125rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
 
 /* Headers stay in view down long tables */
@@ -334,8 +339,8 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-forest-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
 .metaui-forest-toggle:hover { text-decoration: underline; }
 .metaui-forest-count { color: var(--metaui-slate); font-size: .8125rem; }
-.metaui-forest-all, .metaui-forest-sort { padding: 3px 10px; border: 1px solid var(--metaui-slate); border-radius: 4px; background: var(--metaui-background); color: var(--metaui-ink); font-size: .875rem; line-height: 1.35; cursor: pointer; }
-.metaui-forest-all:hover, .metaui-forest-sort:hover { background: var(--metaui-tint); border-color: var(--metaui-accent); }
+.metaui-forest-all, .metaui-forest-sort, .metaui-forest-prev, .metaui-forest-next { padding: 3px 10px; border: 1px solid var(--metaui-slate); border-radius: 4px; background: var(--metaui-background); color: var(--metaui-ink); font-size: .875rem; line-height: 1.35; cursor: pointer; }
+.metaui-forest-all:hover, .metaui-forest-sort:hover, .metaui-forest-prev:hover, .metaui-forest-next:hover { background: var(--metaui-tint); border-color: var(--metaui-accent); }
 .metaui-forest-all[aria-expanded="true"], .metaui-forest-sort[aria-pressed="true"] { background: var(--metaui-tint); border-color: var(--metaui-accent); color: var(--metaui-accent); }
 .metaui-forest .metaui-primary-row td { padding-top: 4px !important; padding-bottom: 4px !important; }
 .metaui-forest .metaui-primary-row td.metaui-track-cell { padding-top: 0 !important; padding-bottom: 0 !important; }
@@ -348,6 +353,10 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-moderators .metaui-track-point { background: var(--metaui-accent); border-radius: 0; transform: rotate(45deg); }
 .metaui-moderators .metaui-track-dot { opacity: .8; }
 .metaui-moderators .metaui-track { min-height: 38px; }
+.metaui-forest-offpage { display: none !important; }
+.metaui-forest-pager[hidden] { display: none; }
+.metaui-forest-status { align-self: center; color: var(--metaui-slate); }
+.metaui-forest-prev:disabled, .metaui-forest-next:disabled { opacity: .5; cursor: default; }
 .metaui-track-hist { left: 0; right: 0; height: 30px; }
 .metaui-track-bar { position: absolute; bottom: 0; width: 3.5px; background: var(--metaui-slate); opacity: .8; }
 .metaui-moderators { --metaui-mark-y: 19px; }

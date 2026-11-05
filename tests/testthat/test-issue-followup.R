@@ -16,7 +16,7 @@ test_that("the sample overview has one output binding and follows the selection"
   })
 })
 
-test_that("oversized forest selections show HTML without creating a plot output", {
+test_that("oversized forest selections still show on screen, without image downloads", {
   path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
   d <- prepared()
   generate_shiny(d, "Forest limit", save_to_folder = path, launch_app = FALSE,
@@ -26,8 +26,9 @@ test_that("oversized forest selections show HTML without creating a plot output"
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
     expect_match(output$forest_panel$html, "limited to 8 effects")
-    expect_false(grepl('id="foreststudies"', output$forest_panel$html, fixed = TRUE))
-    expect_error(output$foreststudies, "limited to 8 effects")
+    expect_true(grepl('id="foreststudies"', output$forest_panel$html, fixed = TRUE))
+    expect_false(grepl('id="forest_pdf"', output$forest_panel$html, fixed = TRUE))
+    expect_match(output$foreststudies, "metaui-forest-pager", fixed = TRUE)
     # The exact boundary should still render a plot.
     state_values$uploaded_data <- d[1:8, ]
     session$setInputs(go = 2)
