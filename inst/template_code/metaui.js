@@ -440,3 +440,120 @@
     schedule();
   });
 })(jQuery);
+
+/* Filters the reader has narrowed stand out from the untouched ones. */
+(function ($) {
+  var timer;
+  function mark() {
+    document.querySelectorAll('form.well .shiny-input-container').forEach(function (box) {
+      var select = box.querySelector('select[multiple]');
+      var slider = box.querySelector('.js-range-slider');
+      var checks = box.querySelectorAll('input[type=checkbox]');
+      var narrowed = false;
+      if (select) narrowed = select.selectedOptions.length < select.options.length;
+      else if (slider) {
+        var range = $(slider).data('ionRangeSlider');
+        narrowed = !!range && (range.result.from !== range.result.min || range.result.to !== range.result.max);
+      } else if (checks.length > 1) narrowed = Array.prototype.some.call(checks, function (check) { return !check.checked; });
+      box.classList.toggle('metaui-narrowed', narrowed);
+    });
+  }
+  $(document).on('shiny:inputchanged', function () { clearTimeout(timer); timer = setTimeout(mark, 60); });
+})(jQuery);
+
+/* Shiny draws a tab only while it is visible. After each analysis, the other tabs are drawn
+   one at a time off-screen, so that opening them is instant. A tab opened before it is ready
+   shows one message, never empty headings or the previous selection's results. */
+(function ($) {
+  var ready = new WeakSet();
+  var analysis = 0, queue = [], running = false;
+  var TOO_SLOW = 20000; // A tab this slow stops the sequence: the reader's next click would wait for it.
+
+  function panes() {
+    return Array.prototype.map.call(document.querySelectorAll('#metaui_results .nav-tabs > li > a'), function (link) {
+      var pane = document.querySelector(link.getAttribute('href'));
+      if (pane) pane.setAttribute('data-metaui-title', link.textContent.trim());
+      return pane;
+    }).filter(Boolean);
+  }
+  // Bayesian and computation fits can take minutes, so they wait for the reader. Moderation
+  // comes last because its model is the slowest of the rest.
+  function backgroundOrder() {
+    var usable = panes().filter(function (pane) {
+      return pane.querySelector('.shiny-bound-output') && !pane.querySelector('#bayesian_sensitivity, #computation_comparison');
+    });
+    var slow = function (pane) { return pane.querySelector('#moderation_panel') ? 1 : 0; };
+    return usable.filter(function (pane) { return !slow(pane); }).concat(usable.filter(slow));
+  }
+  // Calls done once Shiny has answered and fallen quiet.
+  function whenSettled(done) {
+    var quiet, answered = false;
+    var check = function (event) {
+      if (event && event.type === 'shiny:busy') answered = true;
+      clearTimeout(quiet);
+      if (!document.documentElement.classList.contains('shiny-busy')) quiet = setTimeout(finish, answered ? 120 : 500);
+    };
+    var finish = function () {
+      $(document).off('shiny:busy shiny:idle shiny:value', check);
+      done();
+    };
+    $(document).on('shiny:busy shiny:idle shiny:value', check);
+    check();
+  }
+  function next() {
+    if (running) return;
+    var pane = queue.shift();
+    if (!pane) { document.documentElement.classList.remove('metaui-background'); return; }
+    if (ready.has(pane) || pane.classList.contains('active')) return next();
+    var active = document.querySelector('#metaui_results .tab-pane.active');
+    var started = Date.now(), forAnalysis = analysis;
+    running = true;
+    document.documentElement.classList.add('metaui-background');
+    pane.style.width = active ? active.offsetWidth + 'px' : '';
+    pane.classList.add('metaui-preloading');
+    $(pane).trigger('shown');
+    whenSettled(function () {
+      running = false;
+      pane.classList.remove('metaui-preloading');
+      pane.style.width = '';
+      if (forAnalysis === analysis) ready.add(pane);
+      $(pane).trigger('hidden');
+      if (Date.now() - started < TOO_SLOW) setTimeout(next, 50);
+      else { queue = []; document.documentElement.classList.remove('metaui-background'); }
+    });
+  }
+  function newAnalysis() {
+    analysis += 1;
+    ready = new WeakSet();
+    queue = [];
+    if (!running) document.documentElement.classList.remove('metaui-background');
+  }
+  // Clicking Update puts every tab out of date at once; the answer restarts the sequence.
+  $(document).on('click', '#go', newAnalysis);
+  // Saved opening results stay until the server has real values: before the first analysis
+  // starts, each output reports a silent error that would blank the page for a moment.
+  $(document).on('shiny:error', function (event) {
+    if (event.target.hasAttribute && event.target.hasAttribute('data-metaui-opening') && event.error.type && event.error.type.indexOf('shiny.silent.error') >= 0) event.preventDefault();
+  });
+  $(document).on('shiny:value', function (event) {
+    if (event.target.removeAttribute) event.target.removeAttribute('data-metaui-opening');
+    if (event.name !== 'selection_overview') return;
+    newAnalysis();
+    var active = document.querySelector('#metaui_results .tab-pane.active');
+    if (active) ready.add(active);
+    whenSettled(function () { queue = backgroundOrder(); next(); });
+  });
+  $(document).on('shown.bs.tab', '#metaui_results .nav-tabs a', function () {
+    var pane = document.querySelector(this.getAttribute('href'));
+    if (!pane || ready.has(pane) || !pane.querySelector('.shiny-bound-output')) return;
+    var forAnalysis = analysis;
+    pane.classList.add('metaui-pane-loading');
+    pane.setAttribute('aria-busy', 'true');
+    whenSettled(function () {
+      pane.classList.remove('metaui-pane-loading');
+      pane.removeAttribute('aria-busy');
+      if (forAnalysis === analysis) ready.add(pane);
+    });
+  });
+  document.addEventListener('DOMContentLoaded', panes);
+})(jQuery);

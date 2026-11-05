@@ -50,7 +50,7 @@ metaUI_statistics_rows <- function(row) {
 
 # Precomputed content inside an output, shown until the server's own value replaces it.
 metaUI_opening_output <- function(output, content) {
-  if (is.null(content)) output else htmltools::tagAppendChildren(output, shiny::HTML(content))
+  if (is.null(content)) output else htmltools::tagAppendAttributes(htmltools::tagAppendChildren(output, shiny::HTML(content)), `data-metaui-opening` = "true")
 }
 
 # Keeps missing values in or out. Hidden while the built data have none on this filter;

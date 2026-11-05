@@ -47,7 +47,7 @@ p { margin: 0 0 .6em; }
 }
 
 .metaui-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; align-items: baseline; padding: 16px 28px 14px; border-bottom: 1px solid var(--metaui-rule); }
-.metaui-header h2 { font-size: 1.625rem; line-height: 1.2; margin: 0; max-width: 60ch; grid-column: 1; }
+.metaui-header h2 { font-size: 1.375rem; line-height: 1.2; margin: 0; max-width: 60ch; grid-column: 1; }
 .metaui-header .metaui-brand { grid-column: 2; grid-row: 1; font-size: .8125rem; color: var(--metaui-slate); white-space: nowrap; }
 .metaui-intro { grid-column: 1; margin-top: 6px; color: var(--metaui-slate); max-width: 110ch; }
 .metaui-intro p { margin: 0; }
@@ -64,17 +64,26 @@ p { margin: 0 0 .6em; }
   form.well { height: auto; border-right: 0; }
 }
 
+/* Results keep a readable width on very wide windows, so the eye need not cross the screen. */
+@media (min-width: 768px) {
+  .container-fluid > .row > .col-sm-3:has(> form.well) + .col-sm-9 > * { max-width: 1140px; }
+}
+
 /* Wide windows keep the filters in view down long tabs; narrower ones scroll with the page. */
 @media (min-width: 1100px) {
   form.well { position: sticky; top: 0; max-height: var(--metaui-sidebar-height, 100vh); overflow-y: auto; scrollbar-width: thin; }
 }
 
-/* Selection panel */
+/* Selection panel: untouched filters stay quiet, narrowed ones stand out. */
+.well .bootstrap-select .filter-option-inner-inner, .metaui-preview-select { color: var(--metaui-slate); }
+.well .metaui-narrowed > .control-label { font-weight: 700; color: var(--metaui-accent); }
+.well .metaui-narrowed .filter-option-inner-inner { font-weight: 600; color: var(--metaui-ink); }
+.well .metaui-narrowed .bootstrap-select > .dropdown-toggle { border-color: var(--metaui-accent); }
 .well { height: 100%; margin: 0; padding: 18px 20px 0; background: var(--metaui-surface); border: 0; border-right: 1px solid var(--metaui-rule); border-radius: 0; box-shadow: none; }
 .metaui-panel-title { font-family: var(--metaui-sans); font-size: 1rem; font-weight: 700; margin: 0 0 14px; color: var(--metaui-ink); }
 .shiny-input-container { max-width: 100%; }
 .well .shiny-input-container { width: 100%; margin-bottom: 18px; }
-.well .control-label { display: block; font-size: .9375rem; font-weight: 600; margin-bottom: 6px !important; color: var(--metaui-ink); }
+.well .control-label { display: block; font-size: .9375rem; font-weight: 500; margin-bottom: 6px !important; color: var(--metaui-ink); }
 .well .checkbox { margin: 0; }
 .well .shiny-options-group { display: flex; flex-wrap: wrap; gap: 3px 16px; margin-top: -10px; }
 .well .shiny-options-group .checkbox { margin: 0; }
@@ -167,7 +176,7 @@ html.metaui-js .irs--shiny .irs-grid { top: 16px; }
 .metaui-actions #resetFilters { background: transparent; border-color: transparent; color: var(--metaui-slate); padding: 9px 4px; text-decoration: underline; text-underline-offset: 2px; }
 .metaui-actions #resetFilters:hover { color: var(--metaui-hover); }
 .metaui-reset-link { border: 0; padding: 0; background: none; color: var(--metaui-accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
-html.shiny-busy .metaui-actions #go { opacity: .75; }
+html.shiny-busy:not(.metaui-background) .metaui-actions #go { opacity: .75; }
 /* Above the button, inside the bar, so it never covers a filter. */
 .metaui-apply-state { grid-column: 1 / -1; font-size: .875rem; line-height: 1.3; color: var(--metaui-attention); }
 .metaui-apply-state:has(> .shiny-text-output:empty) { display: none; }
@@ -190,12 +199,10 @@ html.shiny-busy .metaui-actions #go { opacity: .75; }
 
 /* Which data and selection the visible results describe */
 .metaui-basis { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 16px; margin: -5px 0 5px -10px; padding: 5px 10px; font-size: .9375rem; line-height: 1.4; border-radius: var(--metaui-radius); }
-#selection_overview { font-weight: 600; }
 #calculation_status { font-size: .875rem; color: var(--metaui-slate); padding-top: 2px; }
 .metaui-basis .shiny-text-output { display: block; }
 .metaui-basis .shiny-output-error-validation { color: var(--metaui-slate); padding: 0; font-size: inherit; }
 #metaui_results:has(.metaui-basis.metaui-stale) .tab-content { opacity: .82; }
-.metaui-basis.metaui-stale #selection_overview { font-weight: 400; }
 .metaui-basis.metaui-stale #selection_overview { color: var(--metaui-attention); }
 .metaui-selection-details { font-size: .875rem; }
 .metaui-selection-details > summary { color: var(--metaui-accent); }
@@ -232,9 +239,11 @@ html.shiny-busy #primary_estimate:empty::before { content: "Fitting the models\2
 .metaui-basis .shiny-output-error-validation { color: var(--metaui-ink); }
 
 /* The primary analysis, as one sentence */
-.metaui-primary { margin: 2px 0 14px; max-width: 80ch; }
-.metaui-primary p { margin: 0; }
-.metaui-primary-value { font-family: var(--metaui-serif); font-size: 1.5rem; font-weight: 400; line-height: 1.3; font-variant-numeric: lining-nums tabular-nums; }
+.metaui-primary { margin: 2px 0 14px; }
+.metaui-primary p { margin: 0; max-width: 80ch; }
+.metaui-primary p.metaui-primary-value { max-width: none; }
+.metaui-primary p.metaui-primary-label { max-width: 110ch; }
+.metaui-primary-value { font-family: var(--metaui-serif); font-size: 1.875rem; font-weight: 400; line-height: 1.3; font-variant-numeric: lining-nums tabular-nums; }
 .metaui-primary-value b { font-weight: 700; }
 /* The sentence leads the tab; its section heading would only compete with it. */
 .tab-pane h3:has(+ .shiny-html-output .metaui-primary-value) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
@@ -271,11 +280,21 @@ html.shiny-busy #primary_estimate:empty::before { content: "Fitting the models\2
 .metaui-estimates .metaui-reason-cell b { color: var(--metaui-attention); font-weight: 600; }
 .metaui-estimates th { vertical-align: bottom !important; }
 .metaui-estimates td:first-child { font-weight: 400; }
-.metaui-level-inline { display: none; font-size: .8125rem; font-weight: 400; color: var(--metaui-slate); line-height: 1.3; }
-.metaui-estimates .metaui-fit { color: var(--metaui-slate); white-space: nowrap; }
 .metaui-primary-row td:first-child, .metaui-primary-row td.num { font-weight: 600; }
 .metaui-primary-row > td { border-bottom-color: var(--metaui-slate) !important; }
 .metaui-other-estimators { margin-top: 2px; }
+/* The primary analysis leads; the other estimators read as quieter comparisons. */
+.metaui-primary-tag { display: block; }
+.metaui-models { --metaui-row: 6px; --metaui-mark-y: calc(6px + .65rem); }
+.metaui-models > thead > tr > th:first-child, .metaui-models > tbody > tr > td:first-child { padding-left: 10px; }
+.table.metaui-models > tbody > tr > td { border-bottom: 0; }
+.table.metaui-models > tbody > tr:last-child > td { border-bottom: 1px solid var(--metaui-rule); }
+.metaui-models > tbody > tr.metaui-primary-row { --metaui-row: 10px; --metaui-mark-y: calc(10px + .65rem); }
+.table.metaui-models > tbody > tr.metaui-primary-row > td { background: var(--metaui-tint); }
+.metaui-models .metaui-track-ci { border-top-width: 1px; margin-top: -.5px; }
+.metaui-models .metaui-primary-row .metaui-track-ci { border-top-width: 2px; margin-top: -1px; }
+.metaui-models tr:not(.metaui-primary-row) .metaui-track-point { width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; background: var(--metaui-slate); }
+.table.metaui-models > tbody > tr.metaui-group-row > td:first-child { padding: 14px 16px 3px 10px !important; font-size: .8125rem; color: var(--metaui-slate); }
 .metaui-estimates td.metaui-track-cell { overflow: hidden; }
 tfoot.metaui-phone-axis { display: none; }
 .metaui-track-diamond { top: var(--metaui-mark-y); height: 15px; margin-top: -7.5px; background: var(--metaui-accent); }
@@ -537,11 +556,6 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
 .metaui-filter-help-panel table { display: block; overflow-x: auto; max-width: 100%; }
 
 @media (min-width: 768px) and (max-width: 1199px) {
-  /* The level of fit moves under the model name, which then fits on one line. */
-  .metaui-estimates th.metaui-fit, .metaui-estimates td.metaui-fit { display: none; }
-  .metaui-level-inline { display: block; }
-  .metaui-estimates .metaui-primary-tag { display: none; }
-  .metaui-forest .metaui-level-inline { display: none; }
   .metaui-estimates td:first-child { min-width: 11em; }
   .metaui-estimates th.metaui-track-cell, .metaui-estimates td.metaui-track-cell { width: 34%; }
   .metaui-moderators th.metaui-track-cell, .metaui-moderators td.metaui-track-cell { width: 50%; }
@@ -619,15 +633,18 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   table.metaui-estimates > tbody > tr > td:first-child { display: block; margin-bottom: 1px; font-size: .9375rem; line-height: 1.2; }
   table.metaui-estimates > tbody > tr > td.num { font-size: .875rem; white-space: nowrap; }
   table.metaui-estimates > tbody > tr > td.num:nth-child(2) { margin-right: 6px; }
-  table.metaui-estimates > tbody > tr > td.metaui-k, table.metaui-estimates > tbody > tr > td.metaui-unit, table.metaui-estimates > tbody > tr > td.metaui-fit { font-size: .8125rem; color: var(--metaui-slate); font-weight: 400; }
+  table.metaui-estimates > tbody > tr > td.metaui-k, table.metaui-estimates > tbody > tr > td.metaui-unit { font-size: .8125rem; color: var(--metaui-slate); font-weight: 400; }
   table.metaui-estimates > tbody > tr > td.metaui-k::before { content: '\A'; white-space: pre; }
-  table.metaui-estimates > tbody > tr > td.metaui-unit:not(:empty)::after { content: ','; }
+  table.metaui-models > tbody > tr.metaui-primary-row { background: var(--metaui-tint); }
+  table.metaui-models > tbody > tr.metaui-primary-row > td { background: none; }
+  table.metaui-models > tbody > tr.metaui-group-row { padding-top: 8px; padding-bottom: 3px; border-bottom: 0; }
+  .table.metaui-models > tbody > tr.metaui-group-row > td:first-child { padding: 0 !important; font-size: .8125rem; line-height: 1.25; color: var(--metaui-slate); }
   table.metaui-estimates > tbody > tr > td.metaui-track-cell { display: block; position: absolute; top: 0; bottom: 0; right: 0; width: var(--metaui-phone-track) !important; padding: 0 6px !important; overflow: hidden; }
   table.metaui-moderators > tbody > tr > td.metaui-k::before { content: 'k = '; white-space: normal; margin-left: 6px; font-style: italic; }
   table.metaui-estimates > tbody > tr > td.metaui-reason-cell { display: block; padding: 2px 0 0 !important; }
   table.metaui-estimates > tbody > tr:has(> td.metaui-reason-cell) { padding-right: 0; }
   .metaui-estimates td .metaui-track:not(.metaui-axis) { height: 100%; }
-  table.metaui-estimates > tbody > tr > td.metaui-unit, table.metaui-estimates > tbody > tr > td.metaui-fit { margin-left: .25em; }
+  table.metaui-estimates > tbody > tr > td.metaui-unit { margin-left: .25em; }
   table.metaui-forest > tbody > tr { padding-top: 3px; padding-bottom: 3px; }
   table.metaui-forest > tbody > tr > td:first-child { font-size: .875rem; }
   table.metaui-forest > tbody > tr.metaui-forest-study > td.metaui-track-cell { display: block; }
@@ -675,3 +692,14 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .dataTables_wrapper .dataTables_paginate .paginate_button { margin: 0; padding: 6px 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .btn, .metaui-help > summary::before, .metaui-selection-details > summary::before { transition: none; } }
+
+/* Tabs not yet drawn for this selection: laid out off-screen while they render in the
+   background, and covered by one message if the reader opens them before they are ready. */
+.tab-content { position: relative; }
+.tab-content > .tab-pane.metaui-preloading:not(.active) { display: block; position: absolute; top: 0; left: -10000px; visibility: hidden; }
+.tab-pane.metaui-pane-loading { position: relative; min-height: 200px; }
+.tab-pane.metaui-pane-loading > * { visibility: hidden; }
+.tab-pane.metaui-pane-loading::before { content: "Preparing " attr(data-metaui-title) "\2026"; position: absolute; top: 18px; left: 0; font-size: 1.0625rem; color: var(--metaui-ink); animation: metaui-appear .2s .15s both; }
+@keyframes metaui-appear { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .tab-pane.metaui-pane-loading::before { animation: none; } }
+.load-container .loader { color: var(--metaui-accent) !important; }

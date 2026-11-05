@@ -19,10 +19,12 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       dataset_name <- {paste(deparse(as.character(dataset_name)), collapse = "\n")}
       not_analysed <- HTML(paste0("<p class=\'metaui-empty-title\'>{effects} effects from {studies} studies</p>", {paste(deparse(strip), collapse = "\n")}, "<p class=\'metaui-fitting\'>Each dot is one effect. Fitting the models\u2026</p>", {paste(deparse(if (nzchar(citation)) paste0("<p class=\'metaui-note\'>", citation, "</p>") else ""), collapse = "\n")}))
 
+      fitting_note <- HTML("<p class=\'metaui-fitting\'>Fitting the models\u2026</p>")
+
       summary_overview_main <- HTML("<h3>Selected sample</h3>")
       summary_table_main <- HTML("<h3>Effect size estimates</h3>")
        # Confidence level needs to be changed in all entries in model.R if you want to adjust it
-      summary_table_notes <- HTML(glue::glue("<p>CI = <<ci_width>> confidence interval; its actual coverage depends on each model\\\'s assumptions.{if (bayesian) " Bayesian rows show central credible intervals." else ""}</p>", .open = "<<", .close = ">>"))
+      summary_table_notes <- HTML(glue::glue("<p>CI = <<ci_width>> confidence interval; its actual coverage depends on each model\\\'s assumptions. <i>k</i> is the number of effects or studies the model reports.{if (bayesian) " Bayesian rows show central credible intervals." else ""}</p>", .open = "<<", .close = ">>"))
       model_help <- HTML("<h4>Default models</h4><dl>
         <dt>Random-Effects Multilevel Model</dt><dd>metafor::rma.mv with REML, random effects for studies and for effects within studies, independent sampling errors and t-based intervals. Uses every selected effect.</dd>
         <dt>Robust Variance Estimation</dt><dd>robumeta::robu with correlated-effects weights (rho = .8) and no small-sample correction, so intervals can be too narrow with few studies.</dd>
@@ -55,8 +57,9 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       zscore_help <- HTML("<p class=\'metaui-help-text\'>z = (effect - mean of all built effects) / their SD, on the fitting scale. Descriptive only.</p>")
       # Result tabs show not_analysed until the first analysis has finished. A tab with
       # precomputed content (opening = TRUE) shows it from the first paint instead.
-      results_panel <- function(..., opening = FALSE) if (opening) tagList(...) else tagList(
-        conditionalPanel("!output.metaui_ready", div(class = "metaui-empty", role = "status", not_analysed)),
+      # Only the Summary tab carries the strip of effects, so the page holds it once.
+      results_panel <- function(..., opening = FALSE, placeholder = fitting_note) if (opening) tagList(...) else tagList(
+        conditionalPanel("!output.metaui_ready", div(class = "metaui-empty", role = "status", placeholder)),
         conditionalPanel("output.metaui_ready", ...))
       data_help <- HTML("<p class=\'metaui-help-text\'>The workbook holds all rows (not only the selection), the last applied filters and the last results. With Bayesian models, it waits for two extra prior-sensitivity fits.<br/>Uploads must be workbooks from this app, with the same columns and effect scale; rows may be edited. Saved filters and the equivalence bound are restored and analyzed.</p><p class=\'metaui-help-text\'>The R script and Quarto file reproduce the applied selection and its model rows from the workbook of the same analysis, without metaUI. They do not reproduce the plots or diagnostic tabs.</p>")
 
@@ -268,7 +271,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
           type = "tabs",
           tabPanel(
             "Summary",
-            results_panel(opening = !is.null(metaUI_opening$html),
+            results_panel(opening = !is.null(metaUI_opening$html), placeholder = not_analysed,
             summary_table_main,
             metaUI_opening_output(uiOutput("primary_estimate"), metaUI_opening$html$primary_estimate),
             conditionalPanel("!output.no_effects",

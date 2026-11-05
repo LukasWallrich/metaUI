@@ -13,6 +13,9 @@
 - With `study_info`, readers can download the references for their selection as text, BibTeX or a table. `study_info` gains optional `reference` and `bibtex` columns.
 - Selection links save only the filters that narrow the data, so they stay short with many filters. Older links still work.
 - Custom models can name their interval in an `interval_type` column.
+- The Summary gives the primary analysis more weight: its row is tinted, and the other estimators sit under it, grouped by level of fit. Results keep a readable width on very wide windows, and filters a reader has narrowed stand out from untouched ones.
+- After each analysis, the other tabs are drawn in the background, one at a time, so they open at once. A tab opened before it is ready shows one message, never empty headings or the previous selection's results. Bayesian and effect-computation tabs still wait to be opened.
+- Saved opening results no longer blank for a moment when the app connects, and the opening page no longer repeats its strip of effects in hidden placeholders.
 - Apps with `fit_cache_entries = 0`, the default for custom model code, no longer save or reuse build-time fits: they fit afresh when opened.
 - A moderator with one value in the selection now says it cannot be tested, instead of failing. Declaring RVE as primary now reports its *k* as studies. Static previews state the actual default selection.
 

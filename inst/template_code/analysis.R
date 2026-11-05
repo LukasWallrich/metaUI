@@ -384,7 +384,9 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   digits <- metaUI_digits(table$LCL[table$status == "ok"], table$UCL[table$status == "ok"])
   fmt <- function(x) if (is.na(x)) "" else metaUI_minus(formatC(x, format = "f", digits = digits))
   esc <- function(x) htmltools::htmlEscape(as.character(x))
-  order <- c(first, setdiff(seq_len(nrow(table)), first))
+  # Other estimators sit under the primary analysis, grouped by the level they are fitted at.
+  rest <- setdiff(seq_len(nrow(table)), first)
+  order <- c(first, rest[order(table$aggregated[rest])])
   scale <- metaUI_track_scale(c(table$es, table$LCL, table$UCL, if (!is.null(bound)) c(-bound, bound)))
   types <- unique(stats::na.omit(table$interval_type[table$status == "ok"]))
   ref <- if (length(first) && table$status[first[1]] == "ok") table$es[first[1]] else NULL
@@ -393,28 +395,30 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   rows <- vapply(order, function(i) {
     row <- table[i, ]
     ok <- row$status == "ok"
-    label <- paste0(esc(row$Model), if (i %in% first) ' <span class="metaui-primary-tag">primary</span>', if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"),
+    label <- paste0(esc(row$Model), if (i %in% first) paste0(' <span class="metaui-primary-tag">primary, ', if (row$aggregated) "study-level" else "effect-level", " fit</span>"), if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"),
       # Confidence intervals need no note; only the rows that differ from them do.
-      if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"),
-      paste0('<span class="metaui-level-inline">', if (i %in% first) "primary, ", if (row$aggregated) "study-level" else "effect-level", "</span>"))
+      if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"))
     interval <- if (is.na(row$LCL) && is.na(row$UCL)) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
-    fit <- if (row$aggregated) "study-level" else "effect-level"
     unit <- metaUI_count_unit(row, studies)
     track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = i %in% first), "</td>")
       else paste0('<td class="metaui-reason-cell"><b>Not estimated (', esc(row$status), "):</b> ", esc(row$reason), "</td>")
-    paste0('<tr', if (i %in% first) ' class="metaui-primary-row"', "><td>", label, '</td><td class="num">', fmt(row$es),
+    position <- match(i, order)
+    opens_group <- !(i %in% first) && (position == length(first) + 1L || table$aggregated[order[position - 1L]] != row$aggregated)
+    group <- if (opens_group) paste0('<tr class="metaui-group-row"><td colspan="5">', if (length(first)) "Other estimators: ",
+        if (row$aggregated) "study-level fits, which first combine the effects within each study" else "effect-level fits, which use every selected effect",
+        '</td><td class="metaui-track-cell">', metaUI_track_row(scale, NA_real_, NA_real_, NA_real_, bound, ref = ref), "</td></tr>")
+    paste0(group, '<tr', if (i %in% first) ' class="metaui-primary-row"', "><td>", label, '</td><td class="num">', fmt(row$es),
       '</td><td class="num">', interval, '</td><td class="num metaui-k">', if (is.na(row$k)) "" else row$k,
-      '</td><td class="metaui-unit">', unit, '</td><td class="metaui-fit">', fit, "</td>", track, "</tr>")
+      '</td><td class="metaui-unit">', unit, "</td>", track, "</tr>")
   }, character(1))
   interval_head <- if (length(types) && all(grepl("^Confidence", types))) "95% CI" else "95% interval"
-  others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Rows under the primary analysis are other estimators for the same selection. They answer different questions and are not interchangeable with it.',
-    if (!is.null(ref)) paste0(" Diamond and dashed line: the primary estimate; the diamond's width is its ", interval_head, "."), "</p>",
-    '<p class="metaui-note metaui-other-estimators"><i>k</i>: effects or studies the model reports',
-    if (any(grepl("trim", table$Model, ignore.case = TRUE))) "; trim-and-fill includes imputed studies", ". Study-level fits first combine the effects within each study.</p>")
+  others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Other estimators answer different questions and are not interchangeable with the primary analysis.',
+    if (!is.null(ref)) paste0(" The diamond and dashed line mark the primary estimate and its ", interval_head, "."),
+    if (any(grepl("trim", table$Model, ignore.case = TRUE))) " The trim-and-fill count includes imputed studies.", "</p>")
   notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(table$warnings[warned]), "</li>", collapse = ""), "</ol>")
-  paste0('<table class="table metaui-estimates metaui-custom"><thead><tr data-head="Model, estimate [', interval_head, ']"><th>Model<span class="metaui-level-inline">and level of fit</span></th><th class="num">Estimate</th><th class="num">',
-    interval_head, '</th><th class="num metaui-k" title="Number of effects or studies the model reports; trim-and-fill includes imputed studies."><i>k</i></th><th></th><th class="metaui-fit" title="Effect-level fits use every selected effect; study-level fits first combine the effects within each study.">Level of fit</th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
-    paste(rows, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="6"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", others, notes)
+  paste0('<table class="table metaui-estimates metaui-models metaui-custom"><thead><tr data-head="Model, estimate [', interval_head, ']"><th>Model</th><th class="num">Estimate</th><th class="num">',
+    interval_head, '</th><th class="num metaui-k" title="Number of effects or studies the model reports; trim-and-fill includes imputed studies."><i>k</i></th><th></th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
+    paste(rows, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="5"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", others, notes)
 }
 
 # The forest plot as a table: the same drawn axis, with exact values beside each interval,

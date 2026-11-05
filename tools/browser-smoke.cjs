@@ -81,7 +81,11 @@ function reproduce(script, workbook, selected) {
   assert((await page.locator('#effectestimate').innerText()).includes('unsupported'));
   await page.locator('#go').click();
   await page.waitForFunction(()=>/Reused|Precomputed/.test(document.querySelector('#calculation_status')?.textContent));
+  // Tabs are drawn in the background, so a reader who waits opens them finished.
+  await page.waitForFunction(()=>document.querySelector('#sample_overview table'),null,{timeout:120000});
+  await page.waitForFunction(()=>!document.querySelector('.metaui-preloading')&&!document.documentElement.classList.contains('metaui-background'),null,{timeout:120000});
   await page.getByRole('tab',{name:'Sample',exact:true}).click();
+  assert.equal(await page.locator('.metaui-pane-loading').count(),0);
   await page.locator('#sample_overview table').waitFor();
   assert((await page.locator('#sample_overview').innerText()).includes('16'));
   await page.getByRole('tab',{name:'Forest plot',exact:true}).click();
@@ -153,7 +157,8 @@ function reproduce(script, workbook, selected) {
   // Reset restores the built year range, deliberately excluding the new 1900 row.
   assert((await page.locator('#selection_status').innerText()).includes('Excluded 1'));
   assert.deepEqual(errors,[]);
-  assert.equal(await page.locator('.shiny-output-error').count(),0);
+  // Validation messages are expected: tabs drawn in the background may report too few studies.
+  assert.equal(await page.locator('.shiny-output-error:not(.shiny-output-error-validation)').count(),0);
   await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:path.join(evidence,'mobile.png')});
   // Crowded moderator levels: the data here are too few to need it, so a table is added to the page.

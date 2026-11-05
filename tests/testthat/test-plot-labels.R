@@ -265,3 +265,23 @@ test_that("moderator effects can be toggled, and the axis fits what is shown", {
   width <- function(html) { x <- regmatches(html, regexpr('metaui-track-diamond" style="left:[0-9.]+%;width:[0-9.]+', html)); as.numeric(sub(".*width:", "", x)) }
   expect_gt(width(off), 5 * width(on))
 })
+
+test_that("the Summary table leads with the primary and groups other estimators by level", {
+  table <- data.frame(Model = c("Study A", "Effect B", "Primary", "Effect C"), es = c(.1, .2, .3, .4), LCL = c(0, .1, .2, .3), UCL = c(.2, .3, .4, .5),
+    k = 5, status = "ok", reason = "", warnings = "", aggregated = c(TRUE, FALSE, FALSE, FALSE), interval_type = "Confidence interval")
+  html <- metaUI:::metaUI_estimates_html(table, 3L)
+  at <- function(x) regexpr(x, html, fixed = TRUE)[[1]]
+  expect_true(at(">Primary") < at("effect-level fits") && at("effect-level fits") < at(">Effect B") && at(">Effect B") < at(">Effect C") &&
+    at(">Effect C") < at("study-level fits") && at("study-level fits") < at(">Study A"))
+  expect_match(html, "primary, effect-level fit", fixed = TRUE)
+  expect_no_match(html, "Level of fit", fixed = TRUE)
+  # Rows without a primary keep their groups, without calling anything "other".
+  plain <- metaUI:::metaUI_estimates_html(table)
+  expect_match(plain, ">effect-level fits", fixed = TRUE)
+  expect_no_match(plain, "Other estimators", fixed = TRUE)
+})
+
+test_that("saved opening results are marked to survive the empty values sent on connecting", {
+  expect_match(as.character(metaUI:::metaUI_opening_output(shiny::uiOutput("x"), "<p>saved</p>")), "data-metaui-opening", fixed = TRUE)
+  expect_no_match(as.character(metaUI:::metaUI_opening_output(shiny::uiOutput("x"), NULL)), "data-metaui-opening", fixed = TRUE)
+})
