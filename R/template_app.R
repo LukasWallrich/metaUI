@@ -854,7 +854,7 @@ glue_string <- ('
       shiny::htmlOutput("moderation_table"), shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot", height = 340)),
       p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise; whole-number moderators are spread slightly so that dots do not stack. Line and band: the multilevel moderator model with its 95% CI."))
     else div(class = "metaui-moderation-wide", shiny::htmlOutput("moderation_table"),
-      p(class = "metaui-note metaui-key", "Green diamond: level estimate from the multilevel moderator model; its width is the 95% CI. Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another. Dashed line: overall multilevel estimate.", tags$span(class = "metaui-hist-note", hidden = NA, " Grey bars: levels with 25 or more effects, showing how many fall in each small range, on one scale across levels.")))
+      p(class = "metaui-note metaui-key", "Green diamond: level estimate from the multilevel moderator model; its width is the 95% CI. Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another. Dashed line: overall multilevel estimate.", tags$span(class = "metaui-hist-note", hidden = NA, " Grey bars: levels with many effects, showing how many fall in each small range, on one scale across levels.")))
   })
 
   output$moderation_plot <- plotly::renderPlotly({
@@ -1098,7 +1098,7 @@ glue_string <- ('
       "Egger test requires at least three studies."))
     # t and p are in the sentence above.
     metaUI_statistics_rows(data.frame(
-      "Intercept" = round_(eggers$estimate[1], 3), "Residual variance (&tau;<sup>2</sup>)" = round_(eggers$tau^2, 3),
+      "Intercept" = metaUI_minus(round_(eggers$estimate[1], 3)), "Residual variance (&tau;<sup>2</sup>)" = round_(eggers$tau^2, 3),
       check.names = FALSE
     ))
   }, colnames = FALSE, sanitize.text.function = function(x) x, align = "lr")
@@ -1205,7 +1205,7 @@ glue_string <- ('
 
   # DISTRIBUTION OF EFFECTS -------------------------------------------------
   output$distribution_note <- renderUI({
-    p(class = "metaui-note", HTML(paste0("The Exclude extreme effects filter uses <i>z</i> = (effect ", metaUI_minus("- "), metaUI_minus(round_(mean(metaUI__df$metaUI__effect_size), 2)),
+    p(class = "metaui-note", HTML(paste0("The Exclude extreme effects filter uses <i>z</i> = (effect ", { centre <- mean(metaUI__df$metaUI__effect_size); paste(if (centre < 0) "+" else metaUI_minus("-"), round_(abs(centre), 2)) },
       ") / ", round_(sd(metaUI__df$metaUI__effect_size), 2), ", from the full dataset.")))
   })
 
@@ -1524,7 +1524,7 @@ glue_string <- ('
     if (!is.null(attr(df_filtered(), "metaUI_upload_info"))) return(p(class = "metaui-note",
       "Links cannot include uploaded data; share the workbook instead."))
     query <- tryCatch(selection_query(), error = function(e) e)
-    if (inherits(query, "error")) return(p(class = "metaui-note", conditionMessage(query)))
+    if (inherits(query, "error")) return(div(class = "metaui-share", p(class = "metaui-note", conditionMessage(query))))
     div(class = "metaui-share", tags$a(href = query, class = "btn btn-default", icon("link"), "Link to this selection"))
   })
 

@@ -105,7 +105,24 @@ test_that("a moderator with one value in the selection is explained, not an erro
   })
 })
 
-test_that("crowded moderator levels become histograms on phones only", {
+test_that("crowded moderator levels become histograms, sooner on phones", {
   js <- paste(readLines(system.file("template_code", "metaui.js", package = "metaUI")), collapse = "\n")
-  expect_match(js, "phone.matches && dotCount(track) >= 25", fixed = TRUE)
+  expect_match(js, "dotCount(track) >= (phone.matches ? 25 : 100)", fixed = TRUE)
+})
+
+test_that("a correlation's plot label says the values are Fisher z", {
+  skip_without_app_packages()
+  d <- data.frame(study = paste0("S", 1:6), yi = c(.1, .2, .3, .1, .2, .4), vi = .02)
+  x <- suppressMessages(prepare_data(d, "study", "yi", variance = "vi", es_type = "COR", variance_scale = "r"))
+  path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
+  generate_shiny(x, "Cor", eff_size_type_label = "r (corrected)", save_to_folder = path, launch_app = FALSE)
+  expect_match(paste(readLines(file.path(path, "global.R")), collapse = "\n"), "Fisher z of r (corrected)", fixed = TRUE)
+})
+
+test_that("confidence intervals carry no row note beside an author-defined one", {
+  table <- data.frame(Model = c("Custom", "Default"), es = c(.1, .2), LCL = c(0, .1), UCL = c(.2, .3), k = 5, status = "ok", reason = "", warnings = "", aggregated = FALSE,
+    interval_type = c("Author-defined interval (type and coverage unknown)", "Confidence interval (coverage model-dependent)"))
+  html <- metaUI:::metaUI_estimates_html(table)
+  expect_match(html, "Author-defined interval", fixed = TRUE)
+  expect_no_match(html, "Confidence interval (coverage", fixed = TRUE)
 })

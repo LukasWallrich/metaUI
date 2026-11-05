@@ -209,6 +209,9 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   metaUI_validate_prepared(dataset)
   if (!is.null(study_info)) study_info <- validate_study_info(study_info, dataset)
 
+  # Plots show the fitted Fisher z values, whatever the correlation is called; model summaries convert to r.
+  if (!is.na(eff_size_type_label) && dataset$metaUI__es_type[1] == "ZCOR" && !grepl("fisher|\\bz\\b", eff_size_type_label, ignore.case = TRUE))
+    eff_size_type_label <- paste("Fisher z of", eff_size_type_label)
   if (is.na(eff_size_type_label)) {
     eff_size_type_label <- if (dataset$metaUI__es_type[1] == "ZCOR") "Fisher z (model summaries: r)" else dataset$metaUI__es_type[1]
   }

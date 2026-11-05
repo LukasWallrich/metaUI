@@ -586,6 +586,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   table.metaui-forest > tbody > tr.metaui-forest-scale > td:first-child { display: none; }
   .metaui-basis.metaui-stale { margin-left: 0; }
   .metaui-breakdown-numeric { grid-template-columns: 1fr; }
+  .tab-pane .plotly.html-widget { max-width: 100%; overflow: hidden; }
   .metaui-moderation-grid { grid-template-columns: 1fr; }
 
   /* Estimates: text on the left of each row, one continuous plot column on the right, so

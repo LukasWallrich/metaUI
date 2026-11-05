@@ -221,12 +221,13 @@
     document.querySelectorAll('.metaui-moderators').forEach(function (table) {
       var tracks = Array.prototype.slice.call(table.querySelectorAll('tbody .metaui-track'));
       var dotCount = function (track) { return track.querySelectorAll('.metaui-track-dot').length; };
-      // On phones a level with many effects would run very tall, so it becomes a histogram.
-      var crowded = function (track) { return phone.matches && dotCount(track) >= 25; };
+      // A level with many effects would run very tall, so it becomes a histogram: sooner on phones.
+      var crowded = function (track) { return dotCount(track) >= (phone.matches ? 25 : 100); };
+      var binWidth = function (width) { return Math.max(4, width / 60); };
       var binsOf = function (track, width) {
         var bins = {};
         track.querySelectorAll('.metaui-track-dot').forEach(function (dot) {
-          var bin = Math.floor(parseFloat(dot.style.left) / 100 * width / 4);
+          var bin = Math.floor(parseFloat(dot.style.left) / 100 * width / binWidth(width));
           bins[bin] = (bins[bin] || 0) + 1;
         });
         return bins;
@@ -256,7 +257,8 @@
             var bar = document.createElement('i');
             bar.className = 'metaui-track-bar';
             bar.dataset.count = bins[bin];
-            bar.style.left = (bin * 4) + 'px';
+            bar.style.left = (bin * binWidth(width)) + 'px';
+            bar.style.width = (binWidth(width) - .5) + 'px';
             bar.style.height = Math.max(2, bins[bin] / tallestBin * 30) + 'px';
             hist.appendChild(bar);
           });
@@ -305,7 +307,15 @@
   }
   $(markTables);
   var spreadTimer;
-  $(document).on('shiny:value shown.bs.tab', function () { setTimeout(function () { markTables(); spreadDots(); }, 0); });
+  // A plot drawn in a hidden tab has no width to go by, and would overflow a phone.
+  function fitPlots() {
+    if (!window.Plotly) return;
+    document.querySelectorAll('.tab-pane.active .js-plotly-plot').forEach(function (plot) {
+      if (plot.clientWidth && plot.parentElement.clientWidth !== plot.querySelector('.main-svg').clientWidth) window.Plotly.Plots.resize(plot);
+    });
+  }
+  $(document).on('shiny:value shown.bs.tab', function () { setTimeout(function () { markTables(); spreadDots(); fitPlots(); }, 0); });
+  $(document).on('plotly_afterplot shiny:visualchange', function () { setTimeout(fitPlots, 0); });
   // Covers window resizes and a scrollbar arriving as later outputs render.
   new ResizeObserver(function () { clearTimeout(spreadTimer); spreadTimer = setTimeout(function () { spreadDots(); }, 120); }).observe(document.documentElement);
   $(document).on('click', '.metaui-forest-all', function () {

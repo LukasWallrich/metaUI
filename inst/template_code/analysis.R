@@ -98,7 +98,10 @@ metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours(), width = NU
   beside <- function(y) c(centre + z * (y + text_height / 2) + gap, centre - z * (y + text_height / 2) - gap)
   y_pooled <- text_height / 2 + .005 * ymax
   pooled_text <- paste0("pooled ", metaUI_minus(formatC(centre, format = "f", digits = 2)))
-  pooled <- place(data.frame(x = beside(y_pooled), y = y_pooled, hjust = c(0, 1)), nchar(pooled_text))
+  # Near the apex if there is room there, else lower down the centre line, where large datasets thin out.
+  down <- seq(.3, .95, by = .13) * ymax
+  pooled <- place(rbind(data.frame(x = beside(y_pooled), y = y_pooled, hjust = c(0, 1)),
+    data.frame(x = rep(centre + c(1, -1) * gap, length(down)), y = rep(down, each = 2), hjust = rep(c(0, 1), length(down)))), nchar(pooled_text))
   # p < .05 in a corner of a grey region, p >= .05 in the white funnel, each wholly inside.
   corner_y <- c(.05, .05, .95, .95) * ymax
   corner <- data.frame(x = c(limits[1] + gap, limits[2] - gap, limits[1] + gap, limits[2] - gap), y = corner_y, hjust = c(0, 1, 0, 1))
@@ -376,7 +379,8 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     row <- table[i, ]
     ok <- row$status == "ok"
     label <- paste0(esc(row$Model), if (i %in% first) ' <span class="metaui-primary-tag">primary</span>', if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"),
-      if (ok && length(types) > 1L) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"),
+      # Confidence intervals need no note; only the rows that differ from them do.
+      if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"),
       paste0('<span class="metaui-level-inline">', if (i %in% first) "primary, ", if (row$aggregated) "study-level" else "effect-level", "</span>"))
     interval <- if (is.na(row$LCL) && is.na(row$UCL)) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
     fit <- if (row$aggregated) "study-level" else "effect-level"
