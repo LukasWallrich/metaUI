@@ -236,7 +236,10 @@ metaUI_study_details <- function(info) {
     pages <- if (!is.null(get("pages"))) gsub("([0-9])-([0-9])", "\\1\u2013\\2", get("pages"))
     venue <- paste0(if (!is.null(get("volume"))) paste0("<i>", esc(get("volume")), "</i>"),
       if (!is.null(get("issue"))) paste0("(", esc(get("issue")), ")"))
-    reference <- paste0(
+    # The authors' own wording of a reference comes first, as in metaUI_study_reference().
+    reference <- if (!is.null(get("reference"))) paste0(esc(get("reference")),
+      if (!is.null(link) && !grepl(link, get("reference"), fixed = TRUE)) paste0(" ", as.character(htmltools::tags$a(href = link, target = "_blank", rel = "noopener", link))))
+    else paste0(
       if (!is.null(get("authors"))) paste0(esc(metaUI_apa_authors(get("authors"))), " "),
       if (!is.null(get("year"))) paste0("(", esc(get("year")), "). "),
       if (!is.null(get("title"))) paste0("<span class=\"metaui-study-title\">", esc(stop_(get("title"))), "</span> "),
@@ -314,8 +317,11 @@ metaUI_selected_references <- function(info, studies) {
   out <- data.frame(Study = rows$study, Reference = metaUI_study_reference(rows),
     Link = ifelse(!is.na(url), url, ifelse(!is.na(doi), paste0("https://doi.org/", doi), NA_character_)),
     bibtex = metaUI_study_bibtex(rows), stringsAsFactors = FALSE)
-  out <- out[nzchar(out$Reference) & !duplicated(out$Reference), , drop = FALSE]
-  out[order(tolower(out$Reference)), , drop = FALSE]
+  # A study known only by its BibTeX entry still belongs in that download.
+  key <- ifelse(nzchar(out$Reference), out$Reference, out$bibtex)
+  keep <- !is.na(key) & !duplicated(key)
+  out <- out[keep, , drop = FALSE]
+  out[order(tolower(key[keep])), , drop = FALSE]
 }
 
 # Effect-list cells: escaped study labels, as disclosure buttons where study details exist,

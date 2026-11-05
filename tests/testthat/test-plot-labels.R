@@ -105,10 +105,7 @@ test_that("a moderator with one value in the selection is explained, not an erro
   })
 })
 
-test_that("crowded moderator levels become histograms, sooner on phones", {
-  js <- paste(readLines(system.file("template_code", "metaui.js", package = "metaUI")), collapse = "\n")
-  expect_match(js, "dotCount(track) >= (phone.matches ? 25 : 100)", fixed = TRUE)
-})
+# The histogram itself is exercised in a real browser: tools/browser-smoke.cjs.
 
 test_that("correlations are shown as r, and a funnel keeps straight limits with an r axis", {
   df <- data.frame(metaUI__es_type = "ZCOR")
@@ -212,4 +209,45 @@ test_that("a study known only by its reference keeps its study information", {
   d <- suppressMessages(prepare_data(data.frame(study = c("A", "B", "C"), yi = c(.1, .2, .3), vi = .02), "study", "yi", variance = "vi"))
   info <- metaUI:::validate_study_info(data.frame(study = c("A", "B", "C"), reference = c("Adams (2000).", NA, NA), bibtex = c(NA, "@b", NA)), d)
   expect_equal(info$study, c("A", "B"))
+})
+
+test_that("a range that really narrows large values stays in the link", {
+  x <- data.frame(study = c("A", "B", "C"), yi = c(.1, .2, .3), vi = .02, big = c(200000000, 200000001, 200000002))
+  d <- suppressMessages(prepare_data(x, "study", "yi", variance = "vi", filters = c(Big = "big")))
+  filters <- list(list(id = "b", type = "numeric", col = "metaUI__filter_Big"))
+  full <- metaUI:::metaUI_full_selection(d, filters)
+  records <- rbind(data.frame(id = "outliers_z_scores", selection = as.character(full$outliers_z_scores)),
+    data.frame(id = "b", selection = c("200000000", "200000001")), data.frame(id = "b_include_NA", selection = "TRUE"))
+  parsed <- metaUI:::metaUI_parse_selection(metaUI:::metaUI_selection_query(records, "key", NULL, d, filters), "key", d, filters)
+  expect_equal(as.numeric(parsed$filters$b$selection), c(200000000, 200000001))
+})
+
+test_that("BibTeX-only studies stay in the download and reference-only studies show their text", {
+  info <- data.frame(study = c("A", "B"), reference = c(NA, "Baker & Co (2001)."), bibtex = c("@a{x}", NA), url = c(NA, "https://example.org/b"))
+  out <- metaUI:::metaUI_selected_references(info, info$study)
+  expect_setequal(out$Study, c("A", "B"))
+  details <- metaUI:::metaUI_study_details(info)
+  expect_match(details[2], "Baker &amp; Co (2001).", fixed = TRUE)
+  expect_match(details[2], "https://example.org/b", fixed = TRUE)
+})
+
+test_that("a primary summary is not called a confidence interval unless it is one", {
+  rows <- data.frame(kind = c("Selected effect", "Model summary"), study = c("A", NA), effect_id = c("1", NA), label = c("A: 1", "Mine"), es = .2, LCL = .1, UCL = .3)
+  attr(rows, "interval_types") <- c(Mine = "95% central credible interval (prior-dependent)")
+  html <- metaUI:::metaUI_forest_html(rows, "g")
+  expect_match(html, "95% central credible interval", fixed = TRUE)
+  expect_no_match(html, "95% CI", fixed = TRUE)
+  attr(rows, "interval_types") <- c(Mine = "Confidence interval")
+  expect_match(metaUI:::metaUI_forest_html(rows, "g"), "95% CI", fixed = TRUE)
+  table <- data.frame(Model = "Mine", es = .1, LCL = 0, UCL = .2, k = 5, status = "ok", reason = "", warnings = "", aggregated = FALSE, interval_type = "95% central credible interval (prior-dependent)")
+  expect_no_match(metaUI:::metaUI_estimates_html(rbind(table, transform(table, Model = "Other")), 1L), "its 95% CI", fixed = TRUE)
+})
+
+test_that("an invalid forest page falls back to the first page", {
+  rows <- data.frame(kind = "Selected effect", study = sprintf("S%03d", 1:60), effect_id = "1", label = sprintf("S%03d: 1", 1:60), es = .1, LCL = 0, UCL = .2)
+  for (bad in list(NA, "bad", integer(), c(1, 2))) expect_match(metaUI:::metaUI_forest_html(rows, "g", page = bad), "Studies 1\u201350", fixed = TRUE)
+})
+
+test_that("a value rounding to zero drops its sign", {
+  expect_equal(metaUI:::metaUI_minus(c("-0.000", "-0", "-0.001", "0.000")), c("0.000", "0", "\u22120.001", "0.000"))
 })

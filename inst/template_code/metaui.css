@@ -326,6 +326,7 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-track-combined { border-radius: 0; }
 .metaui-forest .metaui-forest-single td:first-child { padding-left: 11px; }
 .metaui-note.metaui-forest-key { display: flex; flex-wrap: wrap; gap: 3px 18px; max-width: none; }
+.metaui-forest-key > span { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .metaui-glyph { display: inline-block; vertical-align: 1px; margin-right: 6px; box-sizing: border-box; }
 .metaui-glyph-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--metaui-ink); }
 .metaui-glyph-square { width: 8px; height: 8px; background: var(--metaui-ink); }

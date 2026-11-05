@@ -6,7 +6,7 @@ metaUI_selection_query <- function(selections, dataset_key, bound = NULL, built 
   ranges <- c("outliers_z_scores", vapply(Filter(function(x) x$type == "numeric", filters), function(x) x$id, character(1)))
   untouched <- vapply(names(saved), function(id) {
     if (is.null(full[[id]])) return(FALSE)
-    if (id %in% ranges) return(length(saved[[id]]) == 2L && isTRUE(all.equal(as.numeric(saved[[id]]), as.numeric(full[[id]]), tolerance = 1e-8)))
+    if (id %in% ranges) return(length(saved[[id]]) == 2L && all(abs(as.numeric(saved[[id]]) - as.numeric(full[[id]])) <= 1e-8)) # Absolute: a relative tolerance would drop real limits on large values.
     setequal(saved[[id]], full[[id]])
   }, logical(1))
   saved <- lapply(saved[!untouched], I)

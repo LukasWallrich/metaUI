@@ -156,7 +156,8 @@ metaUI_label_expr <- function(label) {
 }
 
 # True minus signs for display; downloads keep plain numbers.
-metaUI_minus <- function(x) gsub("-", "\u2212", x, fixed = TRUE)
+# A value that rounds to zero loses its sign: "-0.000" says nothing "0.000" does not.
+metaUI_minus <- function(x) gsub("-", "\u2212", sub("^-(0(\\.0+)?)$", "\\1", x), fixed = TRUE)
 
 # Colours and font shared by every plot. The font applies on screen only: PDF devices
 # reject system font names, so downloads use their device default.
@@ -405,11 +406,11 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
       '</td><td class="num">', interval, '</td><td class="num metaui-k">', if (is.na(row$k)) "" else row$k,
       '</td><td class="metaui-unit">', unit, '</td><td class="metaui-fit">', fit, "</td>", track, "</tr>")
   }, character(1))
+  interval_head <- if (length(types) && all(grepl("^Confidence", types))) "95% CI" else "95% interval"
   others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Rows under the primary analysis are other estimators for the same selection. They answer different questions and are not interchangeable with it.',
-    if (!is.null(ref)) " Diamond and dashed line: the primary estimate; the diamond's width is its 95% CI.", "</p>",
+    if (!is.null(ref)) paste0(" Diamond and dashed line: the primary estimate; the diamond's width is its ", interval_head, "."), "</p>",
     '<p class="metaui-note metaui-other-estimators"><i>k</i>: effects or studies the model reports',
     if (any(grepl("trim", table$Model, ignore.case = TRUE))) "; trim-and-fill includes imputed studies", ". Study-level fits first combine the effects within each study.</p>")
-  interval_head <- if (length(types) && all(grepl("^Confidence", types))) "95% CI" else "95% interval"
   notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(table$warnings[warned]), "</li>", collapse = ""), "</ol>")
   paste0('<table class="table metaui-estimates metaui-custom"><thead><tr data-head="Model, estimate [', interval_head, ']"><th>Model<span class="metaui-level-inline">and level of fit</span></th><th class="num">Estimate</th><th class="num">',
     interval_head, '</th><th class="num metaui-k" title="Number of effects or studies the model reports; trim-and-fill includes imputed studies."><i>k</i></th><th></th><th class="metaui-fit" title="Effect-level fits use every selected effect; study-level fits first combine the effects within each study.">Level of fit</th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
@@ -436,6 +437,10 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL,
   # Combined rows count too: correlated weights can put them beyond their effects.
   scale <- metaUI_track_scale(c(rows$es, rows$LCL, rows$UCL, studies$es, studies$LCL, studies$UCL))
   summaries <- rows[rows$kind == "Model summary", , drop = FALSE]
+  # A custom or Bayesian summary may not be a confidence interval, so it must not be called one.
+  types <- attr(rows, "interval_types")
+  other_type <- function(label) { type <- unname(types[as.character(label)]); if (length(type) && !is.na(type) && !grepl("^Confidence", type)) type else "" }
+  interval_head <- if (any(nzchar(vapply(summaries$label, other_type, character(1))))) "95% interval" else "95% CI"
   effects <- rows[rows$kind == "Selected effect", , drop = FALSE]
   ref <- if (nrow(summaries)) summaries$es[1] else NULL
   width <- effects$UCL - effects$LCL
@@ -445,7 +450,7 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL,
     paste0('<td class="num">', fmt(row$es, digits), '</td><td class="num">[', fmt(row$LCL, digits), ", ", fmt(row$UCL, digits), "]</td>")
   }
   grid <- paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, NA_real_, NA_real_, NA_real_, ref = ref), "</td>")
-  summary_rows <- if (nrow(summaries)) paste(vapply(seq_len(nrow(summaries)), function(i) paste0('<tr class="metaui-primary-row"><td>', esc(summaries$label[i]), "</td>", values(summaries[i, ], metaUI_digits(summaries$LCL[i], summaries$UCL[i])),
+  summary_rows <- if (nrow(summaries)) paste(vapply(seq_len(nrow(summaries)), function(i) paste0('<tr class="metaui-primary-row"><td>', esc(summaries$label[i]), if (nzchar(other_type(summaries$label[i]))) paste0('<span class="metaui-row-note">', esc(other_type(summaries$label[i])), "</span>"), "</td>", values(summaries[i, ], metaUI_digits(summaries$LCL[i], summaries$UCL[i])),
     '<td class="metaui-track-cell">', metaUI_track_row(scale, summaries$es[i], summaries$LCL[i], summaries$UCL[i], ref = ref, diamond = TRUE), "</td></tr>"), character(1)), collapse = "")
   groups <- rle(as.character(effects$study))
   ends <- cumsum(groups$lengths); starts <- ends - groups$lengths + 1L
@@ -455,7 +460,8 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL,
   estimate <- ifelse(groups$lengths > 1L, studies$es[match(groups$values, studies$study)], effects$es[starts])
   shown <- if (identical(sort, "estimate")) order(-estimate, groups$values) else seq_along(starts)
   pages <- max(1L, ceiling(length(shown) / page_size))
-  page <- max(1L, min(as.integer(page), pages))
+  page <- suppressWarnings(as.integer(page))
+  page <- if (length(page) == 1L && !is.na(page)) max(1L, min(page, pages)) else 1L
   from <- (page - 1L) * page_size + 1L; to <- min(page * page_size, length(shown))
   study_rows <- vapply(shown[seq(from, length.out = max(0L, to - from + 1L))], function(s) {
     index <- starts[s]:ends[s]
@@ -480,12 +486,12 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL,
   sorted <- identical(sort, "estimate")
   paste0('<p class="metaui-note metaui-key metaui-forest-key"><span><i class="metaui-glyph metaui-glyph-dot"></i>One effect; larger is more precise</span>',
     if (any(groups$lengths > 1L)) '<span><i class="metaui-glyph metaui-glyph-square"></i>A study\'s effects combined</span>',
-    '<span><i class="metaui-glyph metaui-glyph-diamond"></i>Model summary; its width is the 95% CI</span>',
+    '<span><i class="metaui-glyph metaui-glyph-diamond"></i>Model summary; its width is the ', interval_head, '</span>',
     if (!is.null(ref)) paste0('<span><i class="metaui-glyph metaui-glyph-dash"></i>', esc(summaries$label[1]), ", ", fmt(ref, metaUI_digits(summaries$LCL[1], summaries$UCL[1])), "</span>"), "</p>",
     '<p class="metaui-note metaui-key metaui-forest-controls">',
     if (any(groups$lengths > 1L)) '<button type="button" class="metaui-forest-all" aria-expanded="false">Show every effect</button>',
     '<button type="button" class="metaui-forest-sort" aria-pressed="', if (sorted) "true" else "false", '">', if (sorted) "Sort by study name" else "Sort by estimate", "</button></p>", pager,
-    '<table class="table metaui-estimates metaui-forest metaui-custom"><thead><tr data-head="Study, estimate [95% CI]"><th>Study</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="metaui-track-cell">',
+    '<table class="table metaui-estimates metaui-forest metaui-custom"><thead><tr data-head="Study, estimate [', interval_head, ']"><th>Study</th><th class="num">Estimate</th><th class="num">', interval_head, '</th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", summary_rows, paste(study_rows, collapse = ""),
     '</tbody><tfoot><tr><td colspan="3"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", pager)
 }
@@ -874,6 +880,8 @@ metaUI_forest_rows <- function(df, estimates, models = NULL, primary = NULL) {
     fit_es = summaries$fit_es, fit_LCL = summaries$fit_LCL, fit_UCL = summaries$fit_UCL,
     es = summaries$es, LCL = summaries$LCL, UCL = summaries$UCL))
   rows$row <- rev(seq_len(nrow(rows)))
+  # Kept apart from the columns, which are also the plot data download.
+  if ("interval_type" %in% names(summaries)) attr(rows, "interval_types") <- stats::setNames(summaries$interval_type, summaries$Model)
   rows
 }
 

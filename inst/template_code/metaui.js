@@ -217,7 +217,7 @@
   // Effects under each moderator level: no dot covers another, at whatever width the row has.
   var phone = window.matchMedia('(max-width: 767px)');
   function spreadDots(again) {
-    var moved = false, anyBars = false;
+    var moved = false, anyBars = false, mostInBar = 0;
     document.querySelectorAll('.metaui-moderators').forEach(function (table) {
       var tracks = Array.prototype.slice.call(table.querySelectorAll('tbody .metaui-track'));
       var dotCount = function (track) { return track.querySelectorAll('.metaui-track-dot').length; };
@@ -238,7 +238,7 @@
         var bins = binsOf(track, track.clientWidth);
         Object.keys(bins).forEach(function (bin) { tallestBin = Math.max(tallestBin, bins[bin]); });
       });
-      if (tracks.some(crowded)) anyBars = true;
+      if (tracks.some(crowded)) { anyBars = true; mostInBar = Math.max(mostInBar, tallestBin); }
       // One shrink per table, so a dot's size means the same in every row.
       var largest = Math.max.apply(null, tracks.filter(function (track) { return !crowded(track); }).map(dotCount).concat(1));
       var crowd = Math.max(.75, Math.min(1, Math.sqrt(60 / Math.max(largest, 1))));
@@ -257,6 +257,7 @@
             var bar = document.createElement('i');
             bar.className = 'metaui-track-bar';
             bar.dataset.count = bins[bin];
+            bar.title = bins[bin] + (bins[bin] === 1 ? ' effect' : ' effects');
             bar.style.left = (bin * binWidth(width)) + 'px';
             bar.style.width = (binWidth(width) - .5) + 'px';
             bar.style.height = Math.max(2, bins[bin] / tallestBin * 30) + 'px';
@@ -292,7 +293,11 @@
         if (track.clientWidth !== width) moved = true;
       });
     });
-    document.querySelectorAll('.metaui-hist-note').forEach(function (note) { note.hidden = !anyBars; });
+    document.querySelectorAll('.metaui-hist-note').forEach(function (note) {
+      note.hidden = !anyBars;
+      var most = note.querySelector('.metaui-hist-max');
+      if (most) most.textContent = mostInBar;
+    });
     if (moved && !again) spreadDots(true);
   }
   // These tables are restyled as blocks on phones, which would otherwise hide that they are tables.
@@ -306,6 +311,24 @@
     });
   }
   $(markTables);
+  // Where tick labels would touch, only every second (or third) is shown, always keeping zero.
+  function thinAxes() {
+    document.querySelectorAll('.metaui-axis').forEach(function (axis) {
+      var ticks = Array.prototype.slice.call(axis.querySelectorAll('.metaui-axis-tick'));
+      ticks.forEach(function (tick) { tick.style.visibility = ''; });
+      if (!axis.clientWidth) return;
+      var zero = Math.max(0, ticks.findIndex(function (tick) { return parseFloat(tick.textContent.replace('\u2212', '-')) === 0; }));
+      var clash = function (shown) {
+        return shown.some(function (tick, i) { return i > 0 && tick.getBoundingClientRect().left < shown[i - 1].getBoundingClientRect().right + 3; });
+      };
+      for (var step = 1; step <= 4; step++) {
+        var shown = ticks.filter(function (tick, i) { return (i - zero) % step === 0; });
+        if (!clash(shown)) break;
+      }
+      ticks.forEach(function (tick) { if (shown.indexOf(tick) < 0) tick.style.visibility = 'hidden'; });
+    });
+  }
+  $(thinAxes);
   var spreadTimer;
   // A plot drawn in a hidden tab has no width to go by, and would overflow a phone.
   function fitPlots() {
@@ -314,10 +337,10 @@
       if (plot.clientWidth && plot.parentElement.clientWidth !== plot.querySelector('.main-svg').clientWidth) window.Plotly.Plots.resize(plot);
     });
   }
-  $(document).on('shiny:value shown.bs.tab', function () { setTimeout(function () { markTables(); spreadDots(); fitPlots(); restoreForest(); }, 0); });
+  $(document).on('shiny:value shown.bs.tab', function () { setTimeout(function () { markTables(); spreadDots(); fitPlots(); restoreForest(); thinAxes(); }, 0); });
   $(document).on('plotly_afterplot shiny:visualchange', function () { setTimeout(fitPlots, 0); });
   // Covers window resizes and a scrollbar arriving as later outputs render.
-  new ResizeObserver(function () { clearTimeout(spreadTimer); spreadTimer = setTimeout(function () { spreadDots(); }, 120); }).observe(document.documentElement);
+  new ResizeObserver(function () { clearTimeout(spreadTimer); spreadTimer = setTimeout(function () { spreadDots(); thinAxes(); }, 120); }).observe(document.documentElement);
   var forestAll = false;
   $(document).on('click', '.metaui-forest-all', function () {
     var open = this.getAttribute('aria-expanded') !== 'true';
@@ -341,9 +364,11 @@
     if (!forestFocus) return;
     var button = box.querySelectorAll(forestFocus.selector)[forestFocus.index];
     if (button && button.disabled) button = button.parentNode.querySelector('button:not([disabled])');
+    // From the pager under the table, the new page starts back at the top, and focus goes there too.
+    var fromBottom = forestFocus.index === 1;
+    if (fromBottom) { button = box.querySelectorAll(forestFocus.selector)[0]; if (button && button.disabled) button = button.parentNode.querySelector('button:not([disabled])'); }
     if (button) button.focus({ preventScroll: true });
-    // From the pager under the table, the new page starts back at the top.
-    if (forestFocus.index === 1) table.scrollIntoView();
+    if (fromBottom && button) button.closest('p').scrollIntoView();
     forestFocus = null;
   }
   $(document).on('click', '.metaui-forest-prev, .metaui-forest-next', function () {

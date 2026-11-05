@@ -787,7 +787,8 @@ glue_string <- ('
 
   selected_references <- reactive(metaUI_selected_references(metaUI_study_info, df_filtered()$metaUI__study_id))
   output$references_txt <- downloadHandler(filename = function() "references.txt", content = function(file) {
-    writeLines(enc2utf8(paste0(selected_references()$Reference, "\n")), file, useBytes = TRUE)
+    references <- selected_references()$Reference
+    writeLines(enc2utf8(paste0(references[nzchar(references)], "\n")), file, useBytes = TRUE)
   })
   output$references_bib <- downloadHandler(filename = function() "references.bib", content = function(file) {
     refs <- selected_references()
@@ -872,7 +873,7 @@ glue_string <- ('
       shiny::htmlOutput("moderation_table"), shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot", height = 340)),
       p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise; whole-number moderators are spread slightly so that dots do not stack. Line and band: the multilevel moderator model with its 95% CI."))
     else div(class = "metaui-moderation-wide", shiny::htmlOutput("moderation_table"),
-      p(class = "metaui-note metaui-key", "Green diamond: level estimate from the multilevel moderator model; its width is the 95% CI. Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another. Dashed line: overall multilevel estimate.", tags$span(class = "metaui-hist-note", hidden = NA, " Grey bars: levels with many effects, showing how many fall in each small range, on one scale across levels.")))
+      p(class = "metaui-note metaui-key", "Green diamond: level estimate from the multilevel moderator model; its width is the 95% CI. Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another. Dashed line: overall multilevel estimate.", tags$span(class = "metaui-hist-note", hidden = NA, " Grey bars: levels with many effects, showing how many fall in each small range, on one scale across levels; the tallest bar is ", tags$span(class = "metaui-hist-max"), " effects.")))
   })
 
   output$moderation_plot <- plotly::renderPlotly({
@@ -1050,8 +1051,8 @@ glue_string <- ('
       div(class = "metaui-export-actions", if (small) downloadButton("forest_pdf", "Download PDF"),
       if (small) downloadButton("forest_png", "Download PNG"),
       downloadButton("forest_csv", "Download plot data")),
-      if (!small) p(class = "metaui-note", forest_limit_message),
-      shiny::htmlOutput("foreststudies"))
+      shiny::htmlOutput("foreststudies"),
+      if (!small) p(class = "metaui-note", forest_limit_message))
   })
   forest_rows <- reactive({
     df <- df_filtered()
@@ -1068,7 +1069,10 @@ glue_string <- ('
   # Plots taller than about a laptop screen repeat the x axis at the top.
   forest_plot <- reactive(forest_plot_for(top_axis = forest_height() > 700))
   forest_view <- reactiveValues(page = 1L, sort = "name")
-  observeEvent(input$forest_page, forest_view$page <- as.integer(input$forest_page))
+  observeEvent(input$forest_page, {
+    page <- suppressWarnings(as.integer(input$forest_page))
+    if (length(page) == 1L && !is.na(page)) forest_view$page <- page
+  })
   observeEvent(input$forest_sort, {
     forest_view$sort <- if (identical(input$forest_sort, "estimate")) "estimate" else "name"
     forest_view$page <- 1L

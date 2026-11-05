@@ -156,6 +156,44 @@ function reproduce(script, workbook, selected) {
   assert.equal(await page.locator('.shiny-output-error').count(),0);
   await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:path.join(evidence,'mobile.png')});
+  // Crowded moderator levels: the data here are too few to need it, so a table is added to the page.
+  const moderatorTable = (dots) => page.evaluate((dots) => {
+    document.querySelector('#smoke-moderators')?.remove();
+    const row = (n) => '<tr><td>Level</td><td class="metaui-track-cell"><div class="metaui-track">' +
+      Array.from({length:n},(_,i)=>`<i class="metaui-track-dot" style="left:${10+(i%40)*2}%;width:6px;height:6px"></i>`).join('') + '</div></td></tr>';
+    document.body.insertAdjacentHTML('beforeend',`<table id="smoke-moderators" class="table metaui-estimates metaui-moderators" style="width:360px"><tbody>${dots.map(row).join('')}</tbody></table>`);
+  }, dots);
+  const moderatorState = () => page.evaluate(() => {
+    const table = document.querySelector('#smoke-moderators');
+    return [...table.tBodies[0].rows].map(row => ({
+      bars:[...row.querySelectorAll('.metaui-track-bar')].reduce((sum,bar)=>sum+Number(bar.dataset.count),0),
+      dots:[...row.querySelectorAll('.metaui-track-dot')].filter(dot=>dot.getBoundingClientRect().width>0).length,
+      height:row.getBoundingClientRect().height}));
+  });
+  const redraw = async () => { await page.evaluate(()=>$(document).trigger('shown.bs.tab')); await page.waitForTimeout(250); };
+  await page.setViewportSize({width:390,height:844});
+  await moderatorTable([30,3]); await redraw();
+  let levels = await moderatorState();
+  assert.equal(levels[0].bars,30,'a crowded level should count every effect in its bars');
+  assert.equal(levels[0].dots,0,'a crowded level should hide its dots');
+  assert.equal(levels[1].dots,3,'a small level should keep its dots');
+  assert(levels[0].height < 90,'a crowded phone row should stay short: '+levels[0].height);
+  await page.setViewportSize({width:1200,height:844}); await page.waitForTimeout(400);
+  levels = await moderatorState();
+  assert.equal(levels[0].bars,0,'30 effects should not make a histogram on a larger screen');
+  assert.equal(levels[0].dots,30,'dots should return on a larger screen');
+  await moderatorTable([120]); await redraw();
+  levels = await moderatorState();
+  assert.equal(levels[0].bars,120,'a very crowded level should make a histogram on any screen');
+  // Drawn while hidden, it has no width until shown.
+  await page.setViewportSize({width:390,height:844});
+  await moderatorTable([30]);
+  await page.evaluate(()=>{document.querySelector('#smoke-moderators').style.display='none';}); await redraw();
+  assert.equal((await moderatorState())[0].bars,0,'a hidden table should wait for its width');
+  await page.evaluate(()=>{document.querySelector('#smoke-moderators').style.display='';}); await redraw();
+  assert.equal((await moderatorState())[0].bars,30,'a table should draw its histogram once shown');
+  await page.evaluate(()=>document.querySelector('#smoke-moderators').remove());
+  await page.setViewportSize({width:1440,height:1000});
   fs.writeFileSync(path.join(evidence,'result.json'),JSON.stringify({
     ok:true,checks:['standalone startup','analysis','cache disclosure','forest render and PDF/PNG/CSV exports','practical interval assessment',
       'keyboard inline filter help','sample summary on its tab','download/upload round trip with equivalence bound','R/Quarto code export reproduced in fresh R (built and uploaded data)','picker and missing-value restoration','numeric filtering','reset'],
