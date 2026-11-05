@@ -64,6 +64,17 @@ function reproduce(script, workbook, selected) {
     ...(process.env.METAUI_CHROMIUM ? {executablePath:process.env.METAUI_CHROMIUM}: {})});
   page=await browser.newPage({viewport:{width:1440,height:1000}});
   page.on('pageerror',e=>errors.push(e.message));
+  // Saved opening results must stay until the server's own values replace them.
+  await page.addInitScript(()=>{
+    window.__metauiBlanked=[];
+    document.addEventListener('DOMContentLoaded',()=>{
+      const saved=[...document.querySelectorAll('[data-metaui-opening]')];
+      window.__metauiOpening=saved.length;
+      new MutationObserver(()=>saved.forEach(el=>{
+        if(el.hasAttribute('data-metaui-opening')&&!el.textContent.trim()) window.__metauiBlanked.push(el.id);
+      })).observe(document.body,{childList:true,subtree:true,characterData:true});
+    });
+  });
   await page.goto(url);
   await page.waitForFunction(()=>window.Shiny?.shinyapp?.$socket?.readyState===1);
   await page.getByText('Select effects', {exact:true}).waitFor();
@@ -77,6 +88,8 @@ function reproduce(script, workbook, selected) {
   await page.keyboard.press('Escape');
   await helpPanel.waitFor({state:'hidden'});
   await page.locator('#go').click(); await settledSample(16);
+  assert(await page.evaluate(()=>window.__metauiOpening) > 0, 'the fixture should open on saved results');
+  assert.deepEqual(await page.evaluate(()=>window.__metauiBlanked), [], 'saved opening results were blanked');
   await page.getByText('Selection details', {exact:true}).click();
   assert((await page.locator('#effectestimate').innerText()).includes('unsupported'));
   await page.locator('#go').click();
@@ -102,6 +115,12 @@ function reproduce(script, workbook, selected) {
     if (extension === 'png') assert.equal(bytes.subarray(0,8).toString('hex'), '89504e470d0a1a0a', id + ' is not a PNG');
     if (extension === 'csv') assert(bytes.toString().includes('Selected effect'), id + ' is missing effect rows');
   }
+  // Moderator tables open on the level estimates, with individual effects on a toggle.
+  await page.getByRole('tab',{name:'Moderation',exact:true}).click();
+  await page.evaluate(()=>{ const select=$('#moderator'); if(select[0].selectize) select[0].selectize.setValue('metaUI__filter_Group'); else select.val('metaUI__filter_Group').trigger('change'); });
+  await page.locator('table.metaui-moderators').first().waitFor({timeout:60000});
+  assert(await page.locator('table.metaui-moderators-plain').count() > 0, 'moderator tables should open without individual effects');
+  assert.equal(await page.locator('.metaui-moderator-effects').first().getAttribute('aria-pressed'), 'false');
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.getByText('Assess practical equivalence', {exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Smallest bound'));
@@ -146,10 +165,31 @@ function reproduce(script, workbook, selected) {
   reproduce(uploadedScript, uploadedWorkbook, 4);
   // A single excluded year makes the next result three effects.
   await page.locator('#metaUI__filter_Year_include_NA').uncheck();
+  await page.waitForFunction(()=>document.querySelector('#metaUI__filter_Year').closest('.shiny-input-container').classList.contains('metaui-narrowed'),
+    null, {timeout:5000});
   // This output starts hidden; it must resume when a filter changes.
   await page.locator('#apply_state_box').waitFor({state:'visible'});
   await page.waitForFunction(()=>document.querySelector('#apply_state')?.textContent.includes('Filters changed'));
-  await page.locator('#go').click(); await settledSample(3);
+  // A tab opened straight after Update shows its message, never the previous selection.
+  await page.getByRole('tab',{name:'Summary',exact:true}).click();
+  await page.evaluate(()=>{
+    window.__stale=false; window.__fresh=false;
+    $(document).on('shiny:value.smoke', e=>{ if(e.name==='sample_overview') window.__fresh=true; });
+    const pane=document.querySelector('#sample_overview').closest('.tab-pane');
+    const watch=()=>{
+      if(pane.classList.contains('active')&&!pane.classList.contains('metaui-pane-loading')&&!window.__fresh) window.__stale=true;
+      if(!window.__fresh||pane.classList.contains('metaui-pane-loading')) requestAnimationFrame(watch);
+    };
+    requestAnimationFrame(watch);
+  });
+  await page.locator('#go').click();
+  await page.getByRole('tab',{name:'Sample',exact:true}).click();
+  assert.equal(await page.locator('.metaui-pane-loading .metaui-pane-status[role=status]').count(),1,'an early tab should show its status message');
+  await settledSample(3);
+  await page.waitForFunction(()=>window.__fresh&&!document.querySelector('.metaui-pane-loading'),null,{timeout:60000});
+  assert.equal(await page.evaluate(()=>window.__stale),false,'Sample showed before its new values arrived');
+  await page.evaluate(()=>$(document).off('shiny:value.smoke'));
+  await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.locator('#apply_state_box').waitFor({state:'hidden'});
   await page.locator('#resetFilters').click();
   await page.waitForFunction(()=>document.querySelector('#metaUI__filter_Group').selectedOptions.length===8);
@@ -157,8 +197,11 @@ function reproduce(script, workbook, selected) {
   // Reset restores the built year range, deliberately excluding the new 1900 row.
   assert((await page.locator('#selection_status').innerText()).includes('Excluded 1'));
   assert.deepEqual(errors,[]);
-  // Validation messages are expected: tabs drawn in the background may report too few studies.
+  // Tabs drawn in the background may report that this small selection is too small for some methods.
   assert.equal(await page.locator('.shiny-output-error:not(.shiny-output-error-validation)').count(),0);
+  const validation = await page.locator('.shiny-output-error-validation').allInnerTexts();
+  const expected = [/^Egger test requires at least three studies\.$/, /^Z-curve not estimated for this selection; reason below\.$/, /^P-curve requires explicit effect direction; it is not inferred\.$/];;
+  for (const text of validation) assert(expected.some(rx=>rx.test(text.trim())), 'unexpected validation message: ' + text);
   await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:path.join(evidence,'mobile.png')});
   // Crowded moderator levels: the data here are too few to need it, so a table is added to the page.

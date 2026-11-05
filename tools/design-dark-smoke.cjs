@@ -73,8 +73,9 @@ async function readable(locator,label,pseudo=null) {
   await page.waitForFunction(()=>document.querySelector('#apply_state')?.textContent.includes('Filters changed'));
   const staleNotice=await readable(page.locator('#apply_state_box'),'Stale notice');
   await readable(page.locator('#metaui_basis'),'Stale results banner');
+  // The button dims while the server works; its resting state must be readable.
+  await page.waitForFunction(()=>document.querySelector('#go').classList.contains('metaui-needs-run')&&!document.documentElement.classList.contains('shiny-busy'));
   await readable(page.locator('#go'),'Update action');
-  await page.waitForFunction(()=>document.querySelector('#go').classList.contains('metaui-needs-run'));
   await page.screenshot({path:path.join(evidence,'dark-stale.png')});
   assert.deepEqual(pageErrors,[],'Dark app raised page-level JavaScript errors');
   fs.writeFileSync(path.join(evidence,'dark-result.json'),JSON.stringify({ok:true,modal,sampleHeaders,paging,biasHeaders,staleNotice},null,2));

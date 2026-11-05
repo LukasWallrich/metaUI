@@ -271,14 +271,18 @@ test_that("the Summary table leads with the primary and groups other estimators 
     k = 5, status = "ok", reason = "", warnings = "", aggregated = c(TRUE, FALSE, FALSE, FALSE), interval_type = "Confidence interval")
   html <- metaUI:::metaUI_estimates_html(table, 3L)
   at <- function(x) regexpr(x, html, fixed = TRUE)[[1]]
-  expect_true(at(">Primary") < at("effect-level fits") && at("effect-level fits") < at(">Effect B") && at(">Effect B") < at(">Effect C") &&
-    at(">Effect C") < at("study-level fits") && at("study-level fits") < at(">Study A"))
+  expect_true(at(">Primary") < at(">Other effect-level estimators") && at(">Other effect-level estimators") < at(">Effect B") && at(">Effect B") < at(">Effect C") &&
+    at(">Effect C") < at(">Study-level estimators") && at(">Study-level estimators") < at(">Study A"))
   expect_match(html, "primary, effect-level fit", fixed = TRUE)
   expect_no_match(html, "Level of fit", fixed = TRUE)
   # Rows without a primary keep their groups, without calling anything "other".
   plain <- metaUI:::metaUI_estimates_html(table)
-  expect_match(plain, ">effect-level fits", fixed = TRUE)
-  expect_no_match(plain, "Other estimators", fixed = TRUE)
+  expect_match(plain, ">Effect-level estimators", fixed = TRUE)
+  expect_no_match(plain, "Other", fixed = TRUE)
+  # With a study-level primary, the effect-level rows are not "other" ones.
+  study <- metaUI:::metaUI_estimates_html(table, 1L)
+  expect_match(study, ">Effect-level estimators", fixed = TRUE)
+  expect_no_match(study, "Other effect-level", fixed = TRUE)
 })
 
 test_that("saved opening results are marked to survive the empty values sent on connecting", {

@@ -404,8 +404,10 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
       else paste0('<td class="metaui-reason-cell"><b>Not estimated (', esc(row$status), "):</b> ", esc(row$reason), "</td>")
     position <- match(i, order)
     opens_group <- !(i %in% first) && (position == length(first) + 1L || table$aggregated[order[position - 1L]] != row$aggregated)
-    group <- if (opens_group) paste0('<tr class="metaui-group-row"><td colspan="5">', if (length(first)) "Other estimators: ",
-        if (row$aggregated) "study-level fits, which first combine the effects within each study" else "effect-level fits, which use every selected effect",
+    # Methods explains the two levels; the headings stay short enough for one line on phones.
+    level <- if (row$aggregated) "study-level estimators" else "effect-level estimators"
+    group <- if (opens_group) paste0('<tr class="metaui-group-row"><td colspan="5">',
+        if (length(first) && any(table$aggregated[first] == row$aggregated)) paste("Other", level) else paste0(toupper(substr(level, 1, 1)), substring(level, 2)),
         '</td><td class="metaui-track-cell">', metaUI_track_row(scale, NA_real_, NA_real_, NA_real_, bound, ref = ref), "</td></tr>")
     paste0(group, '<tr', if (i %in% first) ' class="metaui-primary-row"', "><td>", label, '</td><td class="num">', fmt(row$es),
       '</td><td class="num">', interval, '</td><td class="num metaui-k">', if (is.na(row$k)) "" else row$k,

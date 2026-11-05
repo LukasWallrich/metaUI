@@ -444,17 +444,26 @@
 /* Filters the reader has narrowed stand out from the untouched ones. */
 (function ($) {
   var timer;
+  function unchecked(box) {
+    var check = box && box.querySelector('input[type=checkbox]');
+    return !!check && !check.checked;
+  }
   function mark() {
     document.querySelectorAll('form.well .shiny-input-container').forEach(function (box) {
       var select = box.querySelector('select[multiple]');
       var slider = box.querySelector('.js-range-slider');
-      var checks = box.querySelectorAll('input[type=checkbox]');
       var narrowed = false;
       if (select) narrowed = select.selectedOptions.length < select.options.length;
       else if (slider) {
         var range = $(slider).data('ionRangeSlider');
-        narrowed = !!range && (range.result.from !== range.result.min || range.result.to !== range.result.max);
-      } else if (checks.length > 1) narrowed = Array.prototype.some.call(checks, function (check) { return !check.checked; });
+        var missing = slider.id && document.getElementById(slider.id + '_include_NA');
+        narrowed = (!!range && (range.result.from !== range.result.min || range.result.to !== range.result.max)) ||
+          (!!missing && !missing.checked && !missing.closest('.metaui-no-missing'));
+      } else if (box.classList.contains('shiny-input-checkboxgroup')) {
+        narrowed = Array.prototype.some.call(box.querySelectorAll('input[type=checkbox]'), function (check) { return !check.checked; });
+      } else if (/_include_NA$/.test((box.querySelector('input[type=checkbox]') || {}).id || '')) {
+        narrowed = unchecked(box) && !box.classList.contains('metaui-no-missing');
+      }
       box.classList.toggle('metaui-narrowed', narrowed);
     });
   }
@@ -466,13 +475,23 @@
    shows one message, never empty headings or the previous selection's results. */
 (function ($) {
   var ready = new WeakSet();
-  var analysis = 0, queue = [], running = false;
-  var TOO_SLOW = 20000; // A tab this slow stops the sequence: the reader's next click would wait for it.
+  var analysis = 0, queue = [], running = null;
+  var TOO_SLOW = 20000;   // A background tab this slow stops the sequence: the reader's next click would wait for it.
+  var GIVE_UP = 60000;    // An opened tab shows what it has after this long, without being counted as ready.
+  var asked = 0, answers = {};
 
   function panes() {
     return Array.prototype.map.call(document.querySelectorAll('#metaui_results .nav-tabs > li > a'), function (link) {
       var pane = document.querySelector(link.getAttribute('href'));
-      if (pane) pane.setAttribute('data-metaui-title', link.textContent.trim());
+      if (pane) {
+        pane.setAttribute('data-metaui-title', link.textContent.trim());
+        if (!pane.querySelector(':scope > .metaui-pane-status')) {
+          var status = document.createElement('div');
+          status.className = 'metaui-pane-status';
+          status.setAttribute('role', 'status');
+          pane.insertBefore(status, pane.firstChild);
+        }
+      }
       return pane;
     }).filter(Boolean);
   }
@@ -485,20 +504,48 @@
     var slow = function (pane) { return pane.querySelector('#moderation_panel') ? 1 : 0; };
     return usable.filter(function (pane) { return !slow(pane); }).concat(usable.filter(slow));
   }
-  // Calls done once Shiny has answered and fallen quiet.
+  var listening = false;
+  function listen() {
+    if (listening || !window.Shiny || !Shiny.addCustomMessageHandler) return;
+    listening = true;
+    Shiny.addCustomMessageHandler('metaui_drawn', function (id) { if (answers[id]) answers[id](); });
+  }
+  listen();
+  $(document).on('shiny:connected', listen);
+  // Calls done once the server has answered for the outputs just shown and fallen quiet. The
+  // server answers after it has started on them, so the wait never ends on elapsed time alone.
+  // Returns a function that cancels the wait.
   function whenSettled(done) {
-    var quiet, answered = false;
-    var check = function (event) {
-      if (event && event.type === 'shiny:busy') answered = true;
+    var id = ++asked, sent = Date.now(), quietFor = 0, quiet, cancelled = false;
+    var check = function () {
       clearTimeout(quiet);
-      if (!document.documentElement.classList.contains('shiny-busy')) quiet = setTimeout(finish, answered ? 120 : 500);
+      if (quietFor && !document.documentElement.classList.contains('shiny-busy')) quiet = setTimeout(finish, quietFor);
     };
-    var finish = function () {
-      $(document).off('shiny:busy shiny:idle shiny:value', check);
-      done();
+    var stop = function () {
+      cancelled = true;
+      clearTimeout(quiet);
+      delete answers[id];
+      $(document).off('shiny:busy shiny:idle shiny:value shiny:error', check);
     };
-    $(document).on('shiny:busy shiny:idle shiny:value', check);
-    check();
+    var finish = function () { stop(); done(); };
+    // Outputs drawn from a new value can ask for more, one round trip later.
+    answers[id] = function () { delete answers[id]; quietFor = Math.max(150, Math.min(1500, 1.5 * (Date.now() - sent))); check(); };
+    $(document).on('shiny:busy shiny:idle shiny:value shiny:error', check);
+    // After Shiny has reported which outputs are now visible.
+    setTimeout(function () { if (!cancelled) Shiny.setInputValue('metaui_drawn', id, { priority: 'event' }); }, 10);
+    return stop;
+  }
+  function finishBackground(job, completed) {
+    if (running !== job) return;
+    running = null;
+    clearTimeout(job.watchdog);
+    job.cancel();
+    job.pane.classList.remove('metaui-preloading');
+    job.pane.style.width = '';
+    if (completed && job.analysis === analysis) ready.add(job.pane);
+    if (!job.pane.classList.contains('active')) $(job.pane).trigger('hidden');
+    if (completed) setTimeout(next, 50);
+    else { queue = []; document.documentElement.classList.remove('metaui-background'); }
   }
   function next() {
     if (running) return;
@@ -506,27 +553,21 @@
     if (!pane) { document.documentElement.classList.remove('metaui-background'); return; }
     if (ready.has(pane) || pane.classList.contains('active')) return next();
     var active = document.querySelector('#metaui_results .tab-pane.active');
-    var started = Date.now(), forAnalysis = analysis;
-    running = true;
+    var job = { pane: pane, analysis: analysis };
+    running = job;
     document.documentElement.classList.add('metaui-background');
     pane.style.width = active ? active.offsetWidth + 'px' : '';
     pane.classList.add('metaui-preloading');
     $(pane).trigger('shown');
-    whenSettled(function () {
-      running = false;
-      pane.classList.remove('metaui-preloading');
-      pane.style.width = '';
-      if (forAnalysis === analysis) ready.add(pane);
-      $(pane).trigger('hidden');
-      if (Date.now() - started < TOO_SLOW) setTimeout(next, 50);
-      else { queue = []; document.documentElement.classList.remove('metaui-background'); }
-    });
+    job.cancel = whenSettled(function () { finishBackground(job, true); });
+    job.watchdog = setTimeout(function () { finishBackground(job, false); }, TOO_SLOW);
   }
   function newAnalysis() {
     analysis += 1;
     ready = new WeakSet();
     queue = [];
-    if (!running) document.documentElement.classList.remove('metaui-background');
+    // The reader's own analysis shows as busy, even while a background tab finishes.
+    document.documentElement.classList.remove('metaui-background');
   }
   // Clicking Update puts every tab out of date at once; the answer restarts the sequence.
   $(document).on('click', '#go', newAnalysis);
@@ -539,21 +580,34 @@
     if (event.target.removeAttribute) event.target.removeAttribute('data-metaui-opening');
     if (event.name !== 'selection_overview') return;
     newAnalysis();
+    var forAnalysis = analysis;
     var active = document.querySelector('#metaui_results .tab-pane.active');
     if (active) ready.add(active);
-    whenSettled(function () { queue = backgroundOrder(); next(); });
+    whenSettled(function () { if (forAnalysis === analysis) { queue = backgroundOrder(); next(); } });
+  });
+  // The message goes up before the tab appears, and the wait starts once Shiny has seen it shown.
+  $(document).on('show.bs.tab', '#metaui_results .nav-tabs a', function () {
+    var pane = document.querySelector(this.getAttribute('href'));
+    if (!pane || ready.has(pane) || !pane.querySelector('.shiny-bound-output') || pane.classList.contains('metaui-pane-loading')) return;
+    var status = pane.querySelector(':scope > .metaui-pane-status');
+    pane.classList.add('metaui-pane-loading');
+    if (status) status.textContent = 'Preparing ' + pane.getAttribute('data-metaui-title') + '\u2026';
   });
   $(document).on('shown.bs.tab', '#metaui_results .nav-tabs a', function () {
     var pane = document.querySelector(this.getAttribute('href'));
-    if (!pane || ready.has(pane) || !pane.querySelector('.shiny-bound-output')) return;
-    var forAnalysis = analysis;
-    pane.classList.add('metaui-pane-loading');
-    pane.setAttribute('aria-busy', 'true');
-    whenSettled(function () {
+    if (!pane || !pane.classList.contains('metaui-pane-loading') || pane.metauiWaiting) return;
+    var forAnalysis = analysis, status = pane.querySelector(':scope > .metaui-pane-status'), giveUp, cancel;
+    var end = function (completed) {
+      clearTimeout(giveUp);
+      cancel();
+      pane.metauiWaiting = false;
       pane.classList.remove('metaui-pane-loading');
-      pane.removeAttribute('aria-busy');
-      if (forAnalysis === analysis) ready.add(pane);
-    });
+      if (status) status.textContent = '';
+      if (completed && forAnalysis === analysis) ready.add(pane);
+    };
+    pane.metauiWaiting = true;
+    cancel = whenSettled(function () { end(true); });
+    giveUp = setTimeout(function () { end(false); }, GIVE_UP);
   });
   document.addEventListener('DOMContentLoaded', panes);
 })(jQuery);

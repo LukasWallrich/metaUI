@@ -468,6 +468,9 @@ glue_string <- ('
     df
   })
 
+  # The browser asks after showing a tab; the answer arrives once the outputs in that tab are under way.
+  observeEvent(input$metaui_drawn, session$sendCustomMessage("metaui_drawn", input$metaui_drawn))
+
   output$selection_overview <- renderText({
     req(isTruthy(input$go))
     df <- df_filtered()
@@ -1295,8 +1298,8 @@ glue_string <- ('
           list(type = "line", x0 = qs[[2]], x1 = qs[[2]], y0 = strip - top * .03, y1 = strip + top * .03, line = list(color = ink, width = 2))),
         annotations = list(
           list(x = qs[[2]], y = strip, yshift = 9, text = paste0("middle 50%, median ", metaUI_minus(round_(qs[[2]], 2))), showarrow = FALSE, xanchor = "center", yanchor = "bottom", font = list(size = 13, color = plot_colours$slate)),
-          if (any(outliers$metaUI__effect_size < qs[[1]])) list(x = min(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "left", yanchor = "bottom", font = list(size = 13, color = plot_colours$slate)),
-          if (any(outliers$metaUI__effect_size > qs[[3]])) list(x = max(outliers$metaUI__effect_size), y = strip, yshift = 9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "right", yanchor = "bottom", font = list(size = 13, color = plot_colours$slate))),
+          if (any(outliers$metaUI__effect_size < qs[[1]])) list(x = min(outliers$metaUI__effect_size), y = strip, yshift = -9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "left", yanchor = "top", font = list(size = 13, color = plot_colours$slate)),
+          if (any(outliers$metaUI__effect_size > qs[[3]])) list(x = max(outliers$metaUI__effect_size), y = strip, yshift = -9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "right", yanchor = "top", font = list(size = 13, color = plot_colours$slate))),
         xaxis = list(title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 13.5)), range = span, tickmode = "array", tickvals = ticks, ticktext = metaUI_minus(formatC(ticks, format = "f", digits = tick_digits)), tickfont = axis_font, zeroline = FALSE, showgrid = FALSE, fixedrange = TRUE, showline = TRUE, linecolor = plot_colours$slate, linewidth = 1, ticks = "outside", ticklen = 3, tickcolor = plot_colours$slate),
         yaxis = list(title = list(text = "Effects", font = list(size = 13.5)), tickfont = axis_font, gridcolor = plot_colours$grid, zeroline = FALSE, fixedrange = TRUE, range = c(0, top * 1.3), rangemode = "normal", tick0 = 0, tickvals = pretty(c(0, top), 5)[pretty(c(0, top), 5) <= top]))
     p

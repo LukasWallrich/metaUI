@@ -698,8 +698,8 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
 .tab-content { position: relative; }
 .tab-content > .tab-pane.metaui-preloading:not(.active) { display: block; position: absolute; top: 0; left: -10000px; visibility: hidden; }
 .tab-pane.metaui-pane-loading { position: relative; min-height: 200px; }
-.tab-pane.metaui-pane-loading > * { visibility: hidden; }
-.tab-pane.metaui-pane-loading::before { content: "Preparing " attr(data-metaui-title) "\2026"; position: absolute; top: 18px; left: 0; font-size: 1.0625rem; color: var(--metaui-ink); animation: metaui-appear .2s .15s both; }
+.tab-pane.metaui-pane-loading > :not(.metaui-pane-status) { visibility: hidden; }
+.tab-pane.metaui-pane-loading > .metaui-pane-status { position: absolute; top: 18px; left: 0; font-size: 1.0625rem; color: var(--metaui-ink); animation: metaui-appear .2s .15s both; }
 @keyframes metaui-appear { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .tab-pane.metaui-pane-loading::before { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .tab-pane.metaui-pane-loading > .metaui-pane-status { animation: none; } }
 .load-container .loader { color: var(--metaui-accent) !important; }
