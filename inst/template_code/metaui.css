@@ -353,8 +353,8 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-moderators .metaui-track-point { background: var(--metaui-accent); border-radius: 0; transform: rotate(45deg); }
 .metaui-moderators .metaui-track-dot { opacity: .8; }
 .metaui-moderators .metaui-track { min-height: 38px; }
-.metaui-forest-offpage { display: none !important; }
-.metaui-forest-pager[hidden] { display: none; }
+/* Until the server has wired up a download, a click would save the page itself. */
+.shiny-download-link[href=""] { pointer-events: none; opacity: .55; }
 .metaui-forest-status { align-self: center; color: var(--metaui-slate); }
 .metaui-forest-prev:disabled, .metaui-forest-next:disabled { opacity: .5; cursor: default; }
 .metaui-track-hist { left: 0; right: 0; height: 30px; }

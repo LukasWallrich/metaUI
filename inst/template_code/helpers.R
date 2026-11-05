@@ -276,6 +276,8 @@ metaUI_study_details <- function(info) {
 # Plain one-line reference for hover titles: "Family et al. (year). Title. Journal."
 metaUI_study_reference <- function(info) {
   vapply(seq_len(nrow(info)), function(i) {
+    # The authors' own wording of a reference comes first.
+    if ("reference" %in% names(info) && !is.na(info$reference[i])) return(as.character(info$reference[i]))
     parts <- vapply(c("authors", "year", "title", "journal"), function(name) {
       value <- if (name %in% names(info)) info[[name]][i] else NA
       if (is.na(value)) "" else as.character(value)
@@ -286,6 +288,34 @@ metaUI_study_reference <- function(info) {
     parts <- parts[nzchar(parts)]
     paste(ifelse(grepl("[.?!]$", parts), parts, paste0(parts, ".")), collapse = " ")
   }, character(1))
+}
+
+# BibTeX entries: the authors' own where supplied, else built from the study's fields.
+metaUI_study_bibtex <- function(info) {
+  field <- function(name, i) if (name %in% names(info) && !is.na(info[[name]][i])) as.character(info[[name]][i]) else NA_character_
+  vapply(seq_len(nrow(info)), function(i) {
+    own <- field("bibtex", i)
+    if (!is.na(own)) return(own)
+    authors <- field("authors", i); title <- field("title", i); year <- field("year", i)
+    if (is.na(title) || is.na(authors)) return(NA_character_)
+    key <- paste0(gsub("[^[:alnum:]]", "", metaUI_first_family(authors)), if (!is.na(year)) year, "_", i)
+    values <- c(author = gsub("; ", " and ", authors, fixed = TRUE), title = title, year = year, journal = field("journal", i),
+      volume = field("volume", i), number = field("issue", i), pages = field("pages", i), doi = field("doi", i), url = field("url", i))
+    values <- values[!is.na(values)]
+    paste0("@article{", key, ",\n", paste0("  ", names(values), " = {", values, "}", collapse = ",\n"), "\n}")
+  }, character(1))
+}
+
+# One row per distinct reference among the studies selected, in alphabetical order.
+metaUI_selected_references <- function(info, studies) {
+  rows <- info[info$study %in% as.character(studies), , drop = FALSE]
+  doi <- if ("doi" %in% names(rows)) rows$doi else rep(NA_character_, nrow(rows))
+  url <- if ("url" %in% names(rows)) rows$url else rep(NA_character_, nrow(rows))
+  out <- data.frame(Study = rows$study, Reference = metaUI_study_reference(rows),
+    Link = ifelse(!is.na(url), url, ifelse(!is.na(doi), paste0("https://doi.org/", doi), NA_character_)),
+    bibtex = metaUI_study_bibtex(rows), stringsAsFactors = FALSE)
+  out <- out[nzchar(out$Reference) & !duplicated(out$Reference), , drop = FALSE]
+  out[order(tolower(out$Reference)), , drop = FALSE]
 }
 
 # Effect-list cells: escaped study labels, as disclosure buttons where study details exist,

@@ -141,9 +141,9 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @param study_info Optional study information shown to readers: a data frame (or CSV path) with one row per
 #' study and a `study` column matching the study IDs, as returned by [fetch_study_metadata()] or written by the
 #' authors. Recognised columns: `doi`, `url`, `title`, `authors` (separated by "; "), `year`, `journal`, `volume`,
-#' `issue`, `pages`, `abstract` (paragraphs separated by blank lines), `abstract_licence` (licence URL),
+#' `issue`, `pages`, `reference` (the full reference as text), `bibtex` (a BibTeX entry), `abstract` (paragraphs separated by blank lines), `abstract_licence` (licence URL),
 #' `abstract_note`, `metadata_source`, `retrieved`, plus `status` and `abstract_policy` from the lookup. Studies in
-#' the effect-size list then open a details row. It is stored in the app; the app never fetches metadata. Include
+#' the effect-size list then open a details row, and readers can download the references for their selection. It is stored in the app; the app never fetches metadata. Include
 #' only abstracts you may republish.
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
 #' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA and static_folder is NULL, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.

@@ -28,7 +28,7 @@ test_that("oversized forest selections still show on screen, without image downl
     expect_match(output$forest_panel$html, "limited to 8 effects")
     expect_true(grepl('id="foreststudies"', output$forest_panel$html, fixed = TRUE))
     expect_false(grepl('id="forest_pdf"', output$forest_panel$html, fixed = TRUE))
-    expect_match(output$foreststudies, "metaui-forest-pager", fixed = TRUE)
+    expect_match(output$foreststudies, "metaui-forest-key", fixed = TRUE)
     # The exact boundary should still render a plot.
     state_values$uploaded_data <- d[1:8, ]
     session$setInputs(go = 2)

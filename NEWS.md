@@ -8,7 +8,8 @@
 - Categorical moderator levels with many effects (25 or more on phones, 100 or more on larger screens) show a small histogram instead of stacked dots, which keeps those rows short and the page responsive.
 - Correlations are shown as *r* everywhere readers see effect sizes: moderator tables and plots, histograms, the effects table and the first screen. The funnel keeps its straight limits on the Fisher z scale with its axis labelled in *r*. Slopes, variances and Egger's test stay on Fisher z and say so.
 - Estimates show three decimals where an interval is narrower than 0.05.
-- The forest plot shows any number of effects, 50 studies to a page; `max_forest_plot_rows` now limits only its PDF and PNG downloads.
+- The forest plot shows any number of effects, 50 studies to a page drawn on the server; `max_forest_plot_rows` now limits only its PDF and PNG downloads. A declared primary model leads its summaries and sets the reference line.
+- With `study_info`, readers can download the references for their selection as text, BibTeX or a table. `study_info` gains optional `reference` and `bibtex` columns.
 - Selection links save only the filters that narrow the data, so they stay short with many filters. Older links still work.
 - Custom models can name their interval in an `interval_type` column.
 - Apps with `fit_cache_entries = 0`, the default for custom model code, no longer save or reuse build-time fits: they fit afresh when opened.

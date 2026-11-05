@@ -159,3 +159,57 @@ test_that("confidence intervals carry no row note beside an author-defined one",
   expect_match(html, "Author-defined interval", fixed = TRUE)
   expect_no_match(html, "Confidence interval (coverage", fixed = TRUE)
 })
+
+test_that("the forest plot draws one page and sorts on the server", {
+  n <- 120
+  rows <- data.frame(kind = "Selected effect", study = sprintf("S%03d", 1:n), effect_id = "1", label = sprintf("S%03d: 1", 1:n), es = (1:n) / 200, LCL = (1:n) / 200 - .2, UCL = (1:n) / 200 + .2)
+  page <- function(...) metaUI:::metaUI_forest_html(rows, "g", ...)
+  count <- function(html, pattern) lengths(regmatches(html, gregexpr(pattern, html, fixed = TRUE)))
+  first <- page()
+  expect_equal(count(first, "metaui-forest-single"), 50)
+  expect_match(first, "Studies 1\u201350 of 120", fixed = TRUE)
+  expect_match(first, 'metaui-forest-prev" data-page="0" disabled', fixed = TRUE)
+  expect_true(grepl(">S001<", first, fixed = TRUE) && !grepl(">S051<", first, fixed = TRUE))
+  last <- page(page = 3)
+  expect_equal(count(last, "metaui-forest-single"), 20)
+  expect_match(last, "Studies 101\u2013120 of 120", fixed = TRUE)
+  # Past the end clamps to the last page; the axis does not depend on the page.
+  expect_match(page(page = 99), "Studies 101\u2013120", fixed = TRUE)
+  ticks <- function(html) regmatches(html, gregexpr('metaui-axis-tick" style="[^"]+"', html))[[1]]
+  expect_identical(ticks(first), ticks(last))
+  sorted <- page(sort = "estimate")
+  expect_true(grepl(">S120<", sorted, fixed = TRUE) && !grepl(">S001<", sorted, fixed = TRUE))
+  expect_match(sorted, 'aria-pressed="true"', fixed = TRUE)
+  expect_no_match(metaUI:::metaUI_forest_html(rows[1:10, ], "g"), "metaui-forest-pager", fixed = TRUE)
+})
+
+test_that("a declared primary model leads the forest summaries", {
+  d <- suppressMessages(prepare_data(data.frame(study = rep(LETTERS[1:8], each = 2), yi = rnorm(16, .2, .2), vi = .02), "study", "yi", variance = "vi"))
+  estimates <- data.frame(Model = c("Random-Effects Multilevel Model", "Robust Variance Estimation", "Mine"), aggregated = FALSE, status = "ok",
+    es = c(.1, .2, .3), LCL = 0, UCL = .4, fit_es = c(.1, .2, .3), fit_LCL = 0, fit_UCL = .4)
+  summaries <- function(...) { r <- metaUI:::metaUI_forest_rows(d, estimates, ...); r$label[r$kind == "Model summary"] }
+  expect_equal(summaries(), c("Random-Effects Multilevel Model", "Robust Variance Estimation"))
+  expect_equal(summaries(primary = "Mine"), c("Mine", "Random-Effects Multilevel Model", "Robust Variance Estimation"))
+  expect_equal(summaries(primary = "Robust Variance Estimation"), c("Robust Variance Estimation", "Random-Effects Multilevel Model"))
+})
+
+test_that("reference downloads cover the selection, without repeats, in the authors' wording", {
+  info <- data.frame(study = c("B 2", "A 1", "B 1", "C 1", "D 1"),
+    reference = c("Brown (2001).", "Adams (2000).", "Brown (2001).", NA, NA), bibtex = c("@b", "@a", "@b", NA, NA),
+    authors = c(NA, NA, NA, "Cole, Ann; Day, Bo", NA), title = c(NA, NA, NA, "Teams", "Untitled note"), year = c(NA, NA, NA, "2005", NA), doi = c(NA, NA, NA, "10.1000/x", NA), url = NA)
+  all <- metaUI:::metaUI_selected_references(info, info$study)
+  expect_equal(all$Reference[1:2], c("Adams (2000).", "Brown (2001)."))
+  expect_equal(sum(all$Reference == "Brown (2001)."), 1)
+  cole <- all[all$Study == "C 1", ]
+  expect_match(cole$bibtex, "author = {Cole, Ann and Day, Bo}", fixed = TRUE)
+  expect_equal(cole$Link, "https://doi.org/10.1000/x")
+  expect_true(is.na(all$bibtex[all$Study == "D 1"]))
+  expect_equal(metaUI:::metaUI_selected_references(info, "A 1")$Study, "A 1")
+  expect_equal(nrow(metaUI:::metaUI_selected_references(info, "nobody")), 0)
+})
+
+test_that("a study known only by its reference keeps its study information", {
+  d <- suppressMessages(prepare_data(data.frame(study = c("A", "B", "C"), yi = c(.1, .2, .3), vi = .02), "study", "yi", variance = "vi"))
+  info <- metaUI:::validate_study_info(data.frame(study = c("A", "B", "C"), reference = c("Adams (2000).", NA, NA), bibtex = c(NA, "@b", NA)), d)
+  expect_equal(info$study, c("A", "B"))
+})

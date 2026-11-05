@@ -51,7 +51,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       diagnostics_main <- HTML("<h3>Distribution of effect sizes</h3><p class=\'metaui-note\'>Dots mark effects more than 1.5 interquartile ranges (IQR) beyond the middle 50%. Hover over a dot for its study and <i>z</i>-score.</p>")
       diagnostics_het <- HTML("<h3>Heterogeneity (REML multilevel model)</h3>")
 
-      forest_note <- HTML("<p class=\'metaui-note\'>Effects: observed, with normal 95% sampling intervals and no shrinkage. Combined rows: the study-level effects used by the study-level models (see Methods); with correlated effects of unequal precision they can lie away from the simple average. Summaries: multilevel and robust variance estimation (RVE). Effects keep their numbers from the full dataset, so a selection can leave gaps.{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
+      forest_note <- HTML("<p class=\'metaui-note\'>Effects: observed, with normal 95% sampling intervals and no shrinkage. Combined rows: the study-level effects used by the study-level models (see Methods); with correlated effects of unequal precision they can lie away from the simple average. Summaries: the primary model, where the authors declared one, with multilevel and robust variance estimation (RVE). Effects keep their numbers from the full dataset, so a selection can leave gaps.{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
       zscore_help <- HTML("<p class=\'metaui-help-text\'>z = (effect - mean of all built effects) / their SD, on the fitting scale. Descriptive only.</p>")
       # Result tabs show not_analysed until the first analysis has finished. A tab with
       # precomputed content (opening = TRUE) shows it from the first paint instead.
@@ -295,6 +295,9 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             {if (any_filters) "sample_overview_main," else ""}
             {generate_sample_description_ui(data, any_filters)}
             sample_table,
+            if (!is.null(metaUI_study_info)) div(class = "metaui-export-actions metaui-reference-actions",
+              downloadButton("references_txt", "Reference list (.txt)"), downloadButton("references_bib", "BibTeX (.bib)"), downloadButton("references_xlsx", "Reference table (.xlsx)")),
+            if (!is.null(metaUI_study_info)) p(class = "metaui-note", "The reference downloads cover the studies in the current selection."),
             if (!is.null(metaUI_study_info)) study_details_hint,
             DT::dataTableOutput("sample_table")
             )
@@ -782,6 +785,19 @@ glue_string <- ('
 
   # Sample table -----------------------------------------------------------
 
+  selected_references <- reactive(metaUI_selected_references(metaUI_study_info, df_filtered()$metaUI__study_id))
+  output$references_txt <- downloadHandler(filename = function() "references.txt", content = function(file) {
+    writeLines(enc2utf8(paste0(selected_references()$Reference, "\n")), file, useBytes = TRUE)
+  })
+  output$references_bib <- downloadHandler(filename = function() "references.bib", content = function(file) {
+    refs <- selected_references()
+    missing <- refs$Reference[is.na(refs$bibtex)]
+    writeLines(enc2utf8(c(unique(stats::na.omit(refs$bibtex)), if (length(missing)) c("", "% References without a BibTeX entry:", paste("%", missing)))), file, useBytes = TRUE)
+  })
+  output$references_xlsx <- downloadHandler(filename = function() "references.xlsx", content = function(file) {
+    writexl::write_xlsx(selected_references()[c("Study", "Reference", "Link")], file)
+  })
+
   output$sample_table <- DT::renderDataTable({
     df <- df_filtered()
 
@@ -1040,7 +1056,7 @@ glue_string <- ('
   forest_rows <- reactive({
     df <- df_filtered()
     validate(need(nrow(df) > 0, "No effects selected."))
-    metaUI_forest_rows(df, estimatesfiltered(), models_to_run)
+    metaUI_forest_rows(df, estimatesfiltered(), models_to_run, primary_model)
   })
   # A drawn page grows with every row, so only the image downloads keep a limit.
   forest_image_rows <- reactive({
@@ -1051,8 +1067,17 @@ glue_string <- ('
   forest_height <- function() 90 + 20 * nrow(forest_image_rows())
   # Plots taller than about a laptop screen repeat the x axis at the top.
   forest_plot <- reactive(forest_plot_for(top_axis = forest_height() > 700))
+  forest_view <- reactiveValues(page = 1L, sort = "name")
+  observeEvent(input$forest_page, forest_view$page <- as.integer(input$forest_page))
+  observeEvent(input$forest_sort, {
+    forest_view$sort <- if (identical(input$forest_sort, "estimate")) "estimate" else "name"
+    forest_view$page <- 1L
+  })
+  observeEvent(df_filtered(), forest_view$page <- 1L)
+  forest_studies <- reactive(metaUI_forest_studies(df_agg()))
+  forest_details <- reactive(metaUI_effect_details(df_filtered()))
   output$foreststudies <- renderText({
-    metaUI_forest_html(forest_rows(), metaUI_eff_size_type_label, studies = metaUI_forest_studies(df_agg()), details = metaUI_effect_details(df_filtered()))
+    metaUI_forest_html(forest_rows(), metaUI_eff_size_type_label, studies = forest_studies(), details = forest_details(), page = forest_view$page, sort = forest_view$sort)
   })
   output$forest_pdf <- downloadHandler(filename = function() "forest-plot.pdf", content = function(file) {
     ggplot2::ggsave(file, forest_plot_for(top_axis = forest_height() > 700, family = ""), device = "pdf", width = 10,

@@ -29,7 +29,7 @@ generate_shiny(
 
 \item{eff_size_type_label}{The label to be used to describe the effect size. If NA, effect type code from dataset is used.}
 
-\item{models}{The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. If you want to change the default models, have a look at the vignette and/or the \code{\link[=get_model_tibble]{get_model_tibble()}} documentation.
+\item{models}{The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. Custom models can add an \code{interval_type} column naming their interval, such as "Confidence interval"; otherwise the app says that its type is unknown. If you want to change the default models, have a look at the vignette and/or the \code{\link[=get_model_tibble]{get_model_tibble()}} documentation.
 Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 this must assign the tibble to a variable called models_to_run (i.e. using <-).}
 
@@ -59,7 +59,7 @@ a character vector with all packages to display.}
 
 \item{options}{List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
 \itemize{
-\item \code{max_forest_plot_rows} Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 200. If more effect sizes are selected, a message is shown instead.
+\item \code{max_forest_plot_rows} Numeric. What is the maximum number of effects for the forest plot's PDF and PNG downloads? Defaults to 200. The plot on screen shows any number of studies, 50 to a page.
 \item \code{shiny_theme} Character. One of the shinythemes that style the app. Defaults to "yeti", see \code{?shinythemes::shinythemes} for all options.
 \item \code{intro} Optional HTML shown under the title: one or two sentences stating the question and, for readers new to the scale, what positive values mean.
 \item \code{fit_cache_entries} Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.
@@ -75,9 +75,9 @@ a character vector with all packages to display.}
 \item{study_info}{Optional study information shown to readers: a data frame (or CSV path) with one row per
 study and a \code{study} column matching the study IDs, as returned by \code{\link[=fetch_study_metadata]{fetch_study_metadata()}} or written by the
 authors. Recognised columns: \code{doi}, \code{url}, \code{title}, \code{authors} (separated by "; "), \code{year}, \code{journal}, \code{volume},
-\code{issue}, \code{pages}, \code{abstract} (paragraphs separated by blank lines), \code{abstract_licence} (licence URL),
+\code{issue}, \code{pages}, \code{reference} (the full reference as text), \code{bibtex} (a BibTeX entry), \code{abstract} (paragraphs separated by blank lines), \code{abstract_licence} (licence URL),
 \code{abstract_note}, \code{metadata_source}, \code{retrieved}, plus \code{status} and \code{abstract_policy} from the lookup. Studies in
-the effect-size list then open a details row. It is stored in the app; the app never fetches metadata. Include
+the effect-size list then open a details row, and readers can download the references for their selection. It is stored in the app; the app never fetches metadata. Include
 only abstracts you may republish.}
 
 \item{static_folder}{Optional destination folder for a static shinylive site. Requires

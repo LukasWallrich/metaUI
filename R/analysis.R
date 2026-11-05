@@ -429,7 +429,8 @@ metaUI_effect_details <- function(df) {
   stats::setNames(out, paste(df$metaUI__study_id, df$metaUI__effect_id))
 }
 
-metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL) {
+# Only one page of studies is drawn and sent; sorting and paging come back to the server.
+metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL, page = 1L, sort = "name", page_size = 50L) {
   fmt <- function(x, digits = 2L) metaUI_minus(formatC(x, format = "f", digits = digits))
   esc <- function(x) htmltools::htmlEscape(as.character(x))
   # Combined rows count too: correlated weights can put them beyond their effects.
@@ -450,7 +451,13 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL)
   ends <- cumsum(groups$lengths); starts <- ends - groups$lengths + 1L
   if (is.null(studies)) studies <- data.frame(study = character(), es = numeric(), LCL = numeric(), UCL = numeric())
   study_size <- pmin(13, pmax(6, 7 * stats::median(width) / (studies$UCL - studies$LCL)))
-  study_rows <- vapply(seq_along(starts), function(s) {
+  # A study sorts by its combined effect, or by its one effect.
+  estimate <- ifelse(groups$lengths > 1L, studies$es[match(groups$values, studies$study)], effects$es[starts])
+  shown <- if (identical(sort, "estimate")) order(-estimate, groups$values) else seq_along(starts)
+  pages <- max(1L, ceiling(length(shown) / page_size))
+  page <- max(1L, min(as.integer(page), pages))
+  from <- (page - 1L) * page_size + 1L; to <- min(page * page_size, length(shown))
+  study_rows <- vapply(shown[seq(from, length.out = max(0L, to - from + 1L))], function(s) {
     index <- starts[s]:ends[s]
     one <- function(i, label, class) paste0('<tr class="', class, '" data-es="', effects$es[i], '"><td>', label, "</td>", values(effects[i, ]),
       '<td class="metaui-track-cell">', metaUI_track_row(scale, effects$es[i], effects$LCL[i], effects$UCL[i], size = size[i], ref = ref), "</td></tr>")
@@ -468,16 +475,16 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL)
         one(index[j], paste0("Effect ", esc(labels[j]), if (!is.na(detail) && nzchar(detail)) paste0(' <span class="metaui-forest-count">', esc(detail), "</span>")), "metaui-forest-effect metaui-forest-closed")
       }, character(1)), collapse = ""))
   }, character(1))
-  # metaui.js shows this when the studies fill more than one page.
-  pager <- paste0('<p class="metaui-note metaui-key metaui-forest-controls metaui-forest-pager" hidden><button type="button" class="metaui-forest-prev">Previous</button>',
-    '<button type="button" class="metaui-forest-next">Next</button><span class="metaui-forest-status" aria-live="polite"></span></p>')
+  pager <- if (pages > 1L) paste0('<p class="metaui-note metaui-key metaui-forest-controls metaui-forest-pager"><button type="button" class="metaui-forest-prev" data-page="', page - 1L, '"', if (page == 1L) " disabled", '>Previous</button>',
+    '<button type="button" class="metaui-forest-next" data-page="', page + 1L, '"', if (page == pages) " disabled", '>Next</button><span class="metaui-forest-status" aria-live="polite">Studies ', from, "\u2013", to, " of ", length(shown), "</span></p>") else ""
+  sorted <- identical(sort, "estimate")
   paste0('<p class="metaui-note metaui-key metaui-forest-key"><span><i class="metaui-glyph metaui-glyph-dot"></i>One effect; larger is more precise</span>',
     if (any(groups$lengths > 1L)) '<span><i class="metaui-glyph metaui-glyph-square"></i>A study\'s effects combined</span>',
     '<span><i class="metaui-glyph metaui-glyph-diamond"></i>Model summary; its width is the 95% CI</span>',
     if (!is.null(ref)) paste0('<span><i class="metaui-glyph metaui-glyph-dash"></i>', esc(summaries$label[1]), ", ", fmt(ref, metaUI_digits(summaries$LCL[1], summaries$UCL[1])), "</span>"), "</p>",
     '<p class="metaui-note metaui-key metaui-forest-controls">',
     if (any(groups$lengths > 1L)) '<button type="button" class="metaui-forest-all" aria-expanded="false">Show every effect</button>',
-    '<button type="button" class="metaui-forest-sort" aria-pressed="false">Sort by estimate</button></p>', pager,
+    '<button type="button" class="metaui-forest-sort" aria-pressed="', if (sorted) "true" else "false", '">', if (sorted) "Sort by study name" else "Sort by estimate", "</button></p>", pager,
     '<table class="table metaui-estimates metaui-forest metaui-custom"><thead><tr data-head="Study, estimate [95% CI]"><th>Study</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", summary_rows, paste(study_rows, collapse = ""),
     '</tbody><tfoot><tr><td colspan="3"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", pager)
@@ -845,7 +852,7 @@ metaUI_forest_studies <- function(aggregated) {
   out
 }
 
-metaUI_forest_rows <- function(df, estimates, models = NULL) {
+metaUI_forest_rows <- function(df, estimates, models = NULL, primary = NULL) {
   df <- df[order(as.character(df$metaUI__study_id), suppressWarnings(as.numeric(as.character(df$metaUI__effect_id))), as.character(df$metaUI__effect_id)), , drop = FALSE]
   label <- if ("metaUI__es_label" %in% names(df)) df$metaUI__es_label else df$metaUI__effect_id
   rows <- data.frame(label = paste(df$metaUI__study_id, label, sep = ": "),
@@ -859,7 +866,9 @@ metaUI_forest_rows <- function(df, estimates, models = NULL) {
   summary_rows <- if (!is.null(models) && nrow(models) == nrow(estimates))
     models$code %in% c(metaUI_code_multilevel, metaUI_code_rve) & !models$aggregated else
     estimates$Model %in% c("Random-Effects Multilevel Model", "Robust Variance Estimation") & !estimates$aggregated
-  summaries <- estimates[summary_rows & estimates$status == "ok", ]
+  # The authors' primary model leads, as it does on the Summary, and sets the reference line.
+  chosen <- which((summary_rows | estimates$Model %in% primary) & estimates$status == "ok")
+  summaries <- estimates[chosen[order(!estimates$Model[chosen] %in% primary)], ]
   if (nrow(summaries)) rows <- rbind(rows, data.frame(label = summaries$Model,
     kind = "Model summary", study = NA_character_, effect_id = NA_character_,
     fit_es = summaries$fit_es, fit_LCL = summaries$fit_LCL, fit_UCL = summaries$fit_UCL,

@@ -285,7 +285,7 @@ metaUI_jats_text <- function(x) {
   if (length(parts)) paste(parts, collapse = "\n\n") else NA_character_
 }
 
-study_info_fields <- c("study", "doi", "url", "status", "title", "authors", "year", "journal", "volume",
+study_info_fields <- c("reference", "bibtex", "study", "doi", "url", "status", "title", "authors", "year", "journal", "volume",
   "issue", "pages", "abstract", "abstract_licence", "abstract_source", "abstract_note", "metadata_source", "abstract_policy", "retrieved")
 
 # Checks author-supplied or fetched study information against the prepared dataset.
@@ -304,7 +304,7 @@ validate_study_info <- function(info, dataset) {
   if (length(unmatched)) stop("study_info rows do not match any study ID: ", paste(utils::head(unmatched, 10), collapse = ", "))
   if ("doi" %in% names(info)) info$doi <- metaUI_normalise_doi(info$doi)
   # Keep rows with something to show; a DOI alone only if the lookup found it (or none was run).
-  shown <- intersect(c("title", "authors", "year", "journal", "url", "abstract"), names(info))
+  shown <- intersect(c("title", "authors", "year", "journal", "url", "abstract", "reference", "bibtex"), names(info))
   found_doi <- if ("doi" %in% names(info)) !is.na(info$doi) & (if ("status" %in% names(info)) info$status %in% c(NA, "found") else TRUE) else FALSE
   info <- info[rowSums(!is.na(info[shown])) > 0 | found_doi, , drop = FALSE]
   rownames(info) <- NULL
