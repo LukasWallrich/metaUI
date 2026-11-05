@@ -854,7 +854,7 @@ glue_string <- ('
       shiny::htmlOutput("moderation_table"), shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot", height = 340)),
       p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise; whole-number moderators are spread slightly so that dots do not stack. Line and band: the multilevel moderator model with its 95% CI."))
     else div(class = "metaui-moderation-wide", shiny::htmlOutput("moderation_table"),
-      p(class = "metaui-note metaui-key", "Green diamond: level estimate from the multilevel moderator model; its width is the 95% CI. Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another. Dashed line: overall multilevel estimate."))
+      p(class = "metaui-note metaui-key", "Green diamond: level estimate from the multilevel moderator model; its width is the 95% CI. Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another. Dashed line: overall multilevel estimate.", tags$span(class = "metaui-hist-note", hidden = NA, " Grey bars: levels with 25 or more effects, showing how many fall in each small range, on one scale across levels.")))
   })
 
   output$moderation_plot <- plotly::renderPlotly({

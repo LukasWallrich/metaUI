@@ -87,6 +87,8 @@ test_that("a moderator with one value in the selection is explained, not an erro
   # Caching off: nothing saved for the opening, so readers always get a fresh fit.
   generate_shiny(x, "Edge", save_to_folder = path, launch_app = FALSE, options = list(fit_cache_entries = 0L))
   expect_false(file.exists(file.path(path, "opening_results.rds")))
+  # The note covers the phone histogram, hidden until metaui.js draws one.
+  expect_match(paste(readLines(file.path(path, "server.R")), collapse = "\n"), "metaui-hist-note", fixed = TRUE)
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
   env <- new.env(parent = globalenv()); suppressMessages(sys.source("global.R", env))
   defaults <- metaUI:::static_default_inputs(env); attr(defaults, "z_slider") <- NULL
@@ -101,4 +103,9 @@ test_that("a moderator with one value in the selection is explained, not an erro
     session$setInputs(moderator = "metaUI__filter_Cat")
     expect_match(output$moderation_table, "metaui-moderators", fixed = TRUE)
   })
+})
+
+test_that("crowded moderator levels become histograms on phones only", {
+  js <- paste(readLines(system.file("template_code", "metaui.js", package = "metaUI")), collapse = "\n")
+  expect_match(js, "phone.matches && dotCount(track) >= 25", fixed = TRUE)
 })

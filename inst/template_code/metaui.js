@@ -215,16 +215,58 @@
     setStudy(this.closest('tr'), this.getAttribute('aria-expanded') !== 'true');
   });
   // Effects under each moderator level: no dot covers another, at whatever width the row has.
+  var phone = window.matchMedia('(max-width: 767px)');
   function spreadDots(again) {
-    var moved = false;
+    var moved = false, anyBars = false;
     document.querySelectorAll('.metaui-moderators').forEach(function (table) {
+      var tracks = Array.prototype.slice.call(table.querySelectorAll('tbody .metaui-track'));
+      var dotCount = function (track) { return track.querySelectorAll('.metaui-track-dot').length; };
+      // On phones a level with many effects would run very tall, so it becomes a histogram.
+      var crowded = function (track) { return phone.matches && dotCount(track) >= 25; };
+      var binsOf = function (track, width) {
+        var bins = {};
+        track.querySelectorAll('.metaui-track-dot').forEach(function (dot) {
+          var bin = Math.floor(parseFloat(dot.style.left) / 100 * width / 4);
+          bins[bin] = (bins[bin] || 0) + 1;
+        });
+        return bins;
+      };
+      // Bars share one scale, so that their heights compare across levels.
+      var tallestBin = 1;
+      tracks.filter(crowded).forEach(function (track) {
+        var bins = binsOf(track, track.clientWidth);
+        Object.keys(bins).forEach(function (bin) { tallestBin = Math.max(tallestBin, bins[bin]); });
+      });
+      if (tracks.some(crowded)) anyBars = true;
       // One shrink per table, so a dot's size means the same in every row.
-      var largest = Math.max.apply(null, Array.prototype.map.call(table.tBodies[0].rows, function (row) { return row.querySelectorAll('.metaui-track-dot').length; }));
+      var largest = Math.max.apply(null, tracks.filter(function (track) { return !crowded(track); }).map(dotCount).concat(1));
       var crowd = Math.max(.75, Math.min(1, Math.sqrt(60 / Math.max(largest, 1))));
-      table.querySelectorAll('tbody .metaui-track').forEach(function (track) {
+      tracks.forEach(function (track) {
         var width = track.clientWidth;
         if (!width || track.dataset.spreadWidth === String(width)) return;
         track.dataset.spreadWidth = width;
+        var oldBars = track.querySelector('.metaui-track-hist');
+        if (oldBars) oldBars.remove();
+        var markY = parseFloat(getComputedStyle(track).getPropertyValue('--metaui-mark-y')) || 19;
+        if (crowded(track)) {
+          var bins = binsOf(track, width), hist = document.createElement('div');
+          hist.className = 'metaui-track-hist';
+          hist.style.top = (markY + 9) + 'px';
+          Object.keys(bins).forEach(function (bin) {
+            var bar = document.createElement('i');
+            bar.className = 'metaui-track-bar';
+            bar.dataset.count = bins[bin];
+            bar.style.left = (bin * 4) + 'px';
+            bar.style.height = Math.max(2, bins[bin] / tallestBin * 30) + 'px';
+            hist.appendChild(bar);
+          });
+          track.appendChild(hist);
+          track.querySelectorAll('.metaui-track-dot').forEach(function (dot) { dot.style.display = 'none'; });
+          track.style.minHeight = track.closest('tr').style.minHeight = (markY + 42) + 'px';
+          if (track.clientWidth !== width) moved = true;
+          return;
+        }
+        track.querySelectorAll('.metaui-track-dot').forEach(function (dot) { dot.style.display = ''; });
         var shrink = crowd * (width < 220 ? .75 : 1), placed = [], lowest = 0;
         var dots = Array.prototype.map.call(track.querySelectorAll('.metaui-track-dot'), function (dot) {
           if (!dot.dataset.size) dot.dataset.size = parseFloat(dot.style.width) || 6;
@@ -241,13 +283,14 @@
           dot.el.style.margin = (-dot.d / 2) + 'px 0 0 ' + (-dot.d / 2) + 'px';
           dot.el.style.transform = 'translateY(' + (9 + dot.d / 2 + y) + 'px)';
         });
-        var height = (parseFloat(getComputedStyle(track).getPropertyValue('--metaui-mark-y')) || 19) + 9 + lowest + 3;
+        var height = markY + 9 + lowest + 3;
         track.style.minHeight = height + 'px';
         track.closest('tr').style.minHeight = height + 'px';
         // Taller rows can bring in a scrollbar, which narrows the track.
         if (track.clientWidth !== width) moved = true;
       });
     });
+    document.querySelectorAll('.metaui-hist-note').forEach(function (note) { note.hidden = !anyBars; });
     if (moved && !again) spreadDots(true);
   }
   // These tables are restyled as blocks on phones, which would otherwise hide that they are tables.

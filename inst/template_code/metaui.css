@@ -348,6 +348,8 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-moderators .metaui-track-point { background: var(--metaui-accent); border-radius: 0; transform: rotate(45deg); }
 .metaui-moderators .metaui-track-dot { opacity: .8; }
 .metaui-moderators .metaui-track { min-height: 38px; }
+.metaui-track-hist { left: 0; right: 0; height: 30px; }
+.metaui-track-bar { position: absolute; bottom: 0; width: 3.5px; background: var(--metaui-slate); opacity: .8; }
 .metaui-moderators { --metaui-mark-y: 19px; }
 .metaui-pcurve-stats { width: 100%; margin: 10px 0; font-size: .875rem; }
 .metaui-pcurve-stats td:last-child { white-space: nowrap; }
