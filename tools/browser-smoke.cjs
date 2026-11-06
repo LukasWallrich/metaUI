@@ -211,7 +211,7 @@ function reproduce(script, workbook, selected) {
   const failed = await page.locator('.shiny-output-error:not(.shiny-output-error-validation)').evaluateAll(els=>els.map(el=>el.id+': '+el.textContent.trim().slice(0,200)));
   assert.deepEqual(failed,[],'outputs failed');
   const validation = await page.locator('.shiny-output-error-validation').allInnerTexts();
-  const expected = [/^Egger test requires at least three studies\.$/, /^Z-curve not estimated for this selection; reason below\.$/, /^P-curve requires explicit effect direction; it is not inferred\.$/, /^Moderator model not estimated for this selection: /];;
+  const expected = [/^Egger test requires at least three studies\.$/, /^Z-curve could not be estimated for this selection; reason below\.$/, /^P-curve requires explicit effect direction; it is not inferred\.$/, /^Moderator model could not be estimated for this selection: /];;
   for (const text of validation) assert(expected.some(rx=>rx.test(text.trim())), 'unexpected validation message: ' + text);
   await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:path.join(evidence,'mobile.png')});

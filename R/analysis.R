@@ -401,7 +401,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     interval <- if (is.na(row$LCL) && is.na(row$UCL)) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
     unit <- metaUI_count_unit(row, studies)
     track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = i %in% first), "</td>")
-      else paste0('<td class="metaui-reason-cell"><b>Not estimated (', esc(row$status), "):</b> ", esc(row$reason), "</td>")
+      else paste0('<td class="metaui-reason-cell"><b>', if (identical(row$status, "failed")) "Could not be estimated:" else paste0("Not estimated (", esc(row$status), "):"), "</b> ", esc(row$reason), "</td>")
     position <- match(i, order)
     opens_group <- !(i %in% first) && (position == length(first) + 1L || table$aggregated[order[position - 1L]] != row$aggregated)
     # Methods explains the two levels; the headings stay short enough for one line on phones.

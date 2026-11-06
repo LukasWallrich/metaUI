@@ -706,7 +706,7 @@ glue_string <- ('
     div(class = "metaui-primary", role = "region", `aria-label` = "Primary analysis",
       if (row$status == "ok") tags$p(class = "metaui-primary-value", HTML(paste0("Estimated effect: ", metaUI_label_html(if (metaUI__df$metaUI__es_type[1] == "ZCOR") "r" else metaUI_eff_size_type_label), " = <b>", fmt(row$es), "</b>, ",
         if (is.na(row$LCL) || is.na(row$UCL)) "no interval reported" else paste0(interval, "\\u00a0[", fmt(row$LCL), ", ", fmt(row$UCL), "]"))))
-      else tags$p(class = "metaui-primary-gap", tags$b(paste0("Not estimated for this selection (", row$status, "): ")), row$reason, " The app does not substitute another model."),
+      else tags$p(class = "metaui-primary-gap", tags$b(if (identical(row$status, "failed")) "Could not be estimated for this selection: " else paste0("Not estimated for this selection (", row$status, "): ")), row$reason, " The app does not substitute another model."),
       # The headline already gives the sign and the interval; this adds what it cannot.
       { reading <- if (row$status == "ok") trimws(paste0(
           { others <- table[-index[1], , drop = FALSE]; others <- others[others$status == "ok", , drop = FALSE]
@@ -922,11 +922,11 @@ glue_string <- ('
   })
 
 
-  # A fit that fails (no convergence on a small selection, say) is reported as not estimated.
+  # A fit that fails (no convergence on a small selection, say) is reported with its reason.
   moderator_model <- reactive({
     model <- tryCatch(moderator_fit(), error = function(e) e)
     if (inherits(model, "shiny.silent.error")) stop(model)
-    if (inherits(model, "error")) shiny::validate(shiny::need(FALSE, paste("Moderator model not estimated for this selection:", conditionMessage(model))))
+    if (inherits(model, "error")) shiny::validate(shiny::need(FALSE, paste("Moderator model could not be estimated for this selection:", conditionMessage(model))))
     model
   })
 
@@ -1213,7 +1213,7 @@ glue_string <- ('
 
   output$zcurve_warnings <- renderText({
     value <- zcurve_fit()
-    paste(if (inherits(value$result, "error")) paste("Not estimated:", conditionMessage(value$result)) else "",
+    paste(if (inherits(value$result, "error")) paste("Could not be estimated:", conditionMessage(value$result)) else "",
           if (length(value$warnings)) paste(if (length(value$warnings) == 1L) "Warning:" else "Warnings:", gsub("EDR", "the expected discovery rate", paste(value$warnings, collapse = "; "), fixed = TRUE)) else "")
   })
 
@@ -1254,7 +1254,7 @@ glue_string <- ('
 
   output$zcurve <- renderPlot({
     value <- zcurve_fit()
-    validate(need(!inherits(value$result, "error"), "Z-curve not estimated for this selection; reason below."))
+    validate(need(!inherits(value$result, "error"), "Z-curve could not be estimated for this selection; reason below."))
     metaUI_zcurve_plot(value$result, plot_colours)
   }, width = function() max(420, session$clientData$output_zcurve_width), height = 400)
 

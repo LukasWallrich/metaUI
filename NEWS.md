@@ -19,7 +19,7 @@
 - The selection count and its details sit at the top of the filters, above the results. The Summary no longer restates the sign and interval of the headline estimate, and moderator findings read as one sentence.
 - The Sample tab's table can show one row per effect or per study. Study rows keep values their effects share and show ranges otherwise; they never average effect sizes. The Source column is left out when study names already give it, whole numbers show no decimals, and the sample-size column is gone.
 - Reference downloads and "Copy link" (which replaces "Link to this selection") look like downloads and actions, with icons. Copy link works on plain http pages too.
-- A moderator model that fails to fit now says it was not estimated, instead of showing the optimizer's error.
+- A model that fails to fit now says it could not be estimated, with the reason; "not estimated" is kept for methods that do not apply. A failed moderator model no longer shows the optimizer's raw error.
 - Apps with `fit_cache_entries = 0`, the default for custom model code, no longer save or reuse build-time fits: they fit afresh when opened.
 - A moderator with one value in the selection now says it cannot be tested, instead of failing. Declaring RVE as primary now reports its *k* as studies. Static previews state the actual default selection.
 
