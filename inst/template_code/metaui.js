@@ -611,3 +611,32 @@
   });
   document.addEventListener('DOMContentLoaded', panes);
 })(jQuery);
+
+
+/* Copy link: the address that reopens this selection goes to the clipboard. Plain http pages
+   cannot use the clipboard API, so a hidden text field does the copying there; failing both,
+   the link is shown selected for the reader to copy. */
+(function ($) {
+  function fallback(url) {
+    var field = document.createElement('textarea');
+    field.value = url; field.setAttribute('readonly', ''); field.style.position = 'fixed'; field.style.opacity = '0';
+    document.body.appendChild(field); field.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(field);
+    return ok;
+  }
+  $(document).on('click', '.metaui-copy-link', function () {
+    var url = new URL(this.getAttribute('data-href'), window.location.href).href;
+    var status = this.parentNode.querySelector('.metaui-copy-status');
+    var show = function (ok) {
+      if (!status) return;
+      if (ok) { status.textContent = 'Copied'; clearTimeout(status.metauiTimer); status.metauiTimer = setTimeout(function () { status.textContent = ''; }, 3000); return; }
+      status.textContent = 'Copy this link: ';
+      var box = document.createElement('input'); box.type = 'text'; box.readOnly = true; box.value = url;
+      box.setAttribute('aria-label', 'Link to this selection'); status.appendChild(box); box.select();
+    };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(url).then(function () { show(true); }, function () { show(fallback(url)); });
+    else show(fallback(url));
+  });
+})(jQuery);

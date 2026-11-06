@@ -289,3 +289,17 @@ test_that("saved opening results are marked to survive the empty values sent on 
   expect_match(as.character(metaUI:::metaUI_opening_output(shiny::uiOutput("x"), "<p>saved</p>")), "data-metaui-opening", fixed = TRUE)
   expect_no_match(as.character(metaUI:::metaUI_opening_output(shiny::uiOutput("x"), NULL)), "data-metaui-opening", fixed = TRUE)
 })
+
+test_that("the Sample table can show one row per study without averaging effects", {
+  effects <- data.frame(Study = c("B", "A", "A", "B"), metaUI__key = c("B", "A", "A", "B"), N = c(40, 10, 12, 40),
+    `Effect size` = c(.1, .2, .3, .4), Year = c(2001, 2002, 2002, NA), Domain = factor(c("x", "y", "z", "x")),
+    check.names = FALSE)
+  studies <- metaUI:::metaUI_study_rows(effects)
+  expect_equal(studies$Study, c("B", "A"))
+  expect_equal(studies$Effects, c(2L, 2L))
+  expect_equal(names(studies)[1:2], c("Study", "Effects"))
+  expect_false("Effect size" %in% names(studies))
+  expect_equal(studies$N, c("40", "10–12"))
+  expect_equal(studies$Year, c(2001, 2002))
+  expect_equal(studies$Domain, c("x", "several"))
+})

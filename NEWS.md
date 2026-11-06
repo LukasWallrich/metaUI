@@ -16,6 +16,10 @@
 - The Summary gives the primary analysis more weight: its row is tinted, and the other estimators sit under it, grouped by level of fit. Results keep a readable width on very wide windows, and filters a reader has narrowed stand out from untouched ones.
 - After each analysis, the other tabs are drawn in the background, one at a time, so they open at once. A tab opened before it is ready shows one message, never empty headings or the previous selection's results. Bayesian and effect-computation tabs still wait to be opened. A tab counts as ready only once the server has answered for it, and screen readers announce the message.
 - Saved opening results no longer blank for a moment when the app connects, and the opening page no longer repeats its strip of effects in hidden placeholders.
+- The selection count and its details sit at the top of the filters, above the results. The Summary no longer restates the sign and interval of the headline estimate, and moderator findings read as one sentence.
+- The Sample tab's table can show one row per effect or per study. Study rows keep values their effects share and show ranges otherwise; they never average effect sizes. The Source column is left out when study names already give it, whole numbers show no decimals, and the sample-size column is gone.
+- Reference downloads and "Copy link" (which replaces "Link to this selection") look like downloads and actions, with icons. Copy link works on plain http pages too.
+- A moderator model that fails to fit now says it was not estimated, instead of showing the optimizer's error.
 - Apps with `fit_cache_entries = 0`, the default for custom model code, no longer save or reuse build-time fits: they fit afresh when opened.
 - A moderator with one value in the selection now says it cannot be tested, instead of failing. Declaring RVE as primary now reports its *k* as studies. Static previews state the actual default selection.
 

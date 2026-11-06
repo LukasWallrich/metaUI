@@ -53,6 +53,25 @@ metaUI_opening_output <- function(output, content) {
   if (is.null(content)) output else htmltools::tagAppendAttributes(htmltools::tagAppendChildren(output, shiny::HTML(content)), `data-metaui-opening` = "true")
 }
 
+# One row per study from the effect rows of the Sample table. A value shared by all of a
+# study's effects is kept; otherwise numbers show their range and other values "several".
+# Effect sizes and p-values are left out: they belong to effects, and averaging them would be a model.
+metaUI_study_rows <- function(effects, key = "metaUI__key", drop = c("Effect size", "Source p (primary)")) {
+  groups <- factor(effects[[key]], levels = unique(effects[[key]]))
+  summarise <- function(x) {
+    values <- lapply(split(x, groups), function(v) unique(v[!is.na(v) & as.character(v) != ""]))
+    if (is.numeric(x) && all(lengths(values) <= 1L)) return(vapply(values, function(v) if (length(v)) as.numeric(v) else NA_real_, numeric(1)))
+    vapply(values, function(v) if (!length(v)) NA_character_ else if (length(v) == 1L) as.character(v)
+      else if (is.numeric(v)) paste0(format(signif(min(v), 4)), "\u2013", format(signif(max(v), 4))) else "several", character(1))
+  }
+  cols <- setdiff(names(effects), drop)
+  out <- as.data.frame(lapply(effects[cols], summarise), check.names = FALSE, stringsAsFactors = FALSE)
+  after <- max(match(intersect(c("Study", "Source"), names(out)), names(out)))
+  out <- cbind(out[seq_len(after)], Effects = as.vector(table(groups)), out[-seq_len(after)])
+  rownames(out) <- NULL
+  out
+}
+
 # Keeps missing values in or out. Hidden while the built data have none on this filter;
 # an upload can bring some, so it reappears then.
 metaUI_missing_toggle <- function(inputId, missing) {

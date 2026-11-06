@@ -22,7 +22,7 @@ test_that("headless app loads and runs the generated server", {
   # insertUI() fills a plain div; an unrendered uiOutput() would stay greyed out
   expect_match(as.character(env$ui), '<div id="z_score_filter"></div>', fixed = TRUE)
   server_code <- readLines("server.R")
-  expect_true(any(grepl('union("Effect size", decimals)', server_code, fixed = TRUE)))
+  expect_true(any(grepl('targets("Effect size"), render = three_decimals', server_code, fixed = TRUE)))
   # need() evaluates its message eagerly, so condition messages must be built only on failure
   expect_false(any(grepl("need(!inherits(", server_code, fixed = TRUE) & grepl("attr(", server_code, fixed = TRUE)))
   expect_true(any(grepl("shiny::validate(shiny::need(FALSE, paste(", server_code, fixed = TRUE)))

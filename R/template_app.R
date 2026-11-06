@@ -34,7 +34,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
         </dl>{if (custom_models) "<p>Rows added by the authors are described on the About tab.</p>" else ""}")
 
       sample_overview_main <- HTML("<h3>Sample breakdown</h3>")
-      sample_table <- HTML("<h3>Effect sizes</h3>")
+      sample_table <- HTML("<h3>Effects and studies</h3>")
       study_details_hint <- HTML("<p class=\'metaui-note\'>Select a study name for its reference and, where the authors could include it, its abstract.</p>")
       sample_moderation_main <- HTML("<h3>Simple tests of moderation</h3>")
       sample_moderation_notes <- HTML("<p class=\'metaui-note\'>One moderator at a time; correlations between moderators are ignored, so these tests are exploratory. Models are fitted by maximum likelihood. <i>k</i> = number of effects.</p>")
@@ -225,6 +225,11 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
       sidebarPanel(
         width = 3,
         tags$h2(class = "metaui-panel-title", "Select effects"),
+        # States which selection and data the visible results use; on phones it stays above the closed filters.
+        conditionalPanel(if (is.null(metaUI_opening$html)) "output.metaui_ready" else "true",
+        div(id = "metaui_basis", class = "metaui-basis", role = "status", `aria-live` = "polite",
+          metaUI_opening_output(textOutput("selection_overview"), metaUI_opening$html$selection_overview),
+          tags$details(class = "metaui-selection-details", tags$summary("Selection details"), textOutput("selection_status"), textOutput("calculation_status")))),
         # Phones collapse the filters so that results follow closely; metaui.js toggles them.
         tags$button(type = "button", class = "btn metaui-filters-toggle", `aria-expanded` = "false",
           `aria-controls` = "metaui_filter_panel", "Filters and downloads"),
@@ -262,11 +267,6 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
       mainPanel(
         width = 9,
         div(id = "metaui_results",
-        # States which selection and data the visible results use
-        conditionalPanel(if (is.null(metaUI_opening$html)) "output.metaui_ready" else "true",
-        div(id = "metaui_basis", class = "metaui-basis", role = "status", `aria-live` = "polite",
-          metaUI_opening_output(textOutput("selection_overview"), metaUI_opening$html$selection_overview),
-          tags$details(class = "metaui-selection-details", tags$summary("Selection details"), textOutput("selection_status"), textOutput("calculation_status")))),
         tabsetPanel(
           type = "tabs",
           tabPanel(
@@ -299,8 +299,9 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             {generate_sample_description_ui(data, any_filters)}
             sample_table,
             if (!is.null(metaUI_study_info)) div(class = "metaui-export-actions metaui-reference-actions",
-              downloadButton("references_txt", "Reference list (.txt)"), downloadButton("references_bib", "BibTeX (.bib)"), downloadButton("references_xlsx", "Reference table (.xlsx)")),
-            if (!is.null(metaUI_study_info)) p(class = "metaui-note", "The reference downloads cover the studies in the current selection."),
+              tags$span(class = "metaui-export-label", "References for this selection:"),
+              downloadButton("references_txt", "Text (.txt)"), downloadButton("references_bib", "BibTeX (.bib)"), downloadButton("references_xlsx", "Excel (.xlsx)")),
+            div(class = "metaui-view-toggle", radioButtons("sample_view", "Show one row per", choices = c("effect" = "effects", "study" = "studies"), selected = "effects", inline = TRUE)),
             if (!is.null(metaUI_study_info)) study_details_hint,
             DT::dataTableOutput("sample_table")
             )
@@ -476,7 +477,7 @@ glue_string <- ('
     df <- df_filtered()
     counts <- attr(df, "metaUI_filter_report")
     studies <- length(unique(df$metaUI__study_id))
-    if (filters_changed()) paste0("Results below are for the previous selection: ", counts$retained_rows, " of ", counts$available_rows,
+    if (filters_changed()) paste0("Results show the previous selection: ", counts$retained_rows, " of ", counts$available_rows,
       " effects.")
     else paste0(counts$retained_rows, " of ", counts$available_rows, " effects, ", studies, if (studies == 1L) " study" else " studies")
   })
@@ -609,11 +610,10 @@ glue_string <- ('
     df <- df_filtered()
 
     overview <- tibble::tribble(
-      ~Sources, ~Studies,
-      ~Effects, ~`Sample size`,
+      ~Sources, ~Studies, ~Effects,
       if ("metaUI__article_label" %in% names(df)) length(unique(df$metaUI__article_label)) else 0L, length(unique(df$metaUI__study_id)),
-      length(df$metaUI__study_id), "not summed: samples may overlap" # N totals require a documented independent-sample rule
-    )
+      length(df$metaUI__study_id)
+    ) # No sample-size total: samples may overlap, and summing them needs a documented independent-sample rule.
 
     if (overview$Sources == 0) {
       overview$Sources <- "not specified"
@@ -707,14 +707,14 @@ glue_string <- ('
       if (row$status == "ok") tags$p(class = "metaui-primary-value", HTML(paste0("Estimated effect: ", metaUI_label_html(if (metaUI__df$metaUI__es_type[1] == "ZCOR") "r" else metaUI_eff_size_type_label), " = <b>", fmt(row$es), "</b>, ",
         if (is.na(row$LCL) || is.na(row$UCL)) "no interval reported" else paste0(interval, "\\u00a0[", fmt(row$LCL), ", ", fmt(row$UCL), "]"))))
       else tags$p(class = "metaui-primary-gap", tags$b(paste0("Not estimated for this selection (", row$status, "): ")), row$reason, " The app does not substitute another model."),
-      if (row$status == "ok" && !is.na(row$LCL) && !is.na(row$UCL)) tags$p(class = "metaui-primary-reading", paste0(
-        if (row$es > 0) "The average effect is positive" else if (row$es < 0) "The average effect is negative" else "The average effect is zero",
-        if (row$LCL > 0 || row$UCL < 0) ", and its interval excludes zero." else ", but its interval includes zero.",
-        { others <- table[-index[1], , drop = FALSE]; others <- others[others$status == "ok", , drop = FALSE]
-          if (nrow(others) > 1L) paste0(" Across the ", nrow(others), " other estimators, estimates range from ", fmt(min(others$es)), " to ", fmt(max(others$es)), ".") else "" },
-        # An introduction from the authors states the direction in their own words.
-        if (nzchar(welcome_text)) "" else switch(metaUI__df$metaUI__direction[1], positive = " Positive values are in the direction the authors expected.",
-          negative = " Negative values are in the direction the authors expected.", ""))),
+      # The headline already gives the sign and the interval; this adds what it cannot.
+      { reading <- if (row$status == "ok") trimws(paste0(
+          { others <- table[-index[1], , drop = FALSE]; others <- others[others$status == "ok", , drop = FALSE]
+            if (nrow(others) > 1L) paste0("Across the ", nrow(others), " other estimators, estimates range from ", fmt(min(others$es)), " to ", fmt(max(others$es)), ".") else "" },
+          # An introduction from the authors states the direction in their own words.
+          if (nzchar(welcome_text)) "" else switch(metaUI__df$metaUI__direction[1], positive = " Positive values are in the direction the authors expected.",
+            negative = " Negative values are in the direction the authors expected.", ""))) else ""
+        if (nzchar(reading)) tags$p(class = "metaui-primary-reading", reading) },
       tags$p(class = "metaui-primary-label", paste0(row$Model, if (row$status == "ok") paste0(", ", row$k, if (nzchar(unit)) " ", unit), ". Primary analysis, declared by the authors.",
         if (grepl("hedges|cohen|standardi[sz]ed mean|^smd$", metaUI_eff_size_type_label, ignore.case = TRUE)) " Effects are standardized mean differences, in standard deviations." else "")),
       if (row$status == "ok" && nzchar(row$warnings)) tags$p(class = "metaui-primary-warning", paste("Warnings:", row$warnings)))
@@ -822,10 +822,11 @@ glue_string <- ('
         `Effect size` = metaUI_show(.data[["Effect size"]], df)) %>%
       dplyr::arrange(.data$Study)
 
-    if ("Source" %in% names(out)) {
-      out <- out %>% dplyr::mutate(Study = stringr::str_remove(Study, Source) %>%
-        stringr::str_remove("^[[:punct:] ]+"))
-    }
+    # Study labels that already name their source make the Source column a repeat.
+    if ("Source" %in% names(out) && all(is.na(out$Source) | startsWith(out$Study, as.character(out$Source)))) out$Source <- NULL
+    studies <- identical(input$sample_view, "studies")
+    if (studies) out <- metaUI_study_rows(out)
+    unit <- if (studies) "studies" else "effects"
 
     if ("URL" %in% names(out)) {
       out$URL <- vapply(out$URL, function(url) if (is.na(url) || url == "") "" else
@@ -844,24 +845,25 @@ glue_string <- ('
     out$metaUI__details <- cells$details
     out$metaUI__key <- NULL
 
-    # Round non-integer numeric columns to 2 decimals, with true minus signs, and leave sorting on the numbers.
-    decimals <- names(out)[vapply(out, function(x) is.numeric(x) && any(x != round(x), na.rm = TRUE), logical(1))]
-    decimals <- union("Effect size", decimals)
+    # Non-integer numeric columns show 2 decimals where a value needs them (whole numbers such as
+    # sample sizes and years stay whole), with true minus signs; sorting stays on the numbers.
+    decimals <- setdiff(names(out)[vapply(out, function(x) is.numeric(x) && any(x != round(x), na.rm = TRUE), logical(1))], "Effect size")
     three_decimals <- DT::JS("function(data, type) { return type === \'display\' && data !== null && data !== \'\' ? Number(data).toFixed(3).replace(\'-\', \'\\u2212\') : data; }")
-    two_decimals <- DT::JS("function(data, type) { return type === \'display\' && data !== null && data !== \'\' ? Number(data).toFixed(2).replace(\'-\', \'\\u2212\') : data; }")
+    two_decimals <- DT::JS("function(data, type) { if (type !== \'display\' || data === null || data === \'\') return data; var x = Number(data); return (Number.isInteger(x) ? String(x) : x.toFixed(2)).replace(\'-\', \'\\u2212\'); }")
+    targets <- function(columns) match(intersect(columns, names(out)), names(out)) - 1
 
     table <- out %>% DT::datatable(
       rownames = FALSE, style = "default", class = "compact",
       options = list(autoWidth = FALSE, columnDefs = list(list(targets = ncol(out) - 1, visible = FALSE, searchable = FALSE),
-          list(targets = match(setdiff(decimals, "Effect size"), names(out)) - 1, render = two_decimals, className = "dt-right"),
-          list(targets = match("Effect size", names(out)) - 1, render = three_decimals, className = "dt-right"),
-          list(targets = unname(which(vapply(out, is.numeric, logical(1)))) - 1, className = "dt-right"),
+          list(targets = targets(decimals), render = two_decimals, className = "dt-right"),
+          list(targets = targets("Effect size"), render = three_decimals, className = "dt-right"),
+          list(targets = union(unname(which(vapply(out, is.numeric, logical(1)))) - 1, targets(c("N", "Effects"))), className = "dt-right"),
           list(targets = "_all", defaultContent = "(Missing)")),
-        language = list(search = "Search effects", lengthMenu = "Show _MENU_ per page", info = "_START_ to _END_ of _TOTAL_ effects", infoFiltered = "(from _MAX_)")),
+        language = list(search = paste("Search", unit), lengthMenu = "Show _MENU_ per page", info = paste("_START_ to _END_ of _TOTAL_", unit), infoFiltered = "(from _MAX_)")),
       escape = setdiff(names(out), c("URL", "Study", "metaUI__details")), # built (and escaped) above
       caption = tags$caption(
         style = "caption-side: bottom; text-align: left; margin: 8px 0;",
-        HTML(paste("Effect size:", metaUI_label_html(metaUI_eff_size_type_label)))
+        HTML(if (studies) "One row per study. Values that differ between its effects show their range, or \\u201cseveral\\u201d." else paste("Effect size:", metaUI_label_html(metaUI_eff_size_type_label)))
       )
     )
     table
@@ -874,7 +876,9 @@ glue_string <- ('
 
   # Categorical moderators are drawn in their table; numeric ones get a scatter beside theirs.
   output$moderation_panel <- renderUI({
-    if (isTRUE(moderator_model()$constant)) NULL
+    # The finding above states a failed fit once; the panel then stays empty.
+    model <- tryCatch(moderator_model(), error = function(e) NULL)
+    if (is.null(model) || isTRUE(model$constant)) NULL
     else if (is.numeric(df_filtered()[[input$moderator]])) div(class = "metaui-moderation-grid",
       shiny::htmlOutput("moderation_table"), shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot", height = 340)),
       p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise; whole-number moderators are spread slightly so that dots do not stack. Line and band: the multilevel moderator model with its 95% CI."))
@@ -918,7 +922,15 @@ glue_string <- ('
   })
 
 
+  # A fit that fails (no convergence on a small selection, say) is reported as not estimated.
   moderator_model <- reactive({
+    model <- tryCatch(moderator_fit(), error = function(e) e)
+    if (inherits(model, "shiny.silent.error")) stop(model)
+    if (inherits(model, "error")) shiny::validate(shiny::need(FALSE, paste("Moderator model not estimated for this selection:", conditionMessage(model))))
+    model
+  })
+
+  moderator_fit <- reactive({
     df <- df_filtered()
     # A moderator with one value has nothing to fit, test or draw.
     if (length(unique(stats::na.omit(df[[input$moderator]]))) < 2L)
@@ -937,9 +949,8 @@ glue_string <- ('
         sparse = TRUE
       )
      moderation_text <-     HTML(glue::glue(
-      \'<p class="metaui-moderation-finding">The {ifelse(is.numeric(df[[input$moderator]]), "linear ", "")}relationship between <b>{input$moderator  %>% stringr::str_remove("metaUI__filter_")}</b> \',
-      \'and the observed effect sizes <b>is {ifelse(model[["QMp"]] < .05, "", "not ")}significant </b> at the 5% level. \',
-     \' Test of moderators: <i>F</i>({model[["QMdf"]][1]}, {model[["QMdf"]][2]}) = {round(model[["QM"]], digits = 2)}, \',
+      \'<p class="metaui-moderation-finding"><b>{input$moderator  %>% stringr::str_remove("metaUI__filter_")}</b> is <b>{ifelse(model[["QMp"]] < .05, "a", "not a")} significant{ifelse(is.numeric(df[[input$moderator]]), " linear", "")} moderator</b> at the 5% level: \',
+     \'<i>F</i>({model[["QMdf"]][1]}, {model[["QMdf"]][2]}) = {round(model[["QM"]], digits = 2)}, \',
       \'<i>p</i> {fmt_p(model[["QMp"]])}.</p>\'
     ))
 
@@ -966,9 +977,8 @@ glue_string <- ('
       )
 
      moderation_text <-     HTML(glue::glue(
-      \'<p class="metaui-moderation-finding">The {ifelse(is.numeric(df[[input$moderator]]), "linear ", "")}relationship between <b>{input$moderator  %>% stringr::str_remove("metaUI__filter_")}</b> \',
-      \'and the observed effect sizes <b>is {ifelse(model_sig[["QMp"]] < .05, "", "not ")}significant</b> at the 5% level. \',
-     \' Test of moderators: <i>F</i>({model_sig[["QMdf"]][1]}, {model_sig[["QMdf"]][2]}) = {round(model_sig[["QM"]], digits = 2)}, \',
+      \'<p class="metaui-moderation-finding"><b>{input$moderator  %>% stringr::str_remove("metaUI__filter_")}</b> is <b>{ifelse(model_sig[["QMp"]] < .05, "a", "not a")} significant{ifelse(is.numeric(df[[input$moderator]]), " linear", "")} moderator</b> at the 5% level: \',
+     \'<i>F</i>({model_sig[["QMdf"]][1]}, {model_sig[["QMdf"]][2]}) = {round(model_sig[["QM"]], digits = 2)}, \',
       \'<i>p</i> {fmt_p(model_sig[["QMp"]])}.</p>\'
     ))
     }
@@ -1573,7 +1583,9 @@ glue_string <- ('
       "Links cannot include uploaded data; share the workbook instead."))
     query <- tryCatch(selection_query(), error = function(e) e)
     if (inherits(query, "error")) return(div(class = "metaui-share", p(class = "metaui-note", conditionMessage(query))))
-    div(class = "metaui-share", tags$a(href = query, class = "btn btn-default", icon("link"), "Link to this selection"))
+    div(class = "metaui-share", tags$button(type = "button", class = "btn btn-default metaui-copy-link", `data-href` = query,
+      title = "Copies a link that reopens the app with this selection", icon("link"), "Copy link"),
+      tags$span(class = "metaui-copy-status", role = "status"))
   })
 
 }

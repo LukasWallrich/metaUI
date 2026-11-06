@@ -101,6 +101,16 @@ function reproduce(script, workbook, selected) {
   assert.equal(await page.locator('.metaui-pane-loading').count(),0);
   await page.locator('#sample_overview table').waitFor();
   assert((await page.locator('#sample_overview').innerText()).includes('16'));
+  // One row per effect or per study.
+  await page.waitForFunction(()=>/of 16 effects/.test(document.querySelector('#sample_table .dataTables_info')?.textContent||''),null,{timeout:60000});
+  await page.locator('.metaui-view-toggle label',{hasText:'study'}).click();
+  await page.waitForFunction(()=>/of 8 studies/.test(document.querySelector('#sample_table .dataTables_info')?.textContent||''),null,{timeout:60000});
+  assert(!(await page.locator('#sample_table thead').innerText()).includes('Effect size'), 'the study view should not show effect sizes');
+  await page.locator('.metaui-view-toggle label',{hasText:'effect'}).click();
+  await page.waitForFunction(()=>/of 16 effects/.test(document.querySelector('#sample_table .dataTables_info')?.textContent||''),null,{timeout:60000});
+  // Copy link puts a link to this selection on the clipboard, or shows it for copying by hand.
+  await page.locator('.metaui-copy-link').click();
+  await page.waitForFunction(()=>{const s=document.querySelector('.metaui-copy-status');return s&&(s.textContent==='Copied'||/selection=/.test(s.querySelector('input')?.value||''));});
   await page.getByRole('tab',{name:'Forest plot',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#foreststudies table'));
   for (const [id, extension] of [['forest_pdf','pdf'], ['forest_png','png'], ['forest_csv','csv']]) {
@@ -198,9 +208,10 @@ function reproduce(script, workbook, selected) {
   assert((await page.locator('#selection_status').innerText()).includes('Excluded 1'));
   assert.deepEqual(errors,[]);
   // Tabs drawn in the background may report that this small selection is too small for some methods.
-  assert.equal(await page.locator('.shiny-output-error:not(.shiny-output-error-validation)').count(),0);
+  const failed = await page.locator('.shiny-output-error:not(.shiny-output-error-validation)').evaluateAll(els=>els.map(el=>el.id+': '+el.textContent.trim().slice(0,200)));
+  assert.deepEqual(failed,[],'outputs failed');
   const validation = await page.locator('.shiny-output-error-validation').allInnerTexts();
-  const expected = [/^Egger test requires at least three studies\.$/, /^Z-curve not estimated for this selection; reason below\.$/, /^P-curve requires explicit effect direction; it is not inferred\.$/];;
+  const expected = [/^Egger test requires at least three studies\.$/, /^Z-curve not estimated for this selection; reason below\.$/, /^P-curve requires explicit effect direction; it is not inferred\.$/, /^Moderator model not estimated for this selection: /];;
   for (const text of validation) assert(expected.some(rx=>rx.test(text.trim())), 'unexpected validation message: ' + text);
   await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:path.join(evidence,'mobile.png')});
