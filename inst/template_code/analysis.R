@@ -495,8 +495,8 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL,
     '<span><i class="metaui-glyph metaui-glyph-diamond"></i>Model summary; its width is the ', interval_head, '</span>',
     if (!is.null(ref)) paste0('<span><i class="metaui-glyph metaui-glyph-dash"></i>', esc(summaries$label[1]), ", ", fmt(ref, metaUI_digits(summaries$LCL[1], summaries$UCL[1])), "</span>"), "</p>",
     '<p class="metaui-note metaui-key metaui-forest-controls">',
-    if (any(groups$lengths > 1L)) '<button type="button" class="metaui-forest-all" aria-expanded="false">Show every effect</button>',
-    '<button type="button" class="metaui-forest-sort" aria-pressed="', if (sorted) "true" else "false", '">', if (sorted) "Sort by study name" else "Sort by estimate", "</button></p>", pager,
+    if (any(groups$lengths > 1L)) metaUI_switch("One row per", "metaui-forest-all", c(studies = "study", effects = "effect"), "studies"),
+    metaUI_switch("Order by", "metaui-forest-sort", c(name = "study name", estimate = "estimate"), if (sorted) "estimate" else "name"), "</p>", pager,
     '<table class="table metaui-estimates metaui-forest metaui-custom"><thead><tr data-head="Study, estimate [', interval_head, ']"><th>Study</th><th class="num">Estimate</th><th class="num">', interval_head, '</th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", summary_rows, paste(study_rows, collapse = ""),
     '</tbody><tfoot><tr><td colspan="3"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", pager)
@@ -511,8 +511,7 @@ metaUI_bars_html <- function(counts, name) {
     ifelse(counts$Count == 0, ' class="metaui-zero"', ifelse(levels == "(Missing)", ' class="metaui-missing"', "")), htmltools::htmlEscape(levels), counts$Count,
     sprintf("%.1f%%", 100 * counts$Count / max(sum(counts$Count), 1)), round(100 * counts$Count / largest, 1))
   paste0('<table class="table metaui-bars metaui-custom"><thead><tr><th><span class="sr-only">', htmltools::htmlEscape(name),
-    '</span></th><th class="num">Effects</th><th class="num">Share</th><th class="metaui-bar-cell"></th></tr></thead><tbody>', paste(rows, collapse = ""), "</tbody></table>",
-    if (any(levels == "(Missing)" & counts$Count > 0)) '<p class="metaui-note">Outlined bar: effects with this value missing.</p>')
+    '</span></th><th class="num">Effects</th><th class="num">Share</th><th class="metaui-bar-cell"></th></tr></thead><tbody>', paste(rows, collapse = ""), "</tbody></table>")
 }
 
 # Moderator levels on the same drawn axis; the dots are the selected effects themselves.
@@ -533,8 +532,8 @@ metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values
       '</td><td class="num">[', fmt(lcl[i]), ", ", fmt(ucl[i]), ']</td><td class="num metaui-k">', k[i], '</td><td class="metaui-track-cell">',
       metaUI_track_row(scale, estimate[i], lcl[i], ucl[i], dots = if (show_effects) values[level], dot_labels = if (show_effects) labels[level], ref = ref, dot_sizes = if (show_effects) sizes[level], diamond = TRUE), "</td></tr>")
   }, character(1))
-  paste0('<p class="metaui-note metaui-key metaui-forest-controls"><button type="button" class="metaui-moderator-effects" aria-pressed="', if (show_effects) "true" else "false", '">',
-    if (show_effects) "Hide individual effects" else "Show individual effects", "</button></p>",
+  paste0('<p class="metaui-note metaui-key metaui-forest-controls">',
+    metaUI_switch("Individual effects", "metaui-moderator-effects", c(hide = "hidden", show = "shown"), if (show_effects) "show" else "hide"), "</p>",
     '<table class="table metaui-estimates metaui-moderators', if (!show_effects) " metaui-moderators-plain", ' metaui-custom"><thead><tr data-head="Level, estimate [95% CI]"><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k"><i>k</i></th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", paste(rows, collapse = ""), "</tbody></table>",
     '<p class="metaui-note metaui-key">Green diamond: level estimate from the multilevel moderator model; its width is the 95% CI.',
@@ -831,7 +830,7 @@ metaUI_validate_upload <- function(df, built) {
 metaUI_pcurve_data <- function(df, selection = "first", require_N = FALSE) {
   metaUI_validate_prepared(df)
   if (!nrow(df)) stop("No eligible rows remain for p-curve.")
-  if (df$metaUI__es_type[1] != "SMD") stop("P-curve is supported only for SMD.")
+  if (df$metaUI__es_type[1] != "SMD") stop("P-curve is available here only for standardized mean differences.")
   direction <- df$metaUI__direction[1]
   if (!direction %in% c("positive", "negative")) stop("P-curve requires explicit effect direction; it is not inferred.")
   if (!selection %in% c("first", "last")) stop("Unknown p-curve selection rule.")

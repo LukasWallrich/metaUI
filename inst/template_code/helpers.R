@@ -53,16 +53,27 @@ metaUI_opening_output <- function(output, content) {
   if (is.null(content)) output else htmltools::tagAppendAttributes(htmltools::tagAppendChildren(output, shiny::HTML(content)), `data-metaui-opening` = "true")
 }
 
+# A two-way choice of view, drawn the same everywhere (metaui.css, metaui.js): a label and one
+# pressed button per option. `class` tells metaui.js what the choice changes.
+metaUI_switch <- function(label, class, options, selected) {
+  buttons <- vapply(seq_along(options), function(i) sprintf('<button type="button" class="%s" data-value="%s" aria-pressed="%s">%s</button>',
+    class, names(options)[i], if (identical(names(options)[i], selected)) "true" else "false", htmltools::htmlEscape(options[[i]])), character(1))
+  paste0('<span class="metaui-switch" role="group" aria-label="', htmltools::htmlEscape(label), '"><span class="metaui-switch-label" aria-hidden="true">',
+    htmltools::htmlEscape(label), "</span>", paste(buttons, collapse = ""), "</span>")
+}
+
 # One row per study from the effect rows of the Sample table. A value shared by all of a
 # study's effects is kept; otherwise numbers show their range and other values "several".
 # Effect sizes and p-values are left out: they belong to effects, and averaging them would be a model.
-metaUI_study_rows <- function(effects, key = "metaUI__key", drop = c("Effect size", "Source p (primary)")) {
+metaUI_study_rows <- function(effects, key = "metaUI__key", drop = c("Effect size", "Reported p")) {
   groups <- factor(effects[[key]], levels = unique(effects[[key]]))
+  # Range ends keep every digit they need, so that close values never print alike.
+  end <- function(x) format(x, digits = 15, scientific = FALSE, trim = TRUE)
   summarise <- function(x) {
     values <- lapply(split(x, groups), function(v) unique(v[!is.na(v) & as.character(v) != ""]))
     if (is.numeric(x) && all(lengths(values) <= 1L)) return(vapply(values, function(v) if (length(v)) as.numeric(v) else NA_real_, numeric(1)))
     vapply(values, function(v) if (!length(v)) NA_character_ else if (length(v) == 1L) as.character(v)
-      else if (is.numeric(v)) paste0(format(signif(min(v), 4)), "\u2013", format(signif(max(v), 4))) else "several", character(1))
+      else if (is.numeric(v)) paste0(end(min(v)), "\u2013", end(max(v))) else "several", character(1))
   }
   cols <- setdiff(names(effects), drop)
   out <- as.data.frame(lapply(effects[cols], summarise), check.names = FALSE, stringsAsFactors = FALSE)
@@ -148,11 +159,8 @@ summarise_categorical <- function(x, name) {
     dplyr::filter(!!rlang::sym(name) != "Other") %>%
     dplyr::slice_max(order_by = Count, n = 9, with_ties = FALSE)
 
+  # Everything not listed, including any level already called "Other", counted once.
   other_count <- sum(counts$Count) - sum(top_categories$Count)
-
-  if ("Other" %in% counts[[name]]) {
-    other_count <- other_count + counts %>% dplyr::filter(!!rlang::sym(name) == "Other") %>% dplyr::pull(Count)
-  }
 
   final_counts <- if (other_count > 0) {
     dplyr::bind_rows(top_categories, tibble::tibble(!!rlang::sym(name) := "Other", Count = other_count))

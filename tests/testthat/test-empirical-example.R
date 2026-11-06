@@ -64,7 +64,7 @@ test_that("shipped empirical example builds and runs its actual generated server
     expect_equal(table$fit_es[8], as.numeric(reference$b), tolerance = 1e-8)
     # build.R declares the source-reference row as primary; it is shown first.
     card <- as.character(output$primary_estimate$html)
-    expect_match(card, "Source-reference: REML / Hartung-Knapp (rounded inputs)", fixed = TRUE)
+    expect_match(output$effectestimate, '<tr class="metaui-primary-row"><td>Source-reference: REML / Hartung-Knapp (rounded inputs)', fixed = TRUE)
     expect_match(card, "\u22120.38", fixed = TRUE); expect_match(card, "[\u22120.69, \u22120.08]", fixed = TRUE)
     expect_match(output$heterogeneity, "not identified")
     expect_error(output$pcurve, "requires explicit effect direction")

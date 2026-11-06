@@ -342,13 +342,27 @@
   $(document).on('plotly_afterplot shiny:visualchange', function () { setTimeout(fitPlots, 0); });
   // Covers window resizes and a scrollbar arriving as later outputs render.
   new ResizeObserver(function () { clearTimeout(spreadTimer); spreadTimer = setTimeout(function () { spreadDots(); thinAxes(); }, 120); }).observe(document.documentElement);
+  // Two-way view switches (metaUI_switch in helpers.R): pressing the other option changes the view.
+  function press(group, value) {
+    group.querySelectorAll('button').forEach(function (button) { button.setAttribute('aria-pressed', String(button.dataset.value === value)); });
+  }
   var forestAll = false;
-  $(document).on('click', '.metaui-forest-all', function () {
-    var open = this.getAttribute('aria-expanded') !== 'true';
-    this.setAttribute('aria-expanded', String(open));
-    this.textContent = open ? 'Show studies only' : 'Show every effect';
-    forestAll = open;
-    this.closest('.shiny-html-output').querySelectorAll('.metaui-forest-study').forEach(function (row) { setStudy(row, open); });
+  $(document).on('click', '.metaui-switch button', function () {
+    if (this.getAttribute('aria-pressed') === 'true') return;
+    var value = this.dataset.value;
+    press(this.closest('.metaui-switch'), value);
+    if (this.classList.contains('metaui-forest-all')) {
+      forestAll = value === 'effects';
+      this.closest('.shiny-html-output').querySelectorAll('.metaui-forest-study').forEach(function (row) { setStudy(row, forestAll); });
+    } else if (this.classList.contains('metaui-forest-sort')) {
+      forestFocus = { selector: '.metaui-forest-sort[data-value="' + value + '"]', index: 0 };
+      Shiny.setInputValue('forest_sort', value, { priority: 'event' });
+    } else if (this.classList.contains('metaui-moderator-effects')) {
+      moderatorFocus = true;
+      Shiny.setInputValue('moderator_effects', value === 'show', { priority: 'event' });
+    } else if (this.classList.contains('metaui-sample-view')) {
+      Shiny.setInputValue('sample_view', value, { priority: 'event' });
+    }
   });
   // The server sends one page at a time, so a new page takes on the reader's current view.
   var forestFocus = null;
@@ -358,8 +372,7 @@
     table.dataset.restored = 'true';
     var box = table.closest('.shiny-html-output'), all = box.querySelector('.metaui-forest-all');
     if (forestAll && all) {
-      all.setAttribute('aria-expanded', 'true');
-      all.textContent = 'Show studies only';
+      press(all.closest('.metaui-switch'), 'effects');
       box.querySelectorAll('.metaui-forest-study').forEach(function (row) { setStudy(row, true); });
     }
     if (!forestFocus) return;
@@ -378,21 +391,12 @@
     Shiny.setInputValue('forest_page', Number(this.dataset.page), { priority: 'event' });
   });
   var moderatorFocus = false;
-  $(document).on('click', '.metaui-moderator-effects', function () {
-    moderatorFocus = true;
-    Shiny.setInputValue('moderator_effects', this.getAttribute('aria-pressed') !== 'true', { priority: 'event' });
-  });
   function restoreModerators() {
     if (!moderatorFocus) return;
-    var button = document.querySelector('.metaui-moderator-effects');
+    var button = document.querySelector('.metaui-moderator-effects[aria-pressed="true"]');
     if (button) button.focus({ preventScroll: true });
     moderatorFocus = false;
   }
-  // A second click restores the order by name.
-  $(document).on('click', '.metaui-forest-sort', function () {
-    forestFocus = { selector: '.metaui-forest-sort', index: 0 };
-    Shiny.setInputValue('forest_sort', this.getAttribute('aria-pressed') === 'true' ? 'name' : 'estimate', { priority: 'event' });
-  });
 })(jQuery);
 
 /* Phones: tables with four or more columns reflow into one card per row (metaui.css).
@@ -479,6 +483,15 @@
   var TOO_SLOW = 20000;   // A background tab this slow stops the sequence: the reader's next click would wait for it.
   var GIVE_UP = 60000;    // An opened tab shows what it has after this long, without being counted as ready.
   var asked = 0, answers = {};
+  // Outputs that have had a value or an error. One drawn inside another (a table inside a
+  // panel) is bound only when its parent arrives, and asks for its own value after that.
+  var received = new WeakSet();
+  $(document).on('shiny:value shiny:error', function (event) { received.add(event.target); });
+  function waiting(pane) {
+    return !!pane && Array.prototype.some.call(pane.querySelectorAll('.shiny-bound-output'), function (output) {
+      return output.offsetParent !== null && !received.has(output);
+    });
+  }
 
   function panes() {
     return Array.prototype.map.call(document.querySelectorAll('#metaui_results .nav-tabs > li > a'), function (link) {
@@ -515,11 +528,11 @@
   // Calls done once the server has answered for the outputs just shown and fallen quiet. The
   // server answers after it has started on them, so the wait never ends on elapsed time alone.
   // Returns a function that cancels the wait.
-  function whenSettled(done) {
+  function whenSettled(done, pane) {
     var id = ++asked, sent = Date.now(), quietFor = 0, quiet, cancelled = false;
     var check = function () {
       clearTimeout(quiet);
-      if (quietFor && !document.documentElement.classList.contains('shiny-busy')) quiet = setTimeout(finish, quietFor);
+      if (quietFor && !document.documentElement.classList.contains('shiny-busy')) quiet = setTimeout(function () { if (!waiting(pane)) finish(); }, quietFor);
     };
     var stop = function () {
       cancelled = true;
@@ -559,7 +572,7 @@
     pane.style.width = active ? active.offsetWidth + 'px' : '';
     pane.classList.add('metaui-preloading');
     $(pane).trigger('shown');
-    job.cancel = whenSettled(function () { finishBackground(job, true); });
+    job.cancel = whenSettled(function () { finishBackground(job, true); }, pane);
     job.watchdog = setTimeout(function () { finishBackground(job, false); }, TOO_SLOW);
   }
   function newAnalysis() {
@@ -606,7 +619,7 @@
       if (completed && forAnalysis === analysis) ready.add(pane);
     };
     pane.metauiWaiting = true;
-    cancel = whenSettled(function () { end(true); });
+    cancel = whenSettled(function () { end(true); }, pane);
     giveUp = setTimeout(function () { end(false); }, GIVE_UP);
   });
   document.addEventListener('DOMContentLoaded', panes);

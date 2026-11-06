@@ -103,16 +103,23 @@ function reproduce(script, workbook, selected) {
   assert((await page.locator('#sample_overview').innerText()).includes('16'));
   // One row per effect or per study.
   await page.waitForFunction(()=>/of 16 effects/.test(document.querySelector('#sample_table .dataTables_info')?.textContent||''),null,{timeout:60000});
-  await page.locator('.metaui-view-toggle label',{hasText:'study'}).click();
+  await page.locator('.metaui-sample-view[data-value="studies"]').click();
   await page.waitForFunction(()=>/of 8 studies/.test(document.querySelector('#sample_table .dataTables_info')?.textContent||''),null,{timeout:60000});
   assert(!(await page.locator('#sample_table thead').innerText()).includes('Effect size'), 'the study view should not show effect sizes');
-  await page.locator('.metaui-view-toggle label',{hasText:'effect'}).click();
+  await page.locator('.metaui-sample-view[data-value="effects"]').click();
   await page.waitForFunction(()=>/of 16 effects/.test(document.querySelector('#sample_table .dataTables_info')?.textContent||''),null,{timeout:60000});
   // Copy link puts a link to this selection on the clipboard, or shows it for copying by hand.
   await page.locator('.metaui-copy-link').click();
   await page.waitForFunction(()=>{const s=document.querySelector('.metaui-copy-status');return s&&(s.textContent==='Copied'||/selection=/.test(s.querySelector('input')?.value||''));});
   await page.getByRole('tab',{name:'Forest plot',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#foreststudies table'));
+  // View switches: every effect opens in the browser; the order comes back from the server, still showing every effect.
+  await page.locator('.metaui-forest-all[data-value="effects"]').click();
+  await page.waitForFunction(()=>!document.querySelector('#foreststudies .metaui-forest-effect.metaui-forest-closed'));
+  await page.locator('.metaui-forest-sort[data-value="estimate"]').click();
+  await page.waitForFunction(()=>document.querySelector('.metaui-forest-sort[data-value="estimate"]')?.getAttribute('aria-pressed')==='true'&&document.querySelector('.metaui-forest-all[data-value="effects"]')?.getAttribute('aria-pressed')==='true'&&!document.querySelector('#foreststudies .metaui-forest-effect.metaui-forest-closed'),null,{timeout:60000});
+  await page.locator('.metaui-forest-sort[data-value="name"]').click();
+  await page.locator('.metaui-forest-all[data-value="studies"]').click();
   for (const [id, extension] of [['forest_pdf','pdf'], ['forest_png','png'], ['forest_csv','csv']]) {
     const pending = page.waitForEvent('download');
     await page.locator('#' + id).click();
@@ -130,7 +137,12 @@ function reproduce(script, workbook, selected) {
   await page.evaluate(()=>{ const select=$('#moderator'); if(select[0].selectize) select[0].selectize.setValue('metaUI__filter_Group'); else select.val('metaUI__filter_Group').trigger('change'); });
   await page.locator('table.metaui-moderators').first().waitFor({timeout:60000});
   assert(await page.locator('table.metaui-moderators-plain').count() > 0, 'moderator tables should open without individual effects');
-  assert.equal(await page.locator('.metaui-moderator-effects').first().getAttribute('aria-pressed'), 'false');
+  assert.equal(await page.locator('.metaui-moderator-effects[data-value="hide"]').first().getAttribute('aria-pressed'), 'true');
+  // Showing them redraws the table with its dots, and the switch keeps the new choice.
+  await page.locator('.metaui-moderator-effects[data-value="show"]').first().click();
+  await page.waitForFunction(()=>document.querySelector('table.metaui-moderators:not(.metaui-moderators-plain)')&&document.querySelector('.metaui-moderator-effects[data-value="show"]')?.getAttribute('aria-pressed')==='true',null,{timeout:60000});
+  await page.locator('.metaui-moderator-effects[data-value="hide"]').first().click();
+  await page.waitForFunction(()=>document.querySelector('table.metaui-moderators-plain'),null,{timeout:60000});
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.getByText('Assess practical equivalence', {exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Smallest bound'));
@@ -179,7 +191,7 @@ function reproduce(script, workbook, selected) {
     null, {timeout:5000});
   // This output starts hidden; it must resume when a filter changes.
   await page.locator('#apply_state_box').waitFor({state:'visible'});
-  await page.waitForFunction(()=>document.querySelector('#apply_state')?.textContent.includes('Filters changed'));
+  await page.waitForFunction(()=>document.querySelector('#apply_state')?.textContent.includes('Update results to apply'));
   // A tab opened straight after Update shows its message, never the previous selection.
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.evaluate(()=>{

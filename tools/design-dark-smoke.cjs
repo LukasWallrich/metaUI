@@ -70,7 +70,7 @@ async function readable(locator,label,pseudo=null) {
     const slider=$('#metaUI__filter_Year');
     slider.data('ionRangeSlider').update({from:2002}); slider.trigger('change');
   });
-  await page.waitForFunction(()=>document.querySelector('#apply_state')?.textContent.includes('Filters changed'));
+  await page.waitForFunction(()=>document.querySelector('#apply_state')?.textContent.includes('Update results to apply'));
   const staleNotice=await readable(page.locator('#apply_state_box'),'Stale notice');
   await readable(page.locator('#metaui_basis'),'Stale results banner');
   // The button dims while the server works; its resting state must be readable.

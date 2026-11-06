@@ -79,7 +79,7 @@ check_app_packages <- function(bayesian = FALSE, meta = FALSE) {
 
 create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE,
                          bayesian = FALSE, meta = FALSE) {
-  out <- glue::glue("<h3>About this analysis</h3><p>An interactive multiverse meta-analysis of {dataset_name}. Readers can select effects, refit the models and download the data and code.</p>
+  out <- glue::glue("<h3>About this analysis</h3>
           <p><b>Last update:</b> {date}</p>
           {if (citation != '') glue::glue('<p><b>Citation:</b> {citation}</p>') else ''}
           {if (osf_link != '') glue::glue('<p><b>Data and materials:</b> <a href=\"{osf_link}\">{osf_link}</a></p>') else ''}

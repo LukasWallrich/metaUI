@@ -20,6 +20,10 @@
 - The Sample tab's table can show one row per effect or per study. Study rows keep values their effects share and show ranges otherwise; they never average effect sizes. The Source column is left out when study names already give it, whole numbers show no decimals, and the sample-size column is gone.
 - Reference downloads and "Copy link" (which replaces "Link to this selection") look like downloads and actions, with icons. Copy link works on plain http pages too.
 - A model that fails to fit now says it could not be estimated, with the reason; "not estimated" is kept for methods that do not apply. A failed moderator model no longer shows the optimizer's raw error.
+- Controls that do the same job look the same. Every choice of view (rows per effect or study, order, individual effects) is one labelled switch showing the current option. Update and Reset are both buttons; downloads and Copy link are outlined buttons with icons; the Sample table pages with the same buttons as the forest plot, from its top as well as its foot.
+- The Sample breakdown no longer counts an existing "Other" category twice, so long categorical breakdowns now add up to the selected effects.
+- Shorter, plainer text: the Summary names the primary model in its table rather than in a line above it; Selection details lists only filters that excluded effects; a pending selection says to update; the numeric moderator's intercept says where it is predicted; p-curve explains its tests; the effects table's p column is "Reported p". The repeated note on outlined missing-value bars and the generic About sentence are gone.
+- A tab drawn in the background now waits for outputs nested in others (such as the moderator table) before it counts as ready.
 - Apps with `fit_cache_entries = 0`, the default for custom model code, no longer save or reuse build-time fits: they fit afresh when opened.
 - A moderator with one value in the selection now says it cannot be tested, instead of failing. Declaring RVE as primary now reports its *k* as studies. Static previews state the actual default selection.
 

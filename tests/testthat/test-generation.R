@@ -52,7 +52,7 @@ test_that("headless app loads and runs the generated server", {
     # Unapplied edits are flagged; displayed results keep the applied selection.
     session$setInputs(outliers_z_scores = c(0, z_range[2]))
     expect_true(filters_changed())
-    expect_match(output$apply_state, "Filters changed")
+    expect_match(output$apply_state, "Update results to apply it")
     expect_equal(nrow(df_filtered()), 16)
     session$setInputs(outliers_z_scores = z_range)
     expect_false(filters_changed())
@@ -269,12 +269,13 @@ test_that("authors can declare one primary model that is never substituted", {
       session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
       card <- as.character(output$primary_estimate$html)
       table <- output$effectestimate
-      expect_match(card, "Primary analysis, declared by the authors")
-      expect_match(card, primary, fixed = TRUE)
+      # The headline names the model only when it has no estimate; otherwise the first table row does.
       # The declared model is listed first in the reader table.
       expect_match(table, paste0('<tbody><tr class="metaui-primary-row"><td>', primary), fixed = TRUE)
       if (primary == "P-uniform star") {
         expect_match(card, "Not estimated for this selection \\(unsupported\\)")
+        expect_match(card, "Primary analysis, declared by the authors")
+        expect_match(card, primary, fixed = TRUE)
         expect_match(card, "does not substitute another model")
         expect_false(grepl("CI \\[", card))
       } else {
@@ -319,9 +320,10 @@ test_that("status and summaries show filter labels with spaces, not input IDs", 
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   shiny::testServer(env$server, {
-    session$setInputs(outliers_z_scores = c(-10, 10), `metaUI__filter_Risk_of_bias` = c(0, 1),
+    session$setInputs(outliers_z_scores = c(-10, 10), `metaUI__filter_Risk_of_bias` = c(0, .9),
       `metaUI__filter_Risk_of_bias_include_NA` = TRUE, go = 1)
-    expect_match(output$selection_status, "Risk of bias: 0", fixed = TRUE)
+    # Only filters that excluded effects are listed, by their labels.
+    expect_match(output$selection_status, "Risk of bias: 2", fixed = TRUE)
     expect_false(grepl("Risk_of_bias", output$summary_metaUI__filter_Risk_of_bias_table, fixed = TRUE))
   })
 })

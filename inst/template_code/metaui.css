@@ -172,9 +172,9 @@ html.metaui-js .irs--shiny .irs-grid { top: 16px; }
 .metaui-actions { position: sticky; bottom: 0; z-index: 4; display: grid; grid-template-columns: 1fr auto; gap: 8px; margin: 0 -20px; padding: 10px 20px 12px; background: var(--metaui-surface); border-top: 1px solid var(--metaui-rule); }
 .metaui-actions .btn { margin: 0; }
 .metaui-actions #go { font-size: 1rem; font-weight: 600; text-align: center; padding: 9px 12px; }
+.metaui-actions #resetFilters { background: transparent; border-color: var(--metaui-rule); color: var(--metaui-slate); padding: 9px 14px; font-size: 1rem; }
+.metaui-actions #resetFilters:hover, .metaui-actions #resetFilters:focus { background: var(--metaui-tint); border-color: var(--metaui-accent); color: var(--metaui-hover); }
 .metaui-actions #go.metaui-needs-run + #resetFilters { color: var(--metaui-accent); }
-.metaui-actions #resetFilters { background: transparent; border-color: transparent; color: var(--metaui-slate); padding: 9px 4px; text-decoration: underline; text-underline-offset: 2px; }
-.metaui-actions #resetFilters:hover { color: var(--metaui-hover); }
 .metaui-reset-link { border: 0; padding: 0; background: none; color: var(--metaui-accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 html.shiny-busy:not(.metaui-background) .metaui-actions #go { opacity: .75; }
 /* Above the button, inside the bar, so it never covers a filter. */
@@ -182,8 +182,6 @@ html.shiny-busy:not(.metaui-background) .metaui-actions #go { opacity: .75; }
 .metaui-apply-state:has(> .shiny-text-output:empty) { display: none; }
 #executeUpload { margin-bottom: 10px; }
 .metaui-share { margin: 10px 0 0; }
-.metaui-share .btn { display: inline; padding: 0; background: none; border: 0; color: var(--metaui-accent); font-size: .9375rem; text-decoration: underline; text-underline-offset: 2px; }
-.metaui-share .btn:hover { background: none; color: var(--metaui-hover); }
 #link_notice { font-size: .875rem; color: var(--metaui-slate); }
 .metaui-data-tools { margin: 10px 0 0; padding: 0 0 16px; }
 .metaui-data-tools > summary { font-size: .9375rem; font-weight: 400; }
@@ -359,9 +357,22 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-forest-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
 .metaui-forest-toggle:hover { text-decoration: underline; }
 .metaui-forest-count { color: var(--metaui-slate); font-size: .8125rem; }
-.metaui-forest-all, .metaui-moderator-effects, .metaui-forest-sort, .metaui-forest-prev, .metaui-forest-next { padding: 3px 10px; border: 1px solid var(--metaui-slate); border-radius: 4px; background: var(--metaui-background); color: var(--metaui-ink); font-size: .875rem; line-height: 1.35; cursor: pointer; }
-.metaui-forest-all:hover, .metaui-moderator-effects:hover, .metaui-forest-sort:hover, .metaui-forest-prev:hover, .metaui-forest-next:hover { background: var(--metaui-tint); border-color: var(--metaui-accent); }
-.metaui-forest-all[aria-expanded="true"], .metaui-moderator-effects[aria-pressed="true"], .metaui-forest-sort[aria-pressed="true"] { background: var(--metaui-tint); border-color: var(--metaui-accent); color: var(--metaui-accent); }
+/* Paging, here and in the Sample table: small outlined buttons; the current page is pressed. */
+.metaui-forest-prev, .metaui-forest-next, body .dataTables_wrapper .dataTables_paginate .paginate_button { padding: 3px 10px; border: 1px solid var(--metaui-slate) !important; border-radius: 4px; background: var(--metaui-background) !important; color: var(--metaui-ink) !important; font-size: .875rem; line-height: 1.35; cursor: pointer; }
+.metaui-forest-prev:hover, .metaui-forest-next:hover, body .dataTables_wrapper .dataTables_paginate .paginate_button:not(.disabled):not(.current):hover { background: var(--metaui-tint) !important; border-color: var(--metaui-accent) !important; text-decoration: none; }
+.metaui-forest-prev[disabled], .metaui-forest-next[disabled], body .dataTables_wrapper .dataTables_paginate .paginate_button.disabled { color: var(--metaui-slate) !important; border-color: var(--metaui-rule) !important; cursor: default; }
+body .dataTables_wrapper .dataTables_paginate .paginate_button.current, body .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover { background: var(--metaui-accent) !important; border-color: var(--metaui-accent) !important; color: var(--metaui-button) !important; font-weight: 600; }
+body .dataTables_wrapper .dataTables_paginate .paginate_button + .paginate_button, body .dataTables_wrapper .dataTables_paginate span > .paginate_button { margin-left: 4px; }
+/* A choice of view: a label, then one pressed option (metaUI_switch in helpers.R). */
+.metaui-switch { display: inline-flex; align-items: center; flex-wrap: wrap; margin-right: 14px; }
+.metaui-switch-label { margin-right: 8px; color: var(--metaui-slate); font-size: .875rem; }
+.metaui-switch button { padding: 3px 10px; border: 1px solid var(--metaui-slate); border-radius: 0; background: var(--metaui-background); color: var(--metaui-ink); font-size: .875rem; line-height: 1.35; cursor: pointer; }
+.metaui-switch button + button { border-left: 0; }
+.metaui-switch-label + button { border-radius: 4px 0 0 4px; }
+.metaui-switch button:last-child { border-radius: 0 4px 4px 0; }
+.metaui-switch button:hover { background: var(--metaui-tint); }
+.metaui-switch button[aria-pressed="true"] { background: var(--metaui-accent); border-color: var(--metaui-accent); color: var(--metaui-button); cursor: default; }
+.metaui-switch button:focus-visible { outline: 2px solid var(--metaui-accent); outline-offset: 2px; }
 .metaui-forest .metaui-primary-row td { padding-top: 4px !important; padding-bottom: 4px !important; }
 .metaui-forest .metaui-primary-row td.metaui-track-cell { padding-top: 0 !important; padding-bottom: 0 !important; }
 .metaui-forest .metaui-forest-effect td:first-child { padding-left: 30px; color: var(--metaui-slate); }
@@ -455,25 +466,14 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 .tab-pane .selectize-control, .tab-pane > .shiny-input-container { max-width: 320px; }
 
 /* Forest plot downloads */
-.metaui-export-actions { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 6px 0 12px; }
+.metaui-export-actions { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 6px 0 12px; }
 @media (min-width: 1000px) { .metaui-export-actions { justify-content: flex-end; margin-top: -40px; margin-bottom: 18px; } }
-.metaui-export-actions .btn { padding: 0; background: none; border: 0; color: var(--metaui-accent); text-decoration: underline; text-underline-offset: 2px; }
-.metaui-export-actions .btn:hover { background: none; color: var(--metaui-hover); }
-.metaui-export-actions .btn i, .metaui-export-actions .btn svg, .metaui-share .btn i, .metaui-share .btn svg { margin-right: 5px; font-size: .8125rem; }
+.metaui-export-actions .btn, .metaui-share .btn { padding: 4px 10px; font-size: .875rem; }
 .metaui-export-label { color: var(--metaui-slate); font-size: .875rem; }
 .metaui-export-actions { align-items: baseline; }
 .metaui-copy-status { margin-left: 8px; font-size: .875rem; color: var(--metaui-slate); }
 .metaui-copy-status input { display: block; width: 100%; margin-top: 4px; font-size: .8125rem; }
 @media (min-width: 768px) { #sample_table td:first-child { min-width: 11rem; } }
-/* Effects or studies: a two-way switch above the table. */
-.metaui-view-toggle .form-group { display: flex; align-items: baseline; gap: 10px; margin: 0 0 6px; }
-.metaui-view-toggle .control-label { margin: 0; font-weight: 400; font-size: .875rem; color: var(--metaui-slate); }
-.metaui-view-toggle .shiny-options-group { display: inline-flex; border: 1px solid var(--metaui-slate); border-radius: 4px; overflow: hidden; }
-.metaui-view-toggle .radio-inline { position: relative; margin: 0; padding: 3px 12px; font-size: .875rem; cursor: pointer; }
-.metaui-view-toggle .radio-inline + .radio-inline { border-left: 1px solid var(--metaui-slate); }
-.metaui-view-toggle .radio-inline input { position: absolute; opacity: 0; margin: 0; }
-.metaui-view-toggle .radio-inline:has(input:checked) { background: var(--metaui-accent); color: var(--metaui-background); }
-.metaui-view-toggle .radio-inline:has(input:focus-visible) { outline: 2px solid var(--metaui-accent); outline-offset: 2px; }
 
 /* DataTables */
 .dataTables_wrapper { max-width: 100%; overflow-x: auto; font-size: .9375rem; color: var(--metaui-ink); }
@@ -499,10 +499,6 @@ body table.dataTable thead > tr > th.sorting:hover::after { color: var(--metaui-
 body table.dataTable thead > tr > th.sorting_asc::after { content: "\2191"; color: var(--metaui-accent); }
 body table.dataTable thead > tr > th.sorting_desc::after { content: "\2193"; color: var(--metaui-accent); }
 body .dataTables_wrapper .dataTables_paginate, body .dataTables_wrapper .dataTables_info { font-size: .875rem; }
-body .dataTables_wrapper .dataTables_paginate .paginate_button, body .dataTables_wrapper .dataTables_paginate .paginate_button.disabled, body .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover { padding: 3px 9px; color: var(--metaui-ink) !important; background: none !important; border: 0 !important; border-radius: var(--metaui-radius); }
-body .dataTables_wrapper .dataTables_paginate .paginate_button.disabled { color: var(--metaui-slate) !important; }
-body .dataTables_wrapper .dataTables_paginate .paginate_button.current, body .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover { color: var(--metaui-ink) !important; background: none !important; border: 0 !important; font-weight: 700; }
-body .dataTables_wrapper .dataTables_paginate .paginate_button:hover { color: var(--metaui-accent) !important; background: none !important; border: 0 !important; text-decoration: underline; }
 body .dataTables_wrapper .dataTables_paginate .ellipsis { color: var(--metaui-slate); }
 #moderation_table td { white-space: nowrap; }
 #sample_table tbody td:not(:first-child) { white-space: nowrap; }
@@ -701,7 +697,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .dataTables_wrapper .dataTables_filter label { display: flex; align-items: center; gap: 8px; width: 100%; }
   .dataTables_wrapper .dataTables_filter input { flex: 1; margin-left: 0; min-width: 0; }
   .dataTables_wrapper .dataTables_paginate { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 4px; }
-  .dataTables_wrapper .dataTables_paginate .paginate_button { margin: 0; padding: 6px 10px; }
+  .dataTables_wrapper .dataTables_paginate .paginate_button { margin: 2px 0 2px 4px; padding: 6px 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .btn, .metaui-help > summary::before, .metaui-selection-details > summary::before { transition: none; } }
 
@@ -715,3 +711,9 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
 @keyframes metaui-appear { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .tab-pane.metaui-pane-loading > .metaui-pane-status { animation: none; } }
 .load-container .loader { color: var(--metaui-accent) !important; }
+
+/* The Sample table pages from the top too, so long phone pages need no scroll to the end. */
+.dataTables_wrapper .metaui-dt-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 8px; }
+.dataTables_wrapper .metaui-dt-top > div { float: none !important; margin: 0 !important; padding: 0 !important; }
+.dataTables_wrapper .metaui-dt-bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-top: 8px; }
+.dataTables_wrapper .metaui-dt-bottom > div { float: none !important; padding: 0 !important; }

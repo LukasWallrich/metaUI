@@ -256,10 +256,10 @@ test_that("moderator effects can be toggled, and the axis fits what is shown", {
   off <- do.call(metaUI:::metaUI_moderator_html, c(args, show_effects = FALSE))
   on <- do.call(metaUI:::metaUI_moderator_html, c(args, show_effects = TRUE))
   expect_no_match(off, "metaui-track-dot", fixed = TRUE)
-  expect_match(off, 'aria-pressed="false">Show individual effects', fixed = TRUE)
+  expect_match(off, 'data-value="hide" aria-pressed="true">hidden', fixed = TRUE)
   expect_no_match(off, "Grey dots", fixed = TRUE)
   expect_equal(lengths(regmatches(on, gregexpr("metaui-track-dot", on, fixed = TRUE))), 3)
-  expect_match(on, 'aria-pressed="true">Hide individual effects', fixed = TRUE)
+  expect_match(on, 'data-value="show" aria-pressed="true">shown', fixed = TRUE)
   expect_match(on, "metaui-hist-note", fixed = TRUE)
   # Off: only the estimates set the axis, so a 0.02-wide interval takes a visible share of it.
   width <- function(html) { x <- regmatches(html, regexpr('metaui-track-diamond" style="left:[0-9.]+%;width:[0-9.]+', html)); as.numeric(sub(".*width:", "", x)) }
@@ -302,4 +302,20 @@ test_that("the Sample table can show one row per study without averaging effects
   expect_equal(studies$N, c("40", "10–12"))
   expect_equal(studies$Year, c(2001, 2002))
   expect_equal(studies$Domain, c("x", "several"))
+})
+
+test_that("study rows keep exact range ends, and categories are counted once", {
+  effects <- data.frame(Study = c("A", "A"), metaUI__key = "A", N = c(10001, 10002), check.names = FALSE)
+  expect_equal(metaUI:::metaUI_study_rows(effects)$N, "10001–10002")
+  x <- c(rep(LETTERS[1:11], each = 2), rep("Other", 5))
+  counts <- metaUI:::summarise_categorical(x, "Group")
+  expect_equal(sum(counts$Count), length(x))
+  expect_equal(counts$Count[counts$Group == "Other"], 5 + 2 * 2) # its own 5, and the two levels beyond the top nine
+})
+
+test_that("view switches are one pressed option among labelled buttons", {
+  html <- metaUI:::metaUI_switch("One row per", "metaui-sample-view", c(effects = "effect", studies = "study"), "studies")
+  expect_match(html, 'role="group" aria-label="One row per"', fixed = TRUE)
+  expect_match(html, 'data-value="studies" aria-pressed="true">study', fixed = TRUE)
+  expect_match(html, 'data-value="effects" aria-pressed="false">effect', fixed = TRUE)
 })
