@@ -393,7 +393,12 @@ metaUI_reader_messages <- c(
   "p-value intervals contains no effect sizes" = "No studies fall in one of the p-value ranges the model compares, so its estimate is unstable.",
   "p-value intervals contains three or fewer effect sizes" = "Few studies fall in one of the p-value ranges the model compares, so its estimate may be unstable.",
   "Unreliable fit" = "The fit is unreliable: some of its standard errors could not be computed.",
-  "NaNs produced" = "Some standard errors could not be computed, a sign that the fit is unreliable.")
+  "NaNs produced" = "Some standard errors could not be computed, a sign that the fit is unreliable.",
+  "Single-level factor(s) found in 'random'" = "There is only one study, so the variance between studies cannot be estimated and is set to 0.",
+  "non-finite value supplied by optim" = "The model could not be fitted to so few or so similar effects.",
+  "exactly singular" = "This selection has too little variation to fit the model.",
+  "There must be at least 10 z-scores in the fitting range" = "Needs at least 10 significant results (z between 1.96 and 6); far more are recommended.",
+  "Two or less significant" = "Needs at least three significant results (p < .05).")
 metaUI_reader_message <- function(x) {
   hit <- names(metaUI_reader_messages)[vapply(names(metaUI_reader_messages), grepl, logical(1), x = x, fixed = TRUE)]
   if (length(hit)) unname(metaUI_reader_messages[hit[1]]) else x
@@ -408,6 +413,8 @@ metaUI_reader_reason <- function(reason, warnings = "") {
 metaUI_reader_warnings <- function(warnings, failed = FALSE) {
   parts <- strsplit(warnings, "; ", fixed = TRUE)[[1]]
   if (failed) parts <- parts[!grepl("NaNs produced", parts, fixed = TRUE)]
+  # "No effects in a range" already covers "few effects in a range".
+  if (any(grepl("contains no effect sizes", parts, fixed = TRUE))) parts <- parts[!grepl("three or fewer effect sizes", parts, fixed = TRUE)]
   paste(unique(vapply(parts, metaUI_reader_message, character(1))), collapse = " ")
 }
 
@@ -425,11 +432,14 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   ref <- if (length(first) && table$status[first[1]] == "ok") table$es[first[1]] else NULL
   # Warnings are footnotes, so that one long message does not break the rows.
   # A failed row whose reason is its warning needs no footnote.
-  warned <- order[nzchar(table$warnings[order]) & (table$status[order] == "ok" | vapply(order, function(i) !startsWith(metaUI_reader_reason("", table$warnings[i]), "Needs"), logical(1)))]
+  # A warning that becomes empty in plain words (it only repeated the failure) gets no footnote.
+  note_text <- vapply(seq_len(nrow(table)), function(i) if (nzchar(table$warnings[i])) metaUI_reader_warnings(table$warnings[i], table$status[i] != "ok") else "", character(1))
+  warned <- order[nzchar(note_text[order]) & (table$status[order] == "ok" | vapply(order, function(i) !startsWith(metaUI_reader_reason("", table$warnings[i]), "Needs"), logical(1)))]
   rows <- vapply(order, function(i) {
     row <- table[i, ]
     ok <- row$status == "ok"
-    label <- paste0(esc(row$Model), if (i %in% first) paste0(' <span class="metaui-primary-tag">primary, ', if (row$aggregated) "study-level" else "effect-level", " fit</span>"), if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"),
+    # The footnote mark follows the name, so that it cannot wrap onto a line of its own.
+    label <- paste0(esc(row$Model), if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"), if (i %in% first) paste0(' <span class="metaui-primary-tag">primary, ', if (row$aggregated) "study-level" else "effect-level", " fit</span>"),
       # Confidence intervals need no note; only the rows that differ from them do.
       if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"))
     # A row that is not estimated shows no numbers, even where an unreliable fit left some.
@@ -440,7 +450,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     unit <- if (!ok) "" else if (effect_level) "effects" else metaUI_count_unit(row, studies)
     k_shown <- if (!ok || is.na(row$k)) "" else if (effect_level) row$input_rows else row$k
     track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = i %in% first), "</td>")
-      else paste0('<td class="metaui-reason-cell"><b>', if (identical(row$status, "failed")) "Could not be estimated:" else "Not estimated:", "</b> ", esc(metaUI_reader_reason(row$reason, row$warnings)), "</td>")
+      else paste0('<td class="metaui-reason-cell"><b>', "Not estimated:</b> ", esc(metaUI_reader_reason(row$reason, row$warnings)), "</td>")
     position <- match(i, order)
     opens_group <- !(i %in% first) && (position == length(first) + 1L || table$aggregated[order[position - 1L]] != row$aggregated)
     # Methods explains the two levels; the headings stay short enough for one line on phones.
@@ -456,7 +466,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Other estimators answer different questions and are not interchangeable with the primary analysis.',
     if (!is.null(ref)) paste0(" The diamond and dashed line mark the primary estimate and its ", interval_head, "."),
     if (any(grepl("trim", table$Model, ignore.case = TRUE))) " The trim-and-fill count includes imputed studies.", "</p>")
-  notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(vapply(warned, function(i) metaUI_reader_warnings(table$warnings[i], table$status[i] != "ok"), character(1))), "</li>", collapse = ""), "</ol>")
+  notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(note_text[warned]), "</li>", collapse = ""), "</ol>")
   paste0('<table class="table metaui-estimates metaui-models metaui-custom"><thead><tr data-head="Model, estimate [', interval_head, ']"><th>Model</th><th class="num">Estimate</th><th class="num">',
     interval_head, '</th><th class="num metaui-k" title="Number of effects or studies the model reports; trim-and-fill includes imputed studies."><i>k</i></th><th></th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
     paste(rows, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="5"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", others, notes)
@@ -530,7 +540,7 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL,
     labels <- substring(effects$label[index], nchar(name) + 3L)
     # Several effects: one combined row, which opens to show them (metaui.js).
     combined <- match(name, studies$study)
-    head <- paste0('<button type="button" class="metaui-forest-toggle" aria-expanded="false">', esc(name), ' <span class="metaui-forest-count">', length(index), " effects</span></button>")
+    head <- paste0('<button type="button" class="metaui-forest-toggle" aria-expanded="false">', esc(name), ' <span class="metaui-forest-count">\u00b7 ', length(index), "\u00a0effects</span></button>")
     paste0(if (is.na(combined)) paste0('<tr class="metaui-forest-study', mark, '"><td colspan="3">', head, "</td>", grid, "</tr>")
       else paste0('<tr class="metaui-forest-study', mark, '" data-es="', studies$es[combined], '"><td>', head, "</td>", values(studies[combined, ]), '<td class="metaui-track-cell">',
         metaUI_track_row(scale, studies$es[combined], studies$LCL[combined], studies$UCL[combined], size = study_size[combined], ref = ref, combined = TRUE), "</td></tr>"),
@@ -572,6 +582,15 @@ metaUI_bars_html <- function(counts, name) {
     '</span></th><th class="num">Effects</th><th class="num">Share</th><th class="metaui-bar-cell"></th></tr></thead><tbody>', paste(rows, collapse = ""), "</tbody></table>",
     if (any(bucket)) paste0('<details class="metaui-help metaui-other-levels"><summary>The ', length(other), " other categories</summary><p>", htmltools::htmlEscape(paste(other, collapse = ", ")), "</p></details>"),
     if (empty) paste0('<p class="metaui-note">', empty, if (empty == 1L) " category has" else " categories have", " no selected effects.</p>"))
+}
+
+# The effects that enter a moderator test: those with a value, leaving out a kept (Missing) category.
+metaUI_moderator_rows <- function(df, moderator) {
+  x <- df[[moderator]]
+  keep <- !is.na(x) & !(as.character(x) %in% "(Missing)")
+  df <- df[keep, , drop = FALSE]
+  if (is.factor(df[[moderator]])) df[[moderator]] <- droplevels(df[[moderator]])
+  df
 }
 
 # Moderator levels on the same drawn axis; the dots are the selected effects themselves.

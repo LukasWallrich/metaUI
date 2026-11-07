@@ -131,6 +131,8 @@ input[type=checkbox] { accent-color: var(--metaui-accent); width: 15px; height: 
 .metaui-preview-select { position: relative; }
 .metaui-preview-select::after { content: ''; position: absolute; right: 12px; top: 50%; margin-top: -2px; border-top: 4px solid var(--metaui-ink); border-left: 4px solid transparent; border-right: 4px solid transparent; }
 .metaui-preview-state { font-size: .875rem; color: var(--metaui-slate); }
+/* In the saved preview, tabs other than the open one wait for the app. */
+.nav-tabs > li:not(.active) > a[aria-disabled="true"] { opacity: .55; cursor: progress; pointer-events: none; }
 .well:has(#go[aria-busy="true"]) .shiny-input-container { opacity: .6; }
 /* Greyed native ticks would read as unselected: the preview's checked boxes keep their fill. */
 input[type=checkbox][disabled]:checked { appearance: none; margin-top: 3px; border-radius: 2px; background: var(--metaui-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center / 100% no-repeat; }
@@ -233,6 +235,7 @@ html.shiny-busy:not(.metaui-background) .metaui-actions #go { opacity: .75; }
 body:has(.metaui-basis.metaui-stale) #metaui_results .tab-content { opacity: .82; }
 /* Above the tabs while the results are out of date; the server shows it (metaui-visible). */
 .metaui-stale-banner { display: none; }
+.metaui-link-banner { margin: 0 0 10px; padding: 6px 10px 6px 12px; font-size: .9375rem; line-height: 1.35; color: var(--metaui-attention); background: var(--metaui-attention-bg); border: 1px solid var(--metaui-rule); border-left: 3px solid var(--metaui-attention); border-radius: var(--metaui-radius); }
 .metaui-stale-banner.metaui-visible { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 0 0 10px; padding: 6px 10px 6px 12px; font-size: .9375rem; line-height: 1.35; color: var(--metaui-attention); background: var(--metaui-attention-bg); border: 1px solid var(--metaui-rule); border-left: 3px solid var(--metaui-attention); border-radius: var(--metaui-radius); }
 .metaui-stale-banner .metaui-banner-go { margin: 0; padding: 3px 10px; font-size: .875rem; font-weight: 600; line-height: 1.35; color: var(--metaui-button); background: var(--metaui-accent); border: 1px solid var(--metaui-accent); border-radius: var(--metaui-radius); cursor: pointer; }
 /* Nothing to update while a link or upload is being applied, or when no effects match. */
@@ -392,7 +395,7 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-forest-toggle::before { content: ''; display: inline-block; width: 0; height: 0; margin-right: 6px; vertical-align: 1px; border-left: 5px solid var(--metaui-accent); border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
 .metaui-forest-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
 .metaui-forest-toggle:hover { text-decoration: underline; }
-.metaui-forest-count { color: var(--metaui-slate); font-size: .8125rem; }
+.metaui-forest-count { color: var(--metaui-slate); font-size: .8125rem; white-space: nowrap; }
 /* Paging, here and in the Sample table: small outlined buttons; the current page is pressed. */
 .metaui-forest-prev, .metaui-forest-next, body .dataTables_wrapper .dataTables_paginate .paginate_button { padding: 3px 10px; border: 1px solid var(--metaui-slate) !important; border-radius: 4px; background: var(--metaui-background) !important; color: var(--metaui-ink) !important; font-size: .875rem; line-height: 1.35; cursor: pointer; }
 .metaui-forest-prev:hover, .metaui-forest-next:hover, body .dataTables_wrapper .dataTables_paginate .paginate_button:not(.disabled):not(.current):hover { background: var(--metaui-tint) !important; border-color: var(--metaui-accent) !important; text-decoration: none; }
@@ -456,7 +459,9 @@ table.metaui-moderators-plain { --metaui-mark-y: 50%; }
 .metaui-sample-note { margin: 0 0 18px; }
 
 /* Sample breakdown: one block per filter */
-.metaui-breakdowns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 6px 44px; }
+/* Columns rather than a grid, so that a short breakdown beside a long one leaves no gap. */
+.metaui-breakdowns { columns: 420px; column-gap: 44px; }
+.metaui-breakdown-item { break-inside: avoid; display: inline-block; width: 100%; }
 .metaui-breakdown-item h4 { margin: 14px 0 6px; }
 .metaui-breakdown-numeric { display: grid; grid-template-columns: minmax(0, 190px) minmax(0, 1fr); gap: 16px; align-items: start; }
 .metaui-breakdown-numeric td:last-child { text-align: right; white-space: nowrap; padding-right: 0 !important; }
@@ -656,6 +661,12 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .metaui-filters-toggle { display: block; width: 100%; margin-bottom: 0; text-align: center !important; background: var(--metaui-panel); color: var(--metaui-accent); border: 1px solid var(--metaui-rule); }
   .metaui-filters-toggle::after { content: ''; display: inline-block; margin-left: 7px; vertical-align: 2px; border-top: 5px solid currentColor; border-left: 4px solid transparent; border-right: 4px solid transparent; }
   .metaui-filters-toggle[aria-expanded="true"]::after { transform: rotate(180deg); }
+  .metaui-filters-toggle:hover, .metaui-filters-toggle:focus, .metaui-filters-toggle:active { background: var(--metaui-tint); color: var(--metaui-accent); border-color: var(--metaui-accent); }
+  /* The moderator table's labels wrap, so that its values keep their last characters. */
+  #moderation_table .metaui-stats td:first-child { white-space: normal; }
+  .metaui-moderation-grid > :first-child { width: 100%; }
+  .metaui-moderation-grid .table.metaui-stats { box-sizing: border-box; min-width: 0; width: 100% !important; }
+  .metaui-moderation-grid .metaui-stats td:last-child { padding-right: 2px !important; }
   .metaui-filter-panel { display: none; }
   .metaui-filter-panel.metaui-open { display: block; padding-top: 14px; }
   .metaui-actions:has(#go.metaui-needs-run) { margin-top: 8px; }

@@ -41,8 +41,8 @@ metaUI_parse_selection <- function(query, dataset_key, built, filters = list()) 
   if (anyDuplicated(names(params)) || !setequal(names(params), c("metaui", "selection")) || !identical(params$metaui, "1"))
     stop("The link is incomplete or damaged.")
   payload <- tryCatch(jsonlite::fromJSON(params$selection), error = function(e) stop("The link is incomplete or damaged.", call. = FALSE))
-  if (!is.list(payload) || !setequal(names(payload), c("dataset", "filters", "sesoi")) ||
-      !identical(payload$dataset, dataset_key)) stop("This link belongs to a different dataset/build or has an invalid payload.")
+  if (!is.list(payload) || !setequal(names(payload), c("dataset", "filters", "sesoi"))) stop("The link is incomplete or damaged.")
+  if (!identical(payload$dataset, dataset_key)) stop("This link was made for a different version of this app's data.")
   records <- payload$filters
   # Links now hold one array per changed filter; older ones hold a row per value.
   if (is.list(records) && !is.data.frame(records)) records <- data.frame(

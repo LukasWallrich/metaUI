@@ -71,7 +71,8 @@ test_that("shipped empirical example builds and runs its actual generated server
     # The estimator rejects this sparse significant-z subset; report its actual
     # requirement instead of constructing an estimate or inventing a cutoff.
     expect_true(inherits(zcurve_fit()$result, "error"))
-    expect_error(output$zcurve, "Z-curve could not be estimated")
-    expect_true(nzchar(output$zcurve_warnings))
+    # The plot stays empty; the plain reason sits under the heading.
+    expect_error(output$zcurve)
+    expect_match(output$zcurve_warnings, "^Not estimated: Needs at least 10 significant results")
   })
 })

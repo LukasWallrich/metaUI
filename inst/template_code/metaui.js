@@ -6,6 +6,10 @@
     // The chosen range is written beside the filter name; the scale ends stay under the track.
     document.documentElement.classList.add('metaui-js');
     document.querySelectorAll('.irs').forEach(function (slider) {
+      // Negative values get a true minus sign, as elsewhere in the app.
+      slider.querySelectorAll('.irs-grid-text, .irs-min, .irs-max, .irs-from, .irs-to, .irs-single').forEach(function (el) {
+        if (el.textContent.indexOf('-') >= 0) el.textContent = el.textContent.replace(/-/g, '\u2212');
+      });
       var from = slider.querySelector('.irs-from'), to = slider.querySelector('.irs-to');
       var container = slider.closest('.shiny-input-container');
       var label = container && container.querySelector('.control-label');
@@ -643,12 +647,22 @@
     document.body.removeChild(field);
     return ok;
   }
+  // A static export runs the app in a frame; the link must open the page around it.
+  function staticPage() {
+    if (window.parent === window || !/\/app_[^/]+\/$/.test(location.pathname)) return null;
+    try { return window.parent.location.href; } catch (e) { return null; }
+  }
   $(document).on('click', '.metaui-copy-link', function () {
-    var url = new URL(this.getAttribute('data-href'), window.location.href).href;
+    var page = staticPage();
+    var url = new URL(this.getAttribute('data-href'), page || window.location.href).href;
     var status = this.parentNode.querySelector('.metaui-copy-status');
+    // Filters changed but not applied are not in the link, which holds the results shown.
+    var pending = document.querySelector('#metaui_stale_banner.metaui-visible');
+    var copied = 'Copied' + (pending ? ': the link is for the results shown, not your new filters, until you update.' :
+      page ? '. The link opens once the app has loaded, which can take about a minute.' : '');
     var show = function (ok) {
       if (!status) return;
-      if (ok) { status.textContent = 'Copied'; clearTimeout(status.metauiTimer); status.metauiTimer = setTimeout(function () { status.textContent = ''; }, 3000); return; }
+      if (ok) { status.textContent = copied; clearTimeout(status.metauiTimer); status.metauiTimer = setTimeout(function () { status.textContent = ''; }, pending || page ? 8000 : 3000); return; }
       status.textContent = 'Copy this link: ';
       var box = document.createElement('input'); box.type = 'text'; box.readOnly = true; box.value = url;
       box.setAttribute('aria-label', 'Link to this selection'); status.appendChild(box); box.select();
@@ -758,7 +772,8 @@ document.addEventListener('toggle', function (event) {
   function mark(wrapper) {
     var table = wrapper.querySelector(':scope > table.dataTable');
     if (!table) return;
-    var over = wrapper.scrollWidth > wrapper.clientWidth + 2;
+    // Tables stacked into cards on phones have no columns to scroll to.
+    var over = getComputedStyle(table).display !== 'block' && wrapper.scrollWidth > wrapper.clientWidth + 2;
     wrapper.classList.toggle('metaui-overflow', over);
     var note = wrapper.querySelector(':scope > .metaui-scroll-note');
     if (over && !note) {
@@ -898,3 +913,14 @@ document.addEventListener('toggle', function (event) {
   if (query && query.addEventListener) query.addEventListener('change', send);
   new MutationObserver(send).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 })(jQuery);
+
+/* A shared link: until the server has applied it, the banner says so, rather than leaving the
+   dimmed default results unexplained. The server replaces the text once it takes over. */
+document.addEventListener('DOMContentLoaded', function () {
+  var query = new URLSearchParams(location.search);
+  var banner = document.getElementById('metaui_stale_banner');
+  if (!banner || query.get('metaui') !== '1' || !query.has('selection')) return;
+  var text = document.getElementById('stale_banner');
+  if (text && !text.textContent.trim()) text.textContent = 'Applying the linked selection…';
+  banner.classList.add('metaui-visible', 'metaui-restoring');
+});

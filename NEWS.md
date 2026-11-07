@@ -1,5 +1,11 @@
 # metaUI (development version)
 
+- Moderator tests leave out effects without a value for the moderator, including a kept "(Missing)" category, and say how many entered the test. Before, "(Missing)" was tested as a level of its own. Moderation warns when fewer than 10 studies enter a test.
+- Narrow selections give plain reasons instead of R's messages (one study, singular fits, too few significant results for p-curve or z-curve). Model footnotes no longer repeat or contradict each other, and every unestimated model reads "Not estimated".
+- The prediction-interval sentence no longer claims that true effects vary, and is left out below three studies. Equivalence counts only the models that gave an interval. The z-curve verdict is held back when its own warning applies, and the funnel caption tells the estimate line from the sloping 95% lines.
+- Shared links: Copy link in a static export copies the page's address rather than the inner frame's, a damaged or outdated link says so in a banner above the results, a link being applied is announced at once, and Copy link warns when the filters on screen are not yet applied. A static export takes the app's title, and its saved preview greys out the tabs until the app has loaded.
+- Pickers open downwards as intended (the option was misspelt), negative slider values use a true minus sign, *p* values in tables drop the leading zero, *F* values keep two decimals, and empty table searches read in the app's own words.
+
 - Generated apps open on results: `generate_shiny()` fits the default analysis at build and saves it as `opening_results.rds`, so no reader waits and no reader triggers a fit. Any later edit to the app's analysis files retires the saved results, and the app then fits on opening. The button is now **Update results**, quiet until filters change.
 - The forest plot opens on one row per study: a study with several effects shows its combined study-level effect (filled square) and opens to show them, labelled by what differs within the study. It can show every effect and sort by estimate. Downloads are unchanged.
 - P-curve and z-curve open with a plain reading of their tests. The p-curve is drawn in the shared plot style from the same values, and z-curve rates appear as percentages.

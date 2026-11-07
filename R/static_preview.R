@@ -40,7 +40,7 @@ static_precompute <- function(app_dir, dest) {
           tag$children <- list(htmltools::HTML(value))
       }
       if (identical(a$id, "metaui_basis")) tag <- htmltools::tagAppendChildren(tag,
-        htmltools::tags$span(class = "metaui-preview-state", "Saved results for the default selection; the filters are loading."))
+        htmltools::tags$span(class = "metaui-preview-state", "Saved results for the default selection. The filters and the other tabs start working once the app has loaded, which can take about a minute."))
       if (identical(a$id, "go")) {
         tag$children <- list("Loading\u2026")
         tag$attribs$`aria-busy` <- "true"
@@ -202,7 +202,12 @@ static_add_preview <- function(target, preview) {
   html <- paste(readLines(path, warn = FALSE), collapse = "\n")
   controller <- readLines(system.file("template_code", "metaui-preview.js", package = "metaUI"))
   injection <- paste0('<script>', paste(controller, collapse = "\n"), '</script>')
-  writeLines(sub('<body>', paste0('<body>\n', injection), html, fixed = TRUE), path)
+  html <- sub('<body>', paste0('<body>\n', injection), html, fixed = TRUE)
+  # The browser tab, bookmarks and link previews show the app's own title, not "Shiny App".
+  inner <- paste(readLines(file.path(preview, "index.html"), warn = FALSE), collapse = "\n")
+  title <- regmatches(inner, regexpr("<title>[^<]*</title>", inner))
+  if (length(title)) html <- sub("<title>[^<]*</title>", title, html)
+  writeLines(html, path)
 }
 
 # Follow URLs from the document and recursively from stylesheets. Query strings

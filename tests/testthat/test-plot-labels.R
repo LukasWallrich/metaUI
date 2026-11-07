@@ -352,3 +352,22 @@ test_that("forest search finds a study's position in either order, and custom mo
   expect_false(grepl("Rows not described", metaUI:::metaUI_custom_model_help(TRUE, c("My model" = "Described.")), fixed = TRUE))
   expect_equal(metaUI:::metaUI_custom_model_help(FALSE, character()), "")
 })
+
+test_that("moderator tests leave out effects without a value, including (Missing)", {
+  df <- data.frame(m = factor(c("a", "b", "(Missing)", NA, "a")), y = 1:5)
+  kept <- metaUI:::metaUI_moderator_rows(df, "m")
+  expect_equal(nrow(kept), 3)
+  expect_identical(levels(kept$m), c("a", "b"))
+  num <- data.frame(m = c(1, NA, 3))
+  expect_equal(nrow(metaUI:::metaUI_moderator_rows(num, "m")), 2)
+})
+
+test_that("narrow selections get plain reasons and consistent footnotes", {
+  expect_match(metaUI:::metaUI_reader_message("Single-level factor(s) found in 'random' argument. Corresponding 'sigma2' value(s) fixed to 0."), "only one study")
+  expect_match(metaUI:::metaUI_reader_message("Lapack routine dgesv: system is exactly singular: U[1,1] = 0"), "too little variation")
+  expect_match(metaUI:::metaUI_reader_message("There must be at least 10 z-scores in the fitting range but a much larger number is recommended."), "^Needs at least 10")
+  both <- "p-value intervals contains no effect sizes; p-value intervals contains three or fewer effect sizes"
+  expect_identical(metaUI:::metaUI_reader_warnings(both), "No studies fall in one of the p-value ranges the model compares, so its estimate is unstable.")
+  expect_identical(metaUI:::fmt_p(0.561, include_equal = FALSE), ".561")
+  expect_identical(metaUI:::fmt_p(0.561), "= .561")
+})

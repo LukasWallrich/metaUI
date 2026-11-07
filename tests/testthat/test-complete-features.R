@@ -33,7 +33,7 @@ test_that("selection links validate build identity and recover exact categories"
   expect_equal(parsed$filters$metaUI__filter_group$selection,"Über & ?")
   expect_equal(parsed$sesoi,.3)
   expect_null(metaUI:::metaUI_parse_selection(metaUI:::metaUI_selection_query(r,"abc"),"abc",d,filters)$sesoi)
-  expect_error(metaUI:::metaUI_parse_selection(q,"xyz",d,filters),"different dataset")
+  expect_error(metaUI:::metaUI_parse_selection(q,"xyz",d,filters),"different version")
   expect_error(metaUI:::metaUI_parse_selection(paste0(q,"&unknown=1"),"abc",d,filters),"incomplete or damaged")
   r$selection[r$id=="metaUI__filter_group"] <- "not built"
   expect_error(metaUI:::metaUI_parse_selection(metaUI:::metaUI_selection_query(r,"abc"),"abc",d,filters),"Unknown")

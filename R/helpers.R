@@ -125,8 +125,8 @@ metaUI_plot_width <- function(width, min_width) {
 fmt_p <- function(p_value, digits = 3, include_equal = TRUE) {
   fmt <- paste0("%.", digits, "f")
   fmt_p <- function(x, include_equal) {
-    paste0(ifelse(include_equal, "= ", ""), sprintf(fmt, x)) %>%
-      stringr::str_replace(" 0.", " .")
+    # APA style: no leading zero, with or without "= " in front.
+    sub("^(= )?0\\.", "\\1.", paste0(ifelse(include_equal, "= ", ""), sprintf(fmt, x)))
   }
   exact <- !(p_value < 10^(-digits) | p_value > .99)
   exact[is.na(exact)] <- TRUE
