@@ -434,7 +434,11 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
       if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"))
     # A row that is not estimated shows no numbers, even where an unreliable fit left some.
     interval <- if (!ok || (is.na(row$LCL) && is.na(row$UCL))) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
-    unit <- if (ok) metaUI_count_unit(row, studies) else ""
+    # Effect-level rows all count the effects they use: RVE reports its studies, which would read
+    # as a different sample beside the multilevel rows. Downloads keep each model's own k.
+    effect_level <- ok && !isTRUE(row$aggregated) && "input_rows" %in% names(row) && !is.na(row$k)
+    unit <- if (!ok) "" else if (effect_level) "effects" else metaUI_count_unit(row, studies)
+    k_shown <- if (!ok || is.na(row$k)) "" else if (effect_level) row$input_rows else row$k
     track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = i %in% first), "</td>")
       else paste0('<td class="metaui-reason-cell"><b>', if (identical(row$status, "failed")) "Could not be estimated:" else "Not estimated:", "</b> ", esc(metaUI_reader_reason(row$reason, row$warnings)), "</td>")
     position <- match(i, order)
@@ -445,7 +449,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
         if (length(first) && any(table$aggregated[first] == row$aggregated)) paste("Other", level) else paste0(toupper(substr(level, 1, 1)), substring(level, 2)),
         '</td><td class="metaui-track-cell">', metaUI_track_row(scale, NA_real_, NA_real_, NA_real_, bound, ref = ref), "</td></tr>")
     paste0(group, '<tr', if (i %in% first) ' class="metaui-primary-row"', "><td>", label, '</td><td class="num">', if (ok) fmt(row$es) else "",
-      '</td><td class="num">', interval, '</td><td class="num metaui-k">', if (is.na(row$k) || !ok) "" else row$k,
+      '</td><td class="num">', interval, '</td><td class="num metaui-k">', k_shown,
       '</td><td class="metaui-unit">', unit, "</td>", track, "</tr>")
   }, character(1))
   interval_head <- if (length(types) && all(grepl("^Confidence", types))) "95% CI" else "95% interval"

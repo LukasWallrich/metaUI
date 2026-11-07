@@ -361,7 +361,11 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     citation = if (is.null(about_args$citation)) "" else as.character(about_args$citation), intro = if (is.null(opts$intro)) "" else as.character(opts$intro)), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
-  writeLines(generate_global.R(eff_size_type_label, bayesian, uses_meta), file.path(save_to_folder, "global.R"))
+  writeLines(c(generate_global.R(eff_size_type_label, bayesian, uses_meta), "",
+    "# Draw one small plot when the app starts, so that the first reader's plots do not wait for",
+    "# the graphics packages to load and compile.",
+    "invisible(tryCatch(shiny::plotPNG(function() print(ggplot2::ggplot(data.frame(x = 1:3), ggplot2::aes(x)) + ggplot2::geom_histogram(bins = 3)),",
+    "  tempfile(fileext = \".png\"), width = 60, height = 40), error = function(e) NULL))"), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
   opening_precompute(save_to_folder, enabled = opts$fit_cache_entries > 0L)
 

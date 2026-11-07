@@ -188,6 +188,8 @@ generate_moderator_selection <- function(data) {
     )')
 }
 
+metaUI_asset_version <- function(file) substr(unname(tools::md5sum(system.file("template_code", file, package = "metaUI"))), 1, 8)
+
 get_favicon_tag <- function(dataset_name) {
   favicon <- paste(readLines(system.file("template_code", "favicon.svg", package = "metaUI")), collapse = "")
   glue::glue('tagList(
@@ -222,7 +224,8 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
 
   fluidPage(lang = "en",
     theme = shinythemes::shinytheme("{opts$shiny_theme}"),
-    tags$head(tags$link(rel = "stylesheet", href = "metaui.css"), tags$script(src = "metaui.js")),
+    # The version in each address makes browsers fetch a changed file rather than reuse a cached one.
+    tags$head(tags$link(rel = "stylesheet", href = "metaui.css?v={metaUI_asset_version("metaui.css")}"), tags$script(src = "metaui.js?v={metaUI_asset_version("metaui.js")}")),
     {if (!is.null(opts$design)) \'tags$head(tags$link(rel = "stylesheet", href = "app-design.css")),\' else ""}
     shinyjs::useShinyjs(),
     tags$a(class = "metaui-skip", href = "#metaui_results", "Skip to results"),
@@ -381,6 +384,9 @@ glue_string <- ('
     shade = "<<if (is.null(opts$design)) "#f0f2f4" else design_mix(opts$design$text, opts$design$surface, .07)>>",
     bars = "<<if (is.null(opts$design)) "#b4bcc4" else design_mix(opts$design$text, opts$design$surface, .32)>>",
     attention = "<<if (is.null(opts$design)) "#8a4b00" else opts$design$accent>>")
+  # Readers whose browser asks for dark colours (metaui.js sends metaui_dark) see plots drawn dark.
+  plot_colours_dark <- <<if (is.null(opts$design)) \'metaUI_plot_colours(accent = "#6cc4a1", ink = "#e3e7ea", grid = "#2c333a", background = "#191c20", slate = "#a1acb6", shade = "#23292f", bars = "#5f6a75", attention = "#f0a765")\' else "plot_colours">>
+  plot_palette <- reactive(if (isTRUE(input$metaui_dark)) plot_colours_dark else plot_colours)
 
   # Set app states
     state_values <- reactiveValues(
@@ -821,13 +827,14 @@ glue_string <- ('
   }})
 
   output$`summary_{f$id}_plot` <- renderPlot({{
+    plot_colours <- plot_palette() # light or dark, as the browser asks; downloads stay light
     df <- df_filtered()
     ggplot2::ggplot(df, ggplot2::aes(x = `{f$col}`)) +
       ggplot2::geom_histogram(na.rm = TRUE, bins = 24, fill = plot_colours$bars, colour = plot_colours$background, linewidth = .3) +
       ggplot2::scale_y_continuous(limits = function(x) range(pretty(c(0, x), 3)), breaks = function(x) unique(floor(pretty(x, 3))), name = \'Effects\', expand = ggplot2::expansion(mult = 0)) +
       metaUI_plot_theme(plot_colours) +
       ggplot2::theme(axis.title.x = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank())
-  }}, bg = plot_colours$background)
+  }}, bg = \'transparent\')
   ")
       } else {
         glue::glue("
@@ -950,6 +957,7 @@ glue_string <- ('
   })
 
   output$moderation_plot <- plotly::renderPlotly({
+    plot_colours <- plot_palette() # light or dark, as the browser asks; downloads stay light
     df <- df_filtered()
     req(is.numeric(df[[input$moderator]]))
     df$mod <- df[[input$moderator]]
@@ -1211,6 +1219,7 @@ glue_string <- ('
   })
 
   output$funnel <- renderPlot({
+    plot_colours <- plot_palette() # light or dark, as the browser asks; downloads stay light
     meta_agg <- meta_agg()
 
     metaUI_funnel(meta_agg, xlab = metaUI_eff_size_type_label, colours = plot_colours, width = session$clientData$output_funnel_width, back = metaUI__df$metaUI__es_type[1] == "ZCOR")
@@ -1266,6 +1275,7 @@ glue_string <- ('
       tags$details(class = "metaui-help", tags$summary("How to read these tests"), tags$p("Right-skew tests ask whether significant results cluster at very small p-values, as real effects produce. The full test uses every significant result; the half test only those below .025, which are harder to reach by selective reporting; the binomial test compares the share below .025 with the half expected without an effect. The 33% power tests ask whether the curve is flatter than studies with 33% power would produce, which would suggest evidential value is absent or inadequate.")))
   })
   output$pcurve <- renderPlot({
+    plot_colours <- plot_palette() # light or dark, as the browser asks; downloads stay light
     pcurve_notes(NULL)
     df <- df_filtered()
     selected <- tryCatch(metaUI_pcurve_data(df), error = function(e) e)
@@ -1343,6 +1353,7 @@ glue_string <- ('
   })
 
   output$zcurve <- renderPlot({
+    plot_colours <- plot_palette() # light or dark, as the browser asks; downloads stay light
     value <- zcurve_fit()
     validate(need(!inherits(value$result, "error"), "Z-curve could not be estimated for this selection; reason below."))
     metaUI_zcurve_plot(value$result, plot_colours)
@@ -1375,6 +1386,7 @@ glue_string <- ('
   })
 
   output$violin <- plotly::renderPlotly({
+    plot_colours <- plot_palette() # light or dark, as the browser asks; downloads stay light
     df <- df_filtered()
     effects <- df$metaUI__effect_size
 

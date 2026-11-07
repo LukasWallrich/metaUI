@@ -31,6 +31,8 @@
 - Moderator tests are saved at build for the default selection and kept for the session, so Moderation opens and switches at once on the default selection.
 - The forest plot has a Find a study box that jumps to the study's page and marks it.
 - Range filters end at the data's own range, to the step, rather than at the next round number. The Egger table no longer shows the regression's residual dispersion, which read as heterogeneity. Z-curve warnings come before its reading.
+- Dark mode: with a dark system setting (or `data-theme="dark"`), apps in the default design switch to dark colours, and the server draws their plots in a matching dark palette. Downloads and author designs keep their own colours. Range sliders are keyboard and screen-reader accessible, one named slider per handle.
+- Effect-level rows of the Summary table all count effects, so RVE no longer reads as a different sample; downloads keep each model's own *k*. The Sample table's study cells are built as text, which makes the tab draw about twice as fast, and apps draw one small plot at start so the first reader's plots do not wait. Stylesheet and script addresses carry a version, so browsers do not reuse an outdated copy.
 - Apps with `fit_cache_entries = 0`, the default for custom model code, no longer save or reuse build-time fits: they fit afresh when opened.
 - A moderator with one value in the selection now says it cannot be tested, instead of failing. Declaring RVE as primary now reports its *k* as studies. Static previews state the actual default selection.
 

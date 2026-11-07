@@ -373,8 +373,9 @@ metaUI_selected_references <- function(info, studies) {
 # and the details HTML for the hidden column that metaui.js shows as a child row.
 metaUI_study_cells <- function(labels, ids, info, details_html, reference_text) {
   index <- match(as.character(ids), info$study)
-  label <- vapply(seq_along(labels), function(i) if (is.na(index[i])) htmltools::htmlEscape(labels[i]) else
-    as.character(htmltools::tags$button(type = "button", class = "metaui-study-toggle", `aria-expanded` = "false",
-      title = reference_text[index[i]], labels[i])), character(1))
+  # Built as strings: thousands of rows, and tag objects take a second or more.
+  escaped <- htmltools::htmlEscape(as.character(labels))
+  label <- ifelse(is.na(index), escaped, sprintf('<button type="button" class="metaui-study-toggle" aria-expanded="false" title="%s">%s</button>',
+    htmltools::htmlEscape(as.character(reference_text[index]), attribute = TRUE), escaped))
   list(label = label, details = ifelse(is.na(index), "", details_html[index]))
 }

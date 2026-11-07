@@ -881,3 +881,20 @@ document.addEventListener('toggle', function (event) {
     }, 50);
   });
 })(jQuery);
+
+/* Plots are drawn on the server, so it is told whether the page is dark: the same rule as the
+   dark colours in metaui.css (system setting or data-theme, never for an author design). */
+(function ($) {
+  'use strict';
+  var query = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  function dark() {
+    if (document.querySelector('link[href$="app-design.css"], link[href^="metaui-design/"]')) return false;
+    var theme = document.documentElement.getAttribute('data-theme');
+    if (theme === 'dark' || theme === 'light') return theme === 'dark';
+    return !!(query && query.matches);
+  }
+  function send() { if (window.Shiny && Shiny.setInputValue) Shiny.setInputValue('metaui_dark', dark()); }
+  $(document).on('shiny:connected', send);
+  if (query && query.addEventListener) query.addEventListener('change', send);
+  new MutationObserver(send).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})(jQuery);

@@ -30,15 +30,15 @@
 
 /* Dark mode, for the default design only. It follows the reader's system setting, and
    data-theme="light" or "dark" on <html> forces either. An app_design() theme (app-design.css)
-   and the designer's preview (metaui-design/) keep their own colours. Server-drawn plots are
-   light, so --metaui-plot-filter inverts them, keeping their hues. */
+   and the designer's preview (metaui-design/) keep their own colours. The server draws
+   plots in matching dark colours (metaui.js tells it the scheme). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not(:has(link[href$="app-design.css"], link[href^="metaui-design/"])) {
     color-scheme: dark;
     --metaui-ink: #e3e7ea; --metaui-slate: #a1acb6; --metaui-rule: #353d45; --metaui-surface: #1f2429;
     --metaui-background: #191c20; --metaui-panel: #23292f; --metaui-accent: #6cc4a1; --metaui-hover: #94d7bc;
     --metaui-tint: #1d3129; --metaui-bars: #5f6a75; --metaui-button: #0f1d17; --metaui-attention: #f0a765;
-    --metaui-plot-filter: invert(.9) hue-rotate(180deg); --metaui-plot-blend: lighten; --metaui-edge-shade: rgba(0, 0, 0, .6);
+    --metaui-edge-shade: rgba(0, 0, 0, .6);
   }
 }
 :root[data-theme="dark"]:not(:has(link[href$="app-design.css"], link[href^="metaui-design/"])) {
@@ -46,10 +46,8 @@
   --metaui-ink: #e3e7ea; --metaui-slate: #a1acb6; --metaui-rule: #353d45; --metaui-surface: #1f2429;
   --metaui-background: #191c20; --metaui-panel: #23292f; --metaui-accent: #6cc4a1; --metaui-hover: #94d7bc;
   --metaui-tint: #1d3129; --metaui-bars: #5f6a75; --metaui-button: #0f1d17; --metaui-attention: #f0a765;
-  --metaui-plot-filter: invert(.9) hue-rotate(180deg); --metaui-plot-blend: lighten; --metaui-edge-shade: rgba(0, 0, 0, .6);
+  --metaui-edge-shade: rgba(0, 0, 0, .6);
 }
-/* Lighten lets the inverted plot background take on the page's own dark grey. */
-.shiny-plot-output img, .js-plotly-plot { filter: var(--metaui-plot-filter, none); mix-blend-mode: var(--metaui-plot-blend, normal); }
 
 /* Page */
 html, body { background: var(--metaui-background); }
