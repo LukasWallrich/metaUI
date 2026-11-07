@@ -919,7 +919,7 @@ document.addEventListener('toggle', function (event) {
 document.addEventListener('DOMContentLoaded', function () {
   var query = new URLSearchParams(location.search);
   var banner = document.getElementById('metaui_stale_banner');
-  if (!banner || query.get('metaui') !== '1' || !query.has('selection')) return;
+  if (!banner || !query.get('metaui')) return;
   var text = document.getElementById('stale_banner');
   if (text && !text.textContent.trim()) text.textContent = 'Applying the linked selection…';
   banner.classList.add('metaui-visible', 'metaui-restoring');

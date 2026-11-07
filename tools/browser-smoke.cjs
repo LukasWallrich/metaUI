@@ -110,7 +110,7 @@ function reproduce(script, workbook, selected) {
   await page.waitForFunction(()=>/of 16 effects/.test(document.querySelector('#sample_table .dataTables_info')?.textContent||''),null,{timeout:60000});
   // Copy link puts a link to this selection on the clipboard, or shows it for copying by hand.
   await page.locator('.metaui-copy-link').click();
-  await page.waitForFunction(()=>{const s=document.querySelector('.metaui-copy-status');return s&&(s.textContent==='Copied'||/selection=/.test(s.querySelector('input')?.value||''));});
+  await page.waitForFunction(()=>{const s=document.querySelector('.metaui-copy-status');return s&&(s.textContent==='Copied'||/metaui=/.test(s.querySelector('input')?.value||''));});
   await page.getByRole('tab',{name:'Forest plot',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#foreststudies table'));
   // View switches: every effect opens in the browser; the order comes back from the server, still showing every effect.

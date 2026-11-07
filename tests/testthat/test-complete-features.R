@@ -28,15 +28,19 @@ test_that("selection links validate build identity and recover exact categories"
   d <- prepared(x,filters=c("group","year"))
   filters <- list(list(id="metaUI__filter_group",col="metaUI__filter_group",type="categorical"),list(id="metaUI__filter_year",col="metaUI__filter_year",type="numeric"))
   r <- data.frame(id=c(rep("outliers_z_scores",2),"metaUI__filter_group",rep("metaUI__filter_year",2),"metaUI__filter_year_include_NA"),selection=c(-1.8,2.2,"Über & ?",2002,2010,"TRUE"))
-  q <- metaUI:::metaUI_selection_query(r,"abc",.3)
+  q <- metaUI:::metaUI_selection_query(r,"abc",.3,d,filters)
   parsed <- metaUI:::metaUI_parse_selection(q,"abc",d,filters)
   expect_equal(parsed$filters$metaUI__filter_group$selection,"Über & ?")
   expect_equal(parsed$sesoi,.3)
-  expect_null(metaUI:::metaUI_parse_selection(metaUI:::metaUI_selection_query(r,"abc"),"abc",d,filters)$sesoi)
+  expect_null(metaUI:::metaUI_parse_selection(metaUI:::metaUI_selection_query(r,"abc",NULL,d,filters),"abc",d,filters)$sesoi)
   expect_error(metaUI:::metaUI_parse_selection(q,"xyz",d,filters),"different version")
   expect_error(metaUI:::metaUI_parse_selection(paste0(q,"&unknown=1"),"abc",d,filters),"incomplete or damaged")
+  expect_error(metaUI:::metaUI_parse_selection(sub("_", "_9k1_", q),"abc",d,filters),"Unknown")
+  expect_error(metaUI:::metaUI_parse_selection(sub("2k[0-9]+", "2k7", q),"abc",d,filters),"Unknown")
+  expect_error(metaUI:::metaUI_parse_selection(paste0(q,"_2k1"),"abc",d,filters),"incomplete or damaged")
+  expect_error(metaUI:::metaUI_parse_selection(paste0(q,"_zz"),"abc",d,filters),"incomplete or damaged")
   r$selection[r$id=="metaUI__filter_group"] <- "not built"
-  expect_error(metaUI:::metaUI_parse_selection(metaUI:::metaUI_selection_query(r,"abc"),"abc",d,filters),"Unknown")
+  expect_error(metaUI:::metaUI_selection_query(r,"abc",NULL,d,filters),"Unknown")
 })
 
 test_that("Bayesian posterior agrees with an independent normal-mixture quadrature", {
@@ -135,7 +139,7 @@ test_that("review guards reject missing labels, odd option lists and percent-lik
   spec <- metaUI:::metaUI_slider_spec(d$metaUI__filter_year)
   r <- data.frame(id=c(rep("outliers_z_scores",2),"metaUI__filter_group",rep("metaUI__filter_year",2),"metaUI__filter_year_include_NA"),
     selection=c(-1.8,2.2,"50%25",spec$min,spec$max,"TRUE"))
-  parsed <- metaUI:::metaUI_parse_selection(metaUI:::metaUI_selection_query(r,"abc",1/3),"abc",d,filters)
+  parsed <- metaUI:::metaUI_parse_selection(metaUI:::metaUI_selection_query(r,"abc",1/3,d,filters),"abc",d,filters)
   expect_equal(parsed$filters$metaUI__filter_group$selection, "50%25")
   expect_identical(parsed$sesoi, 1/3)
 })

@@ -122,7 +122,7 @@ test_that("narrow intervals get three decimals", {
   expect_equal(metaUI:::metaUI_digits(c(.1, NA), c(.3, NA)), 2L)
 })
 
-test_that("links save only what narrows the data, and read older links too", {
+test_that("links save only what narrows the data, in a short form", {
   x <- data.frame(study = rep(LETTERS[1:6], each = 2), yi = rnorm(12), vi = .02, year = rep(2001:2006, 2), group = factor(rep(c("a", "b", "c"), 4)))
   d <- suppressMessages(prepare_data(x, "study", "yi", variance = "vi", filters = c(Year = "year", Group = "group")))
   filters <- list(list(id = "y", type = "numeric", col = "metaUI__filter_Year"), list(id = "g", type = "categorical", col = "metaUI__filter_Group"))
@@ -135,8 +135,13 @@ test_that("links save only what narrows the data, and read older links too", {
   parsed <- metaUI:::metaUI_parse_selection(narrowed, "key", d, filters)
   expect_equal(parsed$filters$g$selection, "b")
   expect_equal(as.numeric(parsed$filters$y$selection), as.numeric(full$y))
-  old <- paste0("?metaui=1&selection=", utils::URLencode(jsonlite::toJSON(list(dataset = "key", filters = records("b"), sesoi = NULL), auto_unbox = TRUE, null = "null"), reserved = TRUE))
-  expect_equal(metaUI:::metaUI_parse_selection(old, "key", d, filters)$filters$g$selection, "b")
+  expect_identical(everything, "?metaui=key")
+  expect_identical(narrowed, "?metaui=key_3k2")
+  dropped <- metaUI:::metaUI_selection_query(records(c("a", "c")), "0123456789abcdef", .25, d, filters)
+  expect_identical(dropped, "?metaui=01234567_3x2_b0.25")
+  expect_setequal(metaUI:::metaUI_parse_selection(dropped, "0123456789abcdef", d, filters)$filters$g$selection, c("a", "c"))
+  expect_identical(metaUI:::metaUI_parse_selection(metaUI:::metaUI_selection_query(records(NA), "key", NULL, d, filters), "key", d, filters)$filters$g$selection, character())
+  expect_identical(metaUI:::metaUI_link_number(c(1/3, -1.8, 2e8, 1e-20)), c("0.33333333333333331", "-1.8", "200000000", "1e-20"))
 })
 
 test_that("an author can name a custom model's interval", {

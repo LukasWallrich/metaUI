@@ -7,7 +7,7 @@
   var page;
   try { page = window.parent.location; page.search; } catch (e) { return; }
   // Restore: hand the page's ?metaui= query to Shiny before it connects.
-  if (!location.search && /[?&]metaui=1(&|$)/.test(page.search))
+  if (!location.search && /[?&]metaui=[^&]/.test(page.search))
     history.replaceState(null, '', location.pathname + page.search);
   // Publish: updateQueryString() changes the iframe URL; copy it to the page.
   ['replaceState', 'pushState'].forEach(function (method) {
