@@ -340,3 +340,15 @@ test_that("study rows round decimals like effect rows, and breakdowns say what O
   expect_match(html, "1 category has no selected effects", fixed = TRUE)
   expect_false(grepl(">c<", html, fixed = TRUE))
 })
+
+test_that("forest search finds a study's position in either order, and custom models get their descriptions", {
+  rows <- data.frame(kind = "Selected effect", study = c("A", "B", "B", "C"), es = c(.1, .5, .7, .3))
+  studies <- data.frame(study = "B", es = .6, LCL = .4, UCL = .8)
+  expect_equal(metaUI:::metaUI_forest_order(rows, studies), c("A", "B", "C"))
+  expect_equal(metaUI:::metaUI_forest_order(rows, studies, "estimate"), c("B", "C", "A"))
+  help <- metaUI:::metaUI_custom_model_help(TRUE, c("My model" = 'Uses "rho" = .6', Other = NA))
+  expect_match(help, "<dt>My model</dt><dd>Uses &quot;rho&quot; = .6</dd>", fixed = TRUE)
+  expect_match(help, "Rows not described here", fixed = TRUE)
+  expect_false(grepl("Rows not described", metaUI:::metaUI_custom_model_help(TRUE, c("My model" = "Described.")), fixed = TRUE))
+  expect_equal(metaUI:::metaUI_custom_model_help(FALSE, character()), "")
+})

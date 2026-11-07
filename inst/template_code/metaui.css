@@ -28,6 +28,29 @@
   --metaui-mark-y: calc(var(--metaui-row) + .65rem);
 }
 
+/* Dark mode, for the default design only. It follows the reader's system setting, and
+   data-theme="light" or "dark" on <html> forces either. An app_design() theme (app-design.css)
+   and the designer's preview (metaui-design/) keep their own colours. Server-drawn plots are
+   light, so --metaui-plot-filter inverts them, keeping their hues. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not(:has(link[href$="app-design.css"], link[href^="metaui-design/"])) {
+    color-scheme: dark;
+    --metaui-ink: #e3e7ea; --metaui-slate: #a1acb6; --metaui-rule: #353d45; --metaui-surface: #1f2429;
+    --metaui-background: #191c20; --metaui-panel: #23292f; --metaui-accent: #6cc4a1; --metaui-hover: #94d7bc;
+    --metaui-tint: #1d3129; --metaui-bars: #5f6a75; --metaui-button: #0f1d17; --metaui-attention: #f0a765;
+    --metaui-plot-filter: invert(.9) hue-rotate(180deg); --metaui-plot-blend: lighten; --metaui-edge-shade: rgba(0, 0, 0, .6);
+  }
+}
+:root[data-theme="dark"]:not(:has(link[href$="app-design.css"], link[href^="metaui-design/"])) {
+  color-scheme: dark;
+  --metaui-ink: #e3e7ea; --metaui-slate: #a1acb6; --metaui-rule: #353d45; --metaui-surface: #1f2429;
+  --metaui-background: #191c20; --metaui-panel: #23292f; --metaui-accent: #6cc4a1; --metaui-hover: #94d7bc;
+  --metaui-tint: #1d3129; --metaui-bars: #5f6a75; --metaui-button: #0f1d17; --metaui-attention: #f0a765;
+  --metaui-plot-filter: invert(.9) hue-rotate(180deg); --metaui-plot-blend: lighten; --metaui-edge-shade: rgba(0, 0, 0, .6);
+}
+/* Lighten lets the inverted plot background take on the page's own dark grey. */
+.shiny-plot-output img, .js-plotly-plot { filter: var(--metaui-plot-filter, none); mix-blend-mode: var(--metaui-plot-blend, normal); }
+
 /* Page */
 html, body { background: var(--metaui-background); }
 sub, sup { line-height: 0; }
@@ -148,12 +171,16 @@ html.metaui-js .irs--shiny .irs-grid { top: 16px; }
 .bootstrap-select .dropdown-menu { font-size: .9375rem; }
 .bootstrap-select .dropdown-menu > li > a { color: var(--metaui-ink); }
 .bootstrap-select .dropdown-menu > li > a:hover { background: var(--metaui-tint); }
+.dropdown-menu { background: var(--metaui-panel); border-color: var(--metaui-rule); }
+.dropdown-menu > .active > a, .dropdown-menu > .active > a:hover, .dropdown-menu > .active > a:focus, .dropdown-menu > li > a:focus { background: var(--metaui-tint); color: var(--metaui-ink); }
 .bs-actionsbox .btn { padding: 4px 8px; font-size: .875rem; background: var(--metaui-panel); color: var(--metaui-accent); border-color: var(--metaui-rule); }
 .form-control { border-radius: var(--metaui-radius); border-color: var(--metaui-rule); background: var(--metaui-panel); color: var(--metaui-ink); box-shadow: none; font-size: .9375rem; }
 .selectize-input, .selectize-input.full, .selectize-input.input-active, .selectize-dropdown { background: var(--metaui-panel); color: var(--metaui-ink); border-color: var(--metaui-rule); border-radius: var(--metaui-radius); box-shadow: none; font-size: .9375rem; }
 .selectize-input input { color: var(--metaui-ink) !important; }
 .selectize-dropdown .active, .selectize-dropdown .selected { background: var(--metaui-tint); color: var(--metaui-ink); }
-.selectize-control.single .selectize-input::after { border-top-color: var(--metaui-ink); }
+.selectize-control.single .selectize-input.input-active, .selectize-input.full { background: var(--metaui-panel); }
+.selectize-control.single .selectize-input:not(.no-arrow)::after { border-top-color: var(--metaui-ink); }
+.selectize-control.single .selectize-input:not(.no-arrow).dropdown-active::after { border-color: transparent transparent var(--metaui-ink); }
 .form-control::placeholder { color: var(--metaui-slate); opacity: 1; }
 .form-control[disabled], .form-control[readonly] { background: var(--metaui-surface); color: var(--metaui-ink); }
 
@@ -449,6 +476,12 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 .metaui-help > summary::before, .metaui-selection-details > summary::before { content: ''; display: inline-block; width: 0; height: 0; margin-right: 7px; vertical-align: 1px; border-left: 5px solid currentColor; border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform .12s; }
 .metaui-help[open] > summary::before, .metaui-selection-details[open] > summary::before { transform: rotate(90deg); }
 .metaui-help > summary:hover, .metaui-selection-details > summary:hover { color: var(--metaui-hover); text-decoration: underline; }
+/* What a table's "N other categories" row holds: a quiet aside under the table, still marked
+   as a disclosure by its triangle and underlined on hover. */
+.metaui-help.metaui-other-levels { margin: 2px 0 10px; font-size: .8125rem; }
+.metaui-other-levels > summary { color: var(--metaui-slate); }
+.metaui-other-levels > summary:hover { color: var(--metaui-ink); }
+.metaui-other-levels p { margin: 4px 0 0; font-size: inherit; }
 .metaui-help dt { margin-top: 8px; font-weight: 600; }
 .metaui-help dd { margin-left: 0; font-size: .875rem; line-height: 1.45; }
 .metaui-help p { margin: 6px 0; font-size: .875rem; line-height: 1.45; }
@@ -469,13 +502,15 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 /* Moderation */
 .metaui-moderation-finding { font-size: 1.0625rem; margin: 12px 0; max-width: 72ch; }
 .metaui-moderation-finding b { font-weight: 600; }
-/* Numeric moderators: the table keeps its full width, and the plot moves below it when the
-   two do not fit side by side. */
+/* Numeric moderators: the table side by side with the plot only when the whole table and a plot
+   of at least 360 px fit; otherwise the plot moves below. The table's width is set by its content
+   alone (a percentage width there sizes it differently across browsers and can clip it); on a
+   line of its own it fills the line, wrapping its labels only if the window is narrower still. */
 .metaui-moderation-grid { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
 .metaui-moderation-grid > * { min-width: 0; }
-.metaui-moderation-grid > :first-child { flex: 0 0 auto; max-width: 100%; overflow-x: auto; }
-.metaui-moderation-grid > :nth-child(2) { flex: 1 1 400px; }
-.metaui-moderation-grid .table { width: 100%; }
+.metaui-moderation-grid > :first-child { flex: 1 0 auto; width: max-content; max-width: 100%; overflow-x: auto; }
+.metaui-moderation-grid > :nth-child(2) { flex: 1000 1 360px; }
+.metaui-moderation-grid .table.metaui-stats { width: auto !important; min-width: 100%; }
 .metaui-moderation-grid > .metaui-key { flex: 1 1 100%; margin-top: -8px; }
 .metaui-moderation-wide .table { width: 100%; }
 .well + .metaui-moderation-grid { margin-top: 12px; }
@@ -525,7 +560,7 @@ body .dataTables_wrapper .dataTables_paginate .ellipsis { color: var(--metaui-sl
 #sample_table thead th { overflow-wrap: normal; word-break: normal; hyphens: manual; }
 /* Tables wider than the page (metaui.js marks them): a shade at the right edge that the
    content's own end covers once scrolled there, and a note that stays at the left. */
-.dataTables_wrapper.metaui-overflow { background: linear-gradient(to left, var(--metaui-background) 40%, transparent) right / 48px 100% no-repeat local, linear-gradient(to left, color-mix(in srgb, var(--metaui-ink) 22%, transparent), transparent) right / 36px 100% no-repeat scroll; }
+.dataTables_wrapper.metaui-overflow { background: linear-gradient(to left, var(--metaui-background) 40%, transparent) right / 48px 100% no-repeat local, linear-gradient(to left, var(--metaui-edge-shade, color-mix(in srgb, var(--metaui-ink) 22%, transparent)), transparent) right / 36px 100% no-repeat scroll; }
 .metaui-scroll-note { position: sticky; left: 0; width: max-content; max-width: 100%; margin: 0 0 4px; font-size: .8125rem; color: var(--metaui-slate); }
 .metaui-scroll-note[hidden] { display: none; }
 body table.dataTable thead th:last-child { padding-right: 14px !important; }
@@ -576,9 +611,9 @@ h4.metaui-study-heading { font-size: .9375rem; font-weight: 600; margin: 12px 0 
 a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, .metaui-scroll:focus-visible {
   outline: 2px solid var(--metaui-accent); outline-offset: 2px;
 }
-/* ion.rangeSlider removes the outline with !important; restore a visible focus ring */
-.irs-line:focus-visible { outline: 2px solid var(--metaui-accent) !important; outline-offset: 5px; }
-.irs:focus-within .irs-handle { box-shadow: 0 0 0 2px var(--metaui-tint), 0 0 0 4px var(--metaui-accent) !important; }
+/* Each slider handle takes the keyboard focus itself (metaui.js); ion.rangeSlider removes outlines. */
+.irs--shiny .irs-handle:focus { outline: none; }
+.irs--shiny .irs-handle:focus-visible { box-shadow: 0 0 0 2px var(--metaui-background), 0 0 0 4px var(--metaui-accent) !important; }
 
 /* Author-provided filter help uses an accessible inline disclosure */
 .metaui-filter-help { position: relative; display: inline-block; width: 16px; height: 16px; margin-left: 3px; padding: 0; border: 1px solid var(--metaui-slate); border-radius: 50%; background: transparent; color: var(--metaui-slate); font-size: .6875rem; font-weight: 600; line-height: 14px; text-align: center; vertical-align: 1px; }
@@ -595,7 +630,6 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .container-fluid > .row > .col-sm-3:has(> form.well) + .col-sm-9 { padding-left: 20px; padding-right: 20px; }
   .metaui-header { padding-left: 20px; padding-right: 20px; }
   .container-fluid > .row > .col-sm-3:has(> form.well) { flex-basis: 256px; width: 256px; }
-  .metaui-moderation-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Short windows: tighter filters, so more of them fit above the update bar. */
@@ -746,3 +780,8 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
 .dataTables_wrapper .metaui-dt-top > div { float: none !important; margin: 0 !important; padding: 0 !important; }
 .dataTables_wrapper .metaui-dt-bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-top: 8px; }
 .dataTables_wrapper .metaui-dt-bottom > div { float: none !important; padding: 0 !important; }
+
+/* The study a reader searched for in the forest plot. */
+.metaui-forest-find { max-width: 420px; margin: 4px 0 10px; }
+table.metaui-forest tr.metaui-found > td { background: var(--metaui-tint); }
+table.metaui-forest tr.metaui-found > td:first-child { box-shadow: inset 3px 0 0 var(--metaui-accent); }

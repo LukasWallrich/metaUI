@@ -94,7 +94,8 @@ test_that("directional bias fits match explicitly oriented reference fits", {
   expect_equal(plus$fit_es, c(ref_p$est,ref_s$output_adj$par[2]),tolerance=1e-8)
   x$yi <- -x$yi
   minus <- fit(prepared(x,direction="negative"),m)$table
-  expect_equal(minus$status, c("ok","ok"))
+  # Reflection changes nothing, including a fit judged unreliable.
+  expect_equal(minus$status, plus$status)
   expect_equal(minus$es,-plus$es,tolerance=1e-8)
   expect_equal(minus$LCL,-plus$UCL,tolerance=1e-8)
   # Same right-sided assumption on reflected data is a different model scenario.
@@ -239,6 +240,6 @@ test_that("slider specs enclose data with an integer, legible grid", {
     if (all(x == round(x))) expect_identical(s$step, 1)
   }
   slider <- as.character(metaUI:::metaUI_slider_input("z", "z", metaUI:::metaUI_slider_spec(c(-2.17, .966))))
-  expect_match(slider, 'data-min="-2.5"'); expect_match(slider, 'data-max="1"')
-  expect_match(slider, 'data-grid-num="7"'); expect_equal(lengths(regmatches(slider, gregexpr("data-grid-num", slider))), 1)
+  expect_match(slider, 'data-min="-2.2"'); expect_match(slider, 'data-max="1"')
+  expect_match(slider, 'data-grid-num="4"'); expect_equal(lengths(regmatches(slider, gregexpr("data-grid-num", slider))), 1)
 })

@@ -123,7 +123,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'
 #' @param dataset Dataframe as returned from [prepare_data()]
 #' @param eff_size_type_label The label to be used to describe the effect size. If NA, effect type code from dataset is used.
-#' @param models The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. Custom models can add an `interval_type` column naming their interval, such as "Confidence interval"; otherwise the app says that its type is unknown. If you want to change the default models, have a look at the vignette and/or the [get_model_tibble()] documentation.
+#' @param models The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. Custom models can add an `interval_type` column naming their interval, such as "Confidence interval"; otherwise the app says that its type is unknown. A `description` column gives a sentence that the app's Methods section shows for that model. If you want to change the default models, have a look at the vignette and/or the [get_model_tibble()] documentation.
 #' Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 #' this must assign the tibble to a variable called models_to_run (i.e. using <-).
 #' @param primary_model Optional name of the one model (a `name` in `models`) that the authors treat as their
@@ -353,7 +353,10 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
   file.copy(system.file("COPYRIGHTS", package = "metaUI"), file.path(save_to_folder, "COPYRIGHTS"), overwrite = TRUE)
   # Could consider keeping all labels in this file - but then ui.R needs less readable glue::glue syntax
-  writeLines(labels_and_options(dataset_name, correlation, primary_model, bayesian = !is.null(bayesian), correlations = identical(dataset$metaUI__es_type[1], "ZCOR"), custom_models = !package_models, effects = nrow(dataset), studies = length(unique(dataset$metaUI__study_id)),
+  writeLines(labels_and_options(dataset_name, correlation, primary_model, bayesian = !is.null(bayesian), correlations = identical(dataset$metaUI__es_type[1], "ZCOR"), custom_models = !package_models,
+    model_descriptions = { custom <- models_to_run[!models_to_run$name %in% opts$known_interval_models, , drop = FALSE]
+      stats::setNames(if ("description" %in% names(custom)) as.character(custom$description) else rep(NA_character_, nrow(custom)), custom$name) },
+    effects = nrow(dataset), studies = length(unique(dataset$metaUI__study_id)),
     strip = metaUI_effects_strip(metaUI_show(dataset$metaUI__effect_size, dataset), eff_size_type_label),
     citation = if (is.null(about_args$citation)) "" else as.character(about_args$citation), intro = if (is.null(opts$intro)) "" else as.character(opts$intro)), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))

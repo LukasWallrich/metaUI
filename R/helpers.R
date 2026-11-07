@@ -32,6 +32,14 @@ metaUI_slider_spec <- function(x, integer = NULL) {
     steps <- round(tick / c(10, 20, 50, 100), digits + 2)
     steps[c(steps <= (hi - lo) / 50, TRUE)][1]
   }
+  # The ends are the data's own range, to the step, so a slider never suggests values beyond it
+  # (a Year slider ending in a future year, say). The grid keeps whole steps between its marks.
+  places <- max(0, ceiling(-log10(step)) + 1)
+  min_value <- max(min_value, round(floor(lo / step + 1e-9) * step, places))
+  max_value <- min(max_value, round(ceiling(hi / step - 1e-9) * step, places))
+  positions <- round((max_value - min_value) / step)
+  ticks <- c(Filter(function(t) positions %% t == 0, seq_len(max(1, ticks)))[-1], 1)
+  ticks <- max(ticks)
   list(min = min_value, max = max_value, step = step, ticks = ticks)
 }
 

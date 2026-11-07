@@ -786,3 +786,98 @@ document.addEventListener('toggle', function (event) {
     if (go && !go.disabled) go.click();
   });
 })(jQuery);
+
+/* Range sliders for keyboard and screen readers. ion.rangeSlider gives its two handles one
+   keyboard stop (the track) and no names, so each handle becomes its own named slider. The arrow
+   keys, Page Up/Down, Home and End move it through the slider's own API, which fires the change
+   that Shiny listens to. An update redraws the whole slider, so the roles are reapplied after
+   every redraw. */
+(function ($) {
+  'use strict';
+  function instance(input) { return input && $(input).data('ionRangeSlider'); }
+  // The filter's name, without the chosen range and help mark that metaui adds to its label.
+  function filterName(input) {
+    var box = input.closest('.shiny-input-container');
+    var label = document.getElementById(input.id + '-label') || (box && box.querySelector('.control-label'));
+    if (!label) return input.id;
+    var copy = label.cloneNode(true);
+    copy.querySelectorAll('.metaui-range, .metaui-filter-help').forEach(function (el) { el.remove(); });
+    return copy.textContent.replace(/\s+/g, ' ').trim();
+  }
+  function shown(slider, value) {
+    try { return String(slider.decorate(slider._prettify(value), value)); } catch (e) { return String(value); }
+  }
+  function enhance(input) {
+    var slider = instance(input), box = input.previousElementSibling;
+    if (!slider || !box || !box.classList.contains('irs')) return;
+    var r = slider.result, double = slider.options.type === 'double', name = filterName(input);
+    // The readonly field repeats the handles' values, and the track and scale only draw them.
+    input.setAttribute('aria-hidden', 'true');
+    box.querySelectorAll('.irs-line, .irs-grid').forEach(function (el) { el.setAttribute('aria-hidden', 'true'); el.setAttribute('tabindex', '-1'); });
+    [['from', '.irs-handle.from'], ['to', '.irs-handle.to'], ['from', '.irs-handle.single']].forEach(function (pair) {
+      var handle = box.querySelector(pair[1]), end = pair[0];
+      if (!handle) return;
+      handle.dataset.metauiEnd = end;
+      handle.setAttribute('role', 'slider');
+      handle.setAttribute('tabindex', slider.options.disable ? '-1' : '0');
+      handle.setAttribute('aria-label', double ? name + (end === 'from' ? ', lower end' : ', upper end') : name);
+      handle.setAttribute('aria-orientation', 'horizontal');
+      // Each end can move only up to the other.
+      handle.setAttribute('aria-valuemin', end === 'to' ? r.from : r.min);
+      handle.setAttribute('aria-valuemax', end === 'from' && double ? r.to : r.max);
+      handle.setAttribute('aria-valuenow', r[end]);
+      handle.setAttribute('aria-valuetext', shown(slider, r[end]));
+      handle.toggleAttribute('aria-disabled', !!slider.options.disable);
+    });
+  }
+  function enhanceAll() { document.querySelectorAll('input.js-range-slider').forEach(enhance); }
+  $(document).on('keydown', '.irs-handle[role="slider"]', function (event) {
+    var box = this.closest('[class*="js-irs-"]'), input = box && box.nextElementSibling, slider = instance(input);
+    if (!slider || slider.options.disable) return;
+    var r = slider.result, end = this.dataset.metauiEnd, step = slider.options.step || 1;
+    var page = Math.max(step, Math.round((r.max - r.min) / 10 / step) * step);
+    var moves = { ArrowLeft: -step, ArrowDown: -step, ArrowRight: step, ArrowUp: step, PageDown: -page, PageUp: page };
+    var value;
+    if (event.key in moves) value = r[end] + moves[event.key];
+    else if (event.key === 'Home') value = r.min;
+    else if (event.key === 'End') value = r.max;
+    else return;
+    event.preventDefault();
+    var low = end === 'to' ? r.from : r.min, high = end === 'from' && slider.options.type === 'double' ? r.to : r.max;
+    var decimals = (String(step).split('.')[1] || '').length;
+    value = Number(Math.min(high, Math.max(low, r.min + Math.round((value - r.min) / step) * step)).toFixed(decimals));
+    if (value === r[end]) return;
+    var change = {};
+    change[end] = value;
+    slider.update(change);
+    // The redrawn slider has new handles: name them and keep the focus on this end.
+    enhance(input);
+    var handle = input.previousElementSibling.querySelector('[data-metaui-end="' + end + '"]');
+    if (handle) handle.focus();
+  });
+  var timer;
+  document.addEventListener('DOMContentLoaded', function () {
+    new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var target = mutations[i].target;
+        if (target.closest && target.closest('.shiny-input-container')) { clearTimeout(timer); timer = setTimeout(enhanceAll, 0); return; }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+  $(document).on('shiny:bound shiny:inputchanged', function () { clearTimeout(timer); timer = setTimeout(enhanceAll, 0); });
+})(jQuery);
+
+/* Find a study (forest plot): once its page is drawn, the marked study scrolls into view. */
+(function ($) {
+  'use strict';
+  var last = null;
+  $(document).on('shiny:value', function (event) {
+    if (event.target.id !== 'foreststudies') return;
+    setTimeout(function () {
+      var found = document.querySelector('#foreststudies .metaui-found');
+      var name = found ? found.textContent : null;
+      if (found && name !== last) found.scrollIntoView({ block: 'center' });
+      last = name;
+    }, 50);
+  });
+})(jQuery);

@@ -176,10 +176,18 @@ opening_precompute <- function(app_dir, enabled = TRUE) {
       captured$value <<- get("estimatesreactive")()
       captured$html <<- list(selection_overview = output$selection_overview,
         primary_estimate = output$primary_estimate$html, effectestimate = output$effectestimate)
+      # Every moderator's test for the default selection, so that Moderation opens at once.
+      if (exists("moderator_fit")) {
+        for (moderator in grep("^metaUI__filter_", names(env$metaUI__df), value = TRUE)) {
+          session$setInputs(moderator = moderator)
+          try(get("moderator_fit")(), silent = TRUE)
+        }
+        captured$moderators <<- as.list(get("moderator_store"))
+      }
     })
     captured$value$precomputed <- TRUE
     list(files = env$metaUI_opening_files("."), ui = unname(tools::md5sum("ui.R")),
-      fit = list(key = captured$key, value = captured$value), html = captured$html)
+      fit = list(key = captured$key, value = captured$value), html = captured$html, moderators = captured$moderators)
   }), error = function(e) {
     message("Default results not precomputed; the app will fit them when first opened: ", conditionMessage(e))
     NULL

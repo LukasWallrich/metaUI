@@ -392,6 +392,7 @@ metaUI_reader_messages <- c(
   "Bayesian analysis requires at least two studies" = "Needs at least two studies.",
   "p-value intervals contains no effect sizes" = "No studies fall in one of the p-value ranges the model compares, so its estimate is unstable.",
   "p-value intervals contains three or fewer effect sizes" = "Few studies fall in one of the p-value ranges the model compares, so its estimate may be unstable.",
+  "Unreliable fit" = "The fit is unreliable: some of its standard errors could not be computed.",
   "NaNs produced" = "Some standard errors could not be computed, a sign that the fit is unreliable.")
 metaUI_reader_message <- function(x) {
   hit <- names(metaUI_reader_messages)[vapply(names(metaUI_reader_messages), grepl, logical(1), x = x, fixed = TRUE)]
@@ -403,7 +404,12 @@ metaUI_reader_reason <- function(reason, warnings = "") {
   explained <- vapply(parts, function(w) startsWith(metaUI_reader_message(w), "Needs"), logical(1))
   if (any(explained)) metaUI_reader_message(parts[explained][1]) else metaUI_reader_message(reason)
 }
-metaUI_reader_warnings <- function(warnings) paste(unique(vapply(strsplit(warnings, "; ", fixed = TRUE)[[1]], metaUI_reader_message, character(1))), collapse = " ")
+# A failed row's reason already says that its standard errors could not be computed.
+metaUI_reader_warnings <- function(warnings, failed = FALSE) {
+  parts <- strsplit(warnings, "; ", fixed = TRUE)[[1]]
+  if (failed) parts <- parts[!grepl("NaNs produced", parts, fixed = TRUE)]
+  paste(unique(vapply(parts, metaUI_reader_message, character(1))), collapse = " ")
+}
 
 # Reader table of model estimates: one row per model, every model named, with reasons
 # where a model was not estimated. Downloads keep the full table.
@@ -426,8 +432,9 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     label <- paste0(esc(row$Model), if (i %in% first) paste0(' <span class="metaui-primary-tag">primary, ', if (row$aggregated) "study-level" else "effect-level", " fit</span>"), if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"),
       # Confidence intervals need no note; only the rows that differ from them do.
       if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"))
-    interval <- if (is.na(row$LCL) && is.na(row$UCL)) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
-    unit <- metaUI_count_unit(row, studies)
+    # A row that is not estimated shows no numbers, even where an unreliable fit left some.
+    interval <- if (!ok || (is.na(row$LCL) && is.na(row$UCL))) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
+    unit <- if (ok) metaUI_count_unit(row, studies) else ""
     track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = i %in% first), "</td>")
       else paste0('<td class="metaui-reason-cell"><b>', if (identical(row$status, "failed")) "Could not be estimated:" else "Not estimated:", "</b> ", esc(metaUI_reader_reason(row$reason, row$warnings)), "</td>")
     position <- match(i, order)
@@ -437,15 +444,15 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     group <- if (opens_group) paste0('<tr class="metaui-group-row"><td colspan="5">',
         if (length(first) && any(table$aggregated[first] == row$aggregated)) paste("Other", level) else paste0(toupper(substr(level, 1, 1)), substring(level, 2)),
         '</td><td class="metaui-track-cell">', metaUI_track_row(scale, NA_real_, NA_real_, NA_real_, bound, ref = ref), "</td></tr>")
-    paste0(group, '<tr', if (i %in% first) ' class="metaui-primary-row"', "><td>", label, '</td><td class="num">', fmt(row$es),
-      '</td><td class="num">', interval, '</td><td class="num metaui-k">', if (is.na(row$k)) "" else row$k,
+    paste0(group, '<tr', if (i %in% first) ' class="metaui-primary-row"', "><td>", label, '</td><td class="num">', if (ok) fmt(row$es) else "",
+      '</td><td class="num">', interval, '</td><td class="num metaui-k">', if (is.na(row$k) || !ok) "" else row$k,
       '</td><td class="metaui-unit">', unit, "</td>", track, "</tr>")
   }, character(1))
   interval_head <- if (length(types) && all(grepl("^Confidence", types))) "95% CI" else "95% interval"
   others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Other estimators answer different questions and are not interchangeable with the primary analysis.',
     if (!is.null(ref)) paste0(" The diamond and dashed line mark the primary estimate and its ", interval_head, "."),
     if (any(grepl("trim", table$Model, ignore.case = TRUE))) " The trim-and-fill count includes imputed studies.", "</p>")
-  notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(vapply(table$warnings[warned], metaUI_reader_warnings, character(1))), "</li>", collapse = ""), "</ol>")
+  notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(vapply(warned, function(i) metaUI_reader_warnings(table$warnings[i], table$status[i] != "ok"), character(1))), "</li>", collapse = ""), "</ol>")
   paste0('<table class="table metaui-estimates metaui-models metaui-custom"><thead><tr data-head="Model, estimate [', interval_head, ']"><th>Model</th><th class="num">Estimate</th><th class="num">',
     interval_head, '</th><th class="num metaui-k" title="Number of effects or studies the model reports; trim-and-fill includes imputed studies."><i>k</i></th><th></th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
     paste(rows, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="5"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", others, notes)
@@ -465,7 +472,19 @@ metaUI_effect_details <- function(df) {
 }
 
 # Only one page of studies is drawn and sent; sorting and paging come back to the server.
-metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL, page = 1L, sort = "name", page_size = 50L) {
+# The studies in the order the forest plot pages through them.
+metaUI_forest_order <- function(rows, studies = NULL, sort = "name") {
+  effects <- rows[rows$kind == "Selected effect", , drop = FALSE]
+  groups <- rle(as.character(effects$study))
+  ends <- cumsum(groups$lengths); starts <- ends - groups$lengths + 1L
+  if (identical(sort, "estimate")) {
+    estimate <- ifelse(groups$lengths > 1L, studies$es[match(groups$values, studies$study)], effects$es[starts])
+    groups$values[order(-estimate, groups$values)]
+  } else groups$values
+}
+
+# found: a study the reader searched for, marked so that it stands out on its page.
+metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL, page = 1L, sort = "name", page_size = 50L, found = NULL) {
   fmt <- function(x, digits = 2L) metaUI_minus(formatC(x, format = "f", digits = digits))
   esc <- function(x) htmltools::htmlEscape(as.character(x))
   # Combined rows count too: correlated weights can put them beyond their effects.
@@ -502,13 +521,14 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL,
     one <- function(i, label, class) paste0('<tr class="', class, '" data-es="', effects$es[i], '"><td>', label, "</td>", values(effects[i, ]),
       '<td class="metaui-track-cell">', metaUI_track_row(scale, effects$es[i], effects$LCL[i], effects$UCL[i], size = size[i], ref = ref), "</td></tr>")
     name <- groups$values[s]
-    if (length(index) == 1L) return(one(index, esc(name), "metaui-forest-single"))
+    mark <- if (identical(name, found)) " metaui-found" else ""
+    if (length(index) == 1L) return(one(index, esc(name), paste0("metaui-forest-single", mark)))
     labels <- substring(effects$label[index], nchar(name) + 3L)
     # Several effects: one combined row, which opens to show them (metaui.js).
     combined <- match(name, studies$study)
     head <- paste0('<button type="button" class="metaui-forest-toggle" aria-expanded="false">', esc(name), ' <span class="metaui-forest-count">', length(index), " effects</span></button>")
-    paste0(if (is.na(combined)) paste0('<tr class="metaui-forest-study"><td colspan="3">', head, "</td>", grid, "</tr>")
-      else paste0('<tr class="metaui-forest-study" data-es="', studies$es[combined], '"><td>', head, "</td>", values(studies[combined, ]), '<td class="metaui-track-cell">',
+    paste0(if (is.na(combined)) paste0('<tr class="metaui-forest-study', mark, '"><td colspan="3">', head, "</td>", grid, "</tr>")
+      else paste0('<tr class="metaui-forest-study', mark, '" data-es="', studies$es[combined], '"><td>', head, "</td>", values(studies[combined, ]), '<td class="metaui-track-cell">',
         metaUI_track_row(scale, studies$es[combined], studies$LCL[combined], studies$UCL[combined], size = study_size[combined], ref = ref, combined = TRUE), "</td></tr>"),
       paste(vapply(seq_along(index), function(j) {
         detail <- if (is.null(details)) "" else details[paste(effects$study[index[j]], effects$effect_id[index[j]])]
@@ -764,6 +784,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
     result <- c(es = NA_real_, LCL = NA_real_, UCL = NA_real_, k = NA_real_)
     status <- "unsupported"
     reflected <- FALSE
+    prediction <- c(NA_real_, NA_real_)
     if (is.null(reason)) {
       started <- proc.time()[["elapsed"]]
       reason <- tryCatch({
@@ -785,6 +806,17 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
         result <- candidate
         if (reflected) result[c("es", "LCL", "UCL")] <- c(-result["es"], -result["UCL"], -result["LCL"])
         status <- "ok"
+        # NaN standard errors mean the fit sits where its curvature is invalid (a variance at its
+        # boundary, say): its estimate and interval are not trustworthy. Downloads keep them, marked.
+        if (any(grepl("NaNs produced", warnings, fixed = TRUE))) {
+          status <- "failed"
+          stop("Unreliable fit: some standard errors could not be computed (NaNs produced). Do not interpret its estimate or interval.")
+        }
+        # Where true effects are expected to lie: the prediction interval of intercept-only metafor models.
+        if (inherits(env$mod, "rma") && is.null(env$mod$formula.mods) && NCOL(env$mod$X) == 1L) {
+          pred <- tryCatch(suppressWarnings(stats::predict(env$mod)), error = function(e) NULL)
+          if (!is.null(pred$pi.lb) && all(is.finite(c(pred$pi.lb, pred$pi.ub)))) prediction <- if (reflected) -c(pred$pi.ub, pred$pi.lb) else c(pred$pi.lb, pred$pi.ub)
+        }
         if (bayesian || (!spec$aggregated && !reflected && spec$code %in% c(metaUI_code_multilevel, metaUI_code_rve))) fits[[i]] <<- env$mod
         ""
       }, error = function(e) { status <<- "failed"; conditionMessage(e) })
@@ -801,8 +833,9 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
       if (!is.null(spec[["interval_type"]]) && !is.na(spec[["interval_type"]])) as.character(spec[["interval_type"]]) else
       if (is.na(metaUI_model_role(spec, NA_character_))) "Author-defined interval (type and coverage unknown)" else
       "Confidence interval (coverage model-dependent)"
+    row$PI_LCL <- prediction[1]; row$PI_UCL <- prediction[2]
     row$fit_es <- row$es; row$fit_LCL <- row$LCL; row$fit_UCL <- row$UCL
-    if (df$metaUI__es_type[1] == "ZCOR") row[c("es", "LCL", "UCL")] <- lapply(row[c("es", "LCL", "UCL")], tanh)
+    if (df$metaUI__es_type[1] == "ZCOR") row[c("es", "LCL", "UCL", "PI_LCL", "PI_UCL")] <- lapply(row[c("es", "LCL", "UCL", "PI_LCL", "PI_UCL")], tanh)
     row
   })
   list(df_agg = df_agg, table = dplyr::bind_rows(rows), fits = fits, fit_data = df)

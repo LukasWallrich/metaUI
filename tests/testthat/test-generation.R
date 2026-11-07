@@ -119,8 +119,8 @@ test_that("uploads retain extreme/missing numeric inputs and restored picker sel
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   ui_code <- paste(readLines("ui.R"), collapse = "\n")
   expect_match(ui_code, "metaUI__filter_Year_include_NA")
-  # Integer filters get whole-number bounds, steps and an integer grid.
-  expect_match(ui_code, "spec = list(min = 2000, max = 2016, step = 1, ticks = 8)", fixed = TRUE)
+  # Integer filters get the data's whole-number range, steps and an integer grid.
+  expect_match(ui_code, "spec = list(min = 2001, max = 2016, step = 1, ticks = 5)", fixed = TRUE)
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Year = c(2001, 2016),
       metaUI__filter_Group = paste0("G", 1:8), metaUI__filter_Year_include_NA = TRUE)
@@ -340,7 +340,7 @@ test_that("filters with quoted levels and URL columns generate a working app", {
   # dom = "t" hides the pager, so paging would silently drop levels beyond the 10th
   expect_true(any(grepl("metaUI_moderator_html(", server_code, fixed = TRUE)))
   # URL and Study cells are built (and escaped) with htmltools and must not be re-escaped
-  expect_true(any(grepl('escape = setdiff(names(out), c("URL", "Study", "metaUI__details"))', server_code, fixed = TRUE)))
+  expect_true(any(grepl('escape = setdiff(names(out), c("URL", "Study", "Source", "metaUI__details"))', server_code, fixed = TRUE)))
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
   env <- new.env(parent = globalenv())
   sys.source("global.R", env) # fails to parse if a level is written unescaped
