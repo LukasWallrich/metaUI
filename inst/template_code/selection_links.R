@@ -39,8 +39,8 @@ metaUI_parse_selection <- function(query, dataset_key, built, filters = list()) 
   if (nchar(query, type = "bytes") > 6000L) stop("Selection URL exceeds the supported length.")
   params <- shiny::parseQueryString(query)
   if (anyDuplicated(names(params)) || !setequal(names(params), c("metaui", "selection")) || !identical(params$metaui, "1"))
-    stop("Unrecognised selection URL version or parameters; no filters were applied.")
-  payload <- jsonlite::fromJSON(params$selection)
+    stop("The link is incomplete or damaged.")
+  payload <- tryCatch(jsonlite::fromJSON(params$selection), error = function(e) stop("The link is incomplete or damaged.", call. = FALSE))
   if (!is.list(payload) || !setequal(names(payload), c("dataset", "filters", "sesoi")) ||
       !identical(payload$dataset, dataset_key)) stop("This link belongs to a different dataset/build or has an invalid payload.")
   records <- payload$filters

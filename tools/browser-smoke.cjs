@@ -91,7 +91,7 @@ function reproduce(script, workbook, selected) {
   assert(await page.evaluate(()=>window.__metauiOpening) > 0, 'the fixture should open on saved results');
   assert.deepEqual(await page.evaluate(()=>window.__metauiBlanked), [], 'saved opening results were blanked');
   await page.getByText('Selection details', {exact:true}).click();
-  assert((await page.locator('#effectestimate').innerText()).includes('unsupported'));
+  assert((await page.locator('#effectestimate').innerText()).includes('Not estimated:'));
   await page.locator('#go').click();
   await page.waitForFunction(()=>/Reused|Precomputed/.test(document.querySelector('#calculation_status')?.textContent));
   // Tabs are drawn in the background, so a reader who waits opens them finished.

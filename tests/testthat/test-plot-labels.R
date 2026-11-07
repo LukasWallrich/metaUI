@@ -319,3 +319,24 @@ test_that("view switches are one pressed option among labelled buttons", {
   expect_match(html, 'data-value="studies" aria-pressed="true">study', fixed = TRUE)
   expect_match(html, 'data-value="effects" aria-pressed="false">effect', fixed = TRUE)
 })
+
+test_that("readers see plain reasons, and the package's text stays in the table", {
+  expect_equal(metaUI:::metaUI_reader_reason("Model extraction must return one value per field", "Minimal number of three studies for trim-and-fill method"),
+    "Needs at least three studies.")
+  expect_equal(metaUI:::metaUI_reader_reason("system is computationally singular: reciprocal condition number = 1e-19"),
+    "This selection has too little variation to fit the model.")
+  expect_equal(metaUI:::metaUI_reader_reason("Something new"), "Something new")
+  expect_match(metaUI:::metaUI_reader_warnings("At least one of the p-value intervals contains three or fewer effect sizes, which may lead to estimation problems.; NaNs produced"),
+    "^Few studies fall .* unreliable[.]$")
+})
+
+test_that("study rows round decimals like effect rows, and breakdowns say what Other holds", {
+  effects <- data.frame(Study = c("A", "A", "B"), metaUI__key = c("A", "A", "B"), Women = c(.5312, .5696, .569620253), check.names = FALSE)
+  expect_equal(metaUI:::metaUI_study_rows(effects)$Women, c("0.53–0.57", "0.57"))
+  x <- factor(c(rep(LETTERS[1:11], each = 2), "L"), levels = c(LETTERS[1:12], "Z"))
+  html <- metaUI:::metaUI_bars_html(metaUI:::summarise_categorical(x, "Group"), "Group")
+  expect_match(html, "3 other categories", fixed = TRUE)
+  html <- metaUI:::metaUI_bars_html(metaUI:::summarise_categorical(factor(c("a", "b"), levels = c("a", "b", "c")), "Group"), "Group")
+  expect_match(html, "1 category has no selected effects", fixed = TRUE)
+  expect_false(grepl(">c<", html, fixed = TRUE))
+})

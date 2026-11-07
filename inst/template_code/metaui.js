@@ -294,6 +294,10 @@
         if (track.clientWidth !== width) moved = true;
       });
     });
+    // The key names only what is drawn: dots, bars or both.
+    document.querySelectorAll('.metaui-dots-note').forEach(function (note) {
+      note.hidden = !Array.prototype.some.call(document.querySelectorAll('.metaui-moderators .metaui-track-dot'), function (dot) { return dot.style.display !== 'none'; });
+    });
     document.querySelectorAll('.metaui-hist-note').forEach(function (note) {
       note.hidden = !anyBars;
       var most = note.querySelector('.metaui-hist-max');
@@ -651,5 +655,134 @@
     };
     if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(url).then(function () { show(true); }, function () { show(fallback(url)); });
     else show(fallback(url));
+  });
+})(jQuery);
+
+/* Update results: a new fit can take several seconds, so the button and the status line say
+   that it is running until the new results have arrived; the server then rewrites the status
+   line itself. Updates that finish quickly (cached fits) change nothing on screen, nor do clicks
+   with nothing to apply (such as the automatic opening run). */
+(function ($) {
+  'use strict';
+  var run = 0, label = null, showTimer;
+  function parts() {
+    var go = document.getElementById('go');
+    return { go: go, text: go && (go.querySelector('.action-label') || go), box: document.getElementById('apply_state_box') };
+  }
+  function show() {
+    var p = parts();
+    if (!p.go) return;
+    if (label === null) label = p.text.textContent;
+    p.text.textContent = 'Updating…';
+    p.go.classList.add('metaui-updating');
+    if (!p.box) return;
+    var note = p.box.querySelector('.metaui-updating-note');
+    if (!note) { note = document.createElement('span'); note.className = 'metaui-updating-note'; p.box.appendChild(note); }
+    note.textContent = 'Updating results…';
+    p.box.classList.add('metaui-updating');
+  }
+  function restore() {
+    clearTimeout(showTimer);
+    var p = parts();
+    if (p.go && label !== null) p.text.textContent = label;
+    label = null;
+    if (p.go) p.go.classList.remove('metaui-updating');
+    if (p.box) {
+      p.box.classList.remove('metaui-updating');
+      var note = p.box.querySelector('.metaui-updating-note');
+      if (note) note.remove();
+    }
+  }
+  $(document).on('click', '#go', function () {
+    if (this.disabled || !this.classList.contains('metaui-needs-run')) return;
+    var mine = ++run, answered = false;
+    clearTimeout(showTimer);
+    showTimer = setTimeout(function () { if (mine === run) show(); }, 300);
+    // Shiny goes idle several times during one update (outputs that do not need the fit come
+    // first). The selection line is redrawn with the fitted results, so the update has finished
+    // at the first idle after it.
+    var value = function (event) { if (event.name === 'selection_overview') answered = true; };
+    var idle = function () { if (answered) finish(); };
+    var finish = function () {
+      clearTimeout(giveUp);
+      $(document).off('shiny:value', value).off('shiny:idle', idle);
+      if (mine === run) restore();
+    };
+    var giveUp = setTimeout(finish, 300000);
+    $(document).on('shiny:value', value).on('shiny:idle', idle);
+  });
+})(jQuery);
+
+/* Reset brings back the results for the default selection. The reset filters reach the server
+   over several round trips; once no filter has changed for a moment, the server is idle and it
+   marks Update as needed, Update is pressed for the reader (the default fit is cached, so this
+   is quick). Shiny handles messages in order, so the click always follows the reset values. */
+(function ($) {
+  'use strict';
+  var poll;
+  function stop() { clearInterval(poll); poll = null; $(document).off('.metauiReset'); }
+  $(document).on('click', '#resetFilters', function () {
+    stop();
+    var started = Date.now(), lastChange = started, lastIdle = 0;
+    // Tabs drawn in the background keep the server briefly busy, so only filter changes count.
+    $(document).on('shiny:inputchanged.metauiReset', function (event) {
+      if (event.el && event.el.closest && event.el.closest('form.well')) lastChange = Date.now();
+    }).on('shiny:idle.metauiReset', function () { lastIdle = Date.now(); });
+    poll = setInterval(function () {
+      var go = document.getElementById('go');
+      if (Date.now() - started > 15000) return stop();
+      // The server has answered since the last filter change, which has had time to settle.
+      if (!go || Date.now() - lastChange < 600 || lastIdle < lastChange + 50 ||
+        !go.classList.contains('metaui-needs-run') || go.disabled) return;
+      stop();
+      // Marked as automatic: the reader stays in the filters they just reset.
+      $(go).trigger('click', [{ auto: true }]);
+    }, 200);
+  });
+})(jQuery);
+
+/* A disclosure opened near the foot of the filters scrolls into view above the sticky update bar. */
+document.addEventListener('toggle', function (event) {
+  var details = event.target;
+  if (!details.open || !details.matches || !details.matches('form.well details')) return;
+  var bar = document.querySelector('form.well .metaui-actions');
+  if (!bar || getComputedStyle(bar).position !== 'sticky') return;
+  details.style.scrollMarginBottom = (bar.offsetHeight + 12) + 'px';
+  details.scrollIntoView({ block: 'nearest' });
+}, true); // toggle does not bubble
+
+/* Wide DataTables scroll sideways. While columns are out of view, a shade at the right edge
+   (metaui.css) and a short note above the table say so. */
+(function ($) {
+  'use strict';
+  function mark(wrapper) {
+    var table = wrapper.querySelector(':scope > table.dataTable');
+    if (!table) return;
+    var over = wrapper.scrollWidth > wrapper.clientWidth + 2;
+    wrapper.classList.toggle('metaui-overflow', over);
+    var note = wrapper.querySelector(':scope > .metaui-scroll-note');
+    if (over && !note) {
+      note = document.createElement('p');
+      note.className = 'metaui-scroll-note';
+      note.textContent = 'Scroll sideways for more columns →';
+      wrapper.insertBefore(note, table);
+    }
+    if (note) note.hidden = !over;
+  }
+  var timer;
+  function markAll() {
+    clearTimeout(timer);
+    timer = setTimeout(function () { document.querySelectorAll('.tab-content .dataTables_wrapper').forEach(mark); }, 50);
+  }
+  $(document).on('draw.dt shown.bs.tab', markAll);
+  window.addEventListener('resize', markAll);
+})(jQuery);
+
+/* The out-of-date banner above the results updates them, as the panel's button does. */
+(function ($) {
+  'use strict';
+  $(document).on('click', '.metaui-banner-go', function () {
+    var go = document.getElementById('go');
+    if (go && !go.disabled) go.click();
   });
 })(jQuery);

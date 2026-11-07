@@ -67,13 +67,17 @@ metaUI_switch <- function(label, class, options, selected) {
 # Effect sizes and p-values are left out: they belong to effects, and averaging them would be a model.
 metaUI_study_rows <- function(effects, key = "metaUI__key", drop = c("Effect size", "Reported p")) {
   groups <- factor(effects[[key]], levels = unique(effects[[key]]))
-  # Range ends keep every digit they need, so that close values never print alike.
-  end <- function(x) format(x, digits = 15, scientific = FALSE, trim = TRUE)
+  # Whole numbers stay whole; others get two decimals, or as many more as close range ends need to differ.
+  end <- function(x) {
+    if (all(x == round(x))) return(format(x, digits = 15, scientific = FALSE, trim = TRUE))
+    for (digits in 2:8) { out <- formatC(x, format = "f", digits = digits); if (length(unique(out)) == length(unique(x))) break }
+    out
+  }
   summarise <- function(x) {
     values <- lapply(split(x, groups), function(v) unique(v[!is.na(v) & as.character(v) != ""]))
     if (is.numeric(x) && all(lengths(values) <= 1L)) return(vapply(values, function(v) if (length(v)) as.numeric(v) else NA_real_, numeric(1)))
-    vapply(values, function(v) if (!length(v)) NA_character_ else if (length(v) == 1L) as.character(v)
-      else if (is.numeric(v)) paste0(end(min(v)), "\u2013", end(max(v))) else "several", character(1))
+    vapply(values, function(v) if (!length(v)) NA_character_ else if (length(v) == 1L) { if (is.numeric(v)) end(v) else as.character(v) }
+      else if (is.numeric(v)) paste(end(c(min(v), max(v))), collapse = "\u2013") else "several", character(1))
   }
   cols <- setdiff(names(effects), drop)
   out <- as.data.frame(lapply(effects[cols], summarise), check.names = FALSE, stringsAsFactors = FALSE)
@@ -172,8 +176,14 @@ summarise_categorical <- function(x, name) {
     final_counts <- counts
   }
 
-  final_counts %>%
+  out <- final_counts %>%
     dplyr::mutate(Percentage = paste0(round(Count / sum(Count) * 100, 1), "%"))
+  # The levels merged into the "Other" row, so that readers can see what it holds.
+  if (nrow(counts) > 10) {
+    merged <- counts[!counts[[name]] %in% top_categories[[name]] & counts$Count > 0, , drop = FALSE]
+    attr(out, "other_levels") <- paste0(as.character(merged[[name]]), " (", merged$Count, ")")
+  }
+  out
 }
 
 

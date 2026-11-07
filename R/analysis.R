@@ -236,11 +236,11 @@ metaUI_zcurve_plot <- function(fit, colours) {
   plot <- plot +
     ggplot2::annotate("text", x = Inf, y = end$y, hjust = -.05, size = 4.9, colour = colours$ink, family = colours$family, parse = TRUE, label = 'italic(z) * "-curve fit"') +
     ggplot2::theme(plot.margin = ggplot2::margin(26, 66, 4, 4))
-  if (beyond > 0L) plot <- plot + ggplot2::annotate("text", x = right, y = -Inf, vjust = 3.3, hjust = 1, size = 4.9, colour = colours$slate, family = colours$family,
-    label = paste0(beyond, if (beyond == 1L) " test" else " tests", " beyond ", format(right)))
   plot$coordinates$clip <- "off"
   x_scale <- plot$scales$get_scales("x")
-  if (!is.null(x_scale)) x_scale$name <- expression(italic(z) * "-score")
+  # The axis title counts the tests beyond the plot's end, where no tick label can collide with it.
+  note <- if (beyond > 0L) paste0(" (", beyond, if (beyond == 1L) " test" else " tests", " beyond ", format(right), " not shown)") else ""
+  if (!is.null(x_scale)) x_scale$name <- bquote(italic(z) * "-score" * .(note))
   y_scale <- plot$scales$get_scales("y")
   if (!is.null(y_scale)) {
     # The package fixes its own limits and breaks; end the axis on a labelled tick above every bar.
@@ -378,6 +378,33 @@ metaUI_count_unit <- function(row, studies = NA) {
   ""
 }
 
+# Plain wording for the reasons and warnings that model packages give; downloads keep the original text.
+metaUI_reader_messages <- c(
+  "Minimal number of three studies" = "Needs at least three studies.",
+  "computationally singular" = "This selection has too little variation to fit the model.",
+  "Missing model interval" = "The model gave an estimate but no interval.",
+  "Nonfinite estimate, interval, or count" = "The model gave no finite estimate.",
+  "Model extraction must return one value per field" = "The model gave no usable estimate.",
+  "Regression requires variable precision" = "Needs at least three studies with different standard errors.",
+  "No eligible rows" = "No effects selected.",
+  "Requires explicit positive or negative effect direction" = "Needs an expected direction, which the authors did not declare.",
+  "P-curve effect estimation only supported for SMD" = "Available only for standardized mean differences.",
+  "Bayesian analysis requires at least two studies" = "Needs at least two studies.",
+  "p-value intervals contains no effect sizes" = "No studies fall in one of the p-value ranges the model compares, so its estimate is unstable.",
+  "p-value intervals contains three or fewer effect sizes" = "Few studies fall in one of the p-value ranges the model compares, so its estimate may be unstable.",
+  "NaNs produced" = "Some standard errors could not be computed, a sign that the fit is unreliable.")
+metaUI_reader_message <- function(x) {
+  hit <- names(metaUI_reader_messages)[vapply(names(metaUI_reader_messages), grepl, logical(1), x = x, fixed = TRUE)]
+  if (length(hit)) unname(metaUI_reader_messages[hit[1]]) else x
+}
+# A failed row leads with the warning that explains it, when the package gave one.
+metaUI_reader_reason <- function(reason, warnings = "") {
+  parts <- if (nzchar(warnings)) strsplit(warnings, "; ", fixed = TRUE)[[1]] else character()
+  explained <- vapply(parts, function(w) startsWith(metaUI_reader_message(w), "Needs"), logical(1))
+  if (any(explained)) metaUI_reader_message(parts[explained][1]) else metaUI_reader_message(reason)
+}
+metaUI_reader_warnings <- function(warnings) paste(unique(vapply(strsplit(warnings, "; ", fixed = TRUE)[[1]], metaUI_reader_message, character(1))), collapse = " ")
+
 # Reader table of model estimates: one row per model, every model named, with reasons
 # where a model was not estimated. Downloads keep the full table.
 metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect size", bound = NULL, studies = NA) {
@@ -391,7 +418,8 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   types <- unique(stats::na.omit(table$interval_type[table$status == "ok"]))
   ref <- if (length(first) && table$status[first[1]] == "ok") table$es[first[1]] else NULL
   # Warnings are footnotes, so that one long message does not break the rows.
-  warned <- order[nzchar(table$warnings[order])]
+  # A failed row whose reason is its warning needs no footnote.
+  warned <- order[nzchar(table$warnings[order]) & (table$status[order] == "ok" | vapply(order, function(i) !startsWith(metaUI_reader_reason("", table$warnings[i]), "Needs"), logical(1)))]
   rows <- vapply(order, function(i) {
     row <- table[i, ]
     ok <- row$status == "ok"
@@ -401,7 +429,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     interval <- if (is.na(row$LCL) && is.na(row$UCL)) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
     unit <- metaUI_count_unit(row, studies)
     track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = i %in% first), "</td>")
-      else paste0('<td class="metaui-reason-cell"><b>', if (identical(row$status, "failed")) "Could not be estimated:" else paste0("Not estimated (", esc(row$status), "):"), "</b> ", esc(row$reason), "</td>")
+      else paste0('<td class="metaui-reason-cell"><b>', if (identical(row$status, "failed")) "Could not be estimated:" else "Not estimated:", "</b> ", esc(metaUI_reader_reason(row$reason, row$warnings)), "</td>")
     position <- match(i, order)
     opens_group <- !(i %in% first) && (position == length(first) + 1L || table$aggregated[order[position - 1L]] != row$aggregated)
     # Methods explains the two levels; the headings stay short enough for one line on phones.
@@ -417,7 +445,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Other estimators answer different questions and are not interchangeable with the primary analysis.',
     if (!is.null(ref)) paste0(" The diamond and dashed line mark the primary estimate and its ", interval_head, "."),
     if (any(grepl("trim", table$Model, ignore.case = TRUE))) " The trim-and-fill count includes imputed studies.", "</p>")
-  notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(table$warnings[warned]), "</li>", collapse = ""), "</ol>")
+  notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(vapply(table$warnings[warned], metaUI_reader_warnings, character(1))), "</li>", collapse = ""), "</ol>")
   paste0('<table class="table metaui-estimates metaui-models metaui-custom"><thead><tr data-head="Model, estimate [', interval_head, ']"><th>Model</th><th class="num">Estimate</th><th class="num">',
     interval_head, '</th><th class="num metaui-k" title="Number of effects or studies the model reports; trim-and-fill includes imputed studies."><i>k</i></th><th></th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
     paste(rows, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="5"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", others, notes)
@@ -504,14 +532,22 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL,
 
 # Category counts with bars in the table, including levels the selection leaves empty.
 metaUI_bars_html <- function(counts, name) {
+  other <- attr(counts, "other_levels")
+  # Levels without selected effects are counted in one line instead of listed.
+  empty <- sum(counts$Count == 0)
+  counts <- counts[counts$Count > 0, , drop = FALSE]
   counts <- counts[order(as.character(counts[[name]]) == "(Missing)"), , drop = FALSE]
   levels <- as.character(counts[[name]])
+  bucket <- !is.null(other) & levels == "Other"
+  levels[bucket] <- paste(length(other), "other categories")
   largest <- max(counts$Count, 1)
   rows <- sprintf('<tr%s><td>%s</td><td class="num">%s</td><td class="num">%s</td><td class="metaui-bar-cell" aria-hidden="true"><span class="metaui-bar" style="width:%s%%"></span></td></tr>',
     ifelse(counts$Count == 0, ' class="metaui-zero"', ifelse(levels == "(Missing)", ' class="metaui-missing"', "")), htmltools::htmlEscape(levels), counts$Count,
     sprintf("%.1f%%", 100 * counts$Count / max(sum(counts$Count), 1)), round(100 * counts$Count / largest, 1))
   paste0('<table class="table metaui-bars metaui-custom"><thead><tr><th><span class="sr-only">', htmltools::htmlEscape(name),
-    '</span></th><th class="num">Effects</th><th class="num">Share</th><th class="metaui-bar-cell"></th></tr></thead><tbody>', paste(rows, collapse = ""), "</tbody></table>")
+    '</span></th><th class="num">Effects</th><th class="num">Share</th><th class="metaui-bar-cell"></th></tr></thead><tbody>', paste(rows, collapse = ""), "</tbody></table>",
+    if (any(bucket)) paste0('<details class="metaui-help metaui-other-levels"><summary>The ', length(other), " other categories</summary><p>", htmltools::htmlEscape(paste(other, collapse = ", ")), "</p></details>"),
+    if (empty) paste0('<p class="metaui-note">', empty, if (empty == 1L) " category has" else " categories have", " no selected effects.</p>"))
 }
 
 # Moderator levels on the same drawn axis; the dots are the selected effects themselves.
@@ -537,8 +573,8 @@ metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values
     '<table class="table metaui-estimates metaui-moderators', if (!show_effects) " metaui-moderators-plain", ' metaui-custom"><thead><tr data-head="Level, estimate [95% CI]"><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k"><i>k</i></th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", paste(rows, collapse = ""), "</tbody></table>",
     '<p class="metaui-note metaui-key">Green diamond: level estimate from the multilevel moderator model; its width is the 95% CI.',
-    if (show_effects) " Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another.",
-    if (!is.null(ref)) " Dashed line: overall multilevel estimate.",
+    if (show_effects) '<span class="metaui-dots-note"> Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another.</span>',
+    if (!is.null(ref)) paste0(" Dashed line: overall estimate of the Random-Effects Multilevel Model, as on the Summary (", fmt(ref), ")."),
     if (show_effects) '<span class="metaui-hist-note" hidden> Grey bars: levels with many effects, showing how many fall in each small range, on one scale across levels; the tallest bar is <span class="metaui-hist-max"></span> effects.</span>',
     "</p>")
 }

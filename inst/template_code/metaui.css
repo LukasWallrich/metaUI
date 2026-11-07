@@ -180,6 +180,10 @@ html.shiny-busy:not(.metaui-background) .metaui-actions #go { opacity: .75; }
 /* Above the button, inside the bar, so it never covers a filter. */
 .metaui-apply-state { grid-column: 1 / -1; font-size: .875rem; line-height: 1.3; color: var(--metaui-attention); }
 .metaui-apply-state:has(> .shiny-text-output:empty) { display: none; }
+/* While an update runs (metaui.js), the line says so in place of the pending-selection notice. */
+#apply_state_box.metaui-updating { display: block; color: var(--metaui-slate); }
+#apply_state_box.metaui-updating > .shiny-text-output { display: none; }
+.metaui-actions #go.metaui-updating { cursor: progress; }
 #executeUpload { margin-bottom: 10px; }
 .metaui-share { margin: 10px 0 0; }
 #link_notice { font-size: .875rem; color: var(--metaui-slate); }
@@ -202,6 +206,13 @@ html.shiny-busy:not(.metaui-background) .metaui-actions #go { opacity: .75; }
 .metaui-basis .shiny-text-output { display: block; }
 .metaui-basis .shiny-output-error-validation { color: var(--metaui-slate); padding: 0; font-size: inherit; }
 body:has(.metaui-basis.metaui-stale) #metaui_results .tab-content { opacity: .82; }
+/* Above the tabs while the results are out of date; the server shows it (metaui-visible). */
+.metaui-stale-banner { display: none; }
+.metaui-stale-banner.metaui-visible { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 0 0 10px; padding: 6px 10px 6px 12px; font-size: .9375rem; line-height: 1.35; color: var(--metaui-attention); background: var(--metaui-attention-bg); border: 1px solid var(--metaui-rule); border-left: 3px solid var(--metaui-attention); border-radius: var(--metaui-radius); }
+.metaui-stale-banner .metaui-banner-go { margin: 0; padding: 3px 10px; font-size: .875rem; font-weight: 600; line-height: 1.35; color: var(--metaui-button); background: var(--metaui-accent); border: 1px solid var(--metaui-accent); border-radius: var(--metaui-radius); cursor: pointer; }
+/* Nothing to update while a link or upload is being applied, or when no effects match. */
+.metaui-stale-banner.metaui-restoring .metaui-banner-go { display: none; }
+.metaui-stale-banner .metaui-banner-go:hover { background: var(--metaui-hover); border-color: var(--metaui-hover); }
 .metaui-basis.metaui-stale #selection_overview { color: var(--metaui-attention); }
 .metaui-selection-details { font-size: .875rem; }
 .metaui-selection-details > summary { color: var(--metaui-accent); }
@@ -458,9 +469,14 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 /* Moderation */
 .metaui-moderation-finding { font-size: 1.0625rem; margin: 12px 0; max-width: 72ch; }
 .metaui-moderation-finding b { font-weight: 600; }
-.metaui-moderation-grid { display: grid; grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); gap: 28px; align-items: start; }
+/* Numeric moderators: the table keeps its full width, and the plot moves below it when the
+   two do not fit side by side. */
+.metaui-moderation-grid { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.metaui-moderation-grid > * { min-width: 0; }
+.metaui-moderation-grid > :first-child { flex: 0 0 auto; max-width: 100%; overflow-x: auto; }
+.metaui-moderation-grid > :nth-child(2) { flex: 1 1 400px; }
 .metaui-moderation-grid .table { width: 100%; }
-.metaui-moderation-grid > .metaui-key { grid-column: 1 / -1; margin-top: -8px; }
+.metaui-moderation-grid > .metaui-key { flex: 1 1 100%; margin-top: -8px; }
 .metaui-moderation-wide .table { width: 100%; }
 .well + .metaui-moderation-grid { margin-top: 12px; }
 .tab-pane .selectize-control, .tab-pane > .shiny-input-container { max-width: 320px; }
@@ -506,6 +522,12 @@ body .dataTables_wrapper .dataTables_paginate .ellipsis { color: var(--metaui-sl
 #sample_table thead th.dt-right { text-align: right; }
 #sample_table tbody td.dt-right + td:not(.dt-right), #sample_table thead th.dt-right + th:not(.dt-right) { padding-left: 24px !important; }
 #sample_table thead th:first-child { max-width: none; }
+#sample_table thead th { overflow-wrap: normal; word-break: normal; hyphens: manual; }
+/* Tables wider than the page (metaui.js marks them): a shade at the right edge that the
+   content's own end covers once scrolled there, and a note that stays at the left. */
+.dataTables_wrapper.metaui-overflow { background: linear-gradient(to left, var(--metaui-background) 40%, transparent) right / 48px 100% no-repeat local, linear-gradient(to left, color-mix(in srgb, var(--metaui-ink) 22%, transparent), transparent) right / 36px 100% no-repeat scroll; }
+.metaui-scroll-note { position: sticky; left: 0; width: max-content; max-width: 100%; margin: 0 0 4px; font-size: .8125rem; color: var(--metaui-slate); }
+.metaui-scroll-note[hidden] { display: none; }
 body table.dataTable thead th:last-child { padding-right: 14px !important; }
 #pcurve_notes, #zcurve_statistics, #funnel_key, #distribution_note { max-width: 760px; }
 #distribution_note { margin-top: 12px; }
@@ -559,7 +581,9 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
 .irs:focus-within .irs-handle { box-shadow: 0 0 0 2px var(--metaui-tint), 0 0 0 4px var(--metaui-accent) !important; }
 
 /* Author-provided filter help uses an accessible inline disclosure */
-.metaui-filter-help { display: inline-block; width: 16px; height: 16px; margin-left: 3px; padding: 0; border: 1px solid var(--metaui-slate); border-radius: 50%; background: transparent; color: var(--metaui-slate); font-size: .6875rem; font-weight: 600; line-height: 14px; text-align: center; vertical-align: 1px; }
+.metaui-filter-help { position: relative; display: inline-block; width: 16px; height: 16px; margin-left: 3px; padding: 0; border: 1px solid var(--metaui-slate); border-radius: 50%; background: transparent; color: var(--metaui-slate); font-size: .6875rem; font-weight: 600; line-height: 14px; text-align: center; vertical-align: 1px; }
+/* A larger, invisible hit area around the small mark, for fingers. */
+.metaui-filter-help::after { content: ''; position: absolute; inset: -6px; }
 .metaui-filter-help-panel { padding: 0 0 8px; margin-bottom: 8px; font-size: .875rem; line-height: 1.45; color: var(--metaui-slate); overflow-wrap: anywhere; }
 .metaui-filter-help-panel[hidden] { display: none; }
 .metaui-filter-help-panel table { display: block; overflow-x: auto; max-width: 100%; }
@@ -571,7 +595,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .container-fluid > .row > .col-sm-3:has(> form.well) + .col-sm-9 { padding-left: 20px; padding-right: 20px; }
   .metaui-header { padding-left: 20px; padding-right: 20px; }
   .container-fluid > .row > .col-sm-3:has(> form.well) { flex-basis: 256px; width: 256px; }
-  .metaui-moderation-grid { grid-template-columns: 1fr; }
+  .metaui-moderation-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Short windows: tighter filters, so more of them fit above the update bar. */
@@ -604,13 +628,16 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .metaui-filter-panel.metaui-open { display: block; padding-top: 14px; }
   .metaui-actions:has(#go.metaui-needs-run) { margin-top: 8px; }
   .metaui-actions { position: relative; margin: 0; padding: 0; background: none; border: 0; }
+  /* With the long filter panel open, Update and Reset stay at the foot of the screen. */
+  .well:has(.metaui-open) .metaui-actions { position: sticky; bottom: 0; margin: 14px -14px 0; padding: 8px 14px 10px; background: var(--metaui-surface); border-top: 1px solid var(--metaui-rule); }
   .metaui-data-tools { padding-bottom: 0; }
   .metaui-share { margin-top: 8px; }
   .container-fluid > .row > .col-sm-9 { padding-top: 12px; padding-bottom: 28px; }
   /* Every section stays in view: the tabs wrap, as plain links with no rule to float above. */
   .nav-tabs { gap: 0 18px; border-bottom: 0; }
   .nav-tabs > li { margin: 0; }
-  .nav-tabs > li > a { padding: 4px 0 3px; white-space: nowrap; }
+  /* Rows of about 40 px, large enough to tap. */
+  .nav-tabs > li > a { padding: 9px 0 8px; white-space: nowrap; }
   .metaui-basis { margin: 0 0 10px; font-size: .875rem; }
   h3 { font-size: 1.25rem; }
   .metaui-primary-value { font-size: 1.25rem; }
@@ -621,7 +648,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   table.metaui-forest > tbody > tr.metaui-forest-scale > td:first-child { display: none; }
   .metaui-breakdown-numeric { grid-template-columns: 1fr; }
   .tab-pane .plotly.html-widget { max-width: 100%; overflow: hidden; }
-  .metaui-moderation-grid { grid-template-columns: 1fr; }
+  .metaui-moderation-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
 
   /* Estimates: text on the left of each row, one continuous plot column on the right, so
      the zero and primary lines and the axis stay unbroken from the first row to the last. */
@@ -704,7 +731,9 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
 /* Tabs not yet drawn for this selection: laid out off-screen while they render in the
    background, and covered by one message if the reader opens them before they are ready. */
 .tab-content { position: relative; }
-.tab-content > .tab-pane.metaui-preloading:not(.active) { display: block; position: absolute; top: 0; left: -10000px; visibility: hidden; }
+/* No height and clipped, so the page does not grow while a long tab draws; its width (set in
+   metaui.js) still sizes the plots inside it. */
+.tab-content > .tab-pane.metaui-preloading:not(.active) { display: block; position: absolute; top: 0; left: -10000px; height: 0; overflow: hidden; visibility: hidden; }
 .tab-pane.metaui-pane-loading { position: relative; min-height: 200px; }
 .tab-pane.metaui-pane-loading > :not(.metaui-pane-status) { visibility: hidden; }
 .tab-pane.metaui-pane-loading > .metaui-pane-status { position: absolute; top: 18px; left: 0; font-size: 1.0625rem; color: var(--metaui-ink); animation: metaui-appear .2s .15s both; }
