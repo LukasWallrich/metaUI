@@ -57,6 +57,22 @@ check_app_packages <- function(bayesian = FALSE, meta = FALSE) {
   invisible(TRUE)
 }
 
+# The effects left out when the app was built, in plain words for About.
+metaUI_exclusions_html <- function(report) {
+  dropped <- report$exclusions
+  if (is.null(dropped) || !NROW(dropped)) return("")
+  plain <- c("missing study ID" = "no study ID", "nonfinite effect" = "no effect size", "invalid variance" = "no valid variance",
+    "invalid SE" = "no valid standard error", "COR outside (-1, 1)" = "a correlation outside \u22121 to 1",
+    "missing mapped or other input" = "a missing value in a mapped column")
+  reasons <- unlist(strsplit(as.character(dropped$reason), "; ", fixed = TRUE))
+  shown <- ifelse(reasons %in% names(plain), plain[reasons], reasons)
+  counts <- table(factor(shown, levels = unique(shown)))
+  number <- function(x) format(x, big.mark = ",")
+  paste0("<p class='metaui-note metaui-exclusions'>The app uses ", number(report$retained_rows), " of the ", number(report$input_rows),
+    " effects supplied. ", number(NROW(dropped)), if (NROW(dropped) == 1L) " was" else " were", " left out when the app was built: ",
+    htmltools::htmlEscape(paste0(counts, " with ", names(counts), collapse = "; ")), ".</p>")
+}
+
 #' Create the about text for the app
 #'
 #' This function is generally only called internally by [generate_shiny()].
@@ -284,7 +300,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   }, error = function(e) list(status = "unsupported", reason = conditionMessage(e)))
   report$study_info <- study_info_report(study_info, dataset)
   report$zcurve <- "First effect per study; normal Wald |effect/SE|, not supplied source p-values. Independence across study IDs is an author assumption."
-  about <- paste0(about, "<details class='metaui-help'><summary>Data mapping and analysis settings</summary><pre>",
+  about <- paste0(about, metaUI_exclusions_html(report),
+                  "<details class='metaui-help'><summary>Technical record: data mapping and analysis settings</summary><pre>",
                   htmltools::htmlEscape(jsonlite::toJSON(report, auto_unbox = TRUE, pretty = TRUE, na = "null"), attribute = TRUE), "</pre></details>")
   defaults_models <- get_model_tibble()
   opts$known_interval_models <- models_to_run$name[vapply(seq_len(nrow(models_to_run)), function(i) {

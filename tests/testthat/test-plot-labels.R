@@ -136,9 +136,9 @@ test_that("links save only what narrows the data, in a short form", {
   expect_equal(parsed$filters$g$selection, "b")
   expect_equal(as.numeric(parsed$filters$y$selection), as.numeric(full$y))
   expect_identical(everything, "?metaui=key")
-  expect_identical(narrowed, "?metaui=key_3k2")
+  expect_identical(narrowed, "?metaui=key&group=b")
   dropped <- metaUI:::metaUI_selection_query(records(c("a", "c")), "0123456789abcdef", .25, d, filters)
-  expect_identical(dropped, "?metaui=01234567_3x2_b0.25")
+  expect_identical(dropped, "?metaui=01234567&group!=b&bound=0.25")
   expect_setequal(metaUI:::metaUI_parse_selection(dropped, "0123456789abcdef", d, filters)$filters$g$selection, c("a", "c"))
   expect_identical(metaUI:::metaUI_parse_selection(metaUI:::metaUI_selection_query(records(NA), "key", NULL, d, filters), "key", d, filters)$filters$g$selection, character())
   expect_identical(metaUI:::metaUI_link_number(c(1/3, -1.8, 2e8, 1e-20)), c("0.33333333333333331", "-1.8", "200000000", "1e-20"))
@@ -315,7 +315,14 @@ test_that("study rows keep exact range ends, and categories are counted once", {
   x <- c(rep(LETTERS[1:11], each = 2), rep("Other", 5))
   counts <- metaUI:::summarise_categorical(x, "Group")
   expect_equal(sum(counts$Count), length(x))
-  expect_equal(counts$Count[counts$Group == "Other"], 5 + 2 * 2) # its own 5, and the two levels beyond the top nine
+  expect_equal(counts$Count[counts$Group == "Other"], 5) # the author's own Other is a level like any other
+  expect_equal(counts$Count[counts$Group == ".metaUI_other"], 3 * 2) # the three levels beyond the top nine
+  missing <- metaUI:::summarise_categorical(factor(c(rep(LETTERS[1:12], 3), "(Missing)"), levels = c(LETTERS[1:12], "(Missing)")), "Group")
+  expect_equal(tail(missing$Group, 1), "(Missing)")
+  ordered <- factor(c("weeks", "hours", "days"), levels = c("hours", "days", "weeks"))
+  expect_true(metaUI:::metaUI_author_order(ordered))
+  expect_false(metaUI:::metaUI_author_order(factor(c("b", "a", "Other"), levels = c("a", "b", "Other"))))
+  expect_equal(metaUI:::summarise_categorical(factor(c("weeks", "weeks", "days"), levels = c("hours", "days", "weeks")), "L")$L, c("hours", "days", "weeks"))
 })
 
 test_that("view switches are one pressed option among labelled buttons", {

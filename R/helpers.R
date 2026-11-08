@@ -155,42 +155,40 @@ summarise_numeric <- function(x, name) {
     tidyr::pivot_longer(dplyr::everything(), names_to = "Statistic", values_to = "Value")
 }
 
-# Count categories in x, return top 10 and return everything else as Other (merging with existing Other if it exists)
+# Whether a factor's levels are in an order the author chose (ordered, or not alphabetical once
+# "Other" and "(Missing)" are set aside); such levels are listed in that order, not by size.
+metaUI_author_order <- function(x) {
+  if (!is.factor(x)) return(FALSE)
+  if (is.ordered(x)) return(TRUE)
+  l <- setdiff(levels(x), c("Other", "(Missing)"))
+  !identical(l, l[order(tolower(l))])
+}
+
+# Count categories in x. With more than ten non-empty levels, the nine largest are listed and the
+# rest counted in one row (named ".metaUI_other", with the merged levels in attr "other_levels").
+# "(Missing)" always keeps its own row; an author's own "Other" level is listed like any other.
 summarise_categorical <- function(x, name) {
   if (length(x) == 0) {
     return(NULL)
   }
-
+  keep_order <- metaUI_author_order(x)
   counts <- tibble::tibble(!!rlang::sym(name) := x) %>%
-    dplyr::count(!!rlang::sym(name), sort = TRUE, .drop = FALSE) %>%
+    dplyr::count(!!rlang::sym(name), sort = !keep_order, .drop = FALSE) %>%
     dplyr::rename(Count = n)
-
-  if (nrow(counts) > 10) {
-
-  top_categories <- counts %>%
-    dplyr::filter(!!rlang::sym(name) != "Other") %>%
-    dplyr::slice_max(order_by = Count, n = 9, with_ties = FALSE)
-
-  # Everything not listed, including any level already called "Other", counted once.
-  other_count <- sum(counts$Count) - sum(top_categories$Count)
-
-  final_counts <- if (other_count > 0) {
-    dplyr::bind_rows(top_categories, tibble::tibble(!!rlang::sym(name) := "Other", Count = other_count))
-  } else {
-    top_categories
+  counts[[name]] <- as.character(counts[[name]])
+  label <- counts[[name]]
+  listed <- counts$Count > 0 & label != "(Missing)"
+  final_counts <- counts
+  merged <- NULL
+  if (!keep_order && sum(listed) > 10) {
+    top <- which(listed)[1:9]
+    merged <- counts[listed & !seq_len(nrow(counts)) %in% top, , drop = FALSE]
+    final_counts <- dplyr::bind_rows(counts[top, , drop = FALSE],
+      tibble::tibble(!!rlang::sym(name) := ".metaUI_other", Count = sum(merged$Count)), counts[!listed, , drop = FALSE])
   }
-
-  } else {
-    final_counts <- counts
-  }
-
   out <- final_counts %>%
     dplyr::mutate(Percentage = paste0(round(Count / sum(Count) * 100, 1), "%"))
-  # The levels merged into the "Other" row, so that readers can see what it holds.
-  if (nrow(counts) > 10) {
-    merged <- counts[!counts[[name]] %in% top_categories[[name]] & counts$Count > 0, , drop = FALSE]
-    attr(out, "other_levels") <- paste0(as.character(merged[[name]]), " (", merged$Count, ")")
-  }
+  if (!is.null(merged)) attr(out, "other_levels") <- paste0(as.character(merged[[name]]), " (", merged$Count, ")")
   out
 }
 

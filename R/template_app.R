@@ -231,9 +231,9 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
     tags$a(class = "metaui-skip", href = "#metaui_results", "Skip to results"),
     # Application title
     div(class = "metaui-header",
-    titlePanel(
-    windowTitle = {paste(deparse(paste0(dataset_name, " - metaUI")), collapse = "\n")},
-    title = {get_favicon_tag(dataset_name)}),
+    # The app name is the one top-level heading of the page.
+    tags$head(tags$title({paste(deparse(paste0(dataset_name, " - metaUI")), collapse = "\n")})),
+    tags$h1(class = "metaui-app-title", {get_favicon_tag(dataset_name)}),
     if (nzchar(welcome_text)) div(class = "metaui-intro", welcome_text)),
     sidebarLayout(
       sidebarPanel(
@@ -262,7 +262,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
         uiOutput("share_selection"), textOutput("link_notice"),
         tags$details(class = "metaui-help metaui-data-tools",
         tags$summary("Download data or code, upload data"),
-        actionButton("downloadData", "Download .xlsx", icon = icon("download")),
+        actionButton("downloadData", "Selected data and results (.xlsx)", icon = icon("download")),
         div(class = "metaui-code-actions", tags$span(class = "metaui-code-label", "Code for the applied selection"),
           actionButton("downloadCode", "R script", icon = icon("download")),
           actionButton("downloadQuarto", "Quarto file", icon = icon("download"))),
@@ -304,7 +304,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             tags$details(class = "metaui-help metaui-equivalence", tags$summary("Assess practical equivalence"),
             htmltools::tagAppendAttributes(numericInput("sesoi", "Smallest effect size of interest (\\u00b1)",
               value = NA_real_, min = 0), placeholder = "Enter a bound", .cssSelector = "input"),
-            p(class = "metaui-note", "A symmetric bound, on the scale of the estimates. There is no universal default; justify it substantively. Changing it reassesses the existing intervals without refitting. The last column gives the smallest bound that contains each interval, rounded up. Assessments use the unrounded limits, so an interval shown as ending at 0.30 can still reach past \\u00b10.30."),
+            p(class = "metaui-note", "A symmetric bound, on the scale of the estimates. There is no universal default; justify it substantively. Changing it reassesses the existing intervals without refitting. The last column gives the smallest bound that contains each interval, rounded up. Assessments use the unrounded limits, so an interval shown as ending exactly at the bound can still reach past it."),
             uiOutput("equivalence_verdict"),
             div(class = "metaui-scroll", tableOutput("equivalence")),
             uiOutput("equivalence_note")))
@@ -722,6 +722,9 @@ glue_string <- ('
     table <- interval_assessment()
     tagList(
       if ("reason" %in% names(table)) p(class = "metaui-reason", table$reason),
+      # Defines the labels in the table, which the downloads keep word for word.
+      if (!"reason" %in% names(table) && any(table$assessment %in% c("Interval within bounds", "Exceeds positive bound", "Exceeds negative bound", "Inconclusive")))
+        p(class = "metaui-note", "Interval within bounds: the whole interval lies between the negative and the positive bound. Exceeds positive (negative) bound: the whole interval lies above the positive bound (below the negative one). Inconclusive: the interval crosses a bound."),
       tags$details(class = "metaui-help", tags$summary("How to read this assessment"), tags$p("For unchanged default models, strict containment of the reported 95% CI corresponds to two one-sided tests at nominal alpha = .025 each, given the model assumptions; this is stricter than the conventional two one-sided tests (TOST) at alpha = .05. Custom intervals have unknown coverage. For Bayesian rows, containment implies at least 95% posterior probability within the bounds; it depends on the prior and is not a TOST. The multilevel model uses residual degrees of freedom; RVE has no small-sample correction, so its intervals can be too narrow. Bias-adjusted models rest on their own assumptions. This assesses the average effect; individual true effects can still exceed the bound.")))
   })
 
@@ -841,7 +844,7 @@ glue_string <- ('
       ggplot2::scale_y_continuous(limits = function(x) range(pretty(c(0, x), 3)), breaks = function(x) unique(floor(pretty(x, 3))), name = \'Effects\', expand = ggplot2::expansion(mult = 0)) +
       metaUI_plot_theme(plot_colours) +
       ggplot2::theme(axis.title.x = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank())
-  }}, bg = \'transparent\')
+  }}, bg = \'transparent\', alt = \'Histogram of {f$col  %>% stringr::str_remove(\'metaUI__filter_\')} in the selected effects; the table beside it gives the summary values.\')
   ")
       } else {
         glue::glue("
@@ -858,16 +861,16 @@ glue_string <- ('
   # Sample table -----------------------------------------------------------
 
   selected_references <- reactive(metaUI_selected_references(metaUI_study_info, df_filtered()$metaUI__study_id))
-  output$references_txt <- downloadHandler(filename = function() "references.txt", content = function(file) {
+  output$references_txt <- downloadHandler(filename = function() download_name("references.txt"), content = function(file) {
     references <- selected_references()$Reference
     writeLines(enc2utf8(paste0(references[nzchar(references)], "\n")), file, useBytes = TRUE)
   })
-  output$references_bib <- downloadHandler(filename = function() "references.bib", content = function(file) {
+  output$references_bib <- downloadHandler(filename = function() download_name("references.bib"), content = function(file) {
     refs <- selected_references()
     missing <- refs$Reference[is.na(refs$bibtex)]
     writeLines(enc2utf8(c(unique(stats::na.omit(refs$bibtex)), if (length(missing)) c("", "% References without a BibTeX entry:", paste("%", missing)))), file, useBytes = TRUE)
   })
-  output$references_xlsx <- downloadHandler(filename = function() "references.xlsx", content = function(file) {
+  output$references_xlsx <- downloadHandler(filename = function() download_name("references.xlsx"), content = function(file) {
     writexl::write_xlsx(selected_references()[c("Study", "Reference", "Link")], file)
   })
 
@@ -1100,12 +1103,14 @@ glue_string <- ('
     levels <- model$levels %>% stringr::str_remove(input$moderator) %>% stringr::str_remove_all("`") #Needed to support spaces in moderator names
     counts <- table(x)
     summary <- estimatesfiltered()
-    overall <- summary$es[models_to_run$code == metaUI_code_multilevel & summary$status == "ok"]
+    # The line is the primary estimate of the Summary, so that the same number appears on both tabs.
+    reference <- intersect(c(primary_index(summary), which(models_to_run$code == metaUI_code_multilevel)), which(summary$status == "ok"))
+    overall <- summary$es[reference]
     shown <- metaUI_show(df$metaUI__effect_size, df)
     metaUI_moderator_html(levels, metaUI_show(as.numeric(model$b), df), metaUI_show(model$ci.lb, df), metaUI_show(model$ci.ub, df),
       as.integer(counts[levels]), x, shown,
       paste0(df$metaUI__study_id, ": ", round(shown, 2)), metaUI_eff_size_type_label,
-      ref = if (length(overall)) overall[1] else NULL, se = df$metaUI__se, show_effects = isTRUE(input$moderator_effects))
+      ref = if (length(overall)) overall[1] else NULL, ref_label = if (length(overall)) summary$Model[reference[1]], se = df$metaUI__se, show_effects = isTRUE(input$moderator_effects), keep_order = metaUI_author_order(x))
   })
 
   output$moderation_text <- shiny::renderText({
@@ -1170,7 +1175,7 @@ glue_string <- ('
     validate(need(nrow(df_filtered()) <= <<opts$max_forest_plot_rows>>, forest_limit_message))
     forest_rows()
   })
-  forest_plot_for <- function(label_width = NULL, top_axis = FALSE, family = plot_colours$family) metaUI_forest_plot(forest_image_rows(), df_filtered()$metaUI__display_scale[1], colours = plot_colours, label_width = label_width, top_axis = top_axis, family = family)
+  forest_plot_for <- function(label_width = NULL, top_axis = FALSE, family = plot_colours$family) metaUI_forest_plot(forest_image_rows(), df_filtered()$metaUI__display_scale[1], colours = plot_colours, label_width = label_width, top_axis = top_axis, family = family, axis_title = metaUI_eff_size_type_label)
   forest_height <- function() 90 + 20 * nrow(forest_image_rows())
   # Plots taller than about a laptop screen repeat the x axis at the top.
   forest_plot <- reactive(forest_plot_for(top_axis = forest_height() > 700))
@@ -1199,15 +1204,15 @@ glue_string <- ('
   output$foreststudies <- renderText({
     metaUI_forest_html(forest_rows(), metaUI_eff_size_type_label, studies = forest_studies(), details = forest_details(), page = forest_view$page, sort = forest_view$sort, found = forest_view$found)
   })
-  output$forest_pdf <- downloadHandler(filename = function() "forest-plot.pdf", content = function(file) {
+  output$forest_pdf <- downloadHandler(filename = function() download_name("forest-plot.pdf"), content = function(file) {
     ggplot2::ggsave(file, forest_plot_for(top_axis = forest_height() > 700, family = ""), device = "pdf", width = 10,
       height = forest_height() / 96, limitsize = FALSE)
   })
-  output$forest_png <- downloadHandler(filename = function() "forest-plot.png", content = function(file) {
+  output$forest_png <- downloadHandler(filename = function() download_name("forest-plot.png"), content = function(file) {
     ggplot2::ggsave(file, forest_plot(), device = "png", width = 10,
       height = forest_height() / 96, dpi = 120, limitsize = FALSE)
   })
-  output$forest_csv <- downloadHandler(filename = function() "forest-plot-data.csv", content = function(file) {
+  output$forest_csv <- downloadHandler(filename = function() download_name("forest-plot-data.csv"), content = function(file) {
     utils::write.csv(forest_rows(), file, row.names = FALSE)
   })
 
@@ -1227,7 +1232,7 @@ glue_string <- ('
   })
 
   output$funnel_key <- renderUI({
-    p(class = "metaui-note metaui-key", HTML(paste0("Shaded regions: <i>p</i> &lt; .05 against zero. Vertical dashed line: the random-effects estimate from the study-level effects shown here (",
+    p(class = "metaui-note metaui-key", HTML(paste0("Shaded regions: <i>p</i> &lt; .05 against zero. Vertical dashed line: the random-effects estimate from the study-level effects shown here, which can differ from the Summary\\u2019s primary estimate (",
       metaUI_minus(round_(metaUI_show(as.numeric(meta_agg()$b), metaUI__df), metaUI_digits(meta_agg()$ci.lb, meta_agg()$ci.ub))), "). Sloping dashed lines: where 95% of studies with that standard error would fall if they all estimated this effect; they widen as studies get smaller.",
       if (metaUI__df$metaUI__es_type[1] == "ZCOR") " Positions follow the Fisher <i>z</i> scale, on which standard errors do not depend on the effect, so the <i>r</i> ticks are unevenly spaced." else "")))
   })
@@ -1237,7 +1242,7 @@ glue_string <- ('
     meta_agg <- meta_agg()
 
     metaUI_funnel(meta_agg, xlab = metaUI_eff_size_type_label, colours = plot_colours, width = session$clientData$output_funnel_width, back = metaUI__df$metaUI__es_type[1] == "ZCOR")
-  }, height = 400) # fixed: after an error the collapsed container would otherwise set the next plot height
+  }, height = 400, alt = "Funnel plot: each study\\u2019s effect against its standard error, with the pooled estimate and the lines within which 95% of studies would fall without small-study effects. The text below gives Egger\\u2019s test.") # fixed: after an error the collapsed container would otherwise set the next plot height
 
   output$bias_power_note <- renderUI({
     studies <- length(unique(df_filtered()$metaUI__study_id))
@@ -1303,7 +1308,8 @@ glue_string <- ('
       present = result$EvidencePresent, absent = result$EvidenceAbsent))
     metaUI_pcurve_plot(result$PlotData, plot_colours)
   }, width = function() max(420, session$clientData$output_pcurve_width),
-    height = function() if (isTRUE(session$clientData$output_pcurve_width < 600)) 380 else 400)
+    height = function() if (isTRUE(session$clientData$output_pcurve_width < 600)) 380 else 400,
+    alt = "P-curve: the share of significant p-values in each range, beside the shares expected with no effect and with 33% power. The text above gives the reading.")
 
 
   # ZCURVE ------------------------------------------------------------------
@@ -1345,7 +1351,9 @@ glue_string <- ('
     if (nzchar(verdict) && length(value$warnings)) verdict <- paste0(sub("\\\\.$", "", verdict), ", but with only ", value$result$N_sig, " significant results this comparison is unreliable.")
     tagList(p(class = "metaui-reading", HTML(paste0("<b>", percent(observed[1]), "</b> of these tests are significant (observed discovery rate); without selective reporting, the fit expects <b>", percent(expected),
       "</b> (expected discovery rate). ", verdict, " Of the significant results, an estimated <b>", percent(replicable), "</b> would be significant again in exact replications (expected replicability rate)."))),
-      p(class = "metaui-note", "The curve is fitted to the significant results only (z above 1.96); the bars below that are shown for comparison. The expected discovery rate is shown without an interval, so treat its comparison with the observed rate as a rough guide."))
+      p(class = "metaui-note", "The curve is fitted to the significant results only (z above 1.96); the bars below that are shown for comparison. The expected discovery rate is shown without an interval, so treat its comparison with the observed rate as a rough guide.",
+        # P-curve, where it applies, reports a power estimate for the same significant results.
+        if (identical(as.character(metaUI__df$metaUI__es_type[1]), "SMD")) " P-curve\\u2019s power estimate above also concerns the significant results. It assumes they all have the same power, which overstates it when power varies; z-curve allows for this, so the two can differ."))
   })
 
   output$zcurve_statistics <- renderUI({
@@ -1374,7 +1382,8 @@ glue_string <- ('
     # The reason is given under the heading.
     validate(need(!inherits(value$result, "error"), ""))
     metaUI_zcurve_plot(value$result, plot_colours)
-  }, width = function() max(420, session$clientData$output_zcurve_width), height = 400)
+  }, width = function() max(420, session$clientData$output_zcurve_width), height = 400,
+    alt = "Z-curve: a histogram of the studies\\u2019 z-scores with the fitted curve. The text above gives its estimates.")
 
   # DISTRIBUTION OF EFFECTS -------------------------------------------------
   output$distribution_note <- renderUI({
@@ -1522,6 +1531,8 @@ glue_string <- ('
       app_dir = metaUI_app_dir, env = environment(metaUI_fit_models))
   }
   code_name <- function(extension) sub("metaUIdata[.]xlsx$", paste0("metaUI-selection.", extension), workbook_name())
+  # Other downloads share the date and data name of the workbook, so that files from two apps or days stay apart.
+  download_name <- function(what) sub("metaUIdata[.]xlsx$", what, workbook_name())
   output$executeCodeDownload <- downloadHandler(filename = function() code_name("R"),
     content = function(file) writeLines(reproduction_code("R"), file, useBytes = TRUE))
   output$executeQuartoDownload <- downloadHandler(filename = function() code_name("qmd"),

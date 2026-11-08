@@ -54,7 +54,7 @@ html, body { background: var(--metaui-background); }
 sub, sup { line-height: 0; }
 body { color: var(--metaui-ink); font-family: var(--metaui-sans); font-size: var(--metaui-size); line-height: 1.5; font-variant-numeric: lining-nums; }
 h1, h2, h3, h4, h5, h6, .btn, .form-control, .irs, .tooltip, .selectize-input, .selectize-dropdown, .bootstrap-select, table.dataTable { font-family: inherit; }
-h2, h3 { font-family: var(--metaui-serif); font-weight: 600; color: var(--metaui-ink); }
+h1, h2, h3 { font-family: var(--metaui-serif); font-weight: 600; color: var(--metaui-ink); }
 h3 { font-size: 1.375rem; line-height: 1.25; margin: 2rem 0 .75rem; }
 h4 { font-size: 1rem; font-weight: 600; line-height: 1.3; margin: 1.5rem 0 .4rem; color: var(--metaui-ink); }
 html { font-size: var(--metaui-size); }
@@ -68,12 +68,12 @@ p { margin: 0 0 .6em; }
 }
 
 .metaui-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; align-items: baseline; padding: 16px 28px 14px; border-bottom: 1px solid var(--metaui-rule); }
-.metaui-header h2 { font-size: 1.375rem; line-height: 1.2; margin: 0; max-width: 60ch; grid-column: 1; }
+.metaui-header h1 { font-size: 1.375rem; line-height: 1.2; margin: 0; max-width: 60ch; grid-column: 1; }
 .metaui-header .metaui-brand { grid-column: 2; grid-row: 1; font-size: .8125rem; color: var(--metaui-slate); white-space: nowrap; }
 .metaui-intro { grid-column: 1; margin-top: 6px; color: var(--metaui-slate); max-width: 110ch; }
 .metaui-intro p { margin: 0; }
-.metaui-header h2, .metaui-header .metaui-brand { color: inherit; }
-.metaui-header h2 { color: var(--metaui-ink); }
+.metaui-header h1, .metaui-header .metaui-brand { color: inherit; }
+.metaui-header h1 { color: var(--metaui-ink); }
 
 /* Two columns: selection on the left, results on the right */
 @media (min-width: 768px) {
@@ -350,6 +350,7 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-track-band { top: -14px; bottom: -400px; background: var(--metaui-tint); }
 .metaui-primary-row .metaui-track-band { background: var(--metaui-rule); opacity: .5; }
 /* A border snaps to whole device pixels, so every interval has the same weight. */
+.metaui-track-pi { top: var(--metaui-mark-y); height: 0; margin-top: -.5px; border-top: 1px solid var(--metaui-slate); }
 .metaui-track-ci { top: var(--metaui-mark-y); height: 0; margin-top: -1px; border-top: 2px solid var(--metaui-slate); }
 .metaui-track-ref { top: -14px; bottom: -400px; width: 0; border-left: 1px dashed var(--metaui-accent); }
 .metaui-track-point { top: var(--metaui-mark-y); width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; background: var(--metaui-ink); border-radius: 50%; }
@@ -649,7 +650,7 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
   .container-fluid > .row > [class*="col-"] { padding: 0 14px; }
   .container-fluid > .row > .col-sm-3:has(> form.well) { padding: 0; }
   .metaui-header { grid-template-columns: 1fr; padding: 12px 14px; }
-  .metaui-header h2 { font-size: 1.3125rem; }
+  .metaui-header h1 { font-size: 1.3125rem; }
   .metaui-intro { font-size: .875rem; line-height: 1.35; margin-top: 4px; }
   .metaui-header .metaui-brand { display: none; }
   .well { height: auto; padding: 10px 14px 10px; border-right: 0; border-bottom: 1px solid var(--metaui-rule); }

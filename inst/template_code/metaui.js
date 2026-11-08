@@ -924,3 +924,18 @@ document.addEventListener('DOMContentLoaded', function () {
   if (text && !text.textContent.trim()) text.textContent = 'Applying the linked selection…';
   banner.classList.add('metaui-visible', 'metaui-restoring');
 });
+
+/* Pickers: the button names its filter, so a screen reader says "Country: 3 of 34 selected"
+   rather than the count alone. */
+(function ($) {
+  function name(select) {
+    var label = select.id && document.getElementById(select.id + '-label');
+    var button = $(select).parent().find('button.dropdown-toggle')[0];
+    if (!label || !button) return;
+    var text = button.querySelector('.filter-option-inner-inner');
+    button.setAttribute('aria-label', label.textContent.trim() + ': ' + (text ? text.textContent.trim() : ''));
+  }
+  $(document).on('loaded.bs.select rendered.bs.select changed.bs.select refreshed.bs.select', 'select', function () {
+    var select = this; setTimeout(function () { name(select); }, 0);
+  });
+})(jQuery);
