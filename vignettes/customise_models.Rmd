@@ -46,6 +46,7 @@ And then code within "" that allows you to export the following from the model o
 - `es`: the effect size
 - `LCL` & `UCL`: the lower and upper bounds of the 95% confidence intervals for the effect size
 -  `k`: the model-specific count (state whether effects, studies, or imputed effects)
+- `LCL90` & `UCL90` (optional): the bounds of the 90% interval, used only by the equivalence assessment, where a 90% interval inside the bounds corresponds to two one-sided tests at .05. A model without them is not assessed there.
 
 For `models_code`, you need to provide code, again in "", that estimates the model based on fields available in the dataset produced by `prepare_data()` (for models where `aggregated = FALSE`) or aggregated by `metaUI_aggregate()` in the generated `analysis.R`. Aggregation retains the first row’s metadata but does not infer aggregate p-values or N; do not interpret retained metadata as a new scientific aggregation rule.
 

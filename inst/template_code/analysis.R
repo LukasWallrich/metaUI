@@ -676,6 +676,20 @@ metaUI_trimfill <- function(df, control = list(), n.iter.max = 50L) {
   fit
 }
 
+# P-uniform* reports only a 95% profile-likelihood interval. This repeats its profile
+# (the same likelihood and significance threshold, alpha = .05 two-sided) at another level.
+metaUI_puni_star_interval <- function(mod, df, level = .90, alpha = .05) {
+  ml_star <- utils::getFromNamespace("ml_star", "puniform")
+  ml_star_tau <- utils::getFromNamespace("ml_star_tau", "puniform")
+  yi <- df$metaUI__effect_size; vi <- df$metaUI__variance
+  ycv <- stats::qnorm(alpha / 2, lower.tail = FALSE) * sqrt(vi)
+  ll <- stats::optim(c(mean(yi), stats::sd(yi)), ml_star, yi = yi, vi = vi, ycv = ycv, lower = c(-Inf, 0),
+    method = "L-BFGS-B", control = list(fnscale = -1, maxit = 300))$value
+  profile <- function(d) -2 * (stats::optimize(ml_star_tau, c(0, 2), d = d, yi = yi, vi = vi, ycv = ycv, maximum = TRUE)$objective - ll) -
+    stats::qchisq(level, 1)
+  c(stats::uniroot(profile, c(mod$est - 3, mod$est))$root, stats::uniroot(profile, c(mod$est, mod$est + 3))$root)
+}
+
 metaUI_multilevel_fit <- function(df) {
   metafor::rma.mv(df$metaUI__effect_size, V = df$metaUI__variance,
     random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df,
@@ -830,6 +844,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
     status <- "unsupported"
     reflected <- FALSE
     prediction <- c(NA_real_, NA_real_)
+    interval90 <- c(NA_real_, NA_real_)
     if (is.null(reason)) {
       started <- proc.time()[["elapsed"]]
       reason <- tryCatch({
@@ -851,6 +866,12 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
         for (field in c("LCL", "UCL")) if (is.na(candidate[field]) && !is.na(spec[[field]]) && spec[[field]] != "NA") stop("Missing model interval")
         result <- candidate
         if (reflected) result[c("es", "LCL", "UCL")] <- c(-result["es"], -result["UCL"], -result["LCL"])
+        # The 90% interval serves only the equivalence assessment; without one, that model is not assessed there.
+        fields90 <- intersect(c("LCL90", "UCL90"), names(spec))
+        if (length(fields90) == 2L && !anyNA(unlist(spec[fields90]))) interval90 <- tryCatch({
+          value <- suppressWarnings(vapply(fields90, function(field) as.numeric(eval(parse(text = spec[[field]]), env))[1], numeric(1)))
+          if (any(!is.finite(value)) || value[1] > value[2]) c(NA_real_, NA_real_) else if (reflected) -rev(unname(value)) else unname(value)
+        }, error = function(e) c(NA_real_, NA_real_))
         status <- "ok"
         # NaN standard errors mean the fit sits where its curvature is invalid (a variance at its
         # boundary, say): its estimate and interval are not trustworthy. Downloads keep them, marked.
@@ -882,8 +903,10 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
       if (is.na(metaUI_model_role(spec, NA_character_))) "Author-defined interval (type and coverage unknown)" else
       "Confidence interval (coverage model-dependent)"
     row$PI_LCL <- prediction[1]; row$PI_UCL <- prediction[2]
+    row$LCL90 <- interval90[1]; row$UCL90 <- interval90[2]
     row$fit_es <- row$es; row$fit_LCL <- row$LCL; row$fit_UCL <- row$UCL
-    if (df$metaUI__es_type[1] == "ZCOR") row[c("es", "LCL", "UCL", "PI_LCL", "PI_UCL")] <- lapply(row[c("es", "LCL", "UCL", "PI_LCL", "PI_UCL")], tanh)
+    shown <- c("es", "LCL", "UCL", "PI_LCL", "PI_UCL", "LCL90", "UCL90")
+    if (df$metaUI__es_type[1] == "ZCOR") row[shown] <- lapply(row[shown], tanh)
     row
   })
   list(df_agg = df_agg, table = dplyr::bind_rows(rows), fits = fits, components = components, fit_data = df)
@@ -1094,25 +1117,29 @@ metaUI_forest_plot <- function(rows, scale, colours = metaUI_plot_colours(), lab
       panel.grid.major.y = ggplot2::element_blank(), axis.ticks = ggplot2::element_blank())
 }
 
-# Descriptive containment of existing intervals, without refitting or assuming
-# custom-model coverage. Equality at a bound is deliberately inconclusive.
+# Descriptive containment of each model's 90% interval, without refitting or assuming
+# custom-model coverage. A 90% CI inside the bounds is the conventional pair of one-sided
+# tests at .05 (TOST). Equality at a bound is deliberately inconclusive.
 metaUI_interval_assessment <- function(estimates, bound = NULL, scale = "SMD", known_models = character()) {
   if (!is.null(bound) && (length(bound) != 1L || !is.numeric(bound) || !is.finite(bound) ||
       bound <= 0 || (scale == "r" && bound >= 1)))
     stop(if (scale == "r") "Enter a bound strictly between 0 and 1 for r." else "Enter a positive finite bound.")
-  valid <- estimates$status == "ok" & is.finite(estimates$LCL) & is.finite(estimates$UCL) & estimates$LCL <= estimates$UCL
+  lower <- if ("LCL90" %in% names(estimates)) estimates$LCL90 else rep(NA_real_, nrow(estimates))
+  upper <- if ("UCL90" %in% names(estimates)) estimates$UCL90 else rep(NA_real_, nrow(estimates))
+  valid <- estimates$status == "ok" & is.finite(lower) & is.finite(upper) & lower <= upper
   threshold <- rep(NA_real_, nrow(estimates))
-  threshold[valid] <- pmax(abs(estimates$LCL[valid]), abs(estimates$UCL[valid]))
+  threshold[valid] <- pmax(abs(lower[valid]), abs(upper[valid]))
   assessment <- rep("Not assessed", nrow(estimates))
   assessment[valid] <- "No bound chosen"
   if (!is.null(bound)) {
     assessment[valid] <- "Inconclusive"
-    assessment[valid & estimates$LCL > -bound & estimates$UCL < bound] <- "Interval within bounds"
-    assessment[valid & estimates$LCL > bound] <- "Exceeds positive bound"
-    assessment[valid & estimates$UCL < -bound] <- "Exceeds negative bound"
+    assessment[valid & lower > -bound & upper < bound] <- "Interval within bounds"
+    assessment[valid & lower > bound] <- "Exceeds positive bound"
+    assessment[valid & upper < -bound] <- "Exceeds negative bound"
   }
   bayesian <- if ("interval_type" %in% names(estimates)) grepl("credible", estimates$interval_type) else rep(FALSE, nrow(estimates))
   data.frame(Model = estimates$Model, bound = rep(if (is.null(bound)) NA_real_ else bound, nrow(estimates)),
     scale = rep(scale, nrow(estimates)), assessment = assessment, threshold = threshold,
-    interval = ifelse(bayesian, "95% central credible interval (prior-dependent)", ifelse(estimates$Model %in% known_models, "Reported 95% CI", "Author-defined interval; error rate unknown")))
+    interval = ifelse(estimates$status != "ok", "Not estimated", ifelse(!valid, "No 90% interval", ifelse(bayesian, "90% central credible interval (prior-dependent)",
+      ifelse(estimates$Model %in% known_models, "90% CI", "Author-defined 90% interval; error rate unknown")))))
 }

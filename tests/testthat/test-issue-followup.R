@@ -106,21 +106,37 @@ test_that("forest rows retain independent intervals and both summary models", {
 
 test_that("interval assessments use strict bounds, valid intervals and display scales", {
   t <- data.frame(Model = letters[1:8], status = c(rep("ok", 6), "failed", "unsupported"),
-    LCL = c(-.1, .05, .21, -.4, -.2, -.5, NA, NA), UCL = c(.1, .1, .4, -.21, .2, .5, NA, NA))
+    LCL90 = c(-.1, .05, .21, -.4, -.2, -.5, NA, NA), UCL90 = c(.1, .1, .4, -.21, .2, .5, NA, NA))
   r <- metaUI:::metaUI_interval_assessment(t, .2, known_models = "a")
   expect_equal(r$assessment, c(rep("Interval within bounds",2), "Exceeds positive bound",
     "Exceeds negative bound", "Inconclusive", "Inconclusive", "Not assessed", "Not assessed"))
   expect_equal(r$threshold[1:6], c(.1, .1, .4, .4, .2, .5))
-  expect_equal(r$interval[1], "Reported 95% CI")
+  expect_equal(r$interval[1], "90% CI")
   expect_match(r$interval[2], "unknown")
   expect_equal(metaUI:::metaUI_interval_assessment(t)$assessment[1], "No bound chosen")
   expect_error(metaUI:::metaUI_interval_assessment(t, 1, "r"), "between 0 and 1")
   expect_error(metaUI:::metaUI_interval_assessment(t, 0), "positive finite")
   expect_equal(nrow(metaUI:::metaUI_interval_assessment(t[0, ], .2)), 0L)
   # Monotone transform gives the same containment decisions on z and r scales.
-  z <- t; z$LCL <- atanh(t$LCL); z$UCL <- atanh(t$UCL)
+  z <- t; z$LCL90 <- atanh(t$LCL90); z$UCL90 <- atanh(t$UCL90)
   expect_identical(metaUI:::metaUI_interval_assessment(t, .2, "r")$assessment,
     metaUI:::metaUI_interval_assessment(z, atanh(.2))$assessment)
+  # The 95% interval is not used: without a 90% interval a model is not assessed.
+  expect_equal(metaUI:::metaUI_interval_assessment(data.frame(Model = "a", status = "ok", LCL = -.1, UCL = .1), .2)$assessment, "Not assessed")
+})
+
+test_that("every default model gives a 90% interval nested in its 95% interval", {
+  set.seed(4)
+  d <- data.frame(study = rep(1:25, each = 2), es = rnorm(50, .25, .3), se = runif(50, .1, .3))
+  x <- prepare_data(d, "study", "es", se = "se", es_type = "SMD", direction = "positive")
+  t <- metaUI:::metaUI_fit_models(x, get_model_tibble())$table
+  ok <- t$status == "ok"
+  expect_true(all(is.finite(t$LCL90[ok]) & is.finite(t$UCL90[ok])))
+  expect_true(all(t$LCL[ok] < t$LCL90[ok] & t$LCL90[ok] < t$es[ok] & t$es[ok] < t$UCL90[ok] & t$UCL90[ok] < t$UCL[ok]))
+  # At 95%, the P-uniform* profile reproduces the package interval.
+  agg <- metaUI:::metaUI_aggregate(x, .6)
+  mod <- puniform::puni_star(yi = agg$metaUI__effect_size, vi = agg$metaUI__variance, alpha = .05, side = "right", method = "ML", boot = FALSE)
+  expect_equal(metaUI:::metaUI_puni_star_interval(mod, agg, .95), c(mod$ci.lb, mod$ci.ub), tolerance = 1e-3)
 })
 
 test_that("changing the practical bound does not refit or change applied filters", {

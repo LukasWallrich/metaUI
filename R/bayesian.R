@@ -32,7 +32,7 @@ metaUI_bayesian_fit <- function(df, tau_scale, max_studies = 50L) {
 metaUI_bayesian_spec <- function(options) {
   tibble::tibble(name = "Bayesian normal-normal model", aggregated = TRUE,
     es = "mod$qposterior(mu.p = .5)", LCL = "mod$qposterior(mu.p = .025)", UCL = "mod$qposterior(mu.p = .975)",
-    k = "length(mod$y)", code = paste0("metaUI_bayesian_fit(df, tau_scale = ",
+    LCL90 = "mod$qposterior(mu.p = .05)", UCL90 = "mod$qposterior(mu.p = .95)", k = "length(mod$y)", code = paste0("metaUI_bayesian_fit(df, tau_scale = ",
       format(options$tau_scale, digits = 17, decimal.mark = "."), ", max_studies = ", options$max_studies, ")"))
 }
 

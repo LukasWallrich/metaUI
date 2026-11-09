@@ -90,7 +90,7 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
   # Fitting functions reachable from the engine, the model code and models.R.
   files <- file.path(app_dir, c("helpers.R", "analysis.R", "computations.R", "bayesian.R", "dmetar_contributions.R"))
   defs <- metaUI_code_definitions(files)
-  model_code <- unlist(models[c("code", "es", "LCL", "UCL", "k")], use.names = FALSE)
+  model_code <- unlist(models[intersect(c("code", "es", "LCL", "UCL", "LCL90", "UCL90", "k"), names(models))], use.names = FALSE)
   model_code <- c(model_code[!is.na(model_code) & model_code != "NA"], models_text)
   roots <- c("metaUI_fit_models", "metaUI_interval_assessment",
     unlist(lapply(model_code, function(x) tryCatch(all.names(parse(text = x)), error = function(e) character()))))
@@ -260,7 +260,7 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
   equivalence_section <- section("Practical equivalence",
     if (is.null(bound)) "No smallest effect size of interest was chosen in the app; set `bound` to assess one." else
       paste0("The reader chose a symmetric bound of ", format(bound, digits = 15), " on the displayed (", scale,
-        ") scale. The assessment checks whether each reported interval lies strictly within the bounds; it does not refit models."),
+        ") scale. The assessment checks whether each model's 90% interval lies strictly within the bounds (two one-sided tests at .05); it does not refit models."),
     c(paste0("bound <- ", if (is.null(bound)) "NULL" else metaUI_code_number(bound)),
       paste0("known_interval_models <- ", metaUI_code_string(settings$known_models)),
       "if (!is.null(estimates))",

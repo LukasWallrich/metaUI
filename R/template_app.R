@@ -305,7 +305,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             tags$details(class = "metaui-help metaui-equivalence", tags$summary("Assess practical equivalence"),
             htmltools::tagAppendAttributes(numericInput("sesoi", "Smallest effect size of interest: \\u00b1",
               value = NA_real_, min = 0), class = "metaui-sesoi"),
-            p(class = "metaui-note", "A symmetric bound, on the scale of the estimates. There is no universal default; justify it substantively. Changing it reassesses the existing intervals without refitting. The last column gives the narrowest bound that each interval lies within."),
+            p(class = "metaui-note", "A symmetric bound, on the scale of the estimates. There is no universal default; justify it substantively. The assessment uses each model\\u2019s 90% interval, not the 95% interval shown elsewhere: a 90% interval inside the bounds is the usual equivalence test, two one-sided tests at .05 (TOST). The last column gives the narrowest bound that each 90% interval lies within."),
             uiOutput("equivalence_verdict"),
             div(class = "metaui-scroll", tableOutput("equivalence")),
             uiOutput("equivalence_note")))
@@ -596,7 +596,7 @@ glue_string <- ('
     if (isTruthy(input$go) && filters_changed()) {
       pending <- pending_rows()
       if (identical(pending, 0L)) "No effects match these filters. Widen them to update the results."
-      else if (is.na(pending)) "New selection. Update results to apply it." else paste0("New selection: ", pending, if (pending == 1L) " effect" else " effects", ". Update results to apply it.")
+      else if (is.na(pending)) "New selection. Update results to apply it." else paste0("New selection: ", format(pending, big.mark = ","), if (pending == 1L) " effect" else " effects", ". Update results to apply it.")
     }
     else ""
   })
@@ -729,8 +729,8 @@ glue_string <- ('
     bound <- tryCatch(chosen_bound(), error = function(e) NULL)
     # Rounded up, so that the shown bound still contains the interval; downloads keep every digit.
     threshold <- ifelse(is.na(table$threshold), "", formatC(ceiling(table$threshold * 1000 + 1e-9) / 1000, format = "f", digits = 3))
-    if (is.null(bound)) return(stats::setNames(data.frame(table$Model, threshold), c("Model", "Interval lies within \\u00b1")))
-    stats::setNames(data.frame(table$Model, table$assessment, threshold), c("Model", "Assessment", "Interval lies within \\u00b1"))
+    if (is.null(bound)) return(stats::setNames(data.frame(table$Model, threshold), c("Model", "90% interval lies within \\u00b1")))
+    stats::setNames(data.frame(table$Model, table$assessment, threshold), c("Model", "Assessment", "90% interval lies within \\u00b1"))
   }, align = "?")
   # The answer leads, directly under the bound it answers.
   output$equivalence_verdict <- renderUI({
@@ -739,8 +739,8 @@ glue_string <- ('
     req(!is.null(bound), "assessment" %in% names(table))
     # Only models with an interval are assessed; the others are counted separately.
     assessed <- table$assessment != "Not assessed"
-    p(class = "metaui-reading", HTML(paste0("<b>", sum(grepl("within bounds", table$assessment, fixed = TRUE)), " of ", sum(assessed), "</b> ", if (sum(assessed) == 1L) "interval lies" else "intervals lie", " within \\u00b1", format(bound), ".",
-      if (any(!assessed)) paste0(" ", sum(!assessed), if (sum(!assessed) == 1L) " model was" else " models were", " not estimated, so ", if (sum(!assessed) == 1L) "it is" else "they are", " not assessed.") else "")))
+    p(class = "metaui-reading", HTML(paste0("<b>", sum(grepl("within bounds", table$assessment, fixed = TRUE)), " of ", sum(assessed), "</b> 90% ", if (sum(assessed) == 1L) "interval lies" else "intervals lie", " within \\u00b1", format(bound), ".",
+      if (any(!assessed)) paste0(" ", sum(!assessed), if (sum(!assessed) == 1L) " model was" else " models were", " not estimated or gave no 90% interval, so ", if (sum(!assessed) == 1L) "it is" else "they are", " not assessed.") else "")))
   })
   output$equivalence_note <- renderUI({
     table <- interval_assessment()
@@ -748,8 +748,8 @@ glue_string <- ('
       if ("reason" %in% names(table)) p(class = "metaui-reason", table$reason),
       # Defines the labels in the table, which the downloads keep word for word.
       if (!"reason" %in% names(table) && any(table$assessment %in% c("Interval within bounds", "Exceeds positive bound", "Exceeds negative bound", "Inconclusive")))
-        p(class = "metaui-note", "Interval within bounds: the whole interval lies between the negative and the positive bound. Exceeds positive (negative) bound: the whole interval lies above the positive bound (below the negative one). Inconclusive: the interval crosses a bound."),
-      tags$details(class = "metaui-help", tags$summary("How to read this assessment"), tags$p("For unchanged default models, strict containment of the reported 95% CI corresponds to two one-sided tests at nominal alpha = .025 each, given the model assumptions; this is stricter than the conventional two one-sided tests (TOST) at alpha = .05. Custom intervals have unknown coverage. For Bayesian rows, containment implies at least 95% posterior probability within the bounds; it depends on the prior and is not a TOST. The multilevel model uses residual degrees of freedom; RVE has no small-sample correction, so its intervals can be too narrow. Bias-adjusted models rest on their own assumptions. This assesses the average effect; individual true effects can still exceed the bound.")))
+        p(class = "metaui-note", "Interval within bounds: the whole 90% interval lies between the negative and the positive bound. Exceeds positive (negative) bound: the whole interval lies above the positive bound (below the negative one). Inconclusive: the interval crosses a bound."),
+      tags$details(class = "metaui-help", tags$summary("How to read this assessment"), tags$p("An interval that lies strictly inside the bounds rejects, at .05 each, both an effect at or below the negative bound and one at or above the positive bound. This pair of one-sided tests (TOST) is the usual equivalence test, and its 90% interval matches it; requiring the 95% interval would make the test stricter than its stated level. For default models, the intervals rest on the model assumptions. Custom intervals have unknown coverage. For Bayesian rows, a 90% credible interval inside the bounds means at least 90% posterior probability within them; it depends on the prior and is not a TOST. The multilevel model uses residual degrees of freedom; RVE has no small-sample correction, so its intervals can be too narrow. Bias-adjusted models rest on their own assumptions. This assesses the average effect; individual true effects can still exceed the bound.")))
   })
 
   # MODEL COMPARISON -----------------------------------------------------

@@ -29,7 +29,7 @@ generate_shiny(
 
 \item{eff_size_type_label}{The label to be used to describe the effect size. If NA, effect type code from dataset is used.}
 
-\item{models}{The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. Custom models can add an \code{interval_type} column naming their interval, such as "Confidence interval"; otherwise the app says that its type is unknown. A \code{description} column gives a sentence that the app's Methods section shows for that model. If you want to change the default models, have a look at the vignette and/or the \code{\link[=get_model_tibble]{get_model_tibble()}} documentation.
+\item{models}{The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. Custom models can add an \code{interval_type} column naming their interval, such as "Confidence interval"; otherwise the app says that its type is unknown. \code{LCL90} and \code{UCL90} columns give the 90\% interval used by the equivalence assessment; a model without them is not assessed there. A \code{description} column gives a sentence that the app's Methods section shows for that model. If you want to change the default models, have a look at the vignette and/or the \code{\link[=get_model_tibble]{get_model_tibble()}} documentation.
 Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 this must assign the tibble to a variable called models_to_run (i.e. using <-).}
 

@@ -38,6 +38,21 @@ get_model_tibble <- function() {
             "Precision Effect Estimate using Standard Error", TRUE, "as.numeric(mod$coefficients[1])", "confint(mod)[1, 1]", "confint(mod)[1, 2]", "mod$df+2"
         )
 
+        # 90% intervals, used only for the equivalence assessment (two one-sided tests at .05).
+        # A model without them is not assessed there.
+        models_90 <- tibble::tribble(
+        ~name, ~LCL90, ~UCL90,
+            "Random-Effects Multilevel Model", "predict(mod, level = 90)$ci.lb", "predict(mod, level = 90)$ci.ub",
+            "Robust Variance Estimation", "mod$reg_table$b.r - qt(.95, mod$reg_table$dfs) * mod$reg_table$SE", "mod$reg_table$b.r + qt(.95, mod$reg_table$dfs) * mod$reg_table$SE",
+            "Trim-and-fill", "predict(mod, level = 90)$ci.lb", "predict(mod, level = 90)$ci.ub",
+            "P-uniform star", "metaUI_puni_star_interval(mod, df)[1]", "metaUI_puni_star_interval(mod, df)[2]",
+            "Hedges-Vevea Selection Model", "mod$output_adj$par[2] - qnorm(.95) * (mod$ci.ub_adj[2] - mod$ci.lb_adj[2]) / (2 * qnorm(.975))",
+              "mod$output_adj$par[2] + qnorm(.95) * (mod$ci.ub_adj[2] - mod$ci.lb_adj[2]) / (2 * qnorm(.975))",
+            "Precision Effect Test", "confint(mod, level = .9)[1, 1]", "confint(mod, level = .9)[1, 2]",
+            "Precision Effect Estimate using Standard Error", "confint(mod, level = .9)[1, 1]", "confint(mod, level = .9)[1, 2]"
+        )
+        models_to_run <- dplyr::left_join(models_to_run, models_90, by = "name")
+
         models_code <- tibble::tribble(
         ~name, ~code,
             "Random-Effects Multilevel Model", metaUI_code_multilevel,
