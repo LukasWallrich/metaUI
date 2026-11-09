@@ -32,6 +32,14 @@ metaUI_slider_spec <- function(x, integer = NULL) {
     steps <- round(tick / c(10, 20, 50, 100), digits + 2)
     steps[c(steps <= (hi - lo) / 50, TRUE)][1]
   }
+  # The ends are the data's own range, to the step, so a slider never suggests values beyond it
+  # (a Year slider ending in a future year, say). The grid keeps whole steps between its marks.
+  places <- max(0, ceiling(-log10(step)) + 1)
+  min_value <- max(min_value, round(floor(lo / step + 1e-9) * step, places))
+  max_value <- min(max_value, round(ceiling(hi / step - 1e-9) * step, places))
+  positions <- round((max_value - min_value) / step)
+  ticks <- c(Filter(function(t) positions %% t == 0, seq_len(max(1, ticks)))[-1], 1)
+  ticks <- max(ticks)
   list(min = min_value, max = max_value, step = step, ticks = ticks)
 }
 
@@ -41,6 +49,63 @@ metaUI_slider_input <- function(inputId, label, spec, value = c(spec$min, spec$m
     value = value, step = spec$step, sep = "")
   htmltools::tagQuery(slider)$find("input")$removeAttrs("data-grid-num")$
     addAttrs(`data-grid-num` = spec$ticks)$allTags()
+}
+
+# One result's statistics as label and value rows, for two-column display tables.
+metaUI_statistics_rows <- function(row) {
+  data.frame(Statistic = names(row), Value = vapply(row, function(x) as.character(x[1]), character(1)), row.names = NULL)
+}
+
+# Precomputed content inside an output, shown until the server's own value replaces it.
+metaUI_opening_output <- function(output, content) {
+  if (is.null(content)) output else htmltools::tagAppendAttributes(htmltools::tagAppendChildren(output, shiny::HTML(content)), `data-metaui-opening` = "true")
+}
+
+# A two-way choice of view, drawn the same everywhere (metaui.css, metaui.js): a label and one
+# pressed button per option. `class` tells metaui.js what the choice changes.
+metaUI_switch <- function(label, class, options, selected) {
+  buttons <- vapply(seq_along(options), function(i) sprintf('<button type="button" class="%s" data-value="%s" aria-pressed="%s">%s</button>',
+    class, names(options)[i], if (identical(names(options)[i], selected)) "true" else "false", htmltools::htmlEscape(options[[i]])), character(1))
+  paste0('<span class="metaui-switch" role="group" aria-label="', htmltools::htmlEscape(label), '"><span class="metaui-switch-label" aria-hidden="true">',
+    htmltools::htmlEscape(label), "</span>", paste(buttons, collapse = ""), "</span>")
+}
+
+# One row per study from the effect rows of the Sample table. A value shared by all of a
+# study's effects is kept; otherwise numbers show their range and other values "several".
+# P-values are left out. Effect sizes show their range ("lowest to highest", three decimals), not an
+# average, which would need a model.
+metaUI_study_rows <- function(effects, key = "metaUI__key", drop = "Reported p", spans = "Effect size") {
+  groups <- factor(effects[[key]], levels = unique(effects[[key]]))
+  # Whole numbers stay whole; others get two decimals, or as many more as close range ends need to differ.
+  end <- function(x) {
+    if (all(x == round(x))) return(format(x, digits = 15, scientific = FALSE, trim = TRUE))
+    for (digits in 2:8) { out <- formatC(x, format = "f", digits = digits); if (length(unique(out)) == length(unique(x))) break }
+    # Trailing zeros add nothing (2011.5, not 2011.50).
+    sub("[.]$", "", sub("0+$", "", out))
+  }
+  span <- function(x) vapply(split(x, groups), function(v) { v <- v[!is.na(v)]
+    if (!length(v)) NA_character_ else if (length(unique(v)) == 1L) metaUI_minus(formatC(v[1], format = "f", digits = 3))
+    else paste(metaUI_minus(formatC(range(v), format = "f", digits = 3)), collapse = " to ") }, character(1))
+  summarise <- function(x) {
+    values <- lapply(split(x, groups), function(v) unique(v[!is.na(v) & as.character(v) != ""]))
+    if (is.numeric(x) && all(lengths(values) <= 1L)) return(vapply(values, function(v) if (length(v)) as.numeric(v) else NA_real_, numeric(1)))
+    vapply(values, function(v) if (!length(v)) NA_character_ else if (length(v) == 1L) { if (is.numeric(v)) end(v) else as.character(v) }
+      else if (is.numeric(v)) paste(end(c(min(v), max(v))), collapse = "\u2013") else "several", character(1))
+  }
+  cols <- setdiff(names(effects), drop)
+  out <- as.data.frame(lapply(cols, function(col) if (col %in% spans) span(effects[[col]]) else summarise(effects[[col]])),
+    col.names = cols, check.names = FALSE, stringsAsFactors = FALSE)
+  after <- max(match(intersect(c("Study", "Source"), names(out)), names(out)))
+  out <- cbind(out[seq_len(after)], Effects = as.vector(table(groups)), out[-seq_len(after)])
+  rownames(out) <- NULL
+  out
+}
+
+# Keeps missing values in or out. Hidden while the built data have none on this filter;
+# an upload can bring some, so it reappears then.
+metaUI_missing_toggle <- function(inputId, missing) {
+  toggle <- shiny::checkboxInput(inputId, paste0("Include missing values", if (missing) paste0(" (", missing, ")")), value = TRUE)
+  if (missing) toggle else htmltools::tagAppendAttributes(toggle, class = "metaui-no-missing")
 }
 
 # Render width for plots that need room for labels: at least `min_width` on wide
@@ -66,8 +131,8 @@ metaUI_plot_width <- function(width, min_width) {
 fmt_p <- function(p_value, digits = 3, include_equal = TRUE) {
   fmt <- paste0("%.", digits, "f")
   fmt_p <- function(x, include_equal) {
-    paste0(ifelse(include_equal, "= ", ""), sprintf(fmt, x)) %>%
-      stringr::str_replace(" 0.", " .")
+    # APA style: no leading zero, with or without "= " in front.
+    sub("^(= )?0\\.", "\\1.", paste0(ifelse(include_equal, "= ", ""), sprintf(fmt, x)))
   }
   exact <- !(p_value < 10^(-digits) | p_value > .99)
   exact[is.na(exact)] <- TRUE
@@ -90,46 +155,47 @@ summarise_numeric <- function(x, name) {
   }
   tibble::tribble(
     ~Var, ~`Mean (SD)`, ~`Min`, ~`Max`, ~`Share missing`,
-    name, paste0(round(mean(x, na.rm = TRUE), 2), " (", round(sd(x, na.rm = TRUE), 2), ")"),
-    round(min(x, na.rm = TRUE), 2), round(max(x, na.rm = TRUE), 2), paste0(round(mean(is.na(x))*100, 2), " %")
+    name, paste0(round(mean(x, na.rm = TRUE), if (abs(mean(x, na.rm = TRUE)) >= 100) 1 else 2), " (", round(sd(x, na.rm = TRUE), if (abs(mean(x, na.rm = TRUE)) >= 100) 1 else 2), ")"),
+    round(min(x, na.rm = TRUE), 2), round(max(x, na.rm = TRUE), 2), paste0(round(mean(is.na(x))*100, 1), "%")
   )  %>% dplyr::mutate(dplyr::across(dplyr::everything(), as.character))  %>%
     tidyr::pivot_longer(dplyr::everything(), names_to = "Statistic", values_to = "Value")
 }
 
-# Count categories in x, return top 10 and return everything else as Other (merging with existing Other if it exists)
+# Whether a factor's levels are in an order the author chose (ordered, or not alphabetical once
+# "Other" and "(Missing)" are set aside); such levels are listed in that order, not by size.
+metaUI_author_order <- function(x) {
+  if (!is.factor(x)) return(FALSE)
+  if (is.ordered(x)) return(TRUE)
+  l <- setdiff(levels(x), c("Other", "(Missing)"))
+  !identical(l, l[order(tolower(l))])
+}
+
+# Count categories in x. With more than ten non-empty levels, the nine largest are listed and the
+# rest counted in one row (named ".metaUI_other", with the merged levels in attr "other_levels").
+# "(Missing)" always keeps its own row; an author's own "Other" level is listed like any other.
 summarise_categorical <- function(x, name) {
   if (length(x) == 0) {
     return(NULL)
   }
-
+  keep_order <- metaUI_author_order(x)
   counts <- tibble::tibble(!!rlang::sym(name) := x) %>%
-    dplyr::count(!!rlang::sym(name), sort = TRUE, .drop = FALSE) %>%
+    dplyr::count(!!rlang::sym(name), sort = !keep_order, .drop = FALSE) %>%
     dplyr::rename(Count = n)
-
-  if (nrow(counts) > 10) {
-
-  top_categories <- counts %>%
-    dplyr::filter(!!rlang::sym(name) != "Other") %>%
-    dplyr::slice_max(order_by = Count, n = 9, with_ties = FALSE)
-
-  other_count <- sum(counts$Count) - sum(top_categories$Count)
-
-  if ("Other" %in% counts[[name]]) {
-    other_count <- other_count + counts %>% dplyr::filter(!!rlang::sym(name) == "Other") %>% dplyr::pull(Count)
+  counts[[name]] <- as.character(counts[[name]])
+  label <- counts[[name]]
+  listed <- counts$Count > 0 & label != "(Missing)"
+  final_counts <- counts
+  merged <- NULL
+  if (!keep_order && sum(listed) > 10) {
+    top <- which(listed)[1:9]
+    merged <- counts[listed & !seq_len(nrow(counts)) %in% top, , drop = FALSE]
+    final_counts <- dplyr::bind_rows(counts[top, , drop = FALSE],
+      tibble::tibble(!!rlang::sym(name) := ".metaUI_other", Count = sum(merged$Count)), counts[!listed, , drop = FALSE])
   }
-
-  final_counts <- if (other_count > 0) {
-    dplyr::bind_rows(top_categories, tibble::tibble(!!rlang::sym(name) := "Other", Count = other_count))
-  } else {
-    top_categories
-  }
-
-  } else {
-    final_counts <- counts
-  }
-
-  final_counts %>%
+  out <- final_counts %>%
     dplyr::mutate(Percentage = paste0(round(Count / sum(Count) * 100, 1), "%"))
+  if (!is.null(merged)) attr(out, "other_levels") <- paste0(as.character(merged[[name]]), " (", merged$Count, ")")
+  out
 }
 
 
@@ -202,6 +268,53 @@ metaUI_first_family <- function(authors) {
   if (length(names) == 1) family else if (length(names) == 2) paste(family, collapse = " & ") else paste(family[1], "et al.")
 }
 
+# One field of a BibTeX entry, without braces or LaTeX commands; NA where it is missing.
+metaUI_bib_field <- function(bibtex, field) {
+  if (is.null(bibtex) || is.na(bibtex)) return(NA_character_)
+  hit <- regmatches(bibtex, regexec(paste0("(?i)\\b", field, "\\s*=\\s*\\{((?:[^{}]|\\{(?:[^{}]|\\{[^{}]*\\})*\\})*)\\}"), bibtex, perl = TRUE))[[1]]
+  if (length(hit) < 2L) return(NA_character_)
+  value <- gsub("\\{?\\\\?&\\}?(amp;?(\\$\\\\mathsemicolon\\$)?)?", "&", hit[2])
+  # Common accents, so that names written in LaTeX still match the reference text.
+  accents <- list("'" = c(a = "\u00e1", e = "\u00e9", i = "\u00ed", o = "\u00f3", u = "\u00fa"), '"' = c(a = "\u00e4", e = "\u00eb", i = "\u00ef", o = "\u00f6", u = "\u00fc"),
+    "`" = c(a = "\u00e0", e = "\u00e8", i = "\u00ec", o = "\u00f2", u = "\u00f9"), "~" = c(n = "\u00f1", a = "\u00e3", o = "\u00f5"), "^" = c(a = "\u00e2", e = "\u00ea", o = "\u00f4"))
+  for (mark in names(accents)) for (letter in names(accents[[mark]]))
+    value <- gsub(paste0("\\\\", if (mark %in% c("^", "~")) "\\" else "", mark, "\\{?(\\\\)?", letter, "\\}?"), accents[[mark]][[letter]], value)
+  value <- gsub("\\\\c\\{?c\\}?", "\u00e7", value)
+  value <- gsub("\\\\[A-Za-z]+\\s*|[{}]", "", value)
+  value <- trimws(gsub("\\s+", " ", value))
+  if (nzchar(value)) sub("[.]$", "", value) else NA_character_
+}
+
+# A reference as the authors wrote it, with APA italics where its BibTeX entry shows what they cover
+# (an article's journal and volume; a book's or thesis's title) and web addresses as links.
+# Other entries, or text the entry does not match, stay as written.
+metaUI_reference_html <- function(reference, bibtex = NULL) {
+  type <- if (is.null(bibtex) || is.na(bibtex)) "" else tolower(sub("^@", "", regmatches(bibtex, regexpr("@[A-Za-z]+", bibtex))))
+  if (!length(type)) type <- ""
+  find <- function(text) {
+    if (is.na(text) || !nzchar(text)) return(NULL)
+    at <- regexpr(tolower(text), tolower(reference), fixed = TRUE)
+    if (at < 0) NULL else c(at, at + nchar(text) - 1L)
+  }
+  span <- NULL
+  if (type == "article") {
+    span <- find(metaUI_bib_field(bibtex, "journal"))
+    volume <- metaUI_bib_field(bibtex, "volume")
+    if (!is.null(span) && !is.na(volume) && startsWith(substring(reference, span[2] + 1L), paste0(", ", volume))) span[2] <- span[2] + nchar(volume) + 2L
+  } else if (type == "book" || grepl("thes", type)) {
+    span <- find(metaUI_bib_field(bibtex, "title"))
+    # A thesis title in APA style runs from the year to the bracketed description.
+    if (is.null(span) && grepl("thes", type)) {
+      start <- regexpr(")\\. ", reference); end <- regexpr(" \\[[^]]*thesis[^]]*\\]", reference, ignore.case = TRUE)
+      if (start > 0 && end > start + 3L) span <- c(start + 3L, end - 1L)
+    }
+  }
+  link <- function(x) gsub("(https?://[^[:space:]<]+?)([.,;]?)(?=[[:space:]]|$)", "<a href=\"\\1\" target=\"_blank\" rel=\"noopener\">\\1</a>\\2", x, perl = TRUE)
+  esc <- function(x) link(htmltools::htmlEscape(x))
+  if (is.null(span)) return(esc(reference))
+  paste0(esc(substring(reference, 1L, span[1] - 1L)), "<i>", esc(substring(reference, span[1], span[2])), "</i>", esc(substring(reference, span[2] + 1L)))
+}
+
 metaUI_copy_icon <- '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><rect x="5.5" y="5.5" width="8.5" height="8.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 5.5V3.5A1.5 1.5 0 0 0 9 2H3.5A1.5 1.5 0 0 0 2 3.5V9a1.5 1.5 0 0 0 1.5 1.5h2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>'
 
 # Reader-facing study details from the authors' study information (see fetch_study_metadata()).
@@ -219,7 +332,10 @@ metaUI_study_details <- function(info) {
     pages <- if (!is.null(get("pages"))) gsub("([0-9])-([0-9])", "\\1\u2013\\2", get("pages"))
     venue <- paste0(if (!is.null(get("volume"))) paste0("<i>", esc(get("volume")), "</i>"),
       if (!is.null(get("issue"))) paste0("(", esc(get("issue")), ")"))
-    reference <- paste0(
+    # The authors' own wording of a reference comes first, as in metaUI_study_reference().
+    reference <- if (!is.null(get("reference"))) paste0(metaUI_reference_html(get("reference"), get("bibtex")),
+      if (!is.null(link) && !grepl(link, get("reference"), fixed = TRUE)) paste0(" ", as.character(htmltools::tags$a(href = link, target = "_blank", rel = "noopener", link))))
+    else paste0(
       if (!is.null(get("authors"))) paste0(esc(metaUI_apa_authors(get("authors"))), " "),
       if (!is.null(get("year"))) paste0("(", esc(get("year")), "). "),
       if (!is.null(get("title"))) paste0("<span class=\"metaui-study-title\">", esc(stop_(get("title"))), "</span> "),
@@ -259,6 +375,8 @@ metaUI_study_details <- function(info) {
 # Plain one-line reference for hover titles: "Family et al. (year). Title. Journal."
 metaUI_study_reference <- function(info) {
   vapply(seq_len(nrow(info)), function(i) {
+    # The authors' own wording of a reference comes first.
+    if ("reference" %in% names(info) && !is.na(info$reference[i])) return(as.character(info$reference[i]))
     parts <- vapply(c("authors", "year", "title", "journal"), function(name) {
       value <- if (name %in% names(info)) info[[name]][i] else NA
       if (is.na(value)) "" else as.character(value)
@@ -271,12 +389,44 @@ metaUI_study_reference <- function(info) {
   }, character(1))
 }
 
+# BibTeX entries: the authors' own where supplied, else built from the study's fields.
+metaUI_study_bibtex <- function(info) {
+  field <- function(name, i) if (name %in% names(info) && !is.na(info[[name]][i])) as.character(info[[name]][i]) else NA_character_
+  vapply(seq_len(nrow(info)), function(i) {
+    own <- field("bibtex", i)
+    if (!is.na(own)) return(own)
+    authors <- field("authors", i); title <- field("title", i); year <- field("year", i)
+    if (is.na(title) || is.na(authors)) return(NA_character_)
+    key <- paste0(gsub("[^[:alnum:]]", "", metaUI_first_family(authors)), if (!is.na(year)) year, "_", i)
+    values <- c(author = gsub("; ", " and ", authors, fixed = TRUE), title = title, year = year, journal = field("journal", i),
+      volume = field("volume", i), number = field("issue", i), pages = field("pages", i), doi = field("doi", i), url = field("url", i))
+    values <- values[!is.na(values)]
+    paste0("@article{", key, ",\n", paste0("  ", names(values), " = {", values, "}", collapse = ",\n"), "\n}")
+  }, character(1))
+}
+
+# One row per distinct reference among the studies selected, in alphabetical order.
+metaUI_selected_references <- function(info, studies) {
+  rows <- info[info$study %in% as.character(studies), , drop = FALSE]
+  doi <- if ("doi" %in% names(rows)) rows$doi else rep(NA_character_, nrow(rows))
+  url <- if ("url" %in% names(rows)) rows$url else rep(NA_character_, nrow(rows))
+  out <- data.frame(Study = rows$study, Reference = metaUI_study_reference(rows),
+    Link = ifelse(!is.na(url), url, ifelse(!is.na(doi), paste0("https://doi.org/", doi), NA_character_)),
+    bibtex = metaUI_study_bibtex(rows), stringsAsFactors = FALSE)
+  # A study known only by its BibTeX entry still belongs in that download.
+  key <- ifelse(nzchar(out$Reference), out$Reference, out$bibtex)
+  keep <- !is.na(key) & !duplicated(key)
+  out <- out[keep, , drop = FALSE]
+  out[order(tolower(key[keep])), , drop = FALSE]
+}
+
 # Effect-list cells: escaped study labels, as disclosure buttons where study details exist,
 # and the details HTML for the hidden column that metaui.js shows as a child row.
 metaUI_study_cells <- function(labels, ids, info, details_html, reference_text) {
   index <- match(as.character(ids), info$study)
-  label <- vapply(seq_along(labels), function(i) if (is.na(index[i])) htmltools::htmlEscape(labels[i]) else
-    as.character(htmltools::tags$button(type = "button", class = "metaui-study-toggle", `aria-expanded` = "false",
-      title = reference_text[index[i]], labels[i])), character(1))
+  # Built as strings: thousands of rows, and tag objects take a second or more.
+  escaped <- htmltools::htmlEscape(as.character(labels))
+  label <- ifelse(is.na(index), escaped, sprintf('<button type="button" class="metaui-study-toggle" aria-expanded="false" title="%s">%s</button>',
+    htmltools::htmlEscape(as.character(reference_text[index]), attribute = TRUE), escaped))
   list(label = label, details = ifelse(is.na(index), "", details_html[index]))
 }

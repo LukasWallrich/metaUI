@@ -24,6 +24,8 @@ importFrom(graphics,
   points,
   rect,
   segments,
+  strheight,
+  strwidth,
   text
 )
 importFrom(rlang,

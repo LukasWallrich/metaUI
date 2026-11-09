@@ -90,7 +90,7 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
   # Fitting functions reachable from the engine, the model code and models.R.
   files <- file.path(app_dir, c("helpers.R", "analysis.R", "computations.R", "bayesian.R", "dmetar_contributions.R"))
   defs <- metaUI_code_definitions(files)
-  model_code <- unlist(models[c("code", "es", "LCL", "UCL", "k")], use.names = FALSE)
+  model_code <- unlist(models[intersect(c("code", "es", "LCL", "UCL", "LCL90", "UCL90", "k"), names(models))], use.names = FALSE)
   model_code <- c(model_code[!is.na(model_code) & model_code != "NA"], models_text)
   roots <- c("metaUI_fit_models", "metaUI_interval_assessment",
     unlist(lapply(model_code, function(x) tryCatch(all.names(parse(text = x)), error = function(e) character()))))
@@ -109,7 +109,7 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
   intro <- c(
     paste0("This file reproduces one selection from the metaUI app \"", gsub("[\r\n]+", " ", settings$dataset_name),
       "\": its filters, missing-value choices, effect-size computation and equivalence bound, and the model rows on the Summary tab. ",
-      "It was exported on ", settings$exported, " from the selection behind the results then shown (the last Analyze data)."),
+      "It was exported on ", settings$exported, " from the selection behind the results then shown (the last analysis)."),
     paste0("It reads the workbook downloaded from the same analysis (", settings$workbook, "), which holds every row of ", data_kind, ". ",
       "Put the workbook next to this file or set `workbook` below. The code does not need metaUI: the model specifications are the app's models.R, ",
       "and the fitting functions are copied from the app's ", paste(helper_files, collapse = ", "), "."),
@@ -260,7 +260,7 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
   equivalence_section <- section("Practical equivalence",
     if (is.null(bound)) "No smallest effect size of interest was chosen in the app; set `bound` to assess one." else
       paste0("The reader chose a symmetric bound of ", format(bound, digits = 15), " on the displayed (", scale,
-        ") scale. The assessment checks whether each reported interval lies strictly within the bounds; it does not refit models."),
+        ") scale. The assessment checks whether each model's 90% interval lies strictly within the bounds (two one-sided tests at .05); it does not refit models."),
     c(paste0("bound <- ", if (is.null(bound)) "NULL" else metaUI_code_number(bound)),
       paste0("known_interval_models <- ", metaUI_code_string(settings$known_models)),
       "if (!is.null(estimates))",

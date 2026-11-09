@@ -5,14 +5,14 @@
 \title{Choose a generated app's design}
 \usage{
 app_design(
-  accent = "#096B74",
-  background = "#EDF3F7",
+  accent = "#1D5C48",
+  background = "#FFFFFF",
   surface = "#FFFFFF",
-  text = "#182F46",
-  font = "system",
-  text_size = 15,
+  text = "#1A2530",
+  font = "source",
+  text_size = 16,
   spacing = "comfortable",
-  radius = 10
+  radius = 3
 )
 }
 \arguments{
@@ -24,13 +24,13 @@ app_design(
 
 \item{text}{Main text colour.}
 
-\item{font}{One of \code{system}, \code{arial}, \code{verdana} or \code{georgia}.}
+\item{font}{One of \code{source}, \code{system}, \code{arial}, \code{verdana} or \code{georgia}.}
 
 \item{text_size}{Base interface text size in pixels, from 14 to 20.}
 
 \item{spacing}{\code{comfortable} or \code{compact}.}
 
-\item{radius}{Panel corner radius in pixels, from 0 to 16.}
+\item{radius}{Corner radius of buttons and fields in pixels, from 0 to 16.}
 }
 \value{
 A named list of validated design settings.
@@ -38,9 +38,10 @@ A named list of validated design settings.
 \description{
 Create settings for \code{\link[=generate_shiny]{generate_shiny()}} or \code{\link[=design_app]{design_app()}}. Colours must be
 opaque six-digit hex values. Text and accent colours must have at least 4.5:1
-contrast against the page, panels and derived tints. Fonts come from each
-reader's device and use fallbacks; no author-machine font files are needed.
-Named fonts may be substituted on other platforms.
+contrast against the page, panels and derived tints. The default font is the
+open-licensed Source Sans and Source Serif pair, which ships inside each app.
+The other fonts come from each reader's device, use fallbacks and may be
+substituted on other platforms.
 }
 \examples{
 design <- app_design(accent = "#69429A", font = "georgia", radius = 4)

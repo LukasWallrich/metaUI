@@ -80,3 +80,7 @@ Source: https://github.com/r-wasm/shiny/tree/v1.13.0.8000
 Copyright (c) 2012-2025 Posit Software, PBC. MIT License.
 The complete MIT permission, inclusion condition and warranty disclaimer above
 also apply to this fixture, with this copyright holder.
+
+Bundled fonts (inst/template_code/fonts): Source Sans 3 and Source Serif 4,
+Copyright Adobe (https://github.com/adobe-fonts). SIL Open Font License 1.1;
+the licence text is in inst/template_code/fonts/OFL.txt.

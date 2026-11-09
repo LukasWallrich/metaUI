@@ -24,17 +24,18 @@ let browser;
     $('#text_size').data('ionRangeSlider').update({from:18}); $('#text_size').trigger('change');
     $('#radius').data('ionRangeSlider').update({from:0}); $('#radius').trigger('change');
   });
-  await page.waitForFunction(()=>{
+  // The preview iframe is replaced after each change: read it in the same step that finds it settled.
+  const preview = await (await page.waitForFunction(()=>{
     const d=document.querySelector('iframe')?.contentDocument;
-    return d && d.body && d.querySelector('.well') && getComputedStyle(d.body).fontFamily.includes('Georgia') && getComputedStyle(d.querySelector('.well')).borderRadius==='0px';
-  });
-  const preview = await page.evaluate(()=>{
-    const d=document.querySelector('iframe').contentDocument;
+    const well=d?.querySelector('.well'), heading=d?.querySelector('h2'), go=d?.querySelector('#go');
+    if(!d?.body||!well||!heading||!go) return false;
+    const body=getComputedStyle(d.body);
+    if(!body.fontFamily.includes('Georgia')||body.fontSize!=='18px'||getComputedStyle(well).borderRadius!=='0px') return false;
     return {accent:getComputedStyle(d.documentElement).getPropertyValue('--metaui-accent').trim(),
-      font:getComputedStyle(d.body).fontFamily,headingFont:getComputedStyle(d.querySelector('h2')).fontFamily,
-      textSize:getComputedStyle(d.body).fontSize,padding:getComputedStyle(d.querySelector('.well')).padding,
-      radius:getComputedStyle(d.querySelector('.well')).borderRadius,buttonBackground:getComputedStyle(d.querySelector('#go')).backgroundColor};
-  });
+      font:body.fontFamily,headingFont:getComputedStyle(heading).fontFamily,
+      textSize:body.fontSize,padding:getComputedStyle(well).padding,
+      radius:getComputedStyle(well).borderRadius,buttonBackground:getComputedStyle(go).backgroundColor};
+  })).jsonValue();
   assert.equal(preview.accent, '#69429A'); assert.equal(preview.textSize,'18px');
   assert(preview.headingFont.includes('Georgia')); assert.equal(preview.padding,'16px');
   await page.screenshot({path:path.join(evidence,'helper-desktop.png')});
@@ -62,8 +63,8 @@ let browser;
   assert.equal(await page.locator('#export_downloads a').count(),0);
   assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('iframe').contentDocument.documentElement).getPropertyValue('--metaui-accent').trim()),'#69429A');
   await page.getByRole('button',{name:'Reset choices',exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('#r_code')?.textContent.includes('#096B74') && document.querySelector('#export_downloads a'));
-  await page.waitForFunction(()=>document.querySelector('#palette').value==='teal');
+  await page.waitForFunction(()=>document.querySelector('#r_code')?.textContent.includes('#1D5C48') && document.querySelector('#export_downloads a'));
+  await page.waitForFunction(()=>document.querySelector('#palette').value==='forest');
   await page.getByRole('radio',{name:'Phone',exact:true}).check();
   await page.waitForFunction(()=>document.querySelector('iframe').style.width==='390px');
   await page.setViewportSize({width:390,height:844});
@@ -79,7 +80,7 @@ let browser;
     textSize:getComputedStyle(document.body).fontSize,padding:getComputedStyle(document.querySelector('.well')).padding,
     radius:getComputedStyle(document.querySelector('.well')).borderRadius,buttonBackground:getComputedStyle(document.querySelector('#go')).backgroundColor}));
   assert.deepEqual(actual,preview);
-  await page.locator('#go').click(); await page.locator('#sample table').waitFor();
+  await page.locator('#effectestimate table').waitFor();
   assert((await page.locator('#primary_estimate').innerText()).includes('0.24'));
   await page.screenshot({path:path.join(evidence,'generated-design.png')});
   assert.deepEqual(errors,[]);

@@ -1,39 +1,42 @@
 skip_without_app_packages()
 
-test_that("generated sample tabs share values without duplicate output bindings", {
+test_that("the sample overview has one output binding and follows the selection", {
   path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
   d <- prepared()
   generate_shiny(d, "Sample overview", save_to_folder = path, launch_app = FALSE)
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   html <- as.character(env$ui)
-  expect_equal(lengths(regmatches(html, gregexpr('id="sample"', html, fixed = TRUE))), 1L)
   expect_equal(lengths(regmatches(html, gregexpr('id="sample_overview"', html, fixed = TRUE))), 1L)
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
-    expect_identical(output$sample, output$sample_overview)
+    before <- output$sample_overview
     session$setInputs(outliers_z_scores = c(0, 10), go = 2)
-    expect_identical(output$sample, output$sample_overview)
+    expect_false(identical(before, output$sample_overview))
   })
 })
 
-test_that("oversized forest selections show HTML without creating a plot output", {
+test_that("forest PDFs hold every study over several pages, and PNGs the page shown", {
   path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
   d <- prepared()
-  generate_shiny(d, "Forest limit", save_to_folder = path, launch_app = FALSE,
+  generate_shiny(d, "Forest pages", save_to_folder = path, launch_app = FALSE,
     options = list(max_forest_plot_rows = 8))
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
-    expect_match(output$forest_panel$html, "limited to 8 effects")
-    expect_false(grepl('id="foreststudies"', output$forest_panel$html, fixed = TRUE))
-    expect_error(output$foreststudies, "limited to 8 effects")
-    # The exact boundary should still render a plot.
-    state_values$uploaded_data <- d[1:8, ]
-    session$setInputs(go = 2)
-    expect_match(output$forest_panel$html, 'id="foreststudies"', fixed = TRUE)
-    expect_true(is.list(output$foreststudies))
+    expect_match(output$forest_panel$html, 'id="forest_pdf"', fixed = TRUE)
+    expect_match(output$forest_panel$html, 'id="forest_png"', fixed = TRUE)
+    expect_match(output$foreststudies, "metaui-forest-key", fixed = TRUE)
+    rows <- forest_rows()
+    pages <- metaUI_forest_chunks(rows, forest_screen_order(), 8)
+    expect_gt(length(pages), 1L)
+    # Every effect appears once, and each page keeps whole studies.
+    effects <- do.call(rbind, lapply(pages, function(x) x[x$kind == "Selected effect", ]))
+    expect_setequal(paste(effects$study, effects$effect_id), paste(rows$study, rows$effect_id)[rows$kind == "Selected effect"])
+    expect_false(any(duplicated(unlist(lapply(pages, function(x) unique(x$study[x$kind == "Selected effect"]))))))
+    pdf <- output$forest_pdf
+    expect_equal(readBin(pdf, "raw", 5), charToRaw("%PDF-"))
   })
 })
 
@@ -103,21 +106,37 @@ test_that("forest rows retain independent intervals and both summary models", {
 
 test_that("interval assessments use strict bounds, valid intervals and display scales", {
   t <- data.frame(Model = letters[1:8], status = c(rep("ok", 6), "failed", "unsupported"),
-    LCL = c(-.1, .05, .21, -.4, -.2, -.5, NA, NA), UCL = c(.1, .1, .4, -.21, .2, .5, NA, NA))
+    LCL90 = c(-.1, .05, .21, -.4, -.2, -.5, NA, NA), UCL90 = c(.1, .1, .4, -.21, .2, .5, NA, NA))
   r <- metaUI:::metaUI_interval_assessment(t, .2, known_models = "a")
   expect_equal(r$assessment, c(rep("Interval within bounds",2), "Exceeds positive bound",
     "Exceeds negative bound", "Inconclusive", "Inconclusive", "Not assessed", "Not assessed"))
   expect_equal(r$threshold[1:6], c(.1, .1, .4, .4, .2, .5))
-  expect_equal(r$interval[1], "Reported 95% CI")
+  expect_equal(r$interval[1], "90% CI")
   expect_match(r$interval[2], "unknown")
   expect_equal(metaUI:::metaUI_interval_assessment(t)$assessment[1], "No bound chosen")
   expect_error(metaUI:::metaUI_interval_assessment(t, 1, "r"), "between 0 and 1")
   expect_error(metaUI:::metaUI_interval_assessment(t, 0), "positive finite")
   expect_equal(nrow(metaUI:::metaUI_interval_assessment(t[0, ], .2)), 0L)
   # Monotone transform gives the same containment decisions on z and r scales.
-  z <- t; z$LCL <- atanh(t$LCL); z$UCL <- atanh(t$UCL)
+  z <- t; z$LCL90 <- atanh(t$LCL90); z$UCL90 <- atanh(t$UCL90)
   expect_identical(metaUI:::metaUI_interval_assessment(t, .2, "r")$assessment,
     metaUI:::metaUI_interval_assessment(z, atanh(.2))$assessment)
+  # The 95% interval is not used: without a 90% interval a model is not assessed.
+  expect_equal(metaUI:::metaUI_interval_assessment(data.frame(Model = "a", status = "ok", LCL = -.1, UCL = .1), .2)$assessment, "Not assessed")
+})
+
+test_that("every default model gives a 90% interval nested in its 95% interval", {
+  set.seed(4)
+  d <- data.frame(study = rep(1:25, each = 2), es = rnorm(50, .25, .3), se = runif(50, .1, .3))
+  x <- prepare_data(d, "study", "es", se = "se", es_type = "SMD", direction = "positive")
+  t <- metaUI:::metaUI_fit_models(x, get_model_tibble())$table
+  ok <- t$status == "ok"
+  expect_true(all(is.finite(t$LCL90[ok]) & is.finite(t$UCL90[ok])))
+  expect_true(all(t$LCL[ok] < t$LCL90[ok] & t$LCL90[ok] < t$es[ok] & t$es[ok] < t$UCL90[ok] & t$UCL90[ok] < t$UCL[ok]))
+  # At 95%, the P-uniform* profile reproduces the package interval.
+  agg <- metaUI:::metaUI_aggregate(x, .6)
+  mod <- puniform::puni_star(yi = agg$metaUI__effect_size, vi = agg$metaUI__variance, alpha = .05, side = "right", method = "ML", boot = FALSE)
+  expect_equal(metaUI:::metaUI_puni_star_interval(mod, agg, .95), c(mod$ci.lb, mod$ci.ub), tolerance = 1e-3)
 })
 
 test_that("changing the practical bound does not refit or change applied filters", {
@@ -208,4 +227,41 @@ test_that("double-escaped IDs are decoded once for alternatives and study detail
   expect_equal(as.character(out$metaUI__study_id), c("A &lt; B", "C & D"))
   info <- metaUI:::validate_study_info(data.frame(study = c("A &lt; B", "C &amp; D"), title = c("T1", "T2")), out)
   expect_setequal(info$study, c("A &lt; B", "C & D"))
+})
+
+test_that("readers get precomputed default results that match a fresh fit", {
+  path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
+  generate_shiny(prepared(), "Opening", save_to_folder = path, launch_app = FALSE)
+  expect_true(file.exists(file.path(path, "opening_results.rds")))
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
+  env <- new.env(parent = globalenv()); suppressMessages(sys.source("global.R", env))
+  opening <- env$metaUI_opening
+  expect_false(is.null(opening$html$primary_estimate))
+  key <- opening$fit$key
+  fresh <- suppressWarnings(env$metaUI_fit_models(key$data, key$models, key$correlation, key$aggregation))$table
+  saved <- opening$fit$value$table
+  for (column in c("Model", "es", "LCL", "UCL", "k", "status")) expect_equal(saved[[column]], fresh[[column]], info = column)
+  # The server answers the default selection from the saved fit, without refitting.
+  defaults <- metaUI:::static_default_inputs(env); attr(defaults, "z_slider") <- NULL
+  shiny::testServer(env$server, {
+    do.call(session$setInputs, defaults)
+    session$setInputs(go = 1)
+    expect_true(estimatesreactive()$precomputed)
+    expect_match(output$calculation_status, "Precomputed")
+  })
+  # Any edit to the app's analysis files retires the saved results.
+  cat("\n# edited\n", file = "models.R", append = TRUE)
+  expect_null(env$metaUI_opening_load("."))
+})
+
+test_that("forest rows combine a study's effects as the study-level models do and keep every effect", {
+  d <- prepared()
+  fit <- metaUI:::metaUI_fit_models(d, get_model_tibble(), .6, "aggregate")
+  rows <- metaUI:::metaUI_forest_rows(d, fit$table)
+  studies <- metaUI:::metaUI_forest_studies(fit$df_agg)
+  expect_equal(studies$es, fit$df_agg$metaUI__effect_size)
+  html <- metaUI:::metaUI_forest_html(rows, "SMD", studies)
+  expect_equal(lengths(regmatches(html, gregexpr("metaui-forest-toggle", html, fixed = TRUE))), length(unique(d$metaUI__study_id)))
+  expect_equal(lengths(regmatches(html, gregexpr("metaui-forest-effect metaui-forest-closed", html, fixed = TRUE))), nrow(d))
+  expect_match(html, metaUI:::metaUI_minus(formatC(studies$es[1], format = "f", digits = 2)), fixed = TRUE)
 })

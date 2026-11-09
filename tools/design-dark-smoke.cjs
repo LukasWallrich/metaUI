@@ -37,7 +37,7 @@ async function readable(locator,label,pseudo=null) {
   const modal=await readable(page.locator('.modal-content'),'Upload-error dialog');
   await page.screenshot({path:path.join(evidence,'dark-dialog.png')});
   await page.getByRole('button',{name:'Dismiss',exact:true}).click();
-  await page.locator('#go').click(); await page.locator('#sample table').waitFor();
+  await page.locator('#effectestimate table').waitFor();
   await readable(page.locator('#go'),'Primary action');
   await page.getByRole('tab',{name:'Sample',exact:true}).click();
   await page.locator('#sample_table .dataTables_paginate .paginate_button').first().waitFor();
@@ -46,9 +46,9 @@ async function readable(locator,label,pseudo=null) {
   const paging=await readable(page.locator('#sample_table .dataTables_paginate .paginate_button'),'Pagination');
   await page.locator('#sample_table').scrollIntoViewIfNeeded();
   await page.screenshot({path:path.join(evidence,'dark-sample.png')});
-  await page.getByRole('tab',{name:'Publication Bias',exact:true}).click();
-  await page.locator('#eggers table thead th').first().waitFor();
-  const biasHeaders=await readable(page.locator('#eggers table thead th'),'Egger headers');
+  await page.getByRole('tab',{name:'Publication bias',exact:true}).click();
+  await page.locator('#eggers table td').first().waitFor();
+  const biasHeaders=await readable(page.locator('#eggers table td'),'Egger statistics');
   await page.getByRole('tab',{name:'Moderation',exact:true}).click();
   await readable(page.locator('#moderator + .selectize-control .selectize-input'),'Moderator input');
   await page.locator('#moderator + .selectize-control .selectize-input').click();
@@ -58,24 +58,24 @@ async function readable(locator,label,pseudo=null) {
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.getByText('Assess practical equivalence',{exact:true}).click();
   await readable(page.locator('#sesoi'),'Equivalence input');
-  const beforeBound=await page.locator('#model_comparison img').getAttribute('src');
-  await page.locator('#sesoi').fill('0.3');
-  await page.waitForFunction(before=>{const img=document.querySelector('#model_comparison img');return img?.naturalWidth>0&&img.src!==before;},beforeBound);
+    await page.locator('#sesoi').fill('0.3');
+  await page.waitForFunction(()=>document.querySelector('#effectestimate .metaui-track-band'));
   await page.evaluate(()=>window.scrollTo(0,0));
   await page.screenshot({path:path.join(evidence,'dark-equivalence.png')});
-  await page.getByRole('tab',{name:'Forest Plot',exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('#foreststudies img')?.naturalWidth>0);
+  await page.getByRole('tab',{name:'Forest plot',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#foreststudies table'));
   await page.screenshot({path:path.join(evidence,'dark-forest.png')});
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.evaluate(()=>{
     const slider=$('#metaUI__filter_Year');
     slider.data('ionRangeSlider').update({from:2002}); slider.trigger('change');
   });
-  await page.waitForFunction(()=>document.querySelector('#apply_state')?.textContent.includes('Filters changed'));
+  await page.waitForFunction(()=>document.querySelector('#apply_state')?.textContent.includes('Update results to apply'));
   const staleNotice=await readable(page.locator('#apply_state_box'),'Stale notice');
   await readable(page.locator('#metaui_basis'),'Stale results banner');
+  // The button dims while the server works; its resting state must be readable.
+  await page.waitForFunction(()=>document.querySelector('#go').classList.contains('metaui-needs-run')&&!document.documentElement.classList.contains('shiny-busy'));
   await readable(page.locator('#go'),'Update action');
-  await page.waitForFunction(()=>getComputedStyle(document.querySelector('#go')).outlineStyle==='dashed');
   await page.screenshot({path:path.join(evidence,'dark-stale.png')});
   assert.deepEqual(pageErrors,[],'Dark app raised page-level JavaScript errors');
   fs.writeFileSync(path.join(evidence,'dark-result.json'),JSON.stringify({ok:true,modal,sampleHeaders,paging,biasHeaders,staleNotice},null,2));

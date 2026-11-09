@@ -2,26 +2,27 @@
 #'
 #' Create settings for [generate_shiny()] or [design_app()]. Colours must be
 #' opaque six-digit hex values. Text and accent colours must have at least 4.5:1
-#' contrast against the page, panels and derived tints. Fonts come from each
-#' reader's device and use fallbacks; no author-machine font files are needed.
-#' Named fonts may be substituted on other platforms.
+#' contrast against the page, panels and derived tints. The default font is the
+#' open-licensed Source Sans and Source Serif pair, which ships inside each app.
+#' The other fonts come from each reader's device, use fallbacks and may be
+#' substituted on other platforms.
 #' @param accent Colour for actions, links and primary estimates.
 #' @param background Page background colour.
 #' @param surface Panel background colour.
 #' @param text Main text colour.
-#' @param font One of `system`, `arial`, `verdana` or `georgia`.
+#' @param font One of `source`, `system`, `arial`, `verdana` or `georgia`.
 #' @param text_size Base interface text size in pixels, from 14 to 20.
 #' @param spacing `comfortable` or `compact`.
-#' @param radius Panel corner radius in pixels, from 0 to 16.
+#' @param radius Corner radius of buttons and fields in pixels, from 0 to 16.
 #' @return A named list of validated design settings.
 #' @export
 #' @examples
 #' design <- app_design(accent = "#69429A", font = "georgia", radius = 4)
 #' # generate_shiny(dataset, "My analysis", design = design)
-app_design <- function(accent = "#096B74", background = "#EDF3F7",
-                       surface = "#FFFFFF", text = "#182F46",
-                       font = "system", text_size = 15,
-                       spacing = "comfortable", radius = 10) {
+app_design <- function(accent = "#1D5C48", background = "#FFFFFF",
+                       surface = "#FFFFFF", text = "#1A2530",
+                       font = "source", text_size = 16,
+                       spacing = "comfortable", radius = 3) {
   colours <- list(accent = accent, background = background, surface = surface, text = text)
   for (key in names(colours)) {
     value <- colours[[key]]
@@ -34,7 +35,7 @@ app_design <- function(accent = "#096B74", background = "#EDF3F7",
     stop(names(ratios)[failing], " needs at least 4.5:1 contrast (currently ", round(ratios[failing], 2), ":1).")
   }
   if (!is.character(font) || length(font) != 1L || is.na(font) || !font %in% names(design_fonts()))
-    stop("font must be system, arial, verdana or georgia.")
+    stop("font must be source, system, arial, verdana or georgia.")
   if (!is.character(spacing) || length(spacing) != 1L || is.na(spacing) || !spacing %in% c("comfortable", "compact"))
     stop("spacing must be comfortable or compact.")
   for (key in c("text_size", "radius")) {
@@ -46,12 +47,13 @@ app_design <- function(accent = "#096B74", background = "#EDF3F7",
   c(lapply(colours, toupper), list(font = font, text_size = as.numeric(text_size), spacing = spacing, radius = as.numeric(radius)))
 }
 
-design_fonts <- function() c(system = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
+design_fonts <- function() c(source = '"Source Sans 3", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif',
+  system = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
   arial = 'Arial, Helvetica, "Liberation Sans", sans-serif', verdana = 'Verdana, Geneva, "DejaVu Sans", sans-serif',
   georgia = 'Georgia, "Times New Roman", "Liberation Serif", serif')
 
-design_palettes <- function() lapply(c(teal = "#096B74", blue = "#235A97", plum = "#69429A"), function(accent)
-  list(accent = accent, background = "#EDF3F7", surface = "#FFFFFF", text = "#182F46"))
+design_palettes <- function() lapply(c(forest = "#1D5C48", teal = "#096B74", blue = "#235A97", plum = "#69429A"), function(accent)
+  list(accent = accent, background = "#FFFFFF", surface = "#FFFFFF", text = "#1A2530"))
 
 design_palette_name <- function(design) {
   palettes <- design_palettes()
@@ -92,49 +94,22 @@ validate_design <- function(design) {
 }
 
 # Shared by the helper preview and generated apps. Only validated values enter CSS.
+# metaui.css draws everything from these tokens, so overriding them restyles the app.
 design_css <- function(design) {
   d <- validate_design(design)
-  tokens <- c(ink = d$text, slate = d$text, accent = d$accent,
+  serif <- if (d$font == "source") 'var(--metaui-serif)' else 'inherit'
+  tokens <- c(ink = d$text, slate = design_mix(d$text, d$surface, .78), accent = d$accent,
     background = d$background, panel = d$surface,
-    attention = d$accent, `attention-bg` = design_mix(d$accent, d$surface, .06),
+    attention = d$accent, `attention-bg` = design_mix(d$accent, d$surface, .08),
     rule = design_mix(d$text, d$surface, .18), surface = design_mix(d$text, d$surface, .045),
-    tint = design_mix(d$accent, d$surface, .06), tabs = design_mix(d$text, d$surface, .08),
-    hover = design_mix(d$accent, d$text, .75), button = if (design_contrast(d$accent, "#FFFFFF") >= 4.5) "#FFFFFF" else "#000000")
+    tint = design_mix(d$accent, d$surface, .1), bars = design_mix(d$text, d$surface, .32),
+    hover = design_mix(d$accent, d$text, .75), button = if (design_contrast(d$accent, "#FFFFFF") >= 4.5) "#FFFFFF" else "#000000",
+    sans = design_fonts()[[d$font]], size = paste0(d$text_size, "px"), radius = paste0(d$radius, "px"),
+    row = if (d$spacing == "compact") "5px" else "9px")
   variables <- paste(sprintf("--metaui-%s:%s;", names(tokens), tokens), collapse = "")
-  small <- max(13, d$text_size - 1)
-  compact <- d$spacing == "compact"
   paste0(":root{", variables, "}\n",
-    'body{background:var(--metaui-background);font-family:', design_fonts()[[d$font]], ';font-size:', d$text_size, 'px;}\n',
-    'h1,h2,h3,h4,h5,h6,.btn,.form-control,.irs{font-family:inherit;}\n',
-    '.well,.tab-content,.metaui-header{background:var(--metaui-panel);}\n',
-    '.well{border-radius:', d$radius, 'px;padding:', if (compact) 16 else 23, 'px;}\n',
-    '.tab-content{border-radius:0 0 ', d$radius, 'px ', d$radius, 'px;}\n',
-    '.btn,.form-control,.metaui-primary,#effectestimate_box{border-radius:', min(d$radius, 6), 'px;}\n',
-    '.btn,.table,.metaui-help,.well .control-label,.nav-tabs>li>a{font-size:', small, 'px;}\n',
-    '.metaui-note,.metaui-help-text,#calculation_status{font-size:', max(12, d$text_size - 2), 'px;}\n',
-    '.metaui-actions #go{font-size:', d$text_size + 1, 'px;}\n',
-    '.well .shiny-input-container{margin-bottom:', if (compact) 12 else 22, 'px;}\n',
-    '.table>tbody>tr>td,.table>thead>tr>th{padding:', if (compact) '6px 8px' else '11px 10px', ';}\n',
-    '.metaui-primary,.metaui-basis,.table>tbody>tr:hover{background:var(--metaui-tint);}\n',
-    '.metaui-primary{border-color:var(--metaui-rule);border-left-color:var(--metaui-accent);}\n',
-    '.metaui-primary-label,.metaui-primary-value,.metaui-selection-details>summary,.nav-tabs>li.active>a,.metaui-help>summary:hover{color:var(--metaui-accent);}\n',
-    '.nav-tabs{background:var(--metaui-tabs);}.nav-tabs>li>a{background:transparent;}.nav-tabs>li>a,.table>thead>tr>th,#calculation_status{color:var(--metaui-ink);}\n',
-    '.nav-tabs>li.active>a,.nav-tabs>li.active>a:hover,.nav-tabs>li.active>a:focus{background:var(--metaui-panel);color:var(--metaui-accent);}\n',
-    '.nav-tabs>li>a:hover,.table>thead>tr>th,.table-striped>tbody>tr:nth-of-type(odd){background:var(--metaui-surface);}\n',
-    '.metaui-actions #resetFilters,.metaui-export-actions .btn,.metaui-share .btn{background:var(--metaui-panel);color:var(--metaui-accent);border-color:var(--metaui-rule);}\n',
-    '.btn-primary{color:var(--metaui-button);}.btn-primary:hover,.btn-primary:focus{color:var(--metaui-button);background:var(--metaui-hover);border-color:var(--metaui-hover);}\n',
-    '.btn-primary.metaui-needs-run{background:var(--metaui-attention);border-color:var(--metaui-attention);color:var(--metaui-button);outline:2px dashed var(--metaui-accent);outline-offset:3px;}\n',
-    '.metaui-help>summary:hover{background:var(--metaui-tint);}.table>tbody>tr>td{border-color:var(--metaui-rule);}\n',
-    'body table.dataTable tbody tr{background:var(--metaui-panel);color:var(--metaui-ink);}body .dataTables_wrapper .dataTables_length,body .dataTables_wrapper .dataTables_filter,body .dataTables_wrapper .dataTables_info{color:var(--metaui-ink);}body .dataTables_wrapper input,body .dataTables_wrapper select{background:var(--metaui-panel);color:var(--metaui-ink);border-color:var(--metaui-rule);}\n',
-    '.modal-content,.shiny-notification{background:var(--metaui-panel);color:var(--metaui-ink);border-color:var(--metaui-rule);}.modal-header,.modal-footer{border-color:var(--metaui-rule);}.modal .close{color:var(--metaui-ink);opacity:1;text-shadow:none;}\n',
-    '.form-control,.selectize-input,.selectize-input.full,.selectize-input.input-active,.selectize-dropdown{background:var(--metaui-panel);color:var(--metaui-ink);border-color:var(--metaui-rule);}.form-control[disabled],.form-control[readonly]{background:var(--metaui-surface);color:var(--metaui-ink);}.form-control::placeholder{color:var(--metaui-slate);opacity:1;}.selectize-input input{color:var(--metaui-ink)!important;}.selectize-dropdown .active,.selectize-dropdown .selected{background:var(--metaui-tint);color:var(--metaui-ink);}.selectize-control.single .selectize-input:after{border-top-color:var(--metaui-ink);}\n',
-    '.btn-default:not(.btn-primary),.metaui-data-tools .btn:not(.btn-primary),.modal-footer .btn:not(.btn-primary){background:var(--metaui-panel);color:var(--metaui-accent);border-color:var(--metaui-rule);}.btn-default:not(.btn-primary):hover,.btn-default:not(.btn-primary):focus,.metaui-data-tools .btn:not(.btn-primary):hover{background:var(--metaui-tint);color:var(--metaui-accent);border-color:var(--metaui-accent);}\n',
-    'body table.dataTable thead th,body table.dataTable thead td,body table.dataTable tfoot th,body table.dataTable tfoot td{background:var(--metaui-surface);color:var(--metaui-ink);border-color:var(--metaui-rule);}body .dataTables_wrapper .dataTables_paginate .ellipsis{color:var(--metaui-ink);}\n',
-    'body table.dataTable.stripe tbody tr.odd,body table.dataTable.display tbody tr.odd,body table.dataTable.display tbody tr.odd>.sorting_1,body table.dataTable.display tbody tr.even>.sorting_1{background:var(--metaui-surface);color:var(--metaui-ink);}\n',
-    'body table.dataTable thead>tr>th.sorting,body table.dataTable thead>tr>th.sorting_asc,body table.dataTable thead>tr>th.sorting_desc{background-image:none!important;position:relative;padding-right:24px;}body table.dataTable thead>tr>th.sorting:after,body table.dataTable thead>tr>th.sorting_asc:after,body table.dataTable thead>tr>th.sorting_desc:after{position:absolute;right:7px;top:50%;bottom:auto;transform:translateY(-50%);color:var(--metaui-ink);opacity:1;}body table.dataTable thead>tr>th.sorting:before,body table.dataTable thead>tr>th.sorting_asc:before,body table.dataTable thead>tr>th.sorting_desc:before{display:none;}body table.dataTable thead>tr>th.sorting:after{content:"\\2195";}body table.dataTable thead>tr>th.sorting_asc:after{content:"\\2191";}body table.dataTable thead>tr>th.sorting_desc:after{content:"\\2193";}\n',
-    'body .dataTables_wrapper .dataTables_paginate .paginate_button,body .dataTables_wrapper .dataTables_paginate .paginate_button.disabled,body .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover,body .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:focus{color:var(--metaui-ink)!important;background:var(--metaui-panel)!important;border-color:var(--metaui-rule)!important;}body .dataTables_wrapper .dataTables_paginate .paginate_button.current,body .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover,body .dataTables_wrapper .dataTables_paginate .paginate_button.current:focus,body .dataTables_wrapper .dataTables_paginate .paginate_button:hover,body .dataTables_wrapper .dataTables_paginate .paginate_button:focus{color:var(--metaui-accent)!important;background:var(--metaui-tint)!important;border-color:var(--metaui-accent)!important;}\n',
-    '#effectestimate_box{scrollbar-color:var(--metaui-slate) var(--metaui-background);}\n',
-    '.irs--shiny .irs-from,.irs--shiny .irs-to,.irs--shiny .irs-single{color:var(--metaui-button);}\n')
+    'h2,h3,.modal-title,.metaui-primary-value,.metaui-breakdown-item h4,.metaui-empty .metaui-empty-title{font-family:', serif, ';}\n',
+    if (d$spacing == "compact") '.well{padding:16px;}.well .shiny-input-container{margin-bottom:12px;}\n')
 }
 
 design_r_code <- function(design) {

@@ -64,14 +64,15 @@ test_that("shipped empirical example builds and runs its actual generated server
     expect_equal(table$fit_es[8], as.numeric(reference$b), tolerance = 1e-8)
     # build.R declares the source-reference row as primary; it is shown first.
     card <- as.character(output$primary_estimate$html)
-    expect_match(card, "Source-reference: REML / Hartung-Knapp (rounded inputs)", fixed = TRUE)
-    expect_match(card, "-0.38", fixed = TRUE); expect_match(card, "[-0.69, -0.08]", fixed = TRUE)
+    expect_match(output$effectestimate, '<tr class="metaui-primary-row"><td>Source-reference: REML / Hartung-Knapp (rounded inputs)', fixed = TRUE)
+    expect_match(card, "\u22120.38", fixed = TRUE); expect_match(card, "[\u22120.69, \u22120.08]", fixed = TRUE)
     expect_match(output$heterogeneity, "not identified")
     expect_error(output$pcurve, "requires explicit effect direction")
     # The estimator rejects this sparse significant-z subset; report its actual
     # requirement instead of constructing an estimate or inventing a cutoff.
     expect_true(inherits(zcurve_fit()$result, "error"))
-    expect_error(output$zcurve, "Z-curve not estimated")
-    expect_true(nzchar(output$zcurve_warnings))
+    # The plot stays empty; the plain reason sits under the heading.
+    expect_error(output$zcurve)
+    expect_match(output$zcurve_warnings, "^Not estimated: Needs at least 10 significant results")
   })
 })

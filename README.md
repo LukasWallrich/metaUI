@@ -143,7 +143,7 @@ Authors can supply up to five alternative computations in `prepare_data(alternat
 Each named entry declares `es_field`, `variance` or `se`, `es_type`,
 `variance_scale` for correlations, and a `justification`. `primary_label` names the
 original computation. All alternatives use the same effects and fitting scale.
-Readers apply a computation with Analyze data; the comparison tab fits the
+Readers apply a computation with Update results; the comparison tab fits the
 configured multilevel/RVE models for the same selection. The descriptive z filter
 and source p-values remain anchored to the primary computation.
 
@@ -239,14 +239,13 @@ Apps with a design contain an editable `www/app-design.css` and a `design.json`
 record. Editing the record does not restyle an app: rebuild with the settings, or
 edit the CSS. These apps do not need the helper or metaUI installed to run.
 The design changes
-interface styling and the summary-comparison/forest plot colours, not models or
-selections. Fonts come from each reader's device, with explicit fallbacks; no font
+interface styling and plot colours, not models or selections. The default fonts, Source Sans and Source Serif, ship inside each app under the SIL
+Open Font License. The other fonts come from each reader's device, with explicit fallbacks; no font
 files from
 the author's machine are needed for deployment. System sans uses the device
 interface font. Named fonts such as Georgia may be substituted on other devices.
 These choices do not require font downloads, though the underlying Bootstrap theme
-may still request external stylesheets. Other analytical plots retain
-their plotting packages' styles. The contrast check covers text and accent
+may still request external stylesheets. The contrast check covers text and accent
 against page, panel and derived tinted backgrounds, not an accessibility audit
 of author-supplied HTML or arbitrary Bootstrap themes.
 
