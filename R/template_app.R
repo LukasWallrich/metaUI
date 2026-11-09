@@ -25,12 +25,13 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       summary_table_main <- HTML("<h3>Effect size estimates</h3>")
        # Confidence level needs to be changed in all entries in model.R if you want to adjust it
       summary_table_notes <- HTML(glue::glue("<p>CI = <<ci_width>> confidence interval; its actual coverage depends on each model\\\'s assumptions. <i>k</i> is the number of effects or studies the model reports.{if (bayesian) " Bayesian rows show central credible intervals." else ""}</p>", .open = "<<", .close = ">>"))
-      model_help <- HTML("<h4>Default models</h4><dl>
-        <dt>Random-Effects Multilevel Model</dt><dd>metafor::rma.mv with REML, random effects for studies and for effects within studies, independent sampling errors and t-based intervals. Uses every selected effect.</dd>
-        <dt>Robust Variance Estimation</dt><dd>robumeta::robu with correlated-effects weights (rho = .8) and no small-sample correction, so intervals can be too narrow with few studies.</dd>
-        <dt>Trim-and-fill</dt><dd>Duval-Tweedie L0 common-effect trimming followed by metafor ML/Hartung-Knapp on study-level effects (random effects, ML tau-squared, Hartung-Knapp intervals). <i>k</i> includes imputed studies.</dd>
-        <dt>P-uniform star; Hedges-Vevea Selection Model</dt><dd>Selection models on study-level effects. They need a declared expected direction and are reported as unsupported without one.</dd>
-        <dt>Precision Effect Test (PET); PEESE</dt><dd>Weighted regressions of study-level effects on their standard error (PET) or variance (PEESE); the intercept is reported.</dd>
+      model_help <- HTML("<h4>Default models</h4>
+        <p>The models make different assumptions, so their estimates need not agree. The first two estimate the average effect from every selected effect. The others use one combined effect per study to explore possible publication or reporting bias, each in its own way. Each entry gives the question first, then the specification.</p><dl>
+        <dt>Random-Effects Multilevel Model</dt><dd>What is the average effect, if true effects differ both between studies and between effects within a study? <span class=\'metaui-spec\'>metafor::rma.mv, REML; random effects for studies and for effects within studies; sampling errors treated as independent; t-based intervals.</span></dd>
+        <dt>Robust Variance Estimation</dt><dd>What is the average effect, allowing for unknown correlations between effects from the same study? With few studies its intervals can be too narrow, because no small-sample correction is applied. <span class=\'metaui-spec\'>robumeta::robu with correlated-effects weights. The .8 is the robumeta default working correlation, used to estimate between-study variation and the weights; the correlation given above is used only to combine effects for the study-level models.</span></dd>
+        <dt>Trim-and-fill</dt><dd>What would the average be if the funnel plot were symmetric? Studies are added as mirror images on the sparse side and the average is estimated again. Asymmetry can have causes other than publication bias. <span class=\'metaui-spec\'>Duval-Tweedie L0 estimator with common-effect trimming; random-effects model (ML) with Hartung-Knapp intervals. <i>k</i> includes the added studies.</span></dd>
+        <dt>P-uniform* and the Hedges-Vevea selection model</dt><dd>What would the average be if significant results in the expected direction were more likely to be published? Both model this selection directly, so they need a declared expected direction and are reported as unsupported without one. <span class=\'metaui-spec\'>puniform::puni_star (ML); weightr::weightfunct with one step at one-sided <i>p</i> = .025 and random effects.</span></dd>
+        <dt>Precision Effect Test (PET); PEESE</dt><dd>What average effect would a study with no sampling error show, extending the link between effect size and its standard error (PET) or variance (PEESE)? <span class=\'metaui-spec\'>Weighted regressions of study-level effects on their standard error or variance; the intercept is reported.</span></dd>
         </dl>{metaUI_custom_model_help(custom_models, model_descriptions)}")
 
       sample_overview_main <- HTML("<h3>Sample breakdown</h3>")
@@ -463,6 +464,28 @@ glue_string <- ('
       tibble::tibble(id = "computation", selection = if (is.null(input$computation)) "primary" else input$computation))
     filter_selections
   }
+
+  <FILTER>
+  # The count beside "Include missing values" is for the effects that the other filters, as now set, keep.
+  missing_counts <- shiny::debounce(reactive({
+    df <- if (is.null(state_values$uploaded_data)) metaUI__df else state_values$uploaded_data
+    z <- input[["outliers_z_scores"]]
+    keep <- if (length(z) == 2L) (df$metaUI__es_z >= z[1] & df$metaUI__es_z <= z[2]) %in% TRUE else rep(TRUE, nrow(df))
+    kept_by <- lapply(filters, function(i) {
+      value <- df[[i$col]]; set <- input[[i$id]]
+      if (i$type != "numeric") return(value %in% set)
+      if (length(set) != 2L) return(rep(TRUE, nrow(df)))
+      (!is.na(value) & value >= set[1] & value <= set[2]) | (is.na(value) & !identical(input[[paste0(i$id, "_include_NA")]], FALSE))
+    })
+    numeric <- which(vapply(filters, function(i) i$type == "numeric", logical(1)))
+    counts <- vapply(numeric, function(j) sum(is.na(df[[filters[[j]]$col]]) & keep & Reduce(`&`, kept_by[-j], TRUE)), integer(1))
+    stats::setNames(counts, vapply(filters[numeric], function(i) i$id, character(1)))
+  }), 300)
+  observe({
+    counts <- missing_counts()
+    for (id in names(counts)) updateCheckboxInput(inputId = paste0(id, "_include_NA"), label = paste0("Include missing values (", counts[[id]], ")"))
+  })
+  </FILTER>
 
   df_reactive <- reactive({
     applied_filters <- capture_filters()
@@ -1081,6 +1104,12 @@ glue_string <- ('
     if (is.numeric(x)) {
       # Three significant digits: a per-unit slope such as -0.0027 must not read as -0.00
       coefficient <- function(value) metaUI_minus(trimws(formatC(signif(value, 3), format = "fg", digits = 3, flag = "#")))
+      # Its interval shares the decimals of the slope, so that the three numbers line up.
+      slope_text <- function(b, lb, ub) {
+        places <- if (is.finite(b) && b != 0) min(8, max(0, 2 - floor(log10(abs(signif(b, 3)))))) else 3
+        f <- function(v) metaUI_minus(formatC(v, format = "f", digits = places))
+        paste0(coefficient(b), " [", f(lb), ", ", f(ub), "]")
+      }
       # Mean and SD share their decimals, as in the Sample tab.
       places <- if (abs(mean(x, na.rm = TRUE)) >= 100) 1 else 2
       stat <- function(value) metaUI_minus(trimws(formatC(value, format = "f", digits = places)))
@@ -1096,7 +1125,7 @@ glue_string <- ('
           shown <- metaUI_show(c(centre$pred, centre$ci.lb, centre$ci.ub), df)
           digits <- metaUI_digits(shown[2], shown[3]); value <- function(v) metaUI_minus(formatC(v, format = "f", digits = digits))
           row(paste0("Effect at the mean ", input$moderator %>% stringr::str_remove("metaUI__filter_"), " (", stat(mean(x, na.rm = TRUE)), ") [95% CI]"),
-            paste0(value(shown[1]), " [", value(shown[2]), ", ", value(shown[3]), "]")) }, row(paste0("Slope, per unit of ", input$moderator %>% stringr::str_remove("metaUI__filter_"), fisher), coefficient(model$b[2])), row("<i>k</i>", sum(!is.na(x))),
+            paste0(value(shown[1]), " [", value(shown[2]), ", ", value(shown[3]), "]")) }, row(paste0("Slope, per unit of ", input$moderator %>% stringr::str_remove("metaUI__filter_"), fisher, " [95% CI]"), slope_text(model$b[2], model$ci.lb[2], model$ci.ub[2])), row("<i>k</i>", sum(!is.na(x))),
         row("Moderator mean (SD)", paste0(stat(mean(x, na.rm = TRUE)), " (", stat(stats::sd(x, na.rm = TRUE)), ")")),
         row("Moderator range", range_text), "</tbody></table>"))
     }

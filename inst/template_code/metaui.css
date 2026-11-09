@@ -574,6 +574,7 @@ body table.dataTable thead th:last-child { padding-right: 14px !important; }
 .metaui-reading b { font-weight: 600; }
 .metaui-methods h4 { margin: 14px 0 4px; }
 .metaui-methods .metaui-note { max-width: none; }
+.metaui-methods .metaui-spec { display: block; margin-top: 2px; font-size: .8125rem; color: var(--metaui-slate); }
 .metaui-zstats { margin-top: 10px; }
 .metaui-notes b { font-weight: 600; }
 
