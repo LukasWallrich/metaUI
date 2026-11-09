@@ -17,17 +17,17 @@ test_that("Summary table recovers from startup with webR Shiny error handling", 
     expect_error(output$effectestimate, class = "shiny.silent.error")
     session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
     table <- output$effectestimate
-    expect_match(table, "metaui-track-point", fixed = TRUE)
+    expect_match(table, "metaui-track-diamond", fixed = TRUE)
     session$setInputs(outliers_z_scores = c(-1.5, 1), go = 2)
     changed <- output$effectestimate
-    expect_match(changed, "metaui-track-point", fixed = TRUE)
+    expect_match(changed, "metaui-track-diamond", fixed = TRUE)
     expect_false(identical(table, changed))
     # An empty selection blanks the table; it must redraw once rows are selected again.
     session$setInputs(outliers_z_scores = c(9, 10), go = 3)
     expect_error(output$effectestimate, class = "shiny.silent.error")
     expect_match(as.character(output$primary_estimate$html), "No effects match this selection", fixed = TRUE)
     session$setInputs(outliers_z_scores = c(-10, 10), go = 4)
-    expect_match(output$effectestimate, "metaui-track-point", fixed = TRUE)
+    expect_match(output$effectestimate, "metaui-track-diamond", fixed = TRUE)
   })
 })
 

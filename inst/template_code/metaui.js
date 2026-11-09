@@ -435,10 +435,10 @@
     }
     if (!forestFocus) return;
     var button = box.querySelectorAll(forestFocus.selector)[forestFocus.index];
-    if (button && button.disabled) button = button.parentNode.querySelector('button:not([disabled])');
+    if (button && button.disabled) button = button.closest('p').querySelector('button:not([disabled])');
     // From the pager under the table, the new page starts back at the top, and focus goes there too.
     var fromBottom = forestFocus.index === 1;
-    if (fromBottom) { button = box.querySelectorAll(forestFocus.selector)[0]; if (button && button.disabled) button = button.parentNode.querySelector('button:not([disabled])'); }
+    if (fromBottom) { button = box.querySelectorAll(forestFocus.selector)[0]; if (button && button.disabled) button = button.closest('p').querySelector('button:not([disabled])'); }
     if (button) button.focus({ preventScroll: true });
     if (fromBottom && button) button.closest('p').scrollIntoView();
     forestFocus = null;
@@ -447,6 +447,10 @@
     var selector = this.classList.contains('metaui-forest-next') ? '.metaui-forest-next' : '.metaui-forest-prev';
     forestFocus = { selector: selector, index: Array.prototype.indexOf.call(this.closest('.shiny-html-output').querySelectorAll(selector), this) };
     Shiny.setInputValue('forest_page', Number(this.dataset.page), { priority: 'event' });
+  });
+  $(document).on('change', '.metaui-forest-page', function () {
+    forestFocus = { selector: '.metaui-forest-page', index: Array.prototype.indexOf.call(this.closest('.shiny-html-output').querySelectorAll('.metaui-forest-page'), this) };
+    Shiny.setInputValue('forest_page', Number(this.value), { priority: 'event' });
   });
   var moderatorFocus = false;
   function restoreModerators() {
@@ -566,14 +570,12 @@
       return pane;
     }).filter(Boolean);
   }
-  // Bayesian and computation fits can take minutes, so they wait for the reader. Moderation
-  // comes last because its model is the slowest of the rest.
+  // Bayesian and computation fits can take minutes, so they wait for the reader. The others
+  // follow the order of the tabs, which is the order readers usually open them in.
   function backgroundOrder() {
-    var usable = panes().filter(function (pane) {
+    return panes().filter(function (pane) {
       return pane.querySelector('.shiny-bound-output') && !pane.querySelector('#bayesian_sensitivity, #computation_comparison');
     });
-    var slow = function (pane) { return pane.querySelector('#moderation_panel') ? 1 : 0; };
-    return usable.filter(function (pane) { return !slow(pane); }).concat(usable.filter(slow));
   }
   var listening = false;
   function listen() {
@@ -600,7 +602,9 @@
     };
     var finish = function () { stop(); done(); };
     // Outputs drawn from a new value can ask for more, one round trip later.
-    answers[id] = function () { delete answers[id]; quietFor = Math.max(150, Math.min(1500, 1.5 * (Date.now() - sent))); check(); };
+    // The answer comes after the server's work, so its delay overstates the network's; outputs
+    // still to be bound are caught by waiting(), so a short quiet spell is enough.
+    answers[id] = function () { delete answers[id]; quietFor = Math.max(150, Math.min(400, Date.now() - sent)); check(); };
     $(document).on('shiny:busy shiny:idle shiny:value shiny:error', check);
     // After Shiny has reported which outputs are now visible.
     setTimeout(function () { if (!cancelled) Shiny.setInputValue('metaui_drawn', id, { priority: 'event' }); }, 10);
@@ -819,25 +823,25 @@ document.addEventListener('toggle', function (event) {
    (metaui.css) and a short note above the table say so. */
 (function ($) {
   'use strict';
-  function mark(wrapper) {
-    var table = wrapper.querySelector(':scope > table.dataTable');
+  function mark(scroller) {
+    var table = scroller.querySelector(':scope > table.dataTable');
     if (!table) return;
     // Tables stacked into cards on phones have no columns to scroll to.
-    var over = getComputedStyle(table).display !== 'block' && wrapper.scrollWidth > wrapper.clientWidth + 2;
-    wrapper.classList.toggle('metaui-overflow', over);
-    var note = wrapper.querySelector(':scope > .metaui-scroll-note');
+    var over = getComputedStyle(table).display !== 'block' && scroller.scrollWidth > scroller.clientWidth + 2;
+    scroller.classList.toggle('metaui-overflow', over);
+    var note = scroller.previousElementSibling && scroller.previousElementSibling.classList.contains('metaui-scroll-note') ? scroller.previousElementSibling : null;
     if (over && !note) {
       note = document.createElement('p');
       note.className = 'metaui-scroll-note';
       note.textContent = 'Scroll sideways for more columns →';
-      wrapper.insertBefore(note, table);
+      scroller.parentNode.insertBefore(note, scroller);
     }
     if (note) note.hidden = !over;
   }
   var timer;
   function markAll() {
     clearTimeout(timer);
-    timer = setTimeout(function () { document.querySelectorAll('.tab-content .dataTables_wrapper').forEach(mark); }, 50);
+    timer = setTimeout(function () { document.querySelectorAll('.tab-content .metaui-dt-scroll').forEach(mark); }, 50);
   }
   $(document).on('draw.dt shown.bs.tab', markAll);
   window.addEventListener('resize', markAll);

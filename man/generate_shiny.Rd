@@ -59,7 +59,7 @@ a character vector with all packages to display.}
 
 \item{options}{List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
 \itemize{
-\item \code{max_forest_plot_rows} Numeric. What is the maximum number of effects for the forest plot's PDF and PNG downloads? Defaults to 200. The plot on screen shows any number of studies, 50 to a page.
+\item \code{max_forest_plot_rows} Numeric. How many effects fit on one page of the forest plot's PDF download, which holds every selected study? Defaults to 60; a study with more effects gets a page of its own. The plot on screen shows 50 studies to a page, and its PNG download the page shown.
 \item \code{shiny_theme} Character. One of the shinythemes that style the app. Defaults to "yeti", see \code{?shinythemes::shinythemes} for all options.
 \item \code{intro} Optional HTML shown under the title: one or two sentences stating the question and, for readers new to the scale, what positive values mean.
 \item \code{fit_cache_entries} Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.

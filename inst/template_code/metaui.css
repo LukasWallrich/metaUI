@@ -337,6 +337,8 @@ html.shiny-busy #primary_estimate:empty::before { content: "Fitting the models\2
 .metaui-models .metaui-track-ci { border-top-width: 1px; margin-top: -.5px; }
 .metaui-models .metaui-primary-row .metaui-track-ci { border-top-width: 2px; margin-top: -1px; }
 .metaui-models tr:not(.metaui-primary-row) .metaui-track-point { width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; background: var(--metaui-slate); }
+/* Every model is a diamond across its interval; the primary one alone is in the accent colour. */
+.metaui-models tr:not(.metaui-primary-row) .metaui-track-diamond { height: 11px; margin-top: -5.5px; background: var(--metaui-slate); }
 .table.metaui-models > tbody > tr.metaui-group-row > td:first-child { padding: 14px 16px 3px 10px !important; font-size: .8125rem; color: var(--metaui-slate); }
 .metaui-estimates td.metaui-track-cell { overflow: hidden; }
 tfoot.metaui-phone-axis { display: none; }
@@ -356,7 +358,6 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-track-band { top: -14px; bottom: -400px; background: var(--metaui-tint); }
 .metaui-primary-row .metaui-track-band { background: var(--metaui-rule); opacity: .5; }
 /* A border snaps to whole device pixels, so every interval has the same weight. */
-.metaui-track-pi { top: var(--metaui-mark-y); height: 0; margin-top: -.5px; border-top: 1px solid var(--metaui-slate); }
 .metaui-track-ci { top: var(--metaui-mark-y); height: 0; margin-top: -1px; border-top: 2px solid var(--metaui-slate); }
 .metaui-track-ref { top: -14px; bottom: -400px; width: 0; border-left: 1px dashed var(--metaui-accent); }
 .metaui-track-point { top: var(--metaui-mark-y); width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; background: var(--metaui-ink); border-radius: 50%; }
@@ -427,12 +428,17 @@ body .dataTables_wrapper .dataTables_paginate .paginate_button + .paginate_butto
 .metaui-moderators th.metaui-track-cell, .metaui-moderators td.metaui-track-cell { width: 55%; }
 /* Level estimate in green on the row's centreline; the effects sit lighter, just beneath it. */
 .metaui-moderators .metaui-track-diamond { height: 12px; margin-top: -6px; }
+/* An interval that includes zero: the same diamond, outlined. */
+svg.metaui-track-hollow { background: none; overflow: visible; }
+svg.metaui-track-hollow polygon { fill: var(--metaui-background); stroke: var(--metaui-accent); stroke-width: 1.5px; }
 .metaui-moderators .metaui-track-point { background: var(--metaui-accent); border-radius: 0; transform: rotate(45deg); }
 .metaui-moderators .metaui-track-dot { opacity: .8; }
 .metaui-moderators .metaui-track { min-height: 38px; }
 /* Until the server has wired up a download, a click would save the page itself. */
 .shiny-download-link[href=""] { pointer-events: none; opacity: .55; }
 .metaui-forest-status { align-self: center; color: var(--metaui-slate); }
+.metaui-forest-jump { margin: 0 4px 0 6px; font-weight: 400; color: var(--metaui-slate); white-space: nowrap; }
+.metaui-forest-page { height: 28px; margin: 0 2px; padding: 0 4px; border: 1px solid var(--metaui-slate); border-radius: 4px; background: var(--metaui-background); color: var(--metaui-ink); }
 .metaui-forest-prev:disabled, .metaui-forest-next:disabled { opacity: .5; cursor: default; }
 .metaui-track-hist { left: 0; right: 0; height: 30px; }
 .metaui-track-bar { position: absolute; bottom: 0; width: 3.5px; background: var(--metaui-slate); opacity: .8; }
@@ -499,6 +505,11 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 #equivalence td:last-child, #equivalence th:last-child { text-align: right; padding-right: 0; }
 .metaui-equivalence { max-width: none; }
 .metaui-equivalence > *:not(summary) { max-width: 80ch; }
+/* The bound sits on the line of its label, as a short entry. */
+.metaui-sesoi.form-group { display: flex; align-items: center; gap: 8px; margin: 14px 0 8px; }
+.metaui-sesoi.form-group > label { margin: 0; font-weight: 600; flex: none; }
+@media (min-width: 768px) { #equivalence th, #equivalence td:nth-child(2) { white-space: nowrap; } }
+.metaui-sesoi.form-group > input { width: 6.5em; height: 32px; padding: 3px 8px; }
 .metaui-gaps { margin: 6px 0 12px; font-size: .9375rem; }
 .metaui-gaps ul { margin: 4px 0 0; padding-left: 20px; }
 .shiny-output-error-validation { color: var(--metaui-slate); font-size: .9375rem; padding: 8px 0; }
@@ -512,6 +523,7 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 /* Moderation */
 .metaui-moderation-finding { font-size: 1.0625rem; margin: 12px 0; max-width: 72ch; }
 .metaui-moderation-finding b { font-weight: 600; }
+.metaui-nowrap { white-space: nowrap; }
 /* Numeric moderators: the table side by side with the plot only when the whole table and a plot
    of at least 360 px fit; otherwise the plot moves below. The table's width is set by its content
    alone (a percentage width there sizes it differently across browsers and can clip it); on a
@@ -520,8 +532,11 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 .metaui-moderation-grid > * { min-width: 0; }
 .metaui-moderation-grid > :first-child { flex: 1 0 auto; width: max-content; max-width: 100%; overflow-x: auto; }
 .metaui-moderation-grid > :nth-child(2) { flex: 1000 1 360px; }
+/* The finding and notes beside the table wrap at its width rather than widening it. */
+.metaui-moderation-grid > :first-child > :not(#moderation_table) { width: 0; min-width: 100%; }
+.metaui-moderation-grid > :first-child .metaui-moderation-finding { margin-top: 0; }
 .metaui-moderation-grid .table.metaui-stats { width: auto !important; min-width: 100%; }
-.metaui-moderation-grid > .metaui-key { flex: 1 1 100%; margin-top: -8px; }
+.metaui-moderation-grid .metaui-key { margin-top: 6px; }
 .metaui-moderation-wide .table { width: 100%; }
 .well + .metaui-moderation-grid { margin-top: 12px; }
 .tab-pane .selectize-control, .tab-pane > .shiny-input-container { max-width: 320px; }
@@ -537,7 +552,9 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 @media (min-width: 768px) { #sample_table td:first-child { min-width: 11rem; } }
 
 /* DataTables */
-.dataTables_wrapper { max-width: 100%; overflow-x: auto; font-size: .9375rem; color: var(--metaui-ink); }
+.dataTables_wrapper { max-width: 100%; font-size: .9375rem; color: var(--metaui-ink); }
+/* Only the table scrolls sideways; its search, paging and notes stay in place. */
+.metaui-dt-scroll { max-width: 100%; overflow-x: auto; }
 .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info { color: var(--metaui-slate); font-size: .875rem; }
 .dataTables_wrapper input, .dataTables_wrapper select { background-color: var(--metaui-panel); color: var(--metaui-ink); border: 1px solid var(--metaui-rule); border-radius: var(--metaui-radius); padding: 2px 6px; }
 .dataTables_wrapper .dataTables_info { padding-top: .35em; }
@@ -570,7 +587,7 @@ body .dataTables_wrapper .dataTables_paginate .ellipsis { color: var(--metaui-sl
 #sample_table thead th { overflow-wrap: normal; word-break: normal; hyphens: manual; }
 /* Tables wider than the page (metaui.js marks them): a shade at the right edge that the
    content's own end covers once scrolled there, and a note that stays at the left. */
-.dataTables_wrapper.metaui-overflow { background: linear-gradient(to left, var(--metaui-background) 40%, transparent) right / 48px 100% no-repeat local, linear-gradient(to left, var(--metaui-edge-shade, color-mix(in srgb, var(--metaui-ink) 22%, transparent)), transparent) right / 36px 100% no-repeat scroll; }
+.metaui-dt-scroll.metaui-overflow { background: linear-gradient(to left, var(--metaui-background) 40%, transparent) right / 48px 100% no-repeat local, linear-gradient(to left, var(--metaui-edge-shade, color-mix(in srgb, var(--metaui-ink) 22%, transparent)), transparent) right / 36px 100% no-repeat scroll; }
 .metaui-scroll-note { position: sticky; left: 0; width: max-content; max-width: 100%; margin: 0 0 4px; font-size: .8125rem; color: var(--metaui-slate); }
 .metaui-scroll-note[hidden] { display: none; }
 body table.dataTable thead th:last-child { padding-right: 14px !important; }

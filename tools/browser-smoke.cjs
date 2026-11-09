@@ -37,7 +37,7 @@ async function waitServer() {
 async function settledSample(effects) {
   await page.waitForFunction(k=> {
     const overview=document.querySelector('#selection_overview')?.textContent.trim() ?? '';
-    return overview.startsWith(k+' of ') && !document.querySelector('.shiny-busy');
+    return (overview.startsWith(k+' of ') || overview.startsWith('Results use '+k+' of ')) && !document.querySelector('.shiny-busy');
   }, effects, {timeout:60000});
 }
 async function saveDownload(selector, name) {
@@ -105,7 +105,7 @@ function reproduce(script, workbook, selected) {
   await page.waitForFunction(()=>/of 16 effects/.test(document.querySelector('#sample_table .dataTables_info')?.textContent||''),null,{timeout:60000});
   await page.locator('.metaui-sample-view[data-value="studies"]').click();
   await page.waitForFunction(()=>/of 8 studies/.test(document.querySelector('#sample_table .dataTables_info')?.textContent||''),null,{timeout:60000});
-  assert(!(await page.locator('#sample_table thead').innerText()).includes('Effect size'), 'the study view should not show effect sizes');
+  assert(/ to /.test(await page.locator('#sample_table tbody').innerText()), 'study rows should give the range of their effect sizes');
   await page.locator('.metaui-sample-view[data-value="effects"]').click();
   await page.waitForFunction(()=>/of 16 effects/.test(document.querySelector('#sample_table .dataTables_info')?.textContent||''),null,{timeout:60000});
   // Copy link puts a link to this selection on the clipboard, or shows it for copying by hand.
@@ -145,11 +145,11 @@ function reproduce(script, workbook, selected) {
   await page.waitForFunction(()=>document.querySelector('table.metaui-moderators-plain'),null,{timeout:60000});
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.getByText('Assess practical equivalence', {exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Smallest bound'));
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval lies within'));
   await page.locator('#sesoi').fill('1');
   await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval within bounds'));
   const equivalenceHeader = await page.locator('#equivalence thead').innerText();
-  for (const column of ['Assessment','Smallest bound']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
+  for (const column of ['Assessment','Interval lies within']) assert(equivalenceHeader.includes(column), 'equivalence table lost column ' + column);
   assert(await page.locator('#equivalence tbody tr').count() >= 2, 'expected one assessment row per model');
   assert.equal((await page.locator('#apply_state').innerText()).trim(), '');
   await page.getByText('Download data or code, upload data', {exact:true}).click();
@@ -165,7 +165,7 @@ function reproduce(script, workbook, selected) {
   reproduce(script, path.join(evidence,'round-trip.xlsx'), 16);
   // Clear the bound so the upload has to restore it.
   await page.locator('#sesoi').fill('');
-  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Smallest bound'));
+  await page.waitForFunction(()=>document.querySelector('#equivalence')?.innerText.includes('Interval lies within'));
   await page.locator('#uploadData').setInputFiles(path.join(evidence,'round-trip.xlsx'));
   await page.waitForFunction(()=>document.querySelector('#uploadData_progress')?.textContent.includes('Upload complete'));
   await page.locator('#executeUpload').click();

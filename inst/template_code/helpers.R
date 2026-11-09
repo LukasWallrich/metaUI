@@ -72,15 +72,20 @@ metaUI_switch <- function(label, class, options, selected) {
 
 # One row per study from the effect rows of the Sample table. A value shared by all of a
 # study's effects is kept; otherwise numbers show their range and other values "several".
-# Effect sizes and p-values are left out: they belong to effects, and averaging them would be a model.
-metaUI_study_rows <- function(effects, key = "metaUI__key", drop = c("Effect size", "Reported p")) {
+# P-values are left out. Effect sizes show their range ("lowest to highest", three decimals), not an
+# average, which would need a model.
+metaUI_study_rows <- function(effects, key = "metaUI__key", drop = "Reported p", spans = "Effect size") {
   groups <- factor(effects[[key]], levels = unique(effects[[key]]))
   # Whole numbers stay whole; others get two decimals, or as many more as close range ends need to differ.
   end <- function(x) {
     if (all(x == round(x))) return(format(x, digits = 15, scientific = FALSE, trim = TRUE))
     for (digits in 2:8) { out <- formatC(x, format = "f", digits = digits); if (length(unique(out)) == length(unique(x))) break }
-    out
+    # Trailing zeros add nothing (2011.5, not 2011.50).
+    sub("[.]$", "", sub("0+$", "", out))
   }
+  span <- function(x) vapply(split(x, groups), function(v) { v <- v[!is.na(v)]
+    if (!length(v)) NA_character_ else if (length(unique(v)) == 1L) metaUI_minus(formatC(v[1], format = "f", digits = 3))
+    else paste(metaUI_minus(formatC(range(v), format = "f", digits = 3)), collapse = " to ") }, character(1))
   summarise <- function(x) {
     values <- lapply(split(x, groups), function(v) unique(v[!is.na(v) & as.character(v) != ""]))
     if (is.numeric(x) && all(lengths(values) <= 1L)) return(vapply(values, function(v) if (length(v)) as.numeric(v) else NA_real_, numeric(1)))
@@ -88,7 +93,8 @@ metaUI_study_rows <- function(effects, key = "metaUI__key", drop = c("Effect siz
       else if (is.numeric(v)) paste(end(c(min(v), max(v))), collapse = "\u2013") else "several", character(1))
   }
   cols <- setdiff(names(effects), drop)
-  out <- as.data.frame(lapply(effects[cols], summarise), check.names = FALSE, stringsAsFactors = FALSE)
+  out <- as.data.frame(lapply(cols, function(col) if (col %in% spans) span(effects[[col]]) else summarise(effects[[col]])),
+    col.names = cols, check.names = FALSE, stringsAsFactors = FALSE)
   after <- max(match(intersect(c("Study", "Source"), names(out)), names(out)))
   out <- cbind(out[seq_len(after)], Effects = as.vector(table(groups)), out[-seq_len(after)])
   rownames(out) <- NULL
@@ -262,6 +268,53 @@ metaUI_first_family <- function(authors) {
   if (length(names) == 1) family else if (length(names) == 2) paste(family, collapse = " & ") else paste(family[1], "et al.")
 }
 
+# One field of a BibTeX entry, without braces or LaTeX commands; NA where it is missing.
+metaUI_bib_field <- function(bibtex, field) {
+  if (is.null(bibtex) || is.na(bibtex)) return(NA_character_)
+  hit <- regmatches(bibtex, regexec(paste0("(?i)\\b", field, "\\s*=\\s*\\{((?:[^{}]|\\{(?:[^{}]|\\{[^{}]*\\})*\\})*)\\}"), bibtex, perl = TRUE))[[1]]
+  if (length(hit) < 2L) return(NA_character_)
+  value <- gsub("\\{?\\\\?&\\}?(amp;?(\\$\\\\mathsemicolon\\$)?)?", "&", hit[2])
+  # Common accents, so that names written in LaTeX still match the reference text.
+  accents <- list("'" = c(a = "\u00e1", e = "\u00e9", i = "\u00ed", o = "\u00f3", u = "\u00fa"), '"' = c(a = "\u00e4", e = "\u00eb", i = "\u00ef", o = "\u00f6", u = "\u00fc"),
+    "`" = c(a = "\u00e0", e = "\u00e8", i = "\u00ec", o = "\u00f2", u = "\u00f9"), "~" = c(n = "\u00f1", a = "\u00e3", o = "\u00f5"), "^" = c(a = "\u00e2", e = "\u00ea", o = "\u00f4"))
+  for (mark in names(accents)) for (letter in names(accents[[mark]]))
+    value <- gsub(paste0("\\\\", if (mark %in% c("^", "~")) "\\" else "", mark, "\\{?(\\\\)?", letter, "\\}?"), accents[[mark]][[letter]], value)
+  value <- gsub("\\\\c\\{?c\\}?", "\u00e7", value)
+  value <- gsub("\\\\[A-Za-z]+\\s*|[{}]", "", value)
+  value <- trimws(gsub("\\s+", " ", value))
+  if (nzchar(value)) sub("[.]$", "", value) else NA_character_
+}
+
+# A reference as the authors wrote it, with APA italics where its BibTeX entry shows what they cover
+# (an article's journal and volume; a book's or thesis's title) and web addresses as links.
+# Other entries, or text the entry does not match, stay as written.
+metaUI_reference_html <- function(reference, bibtex = NULL) {
+  type <- if (is.null(bibtex) || is.na(bibtex)) "" else tolower(sub("^@", "", regmatches(bibtex, regexpr("@[A-Za-z]+", bibtex))))
+  if (!length(type)) type <- ""
+  find <- function(text) {
+    if (is.na(text) || !nzchar(text)) return(NULL)
+    at <- regexpr(tolower(text), tolower(reference), fixed = TRUE)
+    if (at < 0) NULL else c(at, at + nchar(text) - 1L)
+  }
+  span <- NULL
+  if (type == "article") {
+    span <- find(metaUI_bib_field(bibtex, "journal"))
+    volume <- metaUI_bib_field(bibtex, "volume")
+    if (!is.null(span) && !is.na(volume) && startsWith(substring(reference, span[2] + 1L), paste0(", ", volume))) span[2] <- span[2] + nchar(volume) + 2L
+  } else if (type == "book" || grepl("thes", type)) {
+    span <- find(metaUI_bib_field(bibtex, "title"))
+    # A thesis title in APA style runs from the year to the bracketed description.
+    if (is.null(span) && grepl("thes", type)) {
+      start <- regexpr(")\\. ", reference); end <- regexpr(" \\[[^]]*thesis[^]]*\\]", reference, ignore.case = TRUE)
+      if (start > 0 && end > start + 3L) span <- c(start + 3L, end - 1L)
+    }
+  }
+  link <- function(x) gsub("(https?://[^[:space:]<]+?)([.,;]?)(?=[[:space:]]|$)", "<a href=\"\\1\" target=\"_blank\" rel=\"noopener\">\\1</a>\\2", x, perl = TRUE)
+  esc <- function(x) link(htmltools::htmlEscape(x))
+  if (is.null(span)) return(esc(reference))
+  paste0(esc(substring(reference, 1L, span[1] - 1L)), "<i>", esc(substring(reference, span[1], span[2])), "</i>", esc(substring(reference, span[2] + 1L)))
+}
+
 metaUI_copy_icon <- '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><rect x="5.5" y="5.5" width="8.5" height="8.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 5.5V3.5A1.5 1.5 0 0 0 9 2H3.5A1.5 1.5 0 0 0 2 3.5V9a1.5 1.5 0 0 0 1.5 1.5h2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>'
 
 # Reader-facing study details from the authors' study information (see fetch_study_metadata()).
@@ -280,7 +333,7 @@ metaUI_study_details <- function(info) {
     venue <- paste0(if (!is.null(get("volume"))) paste0("<i>", esc(get("volume")), "</i>"),
       if (!is.null(get("issue"))) paste0("(", esc(get("issue")), ")"))
     # The authors' own wording of a reference comes first, as in metaUI_study_reference().
-    reference <- if (!is.null(get("reference"))) paste0(esc(get("reference")),
+    reference <- if (!is.null(get("reference"))) paste0(metaUI_reference_html(get("reference"), get("bibtex")),
       if (!is.null(link) && !grepl(link, get("reference"), fixed = TRUE)) paste0(" ", as.character(htmltools::tags$a(href = link, target = "_blank", rel = "noopener", link))))
     else paste0(
       if (!is.null(get("authors"))) paste0(esc(metaUI_apa_authors(get("authors"))), " "),

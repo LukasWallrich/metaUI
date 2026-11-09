@@ -228,7 +228,7 @@ metaUI_zcurve_plot <- function(fit, colours, narrow = FALSE) {
     layer
   })
   # The threshold's labels sit above the panel, clear of any bar; on phones the statistic takes a line of its own.
-  stat <- sprintf('italic(z) == "%s" * "," ~ italic(p) == "%s"', round(threshold, 2), sub("^0", "", format(fit$control$sig_level)))
+  stat <- sprintf('italic(z) > "%s" * "," ~ italic(p) < "%s"', round(threshold, 2), sub("^0", "", format(fit$control$sig_level)))
   top <- if (narrow) -1.7 else -.4
   plot <- plot + ggplot2::annotate("text", x = threshold + .12, y = Inf, vjust = top, hjust = 0, size = 4.9, colour = colours$accent, family = colours$family, parse = TRUE,
       label = if (narrow) '"significant"' else paste('"significant," ~', stat)) +
@@ -345,19 +345,20 @@ metaUI_track_axis <- function(scale, title) {
       metaUI_minus(format(scale$ticks, trim = TRUE))), collapse = ""), '</div>')
 }
 
-metaUI_track_row <- function(scale, es, lcl, ucl, band = NULL, dots = NULL, dot_labels = NULL, size = NULL, ref = NULL, diamond = FALSE, combined = FALSE, dot_sizes = NULL, pi = NULL) {
+# hollow: an outlined diamond, for an interval that includes zero.
+metaUI_track_row <- function(scale, es, lcl, ucl, band = NULL, dots = NULL, dot_labels = NULL, size = NULL, ref = NULL, diamond = FALSE, combined = FALSE, dot_sizes = NULL, hollow = FALSE) {
   has_interval <- is.finite(lcl) && is.finite(ucl)
   # A diamond always spans the interval, with its tallest point at the estimate.
   spans <- diamond && is.finite(es) && has_interval && ucl > lcl
   paste0('<div class="metaui-track" aria-hidden="true">', metaUI_track_grid(scale, band),
     if (!is.null(ref) && is.finite(ref)) sprintf('<i class="metaui-track-ref" style="%s"></i>', metaUI_track_style(scale$at(ref))),
-    # The prediction interval: a thin line behind the estimate's own interval.
-    if (length(pi) == 2L && all(is.finite(pi))) sprintf('<i class="metaui-track-pi" style="%s"></i>', metaUI_track_style(scale$at(pi[1]), scale$at(pi[2]) - scale$at(pi[1]))),
     # metaui.js spreads these beneath the interval once the row's width is known.
     if (length(dots)) paste(sprintf('<i class="metaui-track-dot" style="%s%s"%s></i>', metaUI_track_style(scale$at(dots)),
       if (length(dot_sizes)) sprintf(";width:%1$.1fpx;height:%1$.1fpx;margin:%2$.2fpx 0 0 %2$.2fpx", dot_sizes, -dot_sizes / 2) else "",
       if (length(dot_labels)) sprintf(' title="%s"', htmltools::htmlEscape(dot_labels, attribute = TRUE)) else ""), collapse = ""),
-    if (spans) sprintf('<i class="metaui-track-diamond" style="%1$s;clip-path:polygon(0 50%%,%2$.1f%% 0,100%% 50%%,%2$.1f%% 100%%)"></i>',
+    if (spans && hollow) sprintf('<svg class="metaui-track-diamond metaui-track-hollow" style="%1$s" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true"><polygon points="0.8,5 %2$.1f,0.8 99.2,5 %2$.1f,9.2" vector-effect="non-scaling-stroke"/></svg>',
+      metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl)), 100 * (es - lcl) / (ucl - lcl))
+    else if (spans) sprintf('<i class="metaui-track-diamond" style="%1$s;clip-path:polygon(0 50%%,%2$.1f%% 0,100%% 50%%,%2$.1f%% 100%%)"></i>',
       metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl)), 100 * (es - lcl) / (ucl - lcl))
     else paste0(
       if (has_interval) sprintf('<i class="metaui-track-ci" style="%s"></i>', metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl))),
@@ -437,12 +438,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   # Other estimators sit under the primary analysis, grouped by the level they are fitted at.
   rest <- setdiff(seq_len(nrow(table)), first)
   order <- c(first, rest[order(table$aggregated[rest])])
-  # The primary model's prediction interval, as in the sentence above the table (three or more studies),
-  # sets the axis too, so that differences between narrow intervals are seen against the spread of effects.
-  pi <- if (length(first) && table$status[first[1]] == "ok" && all(c("PI_LCL", "PI_UCL") %in% names(table)) && isTRUE(studies >= 3L))
-    c(table$PI_LCL[first[1]], table$PI_UCL[first[1]])
-  if (!all(is.finite(pi))) pi <- NULL
-  scale <- metaUI_track_scale(c(table$es, table$LCL, table$UCL, pi, if (!is.null(bound)) c(-bound, bound)))
+  scale <- metaUI_track_scale(c(table$es, table$LCL, table$UCL, if (!is.null(bound)) c(-bound, bound)))
   types <- unique(stats::na.omit(table$interval_type[table$status == "ok"]))
   ref <- if (length(first) && table$status[first[1]] == "ok") table$es[first[1]] else NULL
   # Warnings are footnotes, so that one long message does not break the rows.
@@ -464,7 +460,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     effect_level <- ok && !isTRUE(row$aggregated) && "input_rows" %in% names(row) && !is.na(row$k)
     unit <- if (!ok) "" else if (effect_level) "effects" else metaUI_count_unit(row, studies)
     k_shown <- if (!ok || is.na(row$k)) "" else if (effect_level) row$input_rows else row$k
-    track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = i %in% first, pi = if (isTRUE(i == first[1])) pi), "</td>")
+    track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = TRUE), "</td>")
       else paste0('<td class="metaui-reason-cell"><b>', "Not estimated:</b> ", esc(metaUI_reader_reason(row$reason, row$warnings)), "</td>")
     position <- match(i, order)
     opens_group <- !(i %in% first) && (position == length(first) + 1L || table$aggregated[order[position - 1L]] != row$aggregated)
@@ -479,7 +475,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   }, character(1))
   interval_head <- if (length(types) && all(grepl("^Confidence", types))) "95% CI" else "95% interval"
   others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Other estimators answer different questions and are not interchangeable with the primary analysis.',
-    if (!is.null(ref)) paste0(" The diamond and dashed line mark the primary estimate and its ", interval_head, if (!is.null(pi)) "; the thin line beside the diamond is its 95% prediction interval", "."),
+    if (!is.null(ref)) paste0(" Each diamond spans a model\u2019s ", interval_head, "; the dashed line marks the primary estimate."),
     if (any(grepl("trim", table$Model, ignore.case = TRUE))) " The trim-and-fill count includes imputed studies.", "</p>")
   notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(note_text[warned]), "</li>", collapse = ""), "</ol>")
   paste0('<table class="table metaui-estimates metaui-models metaui-custom"><thead><tr data-head="Model, estimate [', interval_head, ']"><th>Model</th><th class="num">Estimate</th><th class="num">',
@@ -501,15 +497,19 @@ metaUI_effect_details <- function(df) {
 }
 
 # Only one page of studies is drawn and sent; sorting and paging come back to the server.
+# A study sorts by its combined effect, or by its one effect: "estimate" puts the largest first,
+# "estimate_low" the smallest.
+metaUI_forest_sorted <- function(groups, starts, effects, studies, sort) {
+  if (!sort %in% c("estimate", "estimate_low")) return(seq_along(starts))
+  estimate <- ifelse(groups$lengths > 1L, studies$es[match(groups$values, studies$study)], effects$es[starts])
+  order(if (sort == "estimate") -estimate else estimate, groups$values)
+}
 # The studies in the order the forest plot pages through them.
 metaUI_forest_order <- function(rows, studies = NULL, sort = "name") {
   effects <- rows[rows$kind == "Selected effect", , drop = FALSE]
   groups <- rle(as.character(effects$study))
   ends <- cumsum(groups$lengths); starts <- ends - groups$lengths + 1L
-  if (identical(sort, "estimate")) {
-    estimate <- ifelse(groups$lengths > 1L, studies$es[match(groups$values, studies$study)], effects$es[starts])
-    groups$values[order(-estimate, groups$values)]
-  } else groups$values
+  groups$values[metaUI_forest_sorted(groups, starts, effects, studies, sort)]
 }
 
 # found: a study the reader searched for, marked so that it stands out on its page.
@@ -538,9 +538,7 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL,
   ends <- cumsum(groups$lengths); starts <- ends - groups$lengths + 1L
   if (is.null(studies)) studies <- data.frame(study = character(), es = numeric(), LCL = numeric(), UCL = numeric())
   study_size <- pmin(13, pmax(6, 7 * stats::median(width) / (studies$UCL - studies$LCL)))
-  # A study sorts by its combined effect, or by its one effect.
-  estimate <- ifelse(groups$lengths > 1L, studies$es[match(groups$values, studies$study)], effects$es[starts])
-  shown <- if (identical(sort, "estimate")) order(-estimate, groups$values) else seq_along(starts)
+  shown <- metaUI_forest_sorted(groups, starts, effects, studies, sort)
   pages <- max(1L, ceiling(length(shown) / page_size))
   page <- suppressWarnings(as.integer(page))
   page <- if (length(page) == 1L && !is.na(page)) max(1L, min(page, pages)) else 1L
@@ -564,16 +562,18 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL,
         one(index[j], paste0("Effect ", esc(labels[j]), if (!is.na(detail) && nzchar(detail)) paste0(' <span class="metaui-forest-count">', esc(detail), "</span>")), "metaui-forest-effect metaui-forest-closed")
       }, character(1)), collapse = ""))
   }, character(1))
+  # A menu of pages goes straight to any page; the count says which studies it holds.
   pager <- if (pages > 1L) paste0('<p class="metaui-note metaui-key metaui-forest-controls metaui-forest-pager"><button type="button" class="metaui-forest-prev" data-page="', page - 1L, '"', if (page == 1L) " disabled", '>Previous</button>',
-    '<button type="button" class="metaui-forest-next" data-page="', page + 1L, '"', if (page == pages) " disabled", '>Next</button><span class="metaui-forest-status" aria-live="polite">Studies ', from, "\u2013", to, " of ", length(shown), "</span></p>") else ""
-  sorted <- identical(sort, "estimate")
+    '<button type="button" class="metaui-forest-next" data-page="', page + 1L, '"', if (page == pages) " disabled", '>Next</button>',
+    '<label class="metaui-forest-jump">Page <select class="metaui-forest-page">', paste0('<option value="', seq_len(pages), '"', ifelse(seq_len(pages) == page, " selected", ""), ">", seq_len(pages), "</option>", collapse = ""),
+    "</select> of ", pages, '</label><span class="metaui-forest-status" aria-live="polite">Studies ', from, "\u2013", to, " of ", length(shown), "</span></p>") else ""
   paste0('<p class="metaui-note metaui-key metaui-forest-key"><span><i class="metaui-glyph metaui-glyph-dot"></i>One effect; larger is more precise</span>',
     if (any(groups$lengths > 1L)) '<span><i class="metaui-glyph metaui-glyph-square"></i>A study\'s effects combined</span>',
     '<span><i class="metaui-glyph metaui-glyph-diamond"></i>Model summary; its width is the ', interval_head, '</span>',
     if (!is.null(ref)) paste0('<span><i class="metaui-glyph metaui-glyph-dash"></i>', esc(summaries$label[1]), ", ", fmt(ref, metaUI_digits(summaries$LCL[1], summaries$UCL[1])), "</span>"), "</p>",
     '<p class="metaui-note metaui-key metaui-forest-controls">',
     if (any(groups$lengths > 1L)) metaUI_switch("Effects within studies", "metaui-forest-all", c(studies = "hidden", effects = "shown"), "studies"),
-    metaUI_switch("Order by", "metaui-forest-sort", c(name = "study name", estimate = "estimate"), if (sorted) "estimate" else "name"), "</p>", pager,
+    metaUI_switch("Order by", "metaui-forest-sort", c(name = "study name", estimate = "largest estimate", estimate_low = "smallest estimate"), if (sort %in% c("estimate", "estimate_low")) sort else "name"), "</p>", pager,
     '<table class="table metaui-estimates metaui-forest metaui-custom"><thead><tr data-head="Study, estimate [', interval_head, ']"><th>Study</th><th class="num">Estimate</th><th class="num">', interval_head, '</th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", summary_rows, paste(study_rows, collapse = ""),
     '</tbody><tfoot><tr><td colspan="3"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", pager)
@@ -624,13 +624,14 @@ metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values
     level[is.na(level)] <- FALSE
     paste0("<tr><td>", htmltools::htmlEscape(levels[i]), '</td><td class="num">', fmt(estimate[i]),
       '</td><td class="num">[', fmt(lcl[i]), ", ", fmt(ucl[i]), ']</td><td class="num metaui-k">', k[i], '</td><td class="metaui-track-cell">',
-      metaUI_track_row(scale, estimate[i], lcl[i], ucl[i], dots = if (show_effects) values[level], dot_labels = if (show_effects) labels[level], ref = ref, dot_sizes = if (show_effects) sizes[level], diamond = TRUE), "</td></tr>")
+      metaUI_track_row(scale, estimate[i], lcl[i], ucl[i], dots = if (show_effects) values[level], dot_labels = if (show_effects) labels[level], ref = ref, dot_sizes = if (show_effects) sizes[level], diamond = TRUE,
+        hollow = isTRUE(lcl[i] <= 0 && ucl[i] >= 0)), "</td></tr>")
   }, character(1))
   paste0('<p class="metaui-note metaui-key metaui-forest-controls">',
     metaUI_switch("Individual effects", "metaui-moderator-effects", c(hide = "hidden", show = "shown"), if (show_effects) "show" else "hide"), "</p>",
     '<table class="table metaui-estimates metaui-moderators', if (!show_effects) " metaui-moderators-plain", ' metaui-custom"><thead><tr data-head="Level, estimate [95% CI]"><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k"><i>k</i></th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", paste(rows, collapse = ""), "</tbody></table>",
-    '<p class="metaui-note metaui-key">Green diamond: level estimate from the multilevel moderator model; its width is the 95% CI.',
+    '<p class="metaui-note metaui-key">Diamonds: level estimates from the multilevel moderator model; each spans its 95% CI, and is filled where the CI excludes zero, outlined where it includes it.',
     if (show_effects) '<span class="metaui-dots-note"> Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another.</span>',
     if (!is.null(ref)) paste0(" Dashed line: overall estimate of the ", htmltools::htmlEscape(ref_label), ", as on the Summary (", fmt(ref), ")."),
     if (show_effects) '<span class="metaui-hist-note" hidden> Levels with many effects show bars instead of dots: the number of effects in each range (tallest bar: <span class="metaui-hist-max"></span> effects).</span>',
@@ -1015,15 +1016,36 @@ metaUI_forest_rows <- function(df, estimates, models = NULL, primary = NULL) {
   rows
 }
 
+# The forest rows of the given studies, in that order, with the model summaries.
+metaUI_forest_subset <- function(rows, order) {
+  effects <- rows[rows$kind == "Selected effect" & rows$study %in% order, , drop = FALSE]
+  effects <- effects[order(match(effects$study, order), seq_len(nrow(effects))), , drop = FALSE]
+  rbind(effects, rows[rows$kind == "Model summary", , drop = FALSE])
+}
+# Pages for the PDF download: whole studies, in the order on screen, up to per_page effects on a page
+# (a study with more effects has a page to itself).
+metaUI_forest_chunks <- function(rows, order, per_page) {
+  counts <- as.vector(table(factor(rows$study[rows$kind == "Selected effect"], levels = order)))
+  page <- integer(length(order)); current <- 1L; used <- 0L
+  for (i in seq_along(order)) {
+    if (used > 0L && used + counts[i] > per_page) { current <- current + 1L; used <- 0L }
+    page[i] <- current; used <- used + counts[i]
+  }
+  lapply(split(order, page), function(studies) metaUI_forest_subset(rows, studies))
+}
+
 # label_width (characters) wraps study labels onto at most two lines for narrow (phone)
 # plots. Longer labels lose their middle, so the end (year, effect) still tells rows apart.
 # top_axis repeats the x axis above plots taller than a screen.
 # axis_title names the effect size as on screen; without it the axis gives the scale.
-metaUI_forest_plot <- function(rows, scale, colours = metaUI_plot_colours(), label_width = NULL, top_axis = FALSE, family = colours$family, axis_title = NULL) {
+# capacity: rows a page has room for, so that a short last page keeps the spacing of the others.
+# limits: the x range, so that the pages of one download share their axis.
+metaUI_forest_plot <- function(rows, scale, colours = metaUI_plot_colours(), label_width = NULL, top_axis = FALSE, family = colours$family, axis_title = NULL, capacity = NULL, limits = NULL) {
   # As on screen: model summaries first, and an effect is named by its study, with its number
   # only where the study has several.
   rows <- rbind(rows[rows$kind == "Model summary", , drop = FALSE], rows[rows$kind != "Model summary", , drop = FALSE])
-  rows$row <- rev(seq_len(nrow(rows)))
+  capacity <- max(nrow(rows), capacity)
+  rows$row <- rev(seq_len(nrow(rows))) + capacity - nrow(rows)
   if (!is.null(rows$study)) {
     effect <- rows$kind == "Selected effect" & !is.na(rows$study)
     several <- rows$study %in% rows$study[effect][duplicated(rows$study[effect])]
@@ -1060,9 +1082,9 @@ metaUI_forest_plot <- function(rows, scale, colours = metaUI_plot_colours(), lab
     ggplot2::geom_segment(data = effects, ggplot2::aes(x = .data$LCL, xend = .data$UCL, yend = .data$row), colour = colours$ink, linewidth = .4) +
     ggplot2::geom_point(data = effects, shape = 16, size = 1.9, colour = colours$ink) +
     {if (nrow(summaries)) ggplot2::geom_polygon(data = diamonds, ggplot2::aes(x = .data$x, y = .data$y, group = .data$id), inherit.aes = FALSE, fill = colours$accent)} +
-    ggplot2::scale_y_continuous(breaks = rows$row, labels = rows$label, expand = ggplot2::expansion(add = .8),
+    ggplot2::scale_y_continuous(breaks = rows$row, labels = rows$label, limits = c(1, capacity), expand = ggplot2::expansion(add = .8),
       sec.axis = ggplot2::dup_axis(labels = values, name = NULL)) +
-    ggplot2::scale_x_continuous(sec.axis = if (top_axis) ggplot2::dup_axis() else ggplot2::waiver(),
+    ggplot2::scale_x_continuous(limits = limits, sec.axis = if (top_axis) ggplot2::dup_axis() else ggplot2::waiver(),
       # The PDF device's default font has no true minus sign.
       labels = function(x) { x <- format(x, trim = TRUE, drop0trailing = TRUE); if (nzchar(family)) metaUI_minus(x) else x }) +
     ggplot2::labs(x = if (is.null(axis_title)) paste("Effect size (", scale, ")", sep = "") else metaUI_label_expr(axis_title), y = NULL) +

@@ -164,7 +164,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' @param overwrite Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.
 #' @param launch_app Should the app be launched? Defaults to TRUE if save_to_folder is NA and static_folder is NULL, FALSE otherwise. Interactive auto-printing of the returned app launches it and blocks the R console until the app stops. Use launch_app = FALSE to build without launching, then run shiny::runApp() separately when ready.
 #' @param options List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.
-#'   - `max_forest_plot_rows` Numeric. What is the maximum number of effects for the forest plot's PDF and PNG downloads? Defaults to 200. The plot on screen shows any number of studies, 50 to a page.
+#'   - `max_forest_plot_rows` Numeric. How many effects fit on one page of the forest plot's PDF download, which holds every selected study? Defaults to 60; a study with more effects gets a page of its own. The plot on screen shows 50 studies to a page, and its PNG download the page shown.
 #'   - `shiny_theme` Character. One of the shinythemes that style the app. Defaults to "yeti", see `?shinythemes::shinythemes` for all options.
 #'   - `intro` Optional HTML shown under the title: one or two sentences stating the question and, for readers new to the scale, what positive values mean.
 #'   - `fit_cache_entries` Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.
@@ -203,7 +203,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     launch_app <- FALSE
   }
 
-  defaults <- list(max_forest_plot_rows = 200, shiny_theme = "yeti", selection_list_threshold = 6)
+  defaults <- list(max_forest_plot_rows = 60, shiny_theme = "yeti", selection_list_threshold = 6)
   opts <- utils::modifyList(defaults, options)
   opts$design <- if (is.null(design)) NULL else validate_design(design)
   limit <- opts$max_forest_plot_rows

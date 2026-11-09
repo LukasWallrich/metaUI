@@ -16,22 +16,27 @@ test_that("the sample overview has one output binding and follows the selection"
   })
 })
 
-test_that("oversized forest selections still show on screen, without image downloads", {
+test_that("forest PDFs hold every study over several pages, and PNGs the page shown", {
   path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
   d <- prepared()
-  generate_shiny(d, "Forest limit", save_to_folder = path, launch_app = FALSE,
+  generate_shiny(d, "Forest pages", save_to_folder = path, launch_app = FALSE,
     options = list(max_forest_plot_rows = 8))
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   shiny::testServer(env$server, {
     session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
-    expect_match(output$forest_panel$html, "limited to 8 effects")
-    expect_false(grepl('id="forest_pdf"', output$forest_panel$html, fixed = TRUE))
+    expect_match(output$forest_panel$html, 'id="forest_pdf"', fixed = TRUE)
+    expect_match(output$forest_panel$html, 'id="forest_png"', fixed = TRUE)
     expect_match(output$foreststudies, "metaui-forest-key", fixed = TRUE)
-    # The exact boundary should still render a plot.
-    state_values$uploaded_data <- d[1:8, ]
-    session$setInputs(go = 2)
-    expect_true(nzchar(output$foreststudies))
+    rows <- forest_rows()
+    pages <- metaUI_forest_chunks(rows, forest_screen_order(), 8)
+    expect_gt(length(pages), 1L)
+    # Every effect appears once, and each page keeps whole studies.
+    effects <- do.call(rbind, lapply(pages, function(x) x[x$kind == "Selected effect", ]))
+    expect_setequal(paste(effects$study, effects$effect_id), paste(rows$study, rows$effect_id)[rows$kind == "Selected effect"])
+    expect_false(any(duplicated(unlist(lapply(pages, function(x) unique(x$study[x$kind == "Selected effect"]))))))
+    pdf <- output$forest_pdf
+    expect_equal(readBin(pdf, "raw", 5), charToRaw("%PDF-"))
   })
 })
 

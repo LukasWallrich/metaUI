@@ -180,6 +180,12 @@ test_that("the forest plot draws one page and sorts on the server", {
   sorted <- page(sort = "estimate")
   expect_true(grepl(">S120<", sorted, fixed = TRUE) && !grepl(">S001<", sorted, fixed = TRUE))
   expect_match(sorted, 'aria-pressed="true"', fixed = TRUE)
+  smallest <- page(sort = "estimate_low")
+  expect_true(grepl(">S001<", smallest, fixed = TRUE) && !grepl(">S120<", smallest, fixed = TRUE))
+  expect_match(smallest, 'data-value="estimate_low" aria-pressed="true"', fixed = TRUE)
+  # A menu goes to any page, with the page shown selected.
+  expect_match(last, '<option value="3" selected>3</option>', fixed = TRUE)
+  expect_match(last, "</select> of 3", fixed = TRUE)
   expect_no_match(metaUI:::metaUI_forest_html(rows[1:10, ], "g"), "metaui-forest-pager", fixed = TRUE)
 })
 
@@ -303,7 +309,7 @@ test_that("the Sample table can show one row per study without averaging effects
   expect_equal(studies$Study, c("B", "A"))
   expect_equal(studies$Effects, c(2L, 2L))
   expect_equal(names(studies)[1:2], c("Study", "Effects"))
-  expect_false("Effect size" %in% names(studies))
+  expect_equal(studies$`Effect size`, c("0.100 to 0.400", "0.200 to 0.300"))
   expect_equal(studies$N, c("40", "10–12"))
   expect_equal(studies$Year, c(2001, 2002))
   expect_equal(studies$Domain, c("x", "several"))
@@ -382,4 +388,31 @@ test_that("narrow selections get plain reasons and consistent footnotes", {
   expect_identical(metaUI:::metaUI_reader_warnings(both), "No studies fall in one of the p-value ranges the model compares, so its estimate is unstable.")
   expect_identical(metaUI:::fmt_p(0.561, include_equal = FALSE), ".561")
   expect_identical(metaUI:::fmt_p(0.561), "= .561")
+})
+
+test_that("references get APA italics from their BibTeX entry and linked addresses", {
+  ref <- "Lee, T., & Yu, J. (2020). Does it matter? Library & Information Science Research, 28(1), 196\u2013213. https://doi.org/10.1002/csr.2042"
+  bib <- "@Article{Lee_2020,\n  journal = {Library {\\&}amp$\\mathsemicolon$ Information Science Research},\n  volume = {28},\n}"
+  html <- metaUI:::metaUI_reference_html(ref, bib)
+  expect_match(html, "<i>Library &amp; Information Science Research, 28</i>(1)", fixed = TRUE)
+  expect_match(html, '<a href="https://doi.org/10.1002/csr.2042" target="_blank" rel="noopener">https://doi.org/10.1002/csr.2042</a>', fixed = TRUE)
+  thesis <- metaUI:::metaUI_reference_html("Houlette, M. A. (2003). Maximizing the benefits [PhD thesis]. University of Delaware.",
+    "@PhdThesis{h,\n  title = {Maximizing the Benefits},\n}")
+  expect_match(thesis, "(2003). <i>Maximizing the benefits</i> [PhD thesis]", fixed = TRUE)
+  # Other entry types, and text the entry does not match, stay as written, escaped.
+  expect_identical(metaUI:::metaUI_reference_html("A <b> (2001). Talk.", "@Misc{a, title = {Talk}}"), "A &lt;b&gt; (2001). Talk.")
+  expect_identical(metaUI:::metaUI_reference_html("A (2001). Paper. Other Journal, 2.", "@Article{a, journal = {Journal X}}"), "A (2001). Paper. Other Journal, 2.")
+})
+
+test_that("moderator levels are outlined where their interval includes zero", {
+  html <- metaUI:::metaUI_moderator_html(c("a", "b"), c(.2, .05), c(.1, -.05), c(.3, .15), c(3L, 4L), character(), numeric(), character(), "g", show_effects = FALSE)
+  expect_equal(lengths(regmatches(html, gregexpr("metaui-track-hollow", html, fixed = TRUE))), 1L)
+  expect_equal(lengths(regmatches(html, gregexpr('<i class="metaui-track-diamond"', html, fixed = TRUE))), 1L)
+})
+
+test_that("study rows give the range of their effect sizes", {
+  effects <- data.frame(Study = c("A", "A", "B"), metaUI__key = c("A", "A", "B"), `Effect size` = c(-.12, .31, .2), `Reported p` = c(.1, .2, .3), check.names = FALSE)
+  rows <- metaUI:::metaUI_study_rows(effects)
+  expect_identical(rows$`Effect size`, c("\u22120.120 to 0.310", "0.200"))
+  expect_false("Reported p" %in% names(rows))
 })
