@@ -673,9 +673,12 @@ metaUI_multilevel_fit <- function(df) {
     test = "t", method = "REML", sparse = TRUE)
 }
 
+# The within-study correlation is the one declared for the app (metaUI_fit_models attaches it), .6 if none.
 metaUI_rve_fit <- function(df) {
+  rho <- attr(df, "metaUI_correlation")
   robumeta::robu(metaUI__effect_size ~ 1, data = df,
-    studynum = df$metaUI__study_id, var.eff.size = df$metaUI__variance, small = FALSE)
+    studynum = df$metaUI__study_id, var.eff.size = df$metaUI__variance,
+    rho = if (is.null(rho)) .6 else rho, small = FALSE)
 }
 
 # One cache per server session. Exact keys include all data attributes and model
@@ -820,6 +823,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
       reason <- tryCatch({
         env <- new.env(parent = environment(metaUI_fit_models))
         env$df <- x
+        attr(env$df, "metaUI_correlation") <- correlation
         # Reflect the inputs only for explicitly directional, right-sided models.
         reflected <- metaUI_model_role(spec) %in% c("P-uniform star", "Hedges-Vevea Selection Model") && x$metaUI__direction[1] == "negative"
         if (reflected) env$df$metaUI__effect_size <- -env$df$metaUI__effect_size

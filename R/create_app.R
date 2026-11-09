@@ -272,7 +272,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   correlation <- if (is.null(options$correlation_dependent)) .6 else options$correlation_dependent
   metaUI_aggregate(dataset, correlation) # check the aggregation contract before writing
   report$aggregation <- list(method = "GLS study-level average", correlation = correlation,
-    assumptions = "Distinct studies are independent; multilevel V is diagonal (sampling covariance not supplied). RVE uses correlated-effects weights (rho=.8), small=FALSE. Neither N nor p is inferred by aggregation.")
+    assumptions = "Distinct studies are independent; multilevel V is diagonal (sampling covariance not supplied). RVE uses correlated-effects weights with the same within-study correlation, small=FALSE. Neither N nor p is inferred by aggregation.")
   if (!is.null(bayesian)) report$bayesian <- c(bayesian, list(
     model = "Two-level normal-normal on aggregated studies", mean_prior = "Improper uniform on fitting scale",
     latency = "Default cap 20 studies. Approximate benchmark: 20 seconds at 20 studies, 97 at 50. Each Analyze blocks the server process while fitting; sensitivity/downloads can need two extra fits. Hard author override limit 50.",
