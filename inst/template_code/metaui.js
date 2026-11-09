@@ -14,9 +14,18 @@
       var container = slider.closest('.shiny-input-container');
       var label = container && container.querySelector('.control-label');
       if (!from || !to || !label) return;
+      // The range is a button: pressed, it turns into two boxes for typing exact ends.
       var range = label.querySelector('.metaui-range');
-      if (!range) { range = document.createElement('span'); range.className = 'metaui-range'; label.appendChild(range); }
-      range.textContent = from.textContent + ' to ' + to.textContent;
+      if (!range) {
+        range = document.createElement('button'); range.type = 'button'; range.className = 'metaui-range';
+        label.appendChild(range);
+      }
+      if (range.tagName !== 'BUTTON') return; // being edited
+      var text = from.textContent + ' to ' + to.textContent;
+      if (range.textContent !== text) {
+        range.textContent = text;
+        range.setAttribute('aria-label', text + '. Type exact values');
+      }
     });
     document.querySelectorAll('.irs').forEach(function (slider) {
       var labels = Array.prototype.slice.call(slider.querySelectorAll(':scope > .irs-grid > .irs-grid-text'));
@@ -48,6 +57,47 @@
   }
   var timer;
   function schedule() { clearTimeout(timer); timer = setTimeout(declutter, 60); }
+  $(document).on('click', 'button.metaui-range', function (event) {
+    event.preventDefault(); event.stopPropagation();
+    var button = this, container = button.closest('.shiny-input-container');
+    var input = container && container.querySelector('.js-range-slider');
+    var slider = input && $(input).data('ionRangeSlider');
+    if (!slider) return;
+    var o = slider.options, name = (container.querySelector('.control-label').firstChild || {}).textContent || '';
+    function box(value, end) {
+      var field = document.createElement('input');
+      field.type = 'number'; field.inputMode = 'decimal'; field.className = 'metaui-range-box';
+      field.min = o.min; field.max = o.max; field.step = o.step || 'any'; field.value = value;
+      field.setAttribute('aria-label', name.trim() + ', ' + end);
+      return field;
+    }
+    var a = box(slider.result.from, 'from'), b = box(slider.result.to, 'to');
+    var boxes = document.createElement('span'); boxes.className = 'metaui-range metaui-range-boxes';
+    boxes.append(a, ' to ', b);
+    button.replaceWith(boxes);
+    a.focus(); a.select();
+    var done = false;
+    function finish(apply) {
+      if (done) return; done = true;
+      var f = parseFloat(a.value), t = parseFloat(b.value);
+      if (apply && isFinite(f) && isFinite(t)) {
+        if (f > t) { var x = f; f = t; t = x; }
+        f = Math.min(o.max, Math.max(o.min, f)); t = Math.min(o.max, Math.max(o.min, t));
+        slider.update({ from: f, to: t });
+        $(input).trigger('change');
+      }
+      boxes.replaceWith(button);
+      schedule();
+      button.focus();
+    }
+    boxes.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    });
+    boxes.addEventListener('focusout', function (e) { if (!boxes.contains(e.relatedTarget)) finish(true); });
+    // A press inside the label must not move focus to the slider.
+    boxes.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); });
+  });
   window.addEventListener('resize', schedule);
   document.addEventListener('DOMContentLoaded', function () {
     new MutationObserver(function (mutations) {
@@ -937,5 +987,15 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   $(document).on('loaded.bs.select rendered.bs.select changed.bs.select refreshed.bs.select', 'select', function () {
     var select = this; setTimeout(function () { name(select); }, 0);
+  });
+})(jQuery);
+
+/* Links in notes that open another tab. */
+(function ($) {
+  'use strict';
+  $(document).on('click', '.metaui-tab-link', function (event) {
+    event.preventDefault();
+    var tab = document.querySelector('.nav-tabs a[data-value="' + this.dataset.tab + '"]');
+    if (tab) { $(tab).tab('show'); tab.focus(); window.scrollTo(0, 0); }
   });
 })(jQuery);

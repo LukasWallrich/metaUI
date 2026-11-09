@@ -158,6 +158,12 @@ input[type=checkbox][disabled]:checked { appearance: none; margin-top: 3px; bord
 .irs--shiny .irs-grid-text:nth-child(1 of .irs-grid-text), .irs--shiny .irs-grid-text:last-child { display: block; }
 html.metaui-js .irs--shiny .irs-from, html.metaui-js .irs--shiny .irs-to, html.metaui-js .irs--shiny .irs-single { visibility: hidden !important; }
 .metaui-range { float: right; font-weight: 400; font-variant-numeric: tabular-nums; color: var(--metaui-ink); }
+/* Pressed, the range turns into two boxes for exact ends (metaui.js); a small pencil says so. */
+button.metaui-range { padding: 0; border: 0; background: none; font: inherit; font-weight: 400; color: var(--metaui-ink); cursor: text; text-decoration: underline dotted var(--metaui-slate); text-underline-offset: 3px; }
+button.metaui-range::after { content: '\270E'; margin-left: 4px; font-size: .8em; color: var(--metaui-slate); }
+button.metaui-range:hover, button.metaui-range:focus-visible { color: var(--metaui-accent); }
+.metaui-range-boxes { display: inline-flex; align-items: center; gap: 4px; font-weight: 400; }
+.metaui-range-box { width: 5.2em; padding: 1px 4px; border: 1px solid var(--metaui-rule); border-radius: 3px; background: var(--metaui-surface); color: var(--metaui-ink); font: inherit; font-variant-numeric: tabular-nums; }
 html.metaui-js .irs--shiny.irs-with-grid { height: 34px; }
 html.metaui-js .irs--shiny .irs-line, html.metaui-js .irs--shiny .irs-bar { top: 8px; }
 html.metaui-js .irs--shiny .irs-handle { top: 1px; }
@@ -810,3 +816,5 @@ table.metaui-forest tr.metaui-found > td:first-child { box-shadow: inset 3px 0 0
   table.metaui-forest > tbody > tr.metaui-found { background: var(--metaui-tint); box-shadow: inset 3px 0 0 var(--metaui-accent); padding-left: 9px !important; }
   table.metaui-forest > tbody > tr.metaui-found > td { background: none; box-shadow: none !important; }
 }
+.metaui-range-box { -moz-appearance: textfield; appearance: textfield; }
+.metaui-range-box::-webkit-outer-spin-button, .metaui-range-box::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }

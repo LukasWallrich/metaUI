@@ -327,6 +327,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
               downloadButton("references_txt", "Text (.txt)"), downloadButton("references_bib", "BibTeX (.bib)"), downloadButton("references_xlsx", "Excel (.xlsx)")),
             p(class = "metaui-note metaui-key metaui-forest-controls", HTML(metaUI_switch("One row per", "metaui-sample-view", {if ("metaUI__article_label" %in% names(data)) \'c(effects = "effect", studies = "study", sources = "source")\' else \'c(effects = "effect", studies = "study")\'}, "effects"))),
             if (!is.null(metaUI_study_info)) study_details_hint,
+            uiOutput("sample_view_note"),
             DT::dataTableOutput("sample_table")
             )
           ),
@@ -1153,23 +1154,35 @@ glue_string <- ('
 
   # Heterogeneity -----------------------------------------------------------
 
+  # Heterogeneity comes from the primary model when it has study and within-study components, as the
+  # prediction interval on the Summary does; otherwise from the multilevel model, which is named.
+  heterogeneity_source <- reactive({
+    df <- df_filtered()
+    results <- estimatesreactive()
+    req(results)
+    primary <- primary_index(results$table)
+    multilevel <- models_to_run$name[models_to_run$code == metaUI_code_multilevel & !models_to_run$aggregated]
+    if (length(primary) && identical(results$fit_data, df) && results$table$status[primary[1]] == "ok" && !is.null(results$components[[primary[1]]]))
+      return(list(model = primary_model, primary = TRUE, fit = results$components[[primary[1]]]))
+    list(model = if (length(multilevel)) multilevel[1] else "Random-Effects Multilevel Model", primary = length(multilevel) > 0L && identical(primary_model, multilevel[1]),
+      fit = metaUI_reuse_fit(results, models_to_run, metaUI_code_multilevel, df, function() metaUI_multilevel_fit(df)))
+  })
+
   output$heterogeneity_reading <- renderUI({
     df <- df_filtered()
-    req(estimatesreactive())
-    het <- metaUI_heterogeneity(metaUI_reuse_fit(estimatesreactive(), models_to_run, metaUI_code_multilevel, df, function() metaUI_multilevel_fit(df)), df)
+    source <- heterogeneity_source()
+    het <- metaUI_heterogeneity(source$fit, df)
     req(!is.na(het$Q_p))
-    p(class = "metaui-reading", HTML(paste0("Effects vary <b>", if (het$Q_p < .05) "more" else "no more", "</b> than sampling error alone would predict (",
-      "<i>Q</i> test, <i>p</i> ", fmt_p(het$Q_p), ").")))
+    tagList(p(class = "metaui-reading", HTML(paste0("Effects vary <b>", if (het$Q_p < .05) "more" else "no more", "</b> than sampling error alone would predict (",
+      "<i>Q</i> test, <i>p</i> ", fmt_p(het$Q_p), ")."))),
+      p(class = "metaui-note", if (!is.null(primary_model) && !source$primary) paste0("From the ", source$model, "; the primary model, ", primary_model, ", does not report these variance components.")
+        else paste0("From the ", source$model, if (!is.null(primary_model)) ", as is the prediction interval on the Summary" else "", ".")))
   })
 
   output$heterogeneity <- renderTable({
     df <- df_filtered()
 
-    req(estimatesreactive())
-    metapp_total <- metaUI_reuse_fit(estimatesreactive(), models_to_run,
-      metaUI_code_multilevel, df, function() metaUI_multilevel_fit(df))
-
-    het <- metaUI_heterogeneity(metapp_total, df)
+    het <- metaUI_heterogeneity(heterogeneity_source()$fit, df)
     # A component the data cannot separate (one study, say) is said to be so, not shown as NA.
     het[c("study_variance", "effect_variance", "total_variance")] <-
       lapply(het[c("study_variance", "effect_variance", "total_variance")], function(x) if (is.na(x)) "not identified" else round_(x, digits = 4))
@@ -1241,6 +1254,12 @@ glue_string <- ('
   })
   forest_studies <- reactive(metaUI_forest_studies(df_agg()))
   forest_details <- reactive(metaUI_effect_details(df_filtered()))
+  # Study and source rows have no single effect size; the forest plot has their combined effects.
+  output$sample_view_note <- renderUI({
+    req(input$sample_view %in% c("studies", "sources"))
+    p(class = "metaui-note", "Effect sizes are given for each effect, so these rows have none. The ",
+      tags$a(href = "#", class = "metaui-tab-link", `data-tab` = "Forest plot", "Forest plot"), " shows each study with its effects combined.")
+  })
   output$foreststudies <- renderText({
     metaUI_forest_html(forest_rows(), metaUI_eff_size_type_label, studies = forest_studies(), details = forest_details(), page = forest_view$page, sort = forest_view$sort, found = forest_view$found)
   })
@@ -1421,7 +1440,7 @@ glue_string <- ('
     value <- zcurve_fit()
     # The reason is given under the heading.
     validate(need(!inherits(value$result, "error"), ""))
-    metaUI_zcurve_plot(value$result, plot_colours)
+    metaUI_zcurve_plot(value$result, plot_colours, narrow = isTRUE(session$clientData$output_zcurve_width < 560))
   }, width = function() max(420, session$clientData$output_zcurve_width), height = 400,
     alt = "Z-curve: a histogram of the studies\\u2019 z-scores with the fitted curve. The text above gives its estimates.")
 

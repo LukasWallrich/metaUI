@@ -74,6 +74,11 @@ metaUI_digits <- function(lcl, ucl) {
 # back: draw on the fitting scale, where the limits are straight, with the axis labelled in r.
 metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours(), width = NULL, back = FALSE) {
   if (is.null(width)) width <- 700
+  # On phones every other tick, counted from zero, so that their labels keep apart.
+  thin <- function(ticks, range) {
+    if (width >= 560 || sum(ticks >= range[1] & ticks <= range[2]) <= 6L) return(ticks)
+    ticks[round(ticks / diff(ticks)[1]) %% 2 == 0]
+  }
   centre <- as.numeric(fit$b)
   se <- sqrt(fit$vi); yi <- as.numeric(fit$yi)
   z <- stats::qnorm(.975)
@@ -136,9 +141,9 @@ metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours(), width = NU
     label(pooled, pooled_text, colours$accent) +
     ggplot2::scale_y_reverse(breaks = metaUI_funnel_ticks(se), expand = c(0, 0)) +
     (if (back) {
-      ticks <- pretty(tanh(limits), 8); ticks <- ticks[abs(ticks) < 1]
+      ticks <- thin(pretty(tanh(limits), 8), tanh(limits)); ticks <- ticks[abs(ticks) < 1]
       ggplot2::scale_x_continuous(limits = limits, expand = c(0, 0), breaks = atanh(ticks), labels = metaUI_minus(format(ticks, trim = TRUE)))
-    } else ggplot2::scale_x_continuous(limits = limits, expand = c(0, 0), breaks = pretty(limits, 8), labels = function(x) metaUI_minus(format(x, trim = TRUE)))) +
+    } else ggplot2::scale_x_continuous(limits = limits, expand = c(0, 0), breaks = thin(pretty(limits, 8), limits), labels = function(x) metaUI_minus(format(x, trim = TRUE)))) +
     ggplot2::labs(x = metaUI_label_expr(xlab), y = if (back) "Standard error (Fisher z)" else "Standard error") +
     metaUI_plot_theme(colours) +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
@@ -186,7 +191,7 @@ metaUI_base_par <- function(colours) {
 
 # The zcurve package draws fixed colours; recolour its own ggplot layers. Statistics are
 # untouched: its annotations move out of the plot, into the "statistics" attribute.
-metaUI_zcurve_plot <- function(fit, colours) {
+metaUI_zcurve_plot <- function(fit, colours, narrow = FALSE) {
   plot <- zcurve::plot.zcurve(fit, annotation = TRUE, plot_type = "ggplot", main = "")
   is_text <- vapply(plot$layers, function(layer) inherits(layer$geom, "GeomText"), logical(1))
   statistics <- unlist(lapply(plot$layers[is_text], function(layer) as.character(layer$data$label)))
@@ -222,10 +227,13 @@ metaUI_zcurve_plot <- function(fit, colours) {
     layer$aes_params <- params
     layer
   })
-  # The threshold's labels sit above the panel, clear of any bar.
-  plot <- plot + ggplot2::annotate("text", x = threshold + .08, y = Inf, vjust = -.4, hjust = 0, size = 4.9, colour = colours$accent, family = colours$family, parse = TRUE,
-      label = sprintf('"significant," ~ italic(z) == "%s" * "," ~ italic(p) == "%s"', round(threshold, 2), sub("^0", "", format(fit$control$sig_level)))) +
-    ggplot2::annotate("text", x = threshold - .08, y = Inf, vjust = -.4, hjust = 1, size = 4.9, colour = colours$slate, family = colours$family, parse = TRUE, label = '"not significant"') +
+  # The threshold's labels sit above the panel, clear of any bar; on phones the statistic takes a line of its own.
+  stat <- sprintf('italic(z) == "%s" * "," ~ italic(p) == "%s"', round(threshold, 2), sub("^0", "", format(fit$control$sig_level)))
+  top <- if (narrow) -1.7 else -.4
+  plot <- plot + ggplot2::annotate("text", x = threshold + .12, y = Inf, vjust = top, hjust = 0, size = 4.9, colour = colours$accent, family = colours$family, parse = TRUE,
+      label = if (narrow) '"significant"' else paste('"significant," ~', stat)) +
+    (if (narrow) ggplot2::annotate("text", x = threshold + .12, y = Inf, vjust = -.4, hjust = 0, size = 4.9, colour = colours$accent, family = colours$family, parse = TRUE, label = stat)) +
+    ggplot2::annotate("text", x = threshold - .12, y = Inf, vjust = top, hjust = 1, size = 4.9, colour = colours$slate, family = colours$family, parse = TRUE, label = '"not significant"') +
     metaUI_plot_theme(colours)
   # The curve's name sits beyond its end, in the right margin, clear of the data whatever
   # the selection; tests beyond the plot's end are counted beneath it.
@@ -235,7 +243,7 @@ metaUI_zcurve_plot <- function(fit, colours) {
   beyond <- sum(fit$data > right)
   plot <- plot +
     ggplot2::annotate("text", x = Inf, y = end$y, hjust = -.05, size = 4.9, colour = colours$ink, family = colours$family, parse = TRUE, label = 'italic(z) * "-curve fit"') +
-    ggplot2::theme(plot.margin = ggplot2::margin(26, 66, 4, 4))
+    ggplot2::theme(plot.margin = ggplot2::margin(if (narrow) 46 else 26, 66, 4, 4))
   plot$coordinates$clip <- "off"
   x_scale <- plot$scales$get_scales("x")
   # The axis title counts the tests beyond the plot's end, where no tick label can collide with it.
@@ -806,6 +814,9 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
   if (is.null(available_rows)) available_rows <- if (is.null(validation)) nrow(df) else validation$retained_rows
   preparation_excluded <- if (is.null(validation)) NA_integer_ else nrow(validation$exclusions)
   fits <- vector("list", nrow(models))
+  # Variance components of any model with the default random structure (a CHE model, say), so that
+  # heterogeneity can come from the primary model without keeping its whole fit.
+  components <- vector("list", nrow(models))
   rows <- lapply(seq_len(nrow(models)), function(i) {
     spec <- models[i, , drop = FALSE]
     x <- if (isTRUE(spec$aggregated)) df_agg else df
@@ -852,6 +863,8 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
           if (!is.null(pred$pi.lb) && all(is.finite(c(pred$pi.lb, pred$pi.ub)))) prediction <- if (reflected) -c(pred$pi.ub, pred$pi.lb) else c(pred$pi.lb, pred$pi.ub)
         }
         if (bayesian || (!spec$aggregated && !reflected && spec$code %in% c(metaUI_code_multilevel, metaUI_code_rve))) fits[[i]] <<- env$mod
+        if (!spec$aggregated && !reflected && inherits(env$mod, "rma.mv") && identical(unname(env$mod$s.names), c("metaUI__study_id", "metaUI__study_id/metaUI__effect_id")))
+          components[[i]] <<- list(sigma2 = env$mod$sigma2, QE = env$mod$QE, QEp = env$mod$QEp)
         ""
       }, error = function(e) { status <<- "failed"; conditionMessage(e) })
       elapsed <- proc.time()[["elapsed"]] - started
@@ -872,7 +885,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
     if (df$metaUI__es_type[1] == "ZCOR") row[c("es", "LCL", "UCL", "PI_LCL", "PI_UCL")] <- lapply(row[c("es", "LCL", "UCL", "PI_LCL", "PI_UCL")], tanh)
     row
   })
-  list(df_agg = df_agg, table = dplyr::bind_rows(rows), fits = fits, fit_data = df)
+  list(df_agg = df_agg, table = dplyr::bind_rows(rows), fits = fits, components = components, fit_data = df)
 }
 
 metaUI_validate_prepared <- function(df) {
