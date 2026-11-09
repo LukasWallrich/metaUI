@@ -13,7 +13,7 @@
 #' @param variance Character. Name of the field to use as the sampling variances.
 #' @param se Character. Name of the field to use as the standard error for the effect size.
 #' @param pvalue Character. Name of the field to use as the p-value for the effect size.
-#' @param filters Character. List of fields to use as filters - can be named if different labels should be displayed
+#' @param filters Character. List of fields to use as filters - can be named if different labels should be displayed. Labels must be distinct, contain no backticks, and stay distinct when spaces and symbols are replaced by underscores (as in Shiny input IDs); a numeric filter needs at least one value.
 #' @param url Character. Field with URLs or DOIs to link to. DOIs can be in the format "10.1234/5678" or full links. Defaults to NA.
 #' @param article_label Character. Field with article labels. Only used to report number of references in addition to number of independent samples.
 #' @param es_type Character. Input scale: SMD, COR (raw r), or ZCOR (Fisher z). COR needs r-scale variance and uses delta-method variance conversion; ZCOR needs z-scale variance.
@@ -125,6 +125,7 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   } else {
     filter_names <- filters %>% setNames(filters)
   }
+  if (length(filters)) metaUI_check_filter_columns(paste0("metaUI__filter_", filter_names), data[filters])
 
   # Set NA level for categorical filters ...
   for (i in seq_along(filters)) {
@@ -327,4 +328,23 @@ decode_text_entities <- function(data) {
   }
   if (length(changed)) message("Decoded HTML escapes such as '&amp;' in: ", paste(changed, collapse = ", "), ".")
   data
+}
+
+
+# Filter labels become column names, Shiny IDs and model-formula terms, so they must be distinct
+# after IDs are made safe, and free of backticks. A numeric filter needs a value to give its slider a range.
+metaUI_check_filter_columns <- function(cols, values = NULL) {
+  if (!length(cols)) return(invisible(TRUE))
+  labels <- sub("^metaUI__filter_", "", cols)
+  if (anyDuplicated(labels)) stop("Filter labels must be distinct; repeated: ", paste(unique(labels[duplicated(labels)]), collapse = ", "), ".")
+  if (any(grepl("`", labels, fixed = TRUE))) stop("Filter labels cannot contain backticks: ", paste(labels[grepl("`", labels, fixed = TRUE)], collapse = ", "), ".")
+  ids <- metaUI_filter_id(cols)
+  clash <- ids %in% ids[duplicated(ids)]
+  if (any(clash)) stop("These filter labels differ only in spaces or symbols, which the app cannot tell apart: ",
+    paste0("\"", labels[clash], "\"", collapse = ", "), ". Rename one of them.")
+  if (!is.null(values)) for (i in seq_along(cols)) {
+    x <- values[[i]]
+    if (is.numeric(x) && !any(is.finite(x))) stop("Numeric filter \"", labels[i], "\" has no values. Leave it out until it is coded.")
+  }
+  invisible(TRUE)
 }

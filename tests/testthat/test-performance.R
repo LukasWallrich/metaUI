@@ -94,11 +94,35 @@ test_that("upload scale and descriptive-z contracts are explicit", {
   checked <- metaUI:::metaUI_validate_upload(upload, d)
   expect_equal(checked$metaUI__es_z, d$metaUI__es_z, tolerance = 1e-10)
   expect_equal(attr(checked, "metaUI_upload_derivations")$supplied_z_disagreements, nrow(d))
-  bad <- upload; bad$metaUI__effect_size[1] <- .9
-  expect_error(metaUI:::metaUI_validate_upload(bad, d), "source/fitting-scale")
+  # Derived columns follow the edited source columns; edits to them are ignored.
+  edited <- upload; edited$metaUI__effect_size[1] <- .9
+  checked <- metaUI:::metaUI_validate_upload(edited, d)
+  expect_equal(checked$metaUI__effect_size, d$metaUI__effect_size)
+  expect_equal(attr(checked, "metaUI_upload_derivations")$recomputed_rows, 1)
   raw <- fixture(); raw$yi <- raw$yi / 2
   cor <- prepare_data(raw, "study", "yi", variance = "vi", es_id = "id", es_type = "COR", variance_scale = "r")
-  bad <- as.data.frame(cor); bad$metaUI__effect_size <- bad$metaUI__input_effect
-  expect_error(metaUI:::metaUI_validate_upload(bad, cor), "source/fitting-scale")
+  edited <- as.data.frame(cor); edited$metaUI__effect_size <- edited$metaUI__input_effect
+  expect_equal(metaUI:::metaUI_validate_upload(edited, cor)$metaUI__effect_size, cor$metaUI__effect_size)
   expect_equal(metaUI:::metaUI_validate_upload(as.data.frame(cor), cor)$metaUI__effect_size, cor$metaUI__effect_size)
+})
+
+test_that("uploads take new rows, IDs and categories, and explain invalid cells by row", {
+  d <- prepared()
+  upload <- as.data.frame(d); attr(upload, "metaUI_validation") <- NULL
+  new <- upload[1, ]; new[] <- NA
+  new$metaUI__study_id <- "added study"; new$metaUI__input_effect <- .4; new$metaUI__input_variance <- .04
+  checked <- metaUI:::metaUI_validate_upload(rbind(upload, new), d)
+  last <- checked[nrow(checked), ]
+  expect_equal(c(last$metaUI__effect_size, last$metaUI__variance, last$metaUI__se), c(.4, .04, .2))
+  expect_false(is.na(last$metaUI__effect_id))
+  expect_identical(last$metaUI__direction, d$metaUI__direction[1])
+  expect_equal(attr(checked, "metaUI_upload_derivations")$added_ids, 1)
+  text <- upload; text$metaUI__input_effect <- as.character(text$metaUI__input_effect); text$metaUI__input_effect[3] <- "n/a"
+  expect_error(metaUI:::metaUI_validate_upload(text, d), "metaUI__input_effect .*row 4")
+  scale <- upload; scale$metaUI__es_type[2] <- "COR"
+  expect_error(metaUI:::metaUI_validate_upload(scale, d), "metaUI__es_type must be")
+  roles <- metaUI:::metaUI_upload_roles(d)
+  expect_true(all(c("metaUI__input_effect", "metaUI__input_variance") %in% roles$column[roles$role == "Edit"]))
+  expect_true(all(c("metaUI__effect_size", "metaUI__variance", "metaUI__se", "metaUI__es_z") %in% roles$column[roles$role == "Derived"]))
+  expect_identical(names(metaUI:::metaUI_workbook_dataset(upload, d))[1], "metaUI__study_id")
 })

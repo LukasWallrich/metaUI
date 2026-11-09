@@ -153,11 +153,12 @@ test_that("restored filters disclose uploaded rows outside the saved selection",
   u$metaUI__filter_Year[1] <- 2020
   file <- tempfile(fileext = ".xlsx"); on.exit(unlink(file), add = TRUE)
   writexl::write_xlsx(list(dataset = u, filters = data.frame(
-    id = c(rep("outliers_z_scores", 2), rep("metaUI__filter_Year", 2)), selection = c(-10, 10, 2001, 2016))), file)
+    id = c(rep("outliers_z_scores", 2), rep("metaUI__filter_Year", 2)), selection = c(-10, 10, 2002, 2016))), file)
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   shiny::testServer(env$server, {
-    session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Year = c(2001, 2016), metaUI__filter_Year_include_NA = TRUE, go = 1)
+    # A range the reader narrowed keeps added rows outside it out, and says so.
+    session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Year = c(2002, 2016), metaUI__filter_Year_include_NA = TRUE, go = 1)
     session$setInputs(uploadData = list(datapath = file, name = "new-year.xlsx"), executeUpload = 1, go = 2)
     expect_equal(nrow(df_filtered()), 15)
     expect_match(output$selection_status, "Excluded 1")
@@ -166,7 +167,16 @@ test_that("restored filters disclose uploaded rows outside the saved selection",
     session$setInputs(metaUI__filter_Year = c(2000, 2030))
     expect_true(filters_changed())
     saved <- data_list()$filters
-    expect_equal(as.numeric(saved$selection[saved$id == "metaUI__filter_Year"]), c(2001, 2016))
+    expect_equal(as.numeric(saved$selection[saved$id == "metaUI__filter_Year"]), c(2002, 2016))
+  })
+  # A range at its full extent means "everything": it widens to take in the added year.
+  full <- metaUI:::metaUI_full_selection(d, list(list(col = "metaUI__filter_Year", id = "metaUI__filter_Year", type = "numeric")))
+  writexl::write_xlsx(list(dataset = u, filters = data.frame(
+    id = c(rep("outliers_z_scores", 2), rep("metaUI__filter_Year", 2)), selection = c(-10, 10, full$metaUI__filter_Year))), file)
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Year = full$metaUI__filter_Year, metaUI__filter_Year_include_NA = TRUE, go = 1)
+    session$setInputs(uploadData = list(datapath = file, name = "new-year.xlsx"), executeUpload = 1)
+    expect_equal(as.numeric(state_values$pending_upload_filters$metaUI__filter_Year$selection), c(full$metaUI__filter_Year[1], 2020))
   })
 })
 

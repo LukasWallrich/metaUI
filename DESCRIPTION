@@ -37,6 +37,7 @@ Imports:
     tidyr
 Suggests: 
     bayesmeta,
+    clubSandwich,
     DT,
     ggplot2,
     knitr,

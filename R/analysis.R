@@ -409,7 +409,8 @@ metaUI_reader_messages <- c(
   "non-finite value supplied by optim" = "The model could not be fitted to so few or so similar effects.",
   "exactly singular" = "This selection has too little variation to fit the model.",
   "There must be at least 10 z-scores in the fitting range" = "Needs at least 10 significant results (z between 1.96 and 6); far more are recommended.",
-  "Two or less significant" = "Needs at least three significant results (p < .05).")
+  "Two or less significant" = "Needs at least three significant results (p < .05).",
+  "Small-sample degrees of freedom below 4" = "Too few studies for robust variance estimation (small-sample degrees of freedom below 4): its interval and p-value are unreliable.")
 metaUI_reader_message <- function(x) {
   hit <- names(metaUI_reader_messages)[vapply(names(metaUI_reader_messages), grepl, logical(1), x = x, fixed = TRUE)]
   if (length(hit)) unname(metaUI_reader_messages[hit[1]]) else x
@@ -608,6 +609,93 @@ metaUI_moderator_rows <- function(df, moderator) {
   df
 }
 
+# Moderator tests ---------------------------------------------------------------
+# The moderator is added to the primary model where that is an effect-level metafor::rma.mv model,
+# so that the test keeps its dependence structure (a CHE model's within-study correlation, say);
+# otherwise to the default multilevel model. Either way, tests and intervals are cluster-robust by
+# study (CR2 with small-sample degrees of freedom, clubSandwich), so they allow for dependent
+# effects even where the working model gets the dependence wrong.
+metaUI_call_name <- function(e) {
+  if (!is.call(e)) return("")
+  f <- e[[1]]
+  if (is.name(f)) as.character(f) else if (is.call(f) && as.character(f[[1]]) %in% c("::", ":::")) as.character(f[[3]]) else ""
+}
+
+metaUI_moderator_max_df <- 8L
+
+metaUI_default_moderator_call <- quote(metafor::rma.mv(metaUI__effect_size, V = metaUI__variance,
+  random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df, test = "t", dfs = "contain", method = "REML", sparse = TRUE))
+
+# Model code with the moderator added to its one rma.mv call (a final robust() is dropped, as
+# robust inference is added afterwards); NULL when the code has no single such call to extend.
+metaUI_moderator_code <- function(code, mods, control = NULL) {
+  expr <- tryCatch(parse(text = code), error = function(e) NULL)
+  if (is.null(expr) || !length(expr)) return(NULL)
+  found <- 0L
+  walk <- function(e) {
+    if (!is.call(e)) return(e)
+    if (metaUI_call_name(e) == "rma.mv") { found <<- found + 1L; e$mods <- mods; if (!is.null(control)) e$control <- control; return(e) }
+    for (i in seq_along(e)[-1]) if (!is.null(e[[i]])) e[[i]] <- walk(e[[i]])
+    e
+  }
+  strip <- function(e) {
+    if (metaUI_call_name(e) == "{") { e[[length(e)]] <- strip(e[[length(e)]]); e }
+    else if (metaUI_call_name(e) == "robust") e[[2]] else e
+  }
+  expr[[length(expr)]] <- strip(expr[[length(expr)]])
+  for (i in seq_along(expr)) expr[[i]] <- walk(expr[[i]])
+  if (found == 1L) expr else NULL
+}
+
+# primary: list(name, code) of the authors' primary model, or NULL. Returns the fitted model
+# (robust where possible), which model it extends, and whether inference is cluster-robust.
+metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6) {
+  if (is.factor(df[[moderator]])) df[[moderator]] <- droplevels(df[[moderator]])
+  mods <- stats::as.formula(paste0("~`", moderator, "`"))
+  env <- new.env(parent = environment(metaUI_moderator_fit))
+  env$df <- df
+  attr(env$df, "metaUI_correlation") <- correlation
+  model <- NULL
+  working <- "default"
+  # A variance component at zero can stop the default optimizer short; more iterations, then
+  # another optimizer, usually reach the same optimum.
+  controls <- list(NULL, list(iter.max = 1000, rel.tol = 1e-8), list(optimizer = "BFGS"))
+  if (!is.null(primary)) {
+    if (identical(primary$code, metaUI_code_multilevel)) working <- "primary" else {
+      for (control in controls) {
+        expr <- metaUI_moderator_code(primary$code, mods, control)
+        if (is.null(expr)) break
+        model <- tryCatch(suppressWarnings(eval(expr, env)), error = function(e) NULL)
+        if (!is.null(model)) break
+      }
+      if (inherits(model, "rma.mv") && model$k == nrow(df) && NCOL(model$X) > 1L) working <- "primary" else model <- NULL
+    }
+  }
+  if (is.null(model)) for (i in seq_along(controls)) {
+    call <- metaUI_default_moderator_call
+    call$mods <- mods
+    if (!is.null(controls[[i]])) call$control <- controls[[i]]
+    model <- tryCatch(eval(call, env), error = function(e) if (i == length(controls)) stop(e) else NULL)
+    if (!is.null(model)) break
+  }
+  # The small-sample (HTZ) omnibus test grows steeply with the number of coefficients (on 2,628 effects:
+  # 3 s for 2, 12 s and 3 GB for 11, over 8 minutes and 9 GB for 32), while simpler F tests are far too
+  # liberal with many categories. Beyond metaUI_moderator_max_df coefficients no overall test is given;
+  # level estimates and intervals stay CR2-robust either way.
+  omnibus <- NCOL(model$X) - 1L <= metaUI_moderator_max_df
+  robust <- tryCatch(suppressWarnings(metafor::robust(model, cluster = df$metaUI__study_id, clubSandwich = TRUE,
+    wald_test = if (omnibus) "HTZ" else "Naive-Fp")), error = function(e) NULL)
+  list(model = if (is.null(robust)) model else robust, working = working, robust = !is.null(robust), omnibus = omnibus || is.null(robust))
+}
+
+# Estimate and interval of each level of a categorical moderator, from the model with an intercept.
+metaUI_moderator_levels <- function(model, levels) {
+  if (NCOL(model$X) != length(levels)) stop("Moderator levels and model coefficients do not match.")
+  newmods <- rbind(rep(0, length(levels) - 1L), diag(length(levels) - 1L))
+  pred <- as.data.frame(stats::predict(model, newmods = newmods))
+  data.frame(level = levels, b = pred$pred, ci.lb = pred$ci.lb, ci.ub = pred$ci.ub)
+}
+
 # Moderator levels on the same drawn axis; the dots are the selected effects themselves.
 # Without the individual effects, the axis fits the level estimates and their intervals; with
 # them, it covers every effect, which can leave narrow intervals as slivers.
@@ -631,7 +719,7 @@ metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values
     metaUI_switch("Individual effects", "metaui-moderator-effects", c(hide = "hidden", show = "shown"), if (show_effects) "show" else "hide"), "</p>",
     '<table class="table metaui-estimates metaui-moderators', if (!show_effects) " metaui-moderators-plain", ' metaui-custom"><thead><tr data-head="Level, estimate [95% CI]"><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k"><i>k</i></th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", paste(rows, collapse = ""), "</tbody></table>",
-    '<p class="metaui-note metaui-key">Diamonds: level estimates from the multilevel moderator model; each spans its 95% CI, and is filled where the CI excludes zero, outlined where it includes it.',
+    '<p class="metaui-note metaui-key">Diamonds: level estimates from the moderator model named above; each spans its 95% CI, and is filled where the CI excludes zero, outlined where it includes it.',
     if (show_effects) '<span class="metaui-dots-note"> Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another.</span>',
     if (!is.null(ref)) paste0(" Dashed line: overall estimate of the ", htmltools::htmlEscape(ref_label), ", as on the Summary (", fmt(ref), ")."),
     if (show_effects) '<span class="metaui-hist-note" hidden> Levels with many effects show bars instead of dots: the number of effects in each range (tallest bar: <span class="metaui-hist-max"></span> effects).</span>',
@@ -690,18 +778,24 @@ metaUI_puni_star_interval <- function(mod, df, level = .90, alpha = .05) {
   c(stats::uniroot(profile, c(mod$est - 3, mod$est))$root, stats::uniroot(profile, c(mod$est, mod$est + 3))$root)
 }
 
+# Containment degrees of freedom: t tests count studies rather than effects, so that many effects
+# from few studies do not narrow the interval.
 metaUI_multilevel_fit <- function(df) {
   metafor::rma.mv(df$metaUI__effect_size, V = df$metaUI__variance,
     random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df,
-    test = "t", method = "REML", sparse = TRUE)
+    test = "t", dfs = "contain", method = "REML", sparse = TRUE)
 }
 
 # The within-study correlation is the one declared for the app (metaUI_fit_models attaches it), .6 if none.
 metaUI_rve_fit <- function(df) {
   rho <- attr(df, "metaUI_correlation")
-  robumeta::robu(metaUI__effect_size ~ 1, data = df,
+  fit <- robumeta::robu(metaUI__effect_size ~ 1, data = df,
     studynum = df$metaUI__study_id, var.eff.size = df$metaUI__variance,
-    rho = if (is.null(rho)) .6 else rho, small = FALSE)
+    rho = if (is.null(rho)) .6 else rho, small = TRUE)
+  # Tipton (2015): even corrected tests are unreliable below 4 small-sample degrees of freedom.
+  dfs <- as.numeric(fit$reg_table$dfs[1])
+  if (is.finite(dfs) && dfs < 4) warning("Small-sample degrees of freedom below 4 (df = ", formatC(dfs, format = "f", digits = 1), ")", call. = FALSE)
+  fit
 }
 
 # One cache per server session. Exact keys include all data attributes and model
@@ -932,23 +1026,146 @@ metaUI_validate_prepared <- function(df) {
   invisible(TRUE)
 }
 
-metaUI_validate_upload <- function(df, built) {
-  metaUI_validate_prepared(df)
-  if (!nrow(df) || !all(names(built) %in% names(df))) stop("Uploaded data need all built app columns and at least one effect.")
-  for (field in c("metaUI__es_type", "metaUI__display_scale", "metaUI__direction"))
-    if (!identical(as.character(df[[field]][1]), as.character(built[[field]][1]))) stop("Uploaded scale/direction differs from the built app; build a fresh app for a new contract.")
-  source_y <- df$metaUI__input_effect; source_v <- df$metaUI__input_variance
-  if (!is.numeric(source_y) || !is.numeric(source_v) || any(!is.finite(source_y)) || any(!is.finite(source_v) | source_v <= 0)) stop("Invalid uploaded source effect/variance fields.")
-  input_scale <- attr(built, "metaUI_validation")$input_scale
-  expected_y <- source_y; expected_v <- source_v
-  if (identical(input_scale, "COR")) {
-    if (any(abs(source_y) >= 1)) stop("Uploaded COR source effects must be in (-1,1).")
-    expected_y <- atanh(source_y); expected_v <- source_v / (1 - source_y^2)^2
-  }
-  if (any(abs(df$metaUI__effect_size - expected_y) > 1e-8 * pmax(1, abs(expected_y))) ||
-      any(abs(df$metaUI__variance - expected_v) > 1e-6 * pmax(abs(expected_v), df$metaUI__variance)))
-    stop("Uploaded source/fitting-scale fields disagree. Re-prepare original input with the declared transformation.")
+# What a reader may change in the workbook's dataset sheet. "Edit": read on upload. "Derived":
+# recomputed from the edited columns on upload, so edits to them are ignored. "Fixed": the same in
+# every row. "Other": carried with the data; the default models do not use them.
+metaUI_upload_roles <- function(built) {
   specs <- metaUI_computation_specs(built)
+  input_scale <- attr(built, "metaUI_validation")$input_scale
+  if (is.null(input_scale)) input_scale <- built$metaUI__es_type[1]
+  scale <- c(SMD = "standardized mean difference", COR = "correlation r", ZCOR = "Fisher z")[[input_scale]]
+  fitting <- if (built$metaUI__es_type[1] == "ZCOR") "Fisher z" else "standardized mean difference"
+  edit <- c(metaUI__study_id = "Study name or ID. Rows with the same value form one study.",
+    metaUI__effect_id = "Effect ID, unique within its study. Leave it empty in a new row to number the row automatically.",
+    metaUI__es_label = "Label of the effect, shown in the forest plot. Optional.",
+    metaUI__input_effect = paste0("Effect size as supplied (", scale, ")."),
+    metaUI__input_variance = paste0("Sampling variance of that effect size, on the same scale: the square of its standard error."),
+    metaUI__pvalue = "Reported p-value. Optional.",
+    metaUI__N = "Sample size. Optional.",
+    metaUI__url = "Web address or DOI of the source. Optional.",
+    metaUI__article_label = "Source (article) of the study. Optional.")
+  filters <- grep("^metaUI__filter_", names(built), value = TRUE)
+  filter_notes <- vapply(filters, function(col) paste0("Filter and moderator \"", sub("^metaUI__filter_", "", col), "\": ",
+    if (is.numeric(built[[col]])) "a number, or empty if unknown." else "a category. A new category is added to the filter."), character(1))
+  alt_edit <- unlist(lapply(specs, function(x) stats::setNames(paste0(x$name, ": effect size and its sampling variance as supplied (", c("effect", "variance"), ")."), c(x$input_effect, x$input_variance))))
+  derived <- c(metaUI__effect_size = paste0("Effect size on the scale the models use (", fitting, "), from metaUI__input_effect."),
+    metaUI__variance = "Sampling variance on that scale, from metaUI__input_variance.",
+    metaUI__se = "Standard error: the square root of metaUI__variance.",
+    metaUI__es_z = "z-score of the effect against the authors' data, used by the z-score filter.")
+  alt_derived <- unlist(lapply(specs, function(x) stats::setNames(paste0(x$name, ": ", c("effect size", "variance"), " on the scale the models use."), c(x$fit_effect, x$fit_variance))))
+  fixed <- c(metaUI__es_type = "Effect-size scale the models use.", metaUI__display_scale = "Scale results are shown on.",
+    metaUI__direction = "Expected direction of the effect, declared by the authors.")
+  notes <- c(edit[names(edit) %in% names(built)], filter_notes, alt_edit)
+  roles <- data.frame(column = c(names(notes), names(derived), names(alt_derived), names(fixed)),
+    role = c(rep("Edit", length(notes)), rep("Derived", length(derived) + length(alt_derived)), rep("Fixed", length(fixed))),
+    notes = unname(c(notes, derived, alt_derived, fixed)), stringsAsFactors = FALSE)
+  roles <- roles[roles$column %in% names(built), , drop = FALSE]
+  other <- setdiff(names(built), roles$column)
+  rbind(roles, data.frame(column = other, role = rep("Other", length(other)),
+    notes = rep("Kept with the data. The app's default models do not use it; the authors' own models may.", length(other)), stringsAsFactors = FALSE))
+}
+
+# The dataset sheet in the order of the roles above, so that the columns to edit come first.
+metaUI_workbook_dataset <- function(data, built) {
+  order <- intersect(metaUI_upload_roles(built)$column, names(data))
+  data[c(order, setdiff(names(data), order))]
+}
+
+# The instructions sheet that precedes the dataset sheet.
+metaUI_workbook_instructions <- function(built) {
+  roles <- metaUI_upload_roles(built)
+  steps <- c("The dataset sheet holds the data behind these results. To analyse changed data, edit, add or delete rows there, save the workbook, and upload it in the app (under \"Download data or code, upload data\", choose the file and select Upload and analyze).",
+    "Change only the columns marked Edit. Columns marked Derived are recomputed from them when you upload, so changes to Derived columns are ignored, and new rows can leave them empty.",
+    "Columns marked Fixed are the same in every row (the effect-size scale and the expected direction); new rows can leave them empty.",
+    "In a new row, leave metaUI__effect_id empty to number the effect automatically. A new category in a filter column is added to that filter and selected.",
+    "The filters sheet records the selection behind these results; the app restores it after the upload. The other sheets are results and are not read back.")
+  rbind(data.frame(Column = "", Role = paste("Step", seq_along(steps)), Notes = steps, stringsAsFactors = FALSE),
+    data.frame(Column = roles$column, Role = roles$role, Notes = roles$notes, stringsAsFactors = FALSE))
+}
+
+# Workbook rows, as a reader sees them: row 1 holds the column names.
+metaUI_upload_rows <- function(bad) {
+  rows <- which(bad) + 1L
+  paste0(if (length(rows) > 1L) "rows " else "row ", paste(utils::head(rows, 5L), collapse = ", "), if (length(rows) > 5L) ", ..." else "")
+}
+
+# The edited columns are authoritative: fitting-scale effect and variance, SE and z-score are
+# recomputed from them; fixed columns and empty effect IDs are filled in for new rows.
+metaUI_validate_upload <- function(df, built) {
+  df <- as.data.frame(df)
+  if (!nrow(df)) stop("The dataset sheet has no rows.", call. = FALSE)
+  roles <- metaUI_upload_roles(built)
+  needed <- roles$column[roles$role %in% c("Edit", "Other") & !roles$column %in% c("metaUI__effect_id", "metaUI__es_label")]
+  missing <- setdiff(needed, names(df))
+  if (length(missing)) stop("The dataset sheet lacks ", if (length(missing) > 1L) "the columns " else "the column ", paste(missing, collapse = ", "),
+    ". Start from a workbook downloaded from this app and keep its columns.", call. = FALSE)
+  for (field in c("metaUI__es_type", "metaUI__display_scale", "metaUI__direction")) {
+    value <- as.character(built[[field]][1])
+    given <- if (field %in% names(df)) as.character(df[[field]]) else rep(NA_character_, nrow(df))
+    other <- !is.na(given) & given != value
+    if (any(other)) stop(field, " must be \"", value, "\" or empty (it is not in ", metaUI_upload_rows(other),
+      "). This app cannot analyse another effect-size scale or direction.", call. = FALSE)
+    df[[field]] <- value
+  }
+  study <- df$metaUI__study_id
+  empty <- is.na(study) | trimws(as.character(study)) == ""
+  if (any(empty)) stop("Every row needs a study in metaUI__study_id (empty in ", metaUI_upload_rows(empty), ").", call. = FALSE)
+  if (!"metaUI__effect_id" %in% names(df)) df$metaUI__effect_id <- NA
+  ids <- df$metaUI__effect_id
+  added <- is.na(ids) | trimws(as.character(ids)) == ""
+  if (any(added)) {
+    if (is.numeric(built$metaUI__effect_id) && is.numeric(ids) || all(is.na(ids))) {
+      ids <- as.numeric(ids)
+      ids[added] <- max(c(0, built$metaUI__effect_id, ids), na.rm = TRUE) + seq_len(sum(added))
+      if (!is.numeric(built$metaUI__effect_id)) ids <- as.character(ids)
+    } else {
+      ids <- as.character(ids)
+      taken <- unique(c(as.character(built$metaUI__effect_id), ids))
+      fresh <- setdiff(paste0("added-", seq_len(sum(added) + length(taken))), taken)
+      ids[added] <- fresh[seq_len(sum(added))]
+    }
+    df$metaUI__effect_id <- ids
+  }
+  repeated <- duplicated(df[c("metaUI__study_id", "metaUI__effect_id")])
+  if (any(repeated)) stop("Effect IDs must be unique within each study (repeated in ", metaUI_upload_rows(repeated), ").", call. = FALSE)
+  if ("metaUI__es_label" %in% names(built)) {
+    if (!"metaUI__es_label" %in% names(df)) df$metaUI__es_label <- NA
+    unlabelled <- is.na(df$metaUI__es_label) | trimws(as.character(df$metaUI__es_label)) == ""
+    if (any(unlabelled)) df$metaUI__es_label[unlabelled] <- if (is.numeric(df$metaUI__es_label))
+      stats::ave(seq_len(nrow(df)), as.character(df$metaUI__study_id), FUN = seq_along)[unlabelled] else as.character(df$metaUI__effect_id[unlabelled])
+  }
+  number <- function(field, label, positive = FALSE) {
+    x <- suppressWarnings(as.numeric(df[[field]]))
+    bad <- !is.finite(x) | (positive & x <= 0)
+    if (any(bad)) stop(field, " (", label, ") must be ", if (positive) "a positive number" else "a number", " in every row (not in ", metaUI_upload_rows(bad), ").", call. = FALSE)
+    x
+  }
+  input_scale <- attr(built, "metaUI_validation")$input_scale
+  # Source to fitting scale, as prepare_data() did: atanh(r), with delta-method variance.
+  to_fit <- function(y, v, scale, what) {
+    if (identical(scale, "COR")) {
+      outside <- abs(y) >= 1
+      if (any(outside)) stop(what, " are correlations and must lie between -1 and 1 (not in ", metaUI_upload_rows(outside), ").", call. = FALSE)
+      list(y = atanh(y), v = v / (1 - y^2)^2)
+    } else list(y = y, v = v)
+  }
+  differs <- function(field, new, tolerance) {
+    old <- if (field %in% names(df)) suppressWarnings(as.numeric(df[[field]])) else rep(NA_real_, length(new))
+    is.na(old) | abs(old - new) > tolerance * pmax(1, abs(new))
+  }
+  fit <- to_fit(number("metaUI__input_effect", "effect size"), number("metaUI__input_variance", "sampling variance", TRUE), input_scale, "Effect sizes")
+  recomputed <- differs("metaUI__effect_size", fit$y, 1e-8) | differs("metaUI__variance", fit$v, 1e-6) | differs("metaUI__se", sqrt(fit$v), 1e-6)
+  df$metaUI__effect_size <- fit$y; df$metaUI__variance <- fit$v; df$metaUI__se <- sqrt(fit$v)
+  specs <- metaUI_computation_specs(built)
+  for (spec in specs) {
+    alt <- to_fit(number(spec$input_effect, paste(spec$name, "effect size")), number(spec$input_variance, paste(spec$name, "variance"), TRUE), spec$input_scale, spec$name)
+    recomputed <- recomputed | differs(spec$fit_effect, alt$y, 1e-8) | differs(spec$fit_variance, alt$v, 1e-6)
+    df[[spec$fit_effect]] <- alt$y; df[[spec$fit_variance]] <- alt$v
+  }
+  # Optional inputs, as prepare_data() treats them: impossible values count as missing.
+  if ("metaUI__pvalue" %in% names(df)) { p <- suppressWarnings(as.numeric(df$metaUI__pvalue)); p[!is.finite(p) | p < 0 | p > 1] <- NA_real_; df$metaUI__pvalue <- p }
+  if ("metaUI__N" %in% names(df)) { n <- suppressWarnings(as.numeric(df$metaUI__N)); n[!is.finite(n) | n <= 0] <- NA_real_; df$metaUI__N <- n }
+  metaUI_validate_prepared(df)
   metaUI_validate_alternatives(df, specs)
   if (length(specs)) {
     attr(df, "metaUI_alternatives") <- specs
@@ -959,11 +1176,12 @@ metaUI_validate_upload <- function(df, built) {
   centre <- mean(built$metaUI__effect_size); spread <- stats::sd(built$metaUI__effect_size)
   degenerate <- !is.finite(spread) || spread == 0
   z <- if (degenerate) rep(0, nrow(df)) else (df$metaUI__effect_size - centre) / spread
-  supplied <- df$metaUI__es_z
-  disagreements <- if (!is.numeric(supplied)) nrow(df) else sum(!is.finite(supplied) | abs(supplied - z) > 1e-8 * pmax(1, abs(z)))
+  supplied <- if ("metaUI__es_z" %in% names(df)) suppressWarnings(as.numeric(df$metaUI__es_z)) else rep(NA_real_, nrow(df))
+  disagreements <- sum(!is.finite(supplied) | abs(supplied - z) > 1e-8 * pmax(1, abs(z)))
   df$metaUI__es_z <- z
   attr(df, "metaUI_upload_derivations") <- list(z_reference_mean = centre, z_reference_sd = spread,
-    supplied_z_disagreements = disagreements, rule = if (degenerate) "Built SD unavailable/zero: descriptive z=0, outlier discrimination unavailable" else "Descriptive z=(fitting effect-built mean)/built SD; saved scale preserved")
+    supplied_z_disagreements = disagreements, recomputed_rows = sum(recomputed), added_ids = sum(added),
+    rule = if (degenerate) "Built SD unavailable/zero: descriptive z=0, outlier discrimination unavailable" else "Descriptive z=(fitting effect-built mean)/built SD; saved scale preserved")
   df
 }
 

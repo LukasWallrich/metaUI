@@ -27,8 +27,8 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       summary_table_notes <- HTML(glue::glue("<p>CI = <<ci_width>> confidence interval; its actual coverage depends on each model\\\'s assumptions. <i>k</i> is the number of effects or studies the model reports.{if (bayesian) " Bayesian rows show central credible intervals." else ""}</p>", .open = "<<", .close = ">>"))
       model_help <- HTML("<h4>Default models</h4>
         <p>The models make different assumptions, so their estimates need not agree. The first two estimate the average effect from every selected effect. The others use one combined effect per study to explore possible publication or reporting bias, each in its own way. Each entry gives the question first, then the specification.</p><dl>
-        <dt>Random-Effects Multilevel Model</dt><dd>What is the average effect, if true effects differ both between studies and between effects within a study? <span class=\'metaui-spec\'>metafor::rma.mv, REML; random effects for studies and for effects within studies; sampling errors treated as independent; t-based intervals.</span></dd>
-        <dt>Robust Variance Estimation</dt><dd>What is the average effect, allowing for unknown correlations between effects from the same study? With few studies its intervals can be too narrow, because no small-sample correction is applied. <span class=\'metaui-spec\'>robumeta::robu with correlated-effects weights, which use the within-study correlation given above to estimate between-study variation.</span></dd>
+        <dt>Random-Effects Multilevel Model</dt><dd>What is the average effect, if true effects differ both between studies and between effects within a study? <span class=\'metaui-spec\'>metafor::rma.mv, REML; random effects for studies and for effects within studies; sampling errors treated as independent; <i>t</i>-based intervals with containment degrees of freedom (based on the number of studies).</span></dd>
+        <dt>Robust Variance Estimation</dt><dd>What is the average effect, allowing for unknown correlations between effects from the same study? <span class=\'metaui-spec\'>robumeta::robu with correlated-effects weights, which use the within-study correlation given above to estimate between-study variation, and the small-sample correction of Tipton (2015). Below 4 small-sample degrees of freedom its interval is flagged as unreliable.</span></dd>
         <dt>Trim-and-fill</dt><dd>What would the average be if the funnel plot were symmetric? Studies are added as mirror images on the sparse side and the average is estimated again. Asymmetry can have causes other than publication bias. <span class=\'metaui-spec\'>Duval-Tweedie L0 estimator with common-effect trimming; random-effects model (ML) with Hartung-Knapp intervals. <i>k</i> includes the added studies.</span></dd>
         <dt>P-uniform* and the Hedges-Vevea selection model</dt><dd>What would the average be if significant results in the expected direction were more likely to be published? Both model this selection directly, so they need a declared expected direction and are reported as unsupported without one. <span class=\'metaui-spec\'>puniform::puni_star (ML); weightr::weightfunct with one step at one-sided <i>p</i> = .025 and random effects.</span></dd>
         <dt>Precision Effect Test (PET); PEESE</dt><dd>What average effect would a study with no sampling error show, extending the link between effect size and its standard error (PET) or variance (PEESE)? <span class=\'metaui-spec\'>Weighted regressions of study-level effects on their standard error or variance; the intercept is reported.</span></dd>
@@ -38,7 +38,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       sample_table <- HTML("<h3>Effects and studies</h3>")
       study_details_hint <- HTML("<p class=\'metaui-note\'>Select a study name for its reference and, where the authors could include it, its abstract.</p>")
       sample_moderation_main <- HTML("<h3>Simple tests of moderation</h3>")
-      sample_moderation_notes <- HTML("<p class=\'metaui-note\'>One moderator at a time; correlations between moderators are ignored. Models are fitted by maximum likelihood. <i>k</i> = number of effects.</p>")
+      sample_moderation_notes <- HTML("<p class=\'metaui-note\'>One moderator at a time; correlations between moderators are ignored. Each moderator is added to the primary model where that is a multilevel metafor model, and otherwise to the random-effects multilevel model; tests and intervals are cluster-robust by study (CR2, with small-sample degrees of freedom), so they allow for dependent effects. Moderators with more than nine categories get no overall test. These are exploratory tests without adjustment for multiple testing: trying many moderators or selections makes some false positives likely. <i>k</i> = number of effects.</p>")
 
       pcurve_selection <- HTML("<p class=\'metaui-note\'>P-curve uses the first effect per study, an exploratory selection rule applied before direction screening. It excludes and counts effects that are zero or opposite to the expected direction, and uses normal Wald statistics, not the source p-values.</p>")
       zcurve_selection <- HTML("<p class=\'metaui-note\'>Z-curve uses the first effect per study, an exploratory selection rule, and normal Wald statistics, not the source p-values.</p>")
@@ -64,7 +64,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
         conditionalPanel("!output.metaui_ready", div(class = "metaui-empty", role = "status", placeholder)),
         conditionalPanel("output.metaui_ready && output.no_effects", div(class = \'metaui-empty\', role = \'status\', p(class = \'metaui-empty-title\', \'No effects match this selection\'), p(\'Change the filters, or reset them to select every effect again.\'))),
         conditionalPanel("output.metaui_ready && !output.no_effects", ...))
-      data_help <- HTML("<p class=\'metaui-help-text\'>The workbook holds all rows (not only the selection), the last applied filters and the last results.{if (bayesian) " With Bayesian models, it waits for two extra prior-sensitivity fits." else ""}<br/>Upload is for reanalysis: edit a downloaded workbook and upload it to analyze your version. The upload needs the sheets and column names of a workbook downloaded here, and the same effect scale; rows may be edited, added or removed. Saved filters and the equivalence bound are restored and analyzed.</p><p class=\'metaui-help-text\'>The R script and Quarto file reproduce the applied selection and its model rows from the workbook of the same analysis, without metaUI. They do not reproduce the plots or diagnostic tabs.</p>")
+      data_help <- HTML("<p class=\'metaui-help-text\'>The workbook holds all rows (not only the selection), the last applied filters and the last results.{if (bayesian) " With Bayesian models, it waits for two extra prior-sensitivity fits." else ""}<br/>Upload is for reanalysis: edit a downloaded workbook and upload it to analyze your version. Its first sheet, instructions, marks the columns you can edit; the others are recomputed from them. Rows may be edited, added or removed, and new categories join their filter. Saved filters and the equivalence bound are restored and analyzed.</p><p class=\'metaui-help-text\'>The R script and Quarto file reproduce the applied selection and its model rows from the workbook of the same analysis, without metaUI. They do not reproduce the plots or diagnostic tabs.</p>")
 
 
   ')
@@ -108,8 +108,8 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
       # Bounds round outward to a tick interval, so the default range retains every row.
       spec <- metaUI_slider_spec(data[[filter_col]])
       out <- glue::glue('
-      metaUI_slider_input("{filter_col %>% stringr::str_replace_all(" ", "_")}",
-      tagList("{stringr::str_remove(filter_col, "metaUI__filter_")}",
+      metaUI_slider_input({metaUI_r_string(metaUI_filter_id(filter_col))},
+      tagList({metaUI_r_string(stringr::str_remove(filter_col, "metaUI__filter_"))},
       {help}),
           spec = list(min = {spec$min}, max = {spec$max}, step = {spec$step}, ticks = {spec$ticks})
       )
@@ -121,8 +121,8 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
       levels_ <- levels(data[[filter_col]]) %>% na.omit() %>% as.character()
       choices <- paste(deparse(levels_), collapse = "\n")
 
-      out <- glue::glue('{if (length(levels_) < opts$selection_list_threshold) "checkboxGroupInput(" else "shinyWidgets::pickerInput(multiple = TRUE, options = list(`actions-box` = TRUE, `dropup-auto` = FALSE, `selected-text-format` = \\"count\\", `count-selected-text` = \\"{0} of {1} selected\\", `none-selected-text` = \\"None selected\\"), "} "{filter_col %>% stringr::str_replace_all(" ", "_")}",
-      tagList("{stringr::str_remove(filter_col, rm_prefix)}",
+      out <- glue::glue('{if (length(levels_) < opts$selection_list_threshold) "checkboxGroupInput(" else "shinyWidgets::pickerInput(multiple = TRUE, options = list(`actions-box` = TRUE, `dropup-auto` = FALSE, `selected-text-format` = \\"count\\", `count-selected-text` = \\"{0} of {1} selected\\", `none-selected-text` = \\"None selected\\"), "} {metaUI_r_string(metaUI_filter_id(filter_col))},
+      tagList({metaUI_r_string(stringr::str_remove(filter_col, rm_prefix))},
       {help}),
           choices = {choices},
         selected = {choices}
@@ -139,7 +139,7 @@ generate_ui_filters <- function(data, filter_popups, any_filters, opts = opts) {
     if (TRUE) { # Always available for later uploads with missing values
       out <- glue::glue('
           {out},
-          metaUI_missing_toggle("{filter_col %>% stringr::str_replace_all(" ", "_")}_include_NA", {sum(is.na(data[[filter_col]]))})
+          metaUI_missing_toggle({metaUI_r_string(paste0(metaUI_filter_id(filter_col), "_include_NA"))}, {sum(is.na(data[[filter_col]]))})
         ')
     }
     }
@@ -155,17 +155,17 @@ generate_sample_description_ui <- function(data, any_filters) {
     stringr::str_subset("metaUI__filter_")
   filter_names <- stringr::str_remove(filter_ids, "metaUI__filter_")
 
-  filter_ids <-  filter_ids %>% stringr::str_replace_all(" ", "_")
+  filter_ids <-  metaUI_filter_id(filter_ids)
 
   numeric <- vapply(colnames(data)[stringr::str_detect(colnames(data), "metaUI__filter_")], function(col) is.numeric(data[[col]]), logical(1))
   items <- purrr::pmap_chr(list(filter_ids, filter_names, numeric), \(fid, fn, is_numeric) {
     if (is_numeric) glue::glue('
-            div(class = "metaui-breakdown-item", h4("{fn}"), div(class = "metaui-breakdown-numeric",
+            div(class = "metaui-breakdown-item", h4({metaUI_r_string(fn)}), div(class = "metaui-breakdown-numeric",
               tableOutput("summary_{fid}_table"),
               shinycssloaders::withSpinner(plotOutput("summary_{fid}_plot", height = 170))))
                 ')
     else glue::glue('
-            div(class = "metaui-breakdown-item", h4("{fn}"), htmlOutput("summary_{fid}_table"))
+            div(class = "metaui-breakdown-item", h4({metaUI_r_string(fn)}), htmlOutput("summary_{fid}_table"))
                 ')
   }) %>% glue::glue_collapse(sep = ",\n")
   paste0('div(class = "metaui-breakdowns",\n', items, "),\n")
@@ -173,20 +173,23 @@ generate_sample_description_ui <- function(data, any_filters) {
 
 }
 
+# A string as R source, for labels written into generated code (quotes and backslashes escaped).
+metaUI_r_string <- function(x) paste(deparse(as.character(x)), collapse = "")
+
 generate_moderator_selection <- function(data) {
   filter_cols <- colnames(data) %>%
     stringr::str_subset("metaUI__filter_") %>%
     setNames(., stringr::str_remove(., "metaUI__filter_"))
 
   filter_vector <- purrr::imap_chr(filter_cols, \(fc, fn) {
-    paste('"', fn, '" = "', fc, '"', sep = '')
+    paste0(metaUI_r_string(fn), " = ", metaUI_r_string(fc))
   })  %>% glue::glue_collapse(sep = ", ")
 
   # Create a selection drop-down with filter_cols as values
   glue::glue('
     selectInput("moderator", "Moderator",
       choices = c({filter_vector}),
-      selected = "{filter_cols[1]}"
+      selected = {metaUI_r_string(filter_cols[1])}
     )')
 }
 
@@ -413,12 +416,12 @@ glue_string <- ('
  <FILTER>
   filters <- list(<<
     filter_cols <- colnames(metaUI__df) %>% stringr::str_subset("metaUI__filter_")
-    filter_ids <- colnames(metaUI__df) %>% stringr::str_subset("metaUI__filter_") %>% stringr::str_replace_all(" ", "_")
+    filter_ids <- metaUI_filter_id(filter_cols)
     filters_types <- purrr::map_chr(filter_cols, \\(x) {
       if (is.numeric(metaUI__df[[x]])) "numeric" else "selection"
     })
    filters <- purrr::pmap(list(filter_cols, filter_ids, filters_types), ~list(col = ..1, id = ..2, type =  ..3))
-       purrr::pmap(list(filter_cols, filter_ids, filters_types), ~ paste0("list(col = \'", ..1, "\', id = \'", ..2, "\', type = \'", ..3, "\')"))  %>%
+       purrr::pmap(list(filter_cols, filter_ids, filters_types), ~ paste0("list(col = ", metaUI_r_string(..1), ", id = ", metaUI_r_string(..2), ", type = ", metaUI_r_string(..3), ")"))  %>%
         glue::glue_collapse(sep = ",\n")
       >>)
  </FILTER>
@@ -431,6 +434,13 @@ glue_string <- ('
   # Reset filters
        observeEvent(input$resetFilters, {
         shinyjs::reset("filters")
+        # Categories that uploaded data added are selected too, once the reset (a round trip
+        # through the browser) has run.
+        shinyjs::delay(600, for (id in ls(changed_choices)) if (isTRUE(changed_choices[[id]])) {
+          f <- Filter(function(i) i$id == id, filters)[[1]]
+          if (length(levels(metaUI__df[[f$col]])) >= <<opts$selection_list_threshold>>) shinyWidgets::updatePickerInput(session, inputId = id, selected = levels(shiny::isolate(state_values$uploaded_data)[[f$col]]))
+          else updateCheckboxGroupInput(inputId = id, selected = levels(shiny::isolate(state_values$uploaded_data)[[f$col]]))
+        })
         if (length(metaUI_computation_specs(metaUI__df))) updateSelectInput(session, "computation", selected = "primary")
       })
 
@@ -547,7 +557,7 @@ glue_string <- ('
     counts <- attr(df, "metaUI_filter_report")
     # Input IDs replace spaces with underscores; show the column labels instead
     filter_cols <- grep("^metaUI__filter_", names(metaUI__df), value = TRUE)
-    labels <- c(stats::setNames(sub("^metaUI__filter_", "", filter_cols), gsub(" ", "_", filter_cols)),
+    labels <- c(stats::setNames(sub("^metaUI__filter_", "", filter_cols), metaUI_filter_id(filter_cols)),
       outliers_z_scores = "z-score range")
     filter_names <- unname(labels[names(counts$successive_filter_exclusions)])
     excluded <- unlist(counts$successive_filter_exclusions)
@@ -556,7 +566,7 @@ glue_string <- ('
     upload <- attr(df, "metaUI_upload_info")
     paste(if (is.null(upload)) "Built dataset (as published with this app)." else paste0("Uploaded data: ", upload$file,
       " (", upload$rows, " rows), not the authors\' dataset. ", upload$z_rule,
-      "; supplied z disagreements: ", upload$z_disagreements, ". ", upload$checkbox_note),
+      "; supplied z disagreements: ", upload$z_disagreements, ". ", upload$changes, upload$checkbox_note),
       if (length(metaUI_computation_specs(metaUI__df))) paste0("Computation: ",
         names(metaUI_computations(metaUI__df))[match(attr(df, "metaUI_computation"), metaUI_computations(metaUI__df))], ".") else "",
       "Selected", format(counts$retained_rows, big.mark = ","), "of", format(counts$available_rows, big.mark = ","),
@@ -767,15 +777,22 @@ glue_string <- ('
     if (!nrow(df_filtered())) {
       counts <- attr(df_filtered(), "metaUI_filter_report")$successive_filter_exclusions
       filter_cols <- grep("^metaUI__filter_", names(metaUI__df), value = TRUE)
-      labels <- c(stats::setNames(sub("^metaUI__filter_", "", filter_cols), gsub(" ", "_", filter_cols)), outliers_z_scores = "z-score range")
+      labels <- c(stats::setNames(sub("^metaUI__filter_", "", filter_cols), metaUI_filter_id(filter_cols)), outliers_z_scores = "z-score range")
       last <- names(counts)[max(which(unlist(counts) > 0), 0)]
       return(div(class = "metaui-empty", role = "status", tags$p(class = "metaui-empty-title", "No effects match this selection"),
         tags$p(if (length(last)) paste0("The ", unname(labels[last]), " filter removed the last remaining effects. "), "Change it, or ", tags$button(type = "button", class = "metaui-reset-link", "reset the filters"), " to select every effect again.")))
     }
     table <- estimatesfiltered()
     req(table)
+    # Small selections are where the caveat matters most, with or without a declared primary model.
+    few_studies <- function(estimated) {
+      studies <- length(unique(df_filtered()$metaUI__study_id))
+      if (estimated && studies < 10L) tags$p(class = "metaui-primary-warning", paste0("With only ", studies, if (studies == 1L) " study" else " studies",
+        ", these estimates are fragile: the variation between studies is poorly estimated, intervals can be too narrow or very wide, and bias-adjusted estimates are unstable."))
+    }
     if (is.null(primary_model)) return(div(class = "metaui-primary metaui-primary-none",
-      tags$p("The authors have not marked a primary model. The rows below are alternative estimators for the same selection; they answer different questions and the app does not choose between them.")))
+      tags$p("The authors have not marked a primary model. The rows below are alternative estimators for the same selection; they answer different questions and the app does not choose between them."),
+      few_studies(any(table$status == "ok"))))
     index <- primary_index(table)
     if (!length(index)) return(div(class = "metaui-primary metaui-primary-missing", role = "alert",
       tags$p(tags$b("Declared primary model not found: "), primary_model, ". Check the name in labels_and_options.R against models.R.")))
@@ -807,10 +824,7 @@ glue_string <- ('
           if (metaUI__df$metaUI__es_type[1] == "ZCOR" && !identical(metaUI_eff_size_type_label, "r")) paste0(" Effects are correlations: ", metaUI_eff_size_type_label, ".") else ""))
         if (nzchar(label)) tags$p(class = "metaui-primary-label", label) },
       if (row$status == "ok" && nzchar(row$warnings)) tags$p(class = "metaui-primary-warning", paste("Warnings:", metaUI_reader_warnings(row$warnings))),
-      { studies <- length(unique(df_filtered()$metaUI__study_id))
-        if (row$status == "ok" && studies < 10L) tags$p(class = "metaui-primary-warning", paste0("With only ", studies, if (studies == 1L) " study" else " studies",
-          ", these estimates are fragile: ", if (any(table$status == "ok" & table$Model == "Robust Variance Estimation")) "some intervals can be too narrow (robust variance estimation has no small-sample correction here), and " else "",
-          "bias-adjusted estimates are unstable.")) })
+      few_studies(row$status == "ok"))
   })
 
   observe({
@@ -857,7 +871,7 @@ glue_string <- ('
         glue::glue("
     output$`summary_{f$id}_table` <- renderTable({{ # {{ escapes the glue syntax
     df <- df_filtered()
-    summary <- summarise_numeric(df[[\'{f$col}\']], \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\')
+    summary <- summarise_numeric(df[[{metaUI_r_string(f$col)}]], {metaUI_r_string(stringr::str_remove(f$col, \'metaUI__filter_\'))})
     summary$Value <- sub(\'[.]00$\', \'\', summary$Value)
     summary[summary$Statistic != \'Var\', , drop = FALSE]
   }})
@@ -865,18 +879,18 @@ glue_string <- ('
   output$`summary_{f$id}_plot` <- renderPlot({{
     plot_colours <- plot_palette() # light or dark, as the browser asks; downloads stay light
     df <- df_filtered()
-    ggplot2::ggplot(df, ggplot2::aes(x = `{f$col}`)) +
+    ggplot2::ggplot(df, ggplot2::aes(x = .data[[{metaUI_r_string(f$col)}]])) +
       ggplot2::geom_histogram(na.rm = TRUE, bins = 24, fill = plot_colours$bars, colour = plot_colours$background, linewidth = .3) +
       ggplot2::scale_y_continuous(limits = function(x) range(pretty(c(0, x), 3)), breaks = function(x) unique(floor(pretty(x, 3))), name = \'Effects\', expand = ggplot2::expansion(mult = 0)) +
       metaUI_plot_theme(plot_colours) +
       ggplot2::theme(axis.title.x = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank())
-  }}, bg = \'transparent\', alt = \'Histogram of {f$col  %>% stringr::str_remove(\'metaUI__filter_\')} in the selected effects; the table beside it gives the summary values.\')
+  }}, bg = \'transparent\', alt = paste0(\'Histogram of \', {metaUI_r_string(stringr::str_remove(f$col, \'metaUI__filter_\'))}, \' in the selected effects; the table beside it gives the summary values.\'))
   ")
       } else {
         glue::glue("
           output$`summary_{f$id}_table` <- renderText({{
     df <- df_filtered()
-    metaUI_bars_html(summarise_categorical(df[[\'{f$col}\']], \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\'), \'{f$col  %>% stringr::str_remove(\'metaUI__filter_\')}\')
+    metaUI_bars_html(summarise_categorical(df[[{metaUI_r_string(f$col)}]], {metaUI_r_string(stringr::str_remove(f$col, \'metaUI__filter_\'))}), {metaUI_r_string(stringr::str_remove(f$col, \'metaUI__filter_\'))})
   }})
         ")
       }
@@ -931,6 +945,9 @@ glue_string <- ('
       out <- metaUI_study_rows(out)
       out <- cbind(out[1], Studies = as.vector(study_count[out$Study]), out[-1])
     }
+    # Source labels are data: they are shown as text (the table does not escape this column, as
+    # in the sources view it holds the escaped study cells built below).
+    if ("Source" %in% names(out)) out$Source <- ifelse(is.na(out$Source), NA_character_, htmltools::htmlEscape(as.character(out$Source)))
     unit <- view
 
     if ("URL" %in% names(out)) {
@@ -992,7 +1009,7 @@ glue_string <- ('
     else if (is.numeric(df_filtered()[[input$moderator]])) div(class = "metaui-moderation-grid",
       div(shiny::htmlOutput("moderation_text"), shiny::htmlOutput("moderation_table")),
       div(shinycssloaders::withSpinner(plotly::plotlyOutput("moderation_plot", height = 340)),
-        p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise; whole-number moderators are spread slightly so that dots do not stack. Line and band: the multilevel moderator model with its 95% CI.")))
+        p(class = "metaui-note metaui-key", "Dots: selected effects, larger when more precise; whole-number moderators are spread slightly so that dots do not stack. Line and band: the moderator model named above, with its 95% CI.")))
     else div(class = "metaui-moderation-wide", shiny::htmlOutput("moderation_text"), shiny::htmlOutput("moderation_table"))
   })
 
@@ -1001,7 +1018,7 @@ glue_string <- ('
     df <- df_filtered()
     req(is.numeric(df[[input$moderator]]))
     df$mod <- df[[input$moderator]]
-    # The line and band are the multilevel moderator model tested above; dots follow precision.
+    # The line and band are the moderator model tested above; dots follow precision.
     model <- moderator_model()
     fitted <- model$grid
     fitted[c("pred", "ci.lb", "ci.ub")] <- lapply(fitted[c("pred", "ci.lb", "ci.ub")], metaUI_show, df)
@@ -1056,6 +1073,8 @@ glue_string <- ('
 
   # One moderator test, kept as the few numbers and the text that the tab shows, so that it
   # can be saved at build for the default selection and reused within a session.
+  moderator_primary <- if (!is.null(primary_model) && sum(models_to_run$name == primary_model) == 1L &&
+    !models_to_run$aggregated[models_to_run$name == primary_model]) list(name = primary_model, code = models_to_run$code[models_to_run$name == primary_model]) else NULL
   moderator_summary <- function(df, moderator) {
     name <- stringr::str_remove(moderator, "metaUI__filter_")
     # Effects without a value for the moderator, including a kept (Missing) category, are left out of its test.
@@ -1064,23 +1083,32 @@ glue_string <- ('
     # A moderator with one value has nothing to fit, test or draw.
     if (length(unique(stats::na.omit(df[[moderator]]))) < 2L)
       return(list(constant = TRUE, moderation_text = HTML(paste0(\'<p class="metaui-moderation-finding">The selected effects do not vary on <b>\', htmltools::htmlEscape(name), \'</b>, so its relationship with the effect sizes cannot be tested. Widen the selection to test it.</p>\'))))
-    fit <- function(formula) metafor::rma.mv(yi = metaUI__effect_size, V = metaUI__variance,
-      random = ~ 1 | metaUI__study_id/metaUI__effect_id, tdist = TRUE, data = df,
-      mods = as.formula(formula), method = "ML", sparse = TRUE)
     numeric <- is.numeric(df[[moderator]])
-    model_sig <- fit(glue::glue("~`{moderator}`"))
-    # Categorical levels are estimated without an intercept; the test above is on the same model.
-    model <- if (numeric) model_sig else fit(glue::glue("~`{moderator}` - 1"))
-    moderation_text <- paste0(\'<p class="metaui-moderation-finding"><b>\', htmltools::htmlEscape(name), "</b> is <b>", if (model_sig[["QMp"]] < .05) "a" else "not a",
-      " significant", if (numeric) " linear" else "", " moderator</b> at the 5% level: <span class=\'metaui-nowrap\'><i>F</i>(", model_sig[["QMdf"]][1], ", ", model_sig[["QMdf"]][2], ")\\u00a0=\\u00a0",
-      formatC(model_sig[["QM"]], format = "f", digits = 2), ", <i>p</i>\\u00a0", sub(" ", "\\u00a0", fmt_p(model_sig[["QMp"]])), "</span>.</p>")
+    fitted <- metaUI_moderator_fit(df, moderator, moderator_primary, correlation_dependent)
+    model_sig <- fitted$model
+    # Denominator degrees of freedom from the small-sample correction are not whole numbers.
+    df_text <- function(x) if (abs(x - round(x)) < 1e-8) format(round(x)) else formatC(x, format = "f", digits = 1)
+    moderation_text <- if (fitted$omnibus) paste0(\'<p class="metaui-moderation-finding"><b>\', htmltools::htmlEscape(name), "</b> is <b>", if (model_sig[["QMp"]] < .05) "a" else "not a",
+      " significant", if (numeric) " linear" else "", " moderator</b> at the 5% level: <span class=\'metaui-nowrap\'><i>F</i>(", df_text(model_sig[["QMdf"]][1]), ", ", df_text(model_sig[["QMdf"]][2]), ")\\u00a0=\\u00a0",
+      formatC(model_sig[["QM"]], format = "f", digits = 2), ", <i>p</i>\\u00a0", sub(" ", "\\u00a0", fmt_p(model_sig[["QMp"]])), "</span>.</p>") else
+      paste0(\'<p class="metaui-moderation-finding">No overall test is given for <b>\', htmltools::htmlEscape(name), "</b>: with ", NCOL(model_sig$X), " categories, a test that allows for dependent effects needs too much computation, and simpler tests overstate significance. Compare the levels\\u2019 intervals below.</p>")
+    # Which model the test extends, and whether its inference allows for dependent effects.
+    moderation_text <- paste0(moderation_text, \'<p class="metaui-note">\', "Tested in ",
+      if (fitted$working == "primary") paste0("the primary model (", htmltools::htmlEscape(primary_model), ")") else "the random-effects multilevel model",
+      if (fitted$robust) paste0(" with cluster-robust standard errors by study (CR2).", if (fitted$omnibus && model_sig[["QMdf"]][2] < 4)
+        " Its small-sample degrees of freedom are below 4, which happens when categories hold few studies, so the test is unreliable." else "") else
+      ". Cluster-robust standard errors could not be computed for this selection, so the test is model-based and can be too liberal when effects from the same study are dependent.", "</p>")
     if (nrow(df) < total) moderation_text <- paste0(moderation_text, \'<p class="metaui-note">\', format(nrow(df), big.mark = ","), " of ", format(total, big.mark = ","),
       " selected effects have a value for ", htmltools::htmlEscape(name), " and enter this test; effects without one are left out.</p>")
     studies <- length(unique(df$metaUI__study_id))
     if (studies < 10) moderation_text <- paste0(moderation_text, \'<p class="metaui-note metaui-warning-text">Only \', studies, if (studies == 1) " study enters" else " studies enter",
       " this test, so it has little power and its intervals are rough. Treat the result as a description of these studies.</p>")
-    out <- list(constant = FALSE, moderation_text = HTML(moderation_text), b = as.numeric(model$b), levels = rownames(model$b),
-      ci.lb = as.numeric(model$ci.lb), ci.ub = as.numeric(model$ci.ub))
+    model <- model_sig
+    out <- if (numeric) list(constant = FALSE, moderation_text = HTML(moderation_text), b = as.numeric(model$b),
+      ci.lb = as.numeric(model$ci.lb), ci.ub = as.numeric(model$ci.ub)) else {
+      levels <- metaUI_moderator_levels(model, levels(droplevels(df[[moderator]])))
+      list(constant = FALSE, moderation_text = HTML(moderation_text), b = levels$b, levels = levels$level, ci.lb = levels$ci.lb, ci.ub = levels$ci.ub)
+    }
     if (numeric) {
       x <- df[[moderator]]
       out$centre <- as.data.frame(stats::predict(model, newmods = mean(x, na.rm = TRUE)))
@@ -1130,12 +1158,12 @@ glue_string <- ('
         { centre <- model$centre
           shown <- metaUI_show(c(centre$pred, centre$ci.lb, centre$ci.ub), df)
           digits <- metaUI_digits(shown[2], shown[3]); value <- function(v) metaUI_minus(formatC(v, format = "f", digits = digits))
-          row(paste0("Effect at the mean ", input$moderator %>% stringr::str_remove("metaUI__filter_"), " (", stat(mean(x, na.rm = TRUE)), ") [95% CI]"),
-            paste0(value(shown[1]), " [", value(shown[2]), ", ", value(shown[3]), "]")) }, row(paste0("Slope, per unit of ", input$moderator %>% stringr::str_remove("metaUI__filter_"), fisher, " [95% CI]"), slope_text(model$b[2], model$ci.lb[2], model$ci.ub[2])), row("<i>k</i>", sum(!is.na(x))),
+          row(paste0("Effect at the mean ", htmltools::htmlEscape(sub("^metaUI__filter_", "", input$moderator)), " (", stat(mean(x, na.rm = TRUE)), ") [95% CI]"),
+            paste0(value(shown[1]), " [", value(shown[2]), ", ", value(shown[3]), "]")) }, row(paste0("Slope, per unit of ", htmltools::htmlEscape(sub("^metaUI__filter_", "", input$moderator)), fisher, " [95% CI]"), slope_text(model$b[2], model$ci.lb[2], model$ci.ub[2])), row("<i>k</i>", sum(!is.na(x))),
         row("Moderator mean (SD)", paste0(stat(mean(x, na.rm = TRUE)), " (", stat(stats::sd(x, na.rm = TRUE)), ")")),
         row("Moderator range", range_text), "</tbody></table>"))
     }
-    levels <- model$levels %>% stringr::str_remove(input$moderator) %>% stringr::str_remove_all("`") #Needed to support spaces in moderator names
+    levels <- model$levels
     counts <- table(x)
     summary <- estimatesfiltered()
     # The line is the primary estimate of the Summary, so that the same number appears on both tabs.
@@ -1168,12 +1196,20 @@ glue_string <- ('
     if (length(primary) && identical(results$fit_data, df) && results$table$status[primary[1]] == "ok" && !is.null(results$components[[primary[1]]]))
       return(list(model = primary_model, primary = TRUE, fit = results$components[[primary[1]]]))
     list(model = if (length(multilevel)) multilevel[1] else "Random-Effects Multilevel Model", primary = length(multilevel) > 0L && identical(primary_model, multilevel[1]),
-      fit = metaUI_reuse_fit(results, models_to_run, metaUI_code_multilevel, df, function() metaUI_multilevel_fit(df)))
+      fit = tryCatch(metaUI_reuse_fit(results, models_to_run, metaUI_code_multilevel, df, function() metaUI_multilevel_fit(df)), error = function(e) e))
+  })
+  # A selection too small for the multilevel model (one effect, say) gets a message, not an error.
+  heterogeneity_fit <- reactive({
+    source <- heterogeneity_source()
+    if (inherits(source$fit, "error")) shiny::validate(shiny::need(FALSE, if (nrow(df_filtered()) < 2L)
+      "Heterogeneity needs at least two effects; widen the selection." else
+      paste("Heterogeneity could not be estimated for this selection:", metaUI_reader_reason(conditionMessage(source$fit), ""))))
+    source
   })
 
   output$heterogeneity_reading <- renderUI({
     df <- df_filtered()
-    source <- heterogeneity_source()
+    source <- heterogeneity_fit()
     het <- metaUI_heterogeneity(source$fit, df)
     req(!is.na(het$Q_p))
     tagList(p(class = "metaui-reading", HTML(paste0("Effects vary <b>", if (het$Q_p < .05) "more" else "no more", "</b> than sampling error alone would predict (",
@@ -1185,7 +1221,7 @@ glue_string <- ('
   output$heterogeneity <- renderTable({
     df <- df_filtered()
 
-    het <- metaUI_heterogeneity(heterogeneity_source()$fit, df)
+    het <- metaUI_heterogeneity(heterogeneity_fit()$fit, df)
     # A component the data cannot separate (one study, say) is said to be so, not shown as NA.
     het[c("study_variance", "effect_variance", "total_variance")] <-
       lapply(het[c("study_variance", "effect_variance", "total_variance")], function(x) if (is.na(x)) "not identified" else round_(x, digits = 4))
@@ -1538,7 +1574,8 @@ glue_string <- ('
     filter_selections <- attr(df_filtered(), "metaUI_applied_filters")
 
     list(
-      dataset = attr(df_filtered(), "metaUI_source_data"),
+      instructions = metaUI_workbook_instructions(metaUI__df),
+      dataset = metaUI_workbook_dataset(attr(df_filtered(), "metaUI_source_data"), metaUI__df),
       summary = if (nrow(df_filtered())) as.data.frame(estimatesfiltered()) else data.frame(status = "unsupported", reason = "No eligible rows selected"),
       filters = filter_selections,
       computations = if (length(metaUI_computation_specs(metaUI__df)) && nrow(df_filtered())) computations_comparison() else data.frame(computation = "As supplied"),
@@ -1588,7 +1625,7 @@ glue_string <- ('
     req(is.null(state_values$pending_upload_filters))
     df <- df_filtered()
     metaUI_reproduction_code(format, applied = attr(df, "metaUI_applied_filters"), filters = filters,
-      source = attr(df, "metaUI_source_data"), built = metaUI__df, models = models_to_run,
+      source = metaUI_workbook_dataset(attr(df, "metaUI_source_data"), metaUI__df), built = metaUI__df, models = models_to_run,
       estimates = if (nrow(df)) estimatesfiltered() else NULL,
       settings = list(dataset_name = dataset_name, workbook = workbook_name(), primary_model = primary_model,
         correlation = correlation_dependent, aggregation = aggregation_method[1],
@@ -1627,19 +1664,31 @@ glue_string <- ('
       return()
     }
     upload <- tryCatch({
-      sheets <- readxl::excel_sheets(input$uploadData$datapath)
-      if (!all(c("dataset", "filters") %in% sheets)) stop("Upload needs dataset and filters sheets.")
+      # The reader sees the file problem, not a server path inside a package error.
+      sheets <- tryCatch(readxl::excel_sheets(input$uploadData$datapath),
+        error = function(e) stop("This file is not an Excel workbook (.xlsx). Upload a workbook downloaded from this app.", call. = FALSE))
+      if (!all(c("dataset", "filters") %in% sheets)) stop("The workbook needs the dataset and filters sheets of a workbook downloaded from this app.", call. = FALSE)
       df <- readxl::read_xlsx(input$uploadData$datapath, "dataset")
       df <- metaUI_validate_upload(df, metaUI__df)
+      new_levels <- list()
       <FILTER>
       for (i in filters) {
-        if (i$type == "numeric" && is.logical(df[[i$col]]) && all(is.na(df[[i$col]]))) df[[i$col]] <- as.numeric(df[[i$col]])
-        if (i$type == "numeric" && !is.numeric(df[[i$col]])) stop("Uploaded numeric filter has changed type.")
+        label <- sub("^metaUI__filter_", "", i$col)
+        if (i$type == "numeric") {
+          value <- suppressWarnings(as.numeric(df[[i$col]]))
+          text <- !is.na(df[[i$col]]) & trimws(as.character(df[[i$col]])) != "" & is.na(value)
+          if (any(text)) stop("The filter column \\"", label, "\\" must hold numbers or be empty (not in ", metaUI_upload_rows(text), ").", call. = FALSE)
+          df[[i$col]] <- value
+        }
         if (i$type == "selection") {
-          if (anyNA(df[[i$col]]) && !"(Missing)" %in% levels(metaUI__df[[i$col]])) stop("Missing categories require a fresh app built with keep_missing_level = TRUE.")
-          df[[i$col]][is.na(df[[i$col]])] <- "(Missing)"
-          if (any(!is.na(df[[i$col]]) & !df[[i$col]] %in% levels(metaUI__df[[i$col]]))) stop("New categories require a fresh app.")
-          df[[i$col]] <- factor(df[[i$col]], levels = levels(metaUI__df[[i$col]]))
+          value <- as.character(df[[i$col]])
+          value[is.na(value) | trimws(value) == ""] <- "(Missing)"
+          # New categories (added studies, say) join the filter after the authors\' categories.
+          built_levels <- levels(metaUI__df[[i$col]])
+          added <- setdiff(unique(value), built_levels)
+          added <- c(sort(setdiff(added, "(Missing)"), method = "radix"), intersect(added, "(Missing)"))
+          if (length(added)) new_levels[[i$id]] <- added
+          df[[i$col]] <- factor(value, levels = c(built_levels, added))
         }
       }
       </FILTER>
@@ -1654,14 +1703,21 @@ glue_string <- ('
         if (!i$id %in% names(filter_values)) filter_values[[i$id]] <- data.frame(selection = character())
         if (i$type == "numeric") numeric_ids <- c(numeric_ids, i$id)
         else {
-        filter_values[[i$id]] <- data.frame(selection = filter_values[[i$id]]$selection[!is.na(filter_values[[i$id]]$selection)])
-        if (any(!filter_values[[i$id]]$selection %in% levels(metaUI__df[[i$col]]))) stop("Unknown saved category.")
+        # New categories are selected, so that added studies enter the analysis.
+        filter_values[[i$id]] <- data.frame(selection = c(filter_values[[i$id]]$selection[!is.na(filter_values[[i$id]]$selection)], new_levels[[i$id]]))
+        if (any(!filter_values[[i$id]]$selection %in% levels(df[[i$col]]))) stop("The filters sheet names a category that is not in the data.", call. = FALSE)
       }
       }
       </FILTER>
+      # A range left at its full extent means "everything": it widens to take in added values.
+      full <- metaUI_full_selection(metaUI__df, filters)
+      columns <- c(outliers_z_scores = "metaUI__es_z", stats::setNames(vapply(filters, function(i) i$col, character(1)), vapply(filters, function(i) i$id, character(1))))
       for (id in numeric_ids) {
         values <- suppressWarnings(as.numeric(filter_values[[id]]$selection))
-        if (length(values) != 2L || any(!is.finite(values)) || values[1] > values[2]) stop("Invalid saved numeric range: ", id)
+        if (length(values) != 2L || any(!is.finite(values)) || values[1] > values[2]) stop("The filters sheet has an invalid range for ", id, ".", call. = FALSE)
+        observed <- df[[columns[[id]]]][is.finite(df[[columns[[id]]]])]
+        if (length(full[[id]]) == 2L && all(abs(values - full[[id]]) <= 1e-8 * pmax(1, abs(full[[id]]))) && length(observed))
+          filter_values[[id]] <- data.frame(selection = as.character(c(min(values[1], observed), max(values[2], observed))))
       }
       if (length(metaUI_computation_specs(metaUI__df))) {
         value <- filter_values$computation$selection
@@ -1669,7 +1725,7 @@ glue_string <- ('
         if (length(value) != 1L || is.na(value) || !value %in% metaUI_computations(metaUI__df)) stop("Unknown saved computation.")
         filter_values$computation <- data.frame(selection = value)
       }
-      list(data = df, filters = filter_values, bound = metaUI_saved_bound(input$uploadData$datapath, sheets))
+      list(data = df, filters = filter_values, new_levels = new_levels, bound = metaUI_saved_bound(input$uploadData$datapath, sheets))
     }, error = function(e) e)
     if (inherits(upload, "error")) {
       showModal(modalDialog(title = "Invalid upload", conditionMessage(upload)))
@@ -1682,14 +1738,19 @@ glue_string <- ('
     # The upload number distinguishes files with identical metadata.
     state_values$upload_count <- if (is.null(state_values$upload_count)) 1L else state_values$upload_count + 1L
     upload_number <- state_values$upload_count
+    labels <- sub("^metaUI__filter_", "", vapply(filters, function(i) i$col, character(1)))[match(names(upload$new_levels), vapply(filters, function(i) i$id, character(1)))]
     state_values$upload_info <- list(file = basename(input$uploadData$name), rows = nrow(upload$data), upload_number = upload_number,
       z_rule = derivation$rule, z_disagreements = derivation$supplied_z_disagreements,
-      checkbox_note = "Missing-value choices restored (older files: missing values included).")
+      checkbox_note = "Missing-value choices restored (older files: missing values included).",
+      changes = paste0(if (derivation$recomputed_rows > 0) paste0("Derived columns recomputed from the edited ones in ", derivation$recomputed_rows, if (derivation$recomputed_rows == 1) " row. " else " rows. ") else "",
+        if (derivation$added_ids > 0) paste0(derivation$added_ids, if (derivation$added_ids == 1) " effect ID added. " else " effect IDs added. ") else "",
+        if (length(upload$new_levels)) paste0("New categories, selected: ", paste(paste0(labels, ": ", vapply(upload$new_levels, paste, character(1), collapse = ", ")), collapse = "; "), ". ") else ""))
     # The bound does not refit, so it can be set before the restored analysis.
     updateNumericInput(session, "sesoi", value = upload$bound)
     restore_filters(upload$filters, upload$data, "upload")
   })
 
+  changed_choices <- new.env()
   restore_filters <- function(filter_values, restored_data, source) {
     state_values$restore_source <- source
     <FILTER>
@@ -1706,10 +1767,16 @@ glue_string <- ('
           max = selection[2] + step * ceiling((max(limits) - selection[2]) / step),
           step = step, value = selection)
       } else {
+        # Uploaded data can add categories; the choices follow the data, and return to the authors\' afterwards.
+        levels_now <- levels(restored_data[[i$col]])
+        new_choices <- !identical(levels_now, levels(metaUI__df[[i$col]])) || isTRUE(changed_choices[[i$id]])
+        changed_choices[[i$id]] <- !identical(levels_now, levels(metaUI__df[[i$col]]))
         if (length(levels(metaUI__df[[i$col]])) >= <<opts$selection_list_threshold>>) {
-          shinyWidgets::updatePickerInput(session, inputId = i$id, selected = filter_values[[i$id]]$selection)
+          if (new_choices) shinyWidgets::updatePickerInput(session, inputId = i$id, choices = levels_now, selected = filter_values[[i$id]]$selection)
+          else shinyWidgets::updatePickerInput(session, inputId = i$id, selected = filter_values[[i$id]]$selection)
         } else {
-          updateCheckboxGroupInput(inputId = i$id, selected = filter_values[[i$id]]$selection)
+          if (new_choices) updateCheckboxGroupInput(inputId = i$id, choices = levels_now, selected = filter_values[[i$id]]$selection)
+          else updateCheckboxGroupInput(inputId = i$id, selected = filter_values[[i$id]]$selection)
         }
       }
     }

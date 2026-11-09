@@ -62,5 +62,16 @@ function bridge(mode) {
   if (connected) assert.equal(deadlineCleared, true);
 }
 page();
+// A selection link (?metaui=<data key>&...) never shows the full-data preview.
+for (const search of ['?metaui=871c89eb&design=between', '?metaui=1&selection=x']) {
+  const appended = [];
+  const context = {document: {head: {appendChild(e) {appended.push(e);}}, body: {appendChild(e) {appended.push(e);}},
+    createElement: tag => ({tag, style: {}, setAttribute() {}}), documentElement: {dataset: {}}, getElementById: () => null, addEventListener() {}},
+    location: {search, origin: 'https://example.org'}, URLSearchParams, window: {addEventListener() {}},
+    setTimeout() {}, clearTimeout() {}};
+  vm.runInNewContext(fs.readFileSync(path.join(templates, 'metaui-preview.js'), 'utf8'), context);
+  assert.equal(context.window.metauiPrecomputed, undefined, search);
+  assert.equal(appended.length, 0, search);
+}
 for (const mode of ['success', 'error', 'busy', 'disconnected']) bridge(mode);
 console.log('Startup timeout, recovery, analysis failure and successful handover passed.');

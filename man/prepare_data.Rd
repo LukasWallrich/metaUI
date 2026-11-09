@@ -43,7 +43,7 @@ prepare_data(
 
 \item{variance}{Character. Name of the field to use as the sampling variances.}
 
-\item{filters}{Character. List of fields to use as filters - can be named if different labels should be displayed}
+\item{filters}{Character. List of fields to use as filters - can be named if different labels should be displayed. Labels must be distinct, contain no backticks, and stay distinct when spaces and symbols are replaced by underscores (as in Shiny input IDs); a numeric filter needs at least one value.}
 
 \item{url}{Character. Field with URLs or DOIs to link to. DOIs can be in the format "10.1234/5678" or full links. Defaults to NA.}
 

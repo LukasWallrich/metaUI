@@ -97,6 +97,13 @@ Downloads preserve the full current input dataset and saved filter selections; t
 summary sheet describes the selected rows. An empty selection stays empty on
 re-upload and reports no eligible rows, while the original inputs remain available.
 
+Readers can update the data: the workbook's first sheet, `instructions`, marks
+which dataset columns to edit (study, effect ID, the effect size and variance as
+supplied, optional p, N and source fields, and filters) and which are derived.
+On upload the app recomputes the derived columns (fitting-scale effect and
+variance, SE and z-score), numbers new effects, and adds new categories to their
+filters.
+
 After an analysis, readers can download an R script or a Quarto file that
 reproduces the applied selection (filters, missing-value choices, effect-size
 computation and equivalence bound) and the model rows on the Summary tab. The
@@ -127,7 +134,7 @@ in URLs.
 
 Summary includes an interval assessment for a reader-chosen symmetric smallest
 effect size of interest, on the displayed SMD or r scale. No bound is assumed.
-The strict containment criterion uses the reported intervals without refitting;
+The strict containment criterion uses each model's 90% interval (two one-sided tests at .05) without refitting;
 model assumptions and small-sample limitations are shown beside the assessment.
 Downloads record the bound and classification in an `equivalence` sheet, and
 uploading the workbook restores the bound, as selection links do.

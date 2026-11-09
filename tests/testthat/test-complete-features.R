@@ -11,8 +11,8 @@ test_that("alternatives preserve identities and enforce each scale contract", {
   expect_identical(a$metaUI__es_z,d$metaUI__es_z)
   expect_equal(metaUI:::metaUI_select_computation(a)$metaUI__effect_size,x$yi)
   expect_equal(names(metaUI:::metaUI_computations(d)),c("Original","Corrected"))
-  bad <- d; bad$metaUI__alt_1_fit_variance[1] <- 1
-  expect_error(metaUI:::metaUI_validate_upload(bad,d),"Alternative source/fitting")
+  edited <- d; edited$metaUI__alt_1_fit_variance[1] <- 1
+  expect_equal(metaUI:::metaUI_validate_upload(edited,d)$metaUI__alt_1_fit_variance, d$metaUI__alt_1_fit_variance)
   x$yi[1] <- NA; x$corrected[1] <- NA
   expect_warning(dropped <- prepared(x,alternatives=args),"excluded")
   expect_equal(nrow(dropped),15)

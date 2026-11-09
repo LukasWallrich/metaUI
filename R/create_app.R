@@ -32,7 +32,7 @@ models_use_meta <- function(code) {
 
 # Used only inside generated apps and the model fits they run; listed in Suggests.
 # meta is added only when author model code uses it.
-metaUI_app_suggests <- c("DT", "ggplot2", "plotly", "puniform", "readxl",
+metaUI_app_suggests <- c("clubSandwich", "DT", "ggplot2", "plotly", "puniform", "readxl",
   "robumeta", "shinycssloaders", "shinyjs", "weightr", "writexl", "zcurve")
 
 app_dependencies <- function(bayesian = FALSE, meta = FALSE) {
@@ -223,6 +223,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   if (!is.data.frame(dataset)) stop("Dataset must be a data.frame or tibble")
   check_removed_example(dataset)
   metaUI_validate_prepared(dataset)
+  filter_cols <- grep("^metaUI__filter_", names(dataset), value = TRUE)
+  metaUI_check_filter_columns(filter_cols, dataset[filter_cols])
   if (!is.null(study_info)) study_info <- validate_study_info(study_info, dataset)
 
   if (is.na(eff_size_type_label)) {
@@ -272,7 +274,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   correlation <- if (is.null(options$correlation_dependent)) .6 else options$correlation_dependent
   metaUI_aggregate(dataset, correlation) # check the aggregation contract before writing
   report$aggregation <- list(method = "GLS study-level average", correlation = correlation,
-    assumptions = "Distinct studies are independent; multilevel V is diagonal (sampling covariance not supplied). RVE uses correlated-effects weights with the same within-study correlation, small=FALSE. Neither N nor p is inferred by aggregation.")
+    assumptions = "Distinct studies are independent; multilevel V is diagonal (sampling covariance not supplied). Multilevel t tests use containment df. RVE uses correlated-effects weights with the same within-study correlation and the Tipton small-sample correction (small=TRUE). Neither N nor p is inferred by aggregation.")
   if (!is.null(bayesian)) report$bayesian <- c(bayesian, list(
     model = "Two-level normal-normal on aggregated studies", mean_prior = "Improper uniform on fitting scale",
     latency = "Default cap 20 studies. Approximate benchmark: 20 seconds at 20 studies, 97 at 50. Each Analyze blocks the server process while fitting; sensitivity/downloads can need two extra fits. Hard author override limit 50.",
