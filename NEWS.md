@@ -1,5 +1,6 @@
 # metaUI (development version)
 
+- Forest plot: the switch reads "Effects within studies: hidden | shown", Find a study says on which page the study is, the note on effect numbers appears only while effects are shown, and on phones the downloads follow the table.
 - Methods says in plain words which question each default model answers before giving its specification, and states the one assumed within-study correlation. Robust variance estimation now uses that declared correlation (0.6 by default) instead of robumeta's default of .8, so the app makes one assumption about it; on the Diversity data the estimate and SE agree to four significant digits. A numeric moderator's slope has a 95% CI, and the count beside "Include missing values" follows the other filters as they are set.
 - The Summary draws the primary model's 95% prediction interval as a thin line, and its axis includes it, so that small differences between narrow intervals are seen against the spread of effects. Moderation's dashed line is the primary estimate, as on the Summary; the funnel says that its line can differ.
 - Sample breakdowns keep "(Missing)" in a row of its own and list an author's "Other" level like any other; levels the author put in order (such as hours, days, weeks) keep that order in the breakdowns and in Moderation.

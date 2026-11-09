@@ -796,3 +796,17 @@ a:focus-visible, .btn:focus-visible, summary:focus-visible, .nav-tabs > li > a:f
 .metaui-forest-find { max-width: 420px; margin: 4px 0 10px; }
 table.metaui-forest tr.metaui-found > td { background: var(--metaui-tint); }
 table.metaui-forest tr.metaui-found > td:first-child { box-shadow: inset 3px 0 0 var(--metaui-accent); }
+
+/* Forest plot: the note on effect numbers matters only while effects are shown; on phones the
+   downloads follow the table, so that the plot starts on the first screen. */
+.metaui-forest-numbering { display: none; }
+.tab-pane:has(.metaui-forest-effect:not(.metaui-forest-closed)) .metaui-forest-numbering { display: inline; }
+.metaui-forest-found { margin: 4px 0 0; }
+@media (max-width: 767px) {
+  .metaui-forest-tab { display: flex; flex-direction: column; }
+  .metaui-forest-tab > .metaui-note { order: 1; }
+  .metaui-forest-tab > #forest_panel { order: 2; margin-top: 12px; }
+  /* Rows are blocks of inline cells here, so the found study is tinted as a whole row. */
+  table.metaui-forest > tbody > tr.metaui-found { background: var(--metaui-tint); box-shadow: inset 3px 0 0 var(--metaui-accent); padding-left: 9px !important; }
+  table.metaui-forest > tbody > tr.metaui-found > td { background: none; box-shadow: none !important; }
+}
