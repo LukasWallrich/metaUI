@@ -77,7 +77,7 @@ function reproduce(script, workbook, selected) {
   });
   await page.goto(url);
   await page.waitForFunction(()=>window.Shiny?.shinyapp?.$socket?.readyState===1);
-  await page.getByText('Select effects', {exact:true}).waitFor();
+  await page.locator('.metaui-panel-title', {hasText:'Selection'}).waitFor();
   await page.waitForFunction(()=>Array.isArray(window.Shiny.shinyapp.$inputValues.outliers_z_scores));
   const helpButton = page.getByRole('button',{name:'Help for Year'});
   const helpPanel = page.locator('#' + await helpButton.getAttribute('aria-controls'));
@@ -222,7 +222,7 @@ function reproduce(script, workbook, selected) {
   // Tabs drawn in the background may report that this small selection is too small for some methods.
   const failed = await page.locator('.shiny-output-error:not(.shiny-output-error-validation)').evaluateAll(els=>els.map(el=>el.id+': '+el.textContent.trim().slice(0,200)));
   assert.deepEqual(failed,[],'outputs failed');
-  const validation = await page.locator('.shiny-output-error-validation').allInnerTexts();
+  const validation = await page.locator('.shiny-output-error-validation').evaluateAll(els=>els.filter(el=>el.textContent.trim()).map(el=>el.textContent));
   const expected = [/^Egger test requires at least three studies\.$/, /^Z-curve could not be estimated for this selection; reason below\.$/, /^P-curve requires explicit effect direction; it is not inferred\.$/, /^Moderator model could not be estimated for this selection: /];;
   for (const text of validation) assert(expected.some(rx=>rx.test(text.trim())), 'unexpected validation message: ' + text);
   await page.setViewportSize({width:390,height:844});

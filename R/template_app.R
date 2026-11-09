@@ -239,12 +239,12 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
     sidebarLayout(
       sidebarPanel(
         width = 3,
-        # States which selection and data the visible results use, above the filters that change it.
+        tags$h2(class = "metaui-panel-title", "Selection"),
+        # States which selection and data the visible results use, under its heading and above the filters that change it.
         conditionalPanel(if (is.null(metaUI_opening$html)) "output.metaui_ready" else "true",
         div(id = "metaui_basis", class = "metaui-basis", role = "status", `aria-live` = "polite",
           metaUI_opening_output(textOutput("selection_overview"), metaUI_opening$html$selection_overview),
           tags$details(class = "metaui-selection-details", tags$summary("Selection details"), textOutput("selection_status"), textOutput("calculation_status")))),
-        tags$h2(class = "metaui-panel-title", "Select effects"),
         # Phones collapse the filters so that results follow closely; metaui.js toggles them.
         tags$button(type = "button", class = "btn metaui-filters-toggle", `aria-expanded` = "false",
           `aria-controls` = "metaui_filter_panel", "Filters and downloads"),
@@ -252,6 +252,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
         {if (length(metaUI_computation_specs(data))) paste0(
           \'selectInput("computation", "Effect-size computation", choices = \',
           paste(deparse(metaUI_computations(data)), collapse = "\n"), \', selected = "primary"),\nuiOutput("computation_note"),\') else ""}
+        tags$h3(class = "metaui-filters-title", "Filters"),
         div(id = "filters",
         {generate_ui_filters(data, filter_popups, any_filters, opts = opts)}
         tags$details(class = "metaui-help metaui-advanced", tags$summary("Exclude extreme effects"), div(id = "z_score_filter"), zscore_help))),
