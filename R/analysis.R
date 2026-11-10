@@ -621,8 +621,6 @@ metaUI_call_name <- function(e) {
   if (is.name(f)) as.character(f) else if (is.call(f) && as.character(f[[1]]) %in% c("::", ":::")) as.character(f[[3]]) else ""
 }
 
-metaUI_moderator_max_df <- 8L
-
 metaUI_default_moderator_call <- quote(metafor::rma.mv(metaUI__effect_size, V = metaUI__variance,
   random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df, test = "t", dfs = "contain", method = "REML", sparse = TRUE))
 
@@ -678,14 +676,76 @@ metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6
     model <- tryCatch(eval(call, env), error = function(e) if (i == length(controls)) stop(e) else NULL)
     if (!is.null(model)) break
   }
-  # The small-sample (HTZ) omnibus test grows steeply with the number of coefficients (on 2,628 effects:
-  # 3 s for 2, 12 s and 3 GB for 11, over 8 minutes and 9 GB for 32), while simpler F tests are far too
-  # liberal with many categories. Beyond metaUI_moderator_max_df coefficients no overall test is given;
-  # level estimates and intervals stay CR2-robust either way.
-  omnibus <- NCOL(model$X) - 1L <= metaUI_moderator_max_df
-  robust <- tryCatch(suppressWarnings(metafor::robust(model, cluster = df$metaUI__study_id, clubSandwich = TRUE,
-    wald_test = if (omnibus) "HTZ" else "Naive-Fp")), error = function(e) NULL)
+  # Level estimates and intervals: CR2 with Satterthwaite df. The overall test is clubSandwich's HTZ
+  # test, computed by metaUI_moderator_omnibus() because clubSandwich's own route builds a
+  # q x q x studies x studies array (over 3 GB and many minutes for 33 categories on 2,628 effects).
+  # The cheap robust() Wald test only fills the object's slots until it is replaced.
+  robust <- tryCatch(suppressWarnings(metafor::robust(model, cluster = df$metaUI__study_id, clubSandwich = TRUE, wald_test = "Naive-Fp")),
+    error = function(e) NULL)
+  omnibus <- FALSE
+  if (!is.null(robust)) {
+    test <- tryCatch(metaUI_moderator_omnibus(model, df$metaUI__study_id[model$not.na]), error = function(e) NULL)
+    if (!is.null(test) && is.finite(test$p_value)) {
+      robust$QM <- test$statistic
+      robust$QMdf <- c(test$df_num, test$df_denom)
+      robust$QMp <- test$p_value
+      omnibus <- TRUE
+    }
+  }
   list(model = if (is.null(robust)) model else robust, working = working, robust = !is.null(robust), omnibus = omnibus || is.null(robust))
+}
+
+# clubSandwich's HTZ Wald test (CR2, Tipton & Pustejovsky 2015, doi:10.3102/1076998615606099) of all
+# non-intercept coefficients of an inverse-variance weighted rma.mv fit (not its robust() version).
+# The same statistic and df as clubSandwich::Wald_test(test = "HTZ"), with the variance sum taken by
+# small matrix contractions instead of a q x q x studies x studies array; checked to agree within 1e-8.
+metaUI_moderator_omnibus <- function(model, cluster, constraints = NULL, vcov = NULL) {
+  if (is.null(vcov)) vcov <- clubSandwich::vcovCR(model, cluster = cluster, type = "CR2")
+  if (!inherits(vcov, "clubSandwich") || attr(vcov, "type") != "CR2") stop("Need CR2 vcovCR object.")
+  beta <- as.numeric(stats::coef(model))
+  p <- length(beta)
+  if (is.null(constraints)) constraints <- diag(p)[-1L, , drop = FALSE]
+  C <- as.matrix(constraints)
+  q <- nrow(C)
+  if (!q || ncol(C) != p || anyNA(beta) || qr(C)$rank != q) stop("Invalid constraints or aliased coefficients.")
+  if (!inherits(model, "rma.mv") || inherits(model, "robust.rma") || !is.null(model$W))
+    stop("Supply the original rma.mv fit with default inverse-variance weights.")
+  if (!isTRUE(attr(vcov, "inverse_var"))) stop("Custom working targets are unsupported.")
+  cl <- attr(vcov, "cluster")
+  if (length(cluster) != nrow(model$X) || anyNA(cluster) || !identical(as.integer(factor(cluster)), as.integer(cl)))
+    stop("cluster must match model rows and CR2 clusters, without missing values.")
+  M <- attr(vcov, "bread") / attr(vcov, "v_scale")
+  E <- Map(function(e, a) M %*% e %*% a, attr(vcov, "est_mats"), attr(vcov, "adjustments"))
+  U <- lapply(split(seq_len(nrow(model$X)), cl), function(i) model$X[i, , drop = FALSE])
+  G <- Map(function(e, theta) C %*% e %*% t(chol(theta)), E, attr(vcov, "target"))
+  L <- t(chol(M))
+  H <- Map(function(e, x) C %*% e %*% x %*% L, E, U)
+  D <- lapply(G, tcrossprod)
+  Omega <- Reduce("+", D) - Reduce("+", lapply(H, tcrossprod))
+  eig <- eigen((Omega + t(Omega)) / 2, symmetric = TRUE)
+  if (min(eig$values) <= max(eig$values) * 1e-10) stop("Working covariance is singular or ill-conditioned.")
+  A <- (eig$vectors * rep(1 / sqrt(eig$values), each = q)) %*% t(eig$vectors)
+  H <- lapply(H, function(h) A %*% h)
+  D <- lapply(D, function(d) A %*% d %*% A)
+  # K[s, a, t, b] = sum over studies of H_i[s, a] H_i[t, b]
+  K <- tcrossprod(vapply(H, as.numeric, numeric(q * p)))
+  dim(K) <- c(q, p, q, p)
+  total <- sum(K * aperm(K, c(3, 2, 1, 4))) + sum(K^2)
+  for (i in seq_along(H)) {
+    HH <- tcrossprod(H[[i]])
+    Di <- D[[i]]
+    total <- total + sum(Di * t(Di)) - 2 * sum(Di * t(HH)) + sum(diag(Di))^2 - 2 * sum(diag(Di)) * sum(diag(HH))
+  }
+  if (!is.finite(total) || total <= 0) stop("HTZ variance calculation is degenerate.")
+  nu <- q * (q + 1) / total
+  df <- nu - q + 1
+  b <- drop(C %*% beta)
+  S <- C %*% vcov %*% t(C)
+  if (rcond(S) < 1e-12) stop("Robust covariance is singular or ill-conditioned.")
+  Q <- drop(crossprod(b, solve(S, b)))
+  statistic <- max(df / nu, 0) * Q / q
+  data.frame(statistic = statistic, df_num = q, df_denom = df,
+    p_value = if (df > 0) stats::pf(statistic, q, df, lower.tail = FALSE) else NA_real_)
 }
 
 # Estimate and interval of each level of a categorical moderator, from the model with an intercept.

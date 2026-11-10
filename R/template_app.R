@@ -38,7 +38,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       sample_table <- HTML("<h3>Effects and studies</h3>")
       study_details_hint <- HTML("<p class=\'metaui-note\'>Select a study name for its reference and, where the authors could include it, its abstract.</p>")
       sample_moderation_main <- HTML("<h3>Simple tests of moderation</h3>")
-      sample_moderation_notes <- HTML("<p class=\'metaui-note\'>One moderator at a time; correlations between moderators are ignored. Each moderator is added to the primary model where that is a multilevel metafor model, and otherwise to the random-effects multilevel model; tests and intervals are cluster-robust by study (CR2, with small-sample degrees of freedom), so they allow for dependent effects. Moderators with more than nine categories get no overall test. These are exploratory tests without adjustment for multiple testing: trying many moderators or selections makes some false positives likely. <i>k</i> = number of effects.</p>")
+      sample_moderation_notes <- HTML("<p class=\'metaui-note\'>One moderator at a time; correlations between moderators are ignored. Each moderator is added to the primary model where that is a multilevel metafor model, and otherwise to the random-effects multilevel model; tests and intervals are cluster-robust by study (CR2, with small-sample degrees of freedom), so they allow for dependent effects. The overall test uses the matching small-sample correction (HTZ); with many categories that hold few studies it has little power. These are exploratory tests without adjustment for multiple testing: trying many moderators or selections makes some false positives likely. <i>k</i> = number of effects.</p>")
 
       pcurve_selection <- HTML("<p class=\'metaui-note\'>P-curve uses the first effect per study, an exploratory selection rule applied before direction screening. It excludes and counts effects that are zero or opposite to the expected direction, and uses normal Wald statistics, not the source p-values.</p>")
       zcurve_selection <- HTML("<p class=\'metaui-note\'>Z-curve uses the first effect per study, an exploratory selection rule, and normal Wald statistics, not the source p-values.</p>")
@@ -1091,12 +1091,12 @@ glue_string <- ('
     moderation_text <- if (fitted$omnibus) paste0(\'<p class="metaui-moderation-finding"><b>\', htmltools::htmlEscape(name), "</b> is <b>", if (model_sig[["QMp"]] < .05) "a" else "not a",
       " significant", if (numeric) " linear" else "", " moderator</b> at the 5% level: <span class=\'metaui-nowrap\'><i>F</i>(", df_text(model_sig[["QMdf"]][1]), ", ", df_text(model_sig[["QMdf"]][2]), ")\\u00a0=\\u00a0",
       formatC(model_sig[["QM"]], format = "f", digits = 2), ", <i>p</i>\\u00a0", sub(" ", "\\u00a0", fmt_p(model_sig[["QMp"]])), "</span>.</p>") else
-      paste0(\'<p class="metaui-moderation-finding">No overall test is given for <b>\', htmltools::htmlEscape(name), "</b>: with ", NCOL(model_sig$X), " categories, a test that allows for dependent effects needs too much computation, and simpler tests overstate significance. Compare the levels\\u2019 intervals below.</p>")
+      paste0(\'<p class="metaui-moderation-finding">No overall test could be computed for <b>\', htmltools::htmlEscape(name), "</b> in this selection, usually because some categories hold too few studies. Compare the levels\\u2019 intervals below.</p>")
     # Which model the test extends, and whether its inference allows for dependent effects.
     moderation_text <- paste0(moderation_text, \'<p class="metaui-note">\', "Tested in ",
       if (fitted$working == "primary") paste0("the primary model (", htmltools::htmlEscape(primary_model), ")") else "the random-effects multilevel model",
       if (fitted$robust) paste0(" with cluster-robust standard errors by study (CR2).", if (fitted$omnibus && model_sig[["QMdf"]][2] < 4)
-        " Its small-sample degrees of freedom are below 4, which happens when categories hold few studies, so the test is unreliable." else "") else
+        " Its small-sample degrees of freedom are below 4, which happens when categories hold few studies, so the test has little power and its p-value is rough." else "") else
       ". Cluster-robust standard errors could not be computed for this selection, so the test is model-based and can be too liberal when effects from the same study are dependent.", "</p>")
     if (nrow(df) < total) moderation_text <- paste0(moderation_text, \'<p class="metaui-note">\', format(nrow(df), big.mark = ","), " of ", format(total, big.mark = ","),
       " selected effects have a value for ", htmltools::htmlEscape(name), " and enter this test; effects without one are left out.</p>")

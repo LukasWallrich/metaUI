@@ -40,6 +40,28 @@ test_that("moderator tests extend the primary model and use cluster-robust infer
   expect_identical(metaUI:::metaUI_moderator_fit(d, "metaUI__filter_g")$working, "default")
 })
 
+test_that("the fast HTZ omnibus test matches clubSandwich, also with many categories", {
+  skip_if_not_installed("clubSandwich")
+  set.seed(1)
+  studies <- 40
+  x <- data.frame(study = rep(seq_len(studies), each = 3), effect = seq_len(studies * 3))
+  x$g <- factor(rep(rep(letters[1:10], length.out = studies), each = 3))
+  x$yi <- rnorm(studies, sd = .2)[x$study] + rnorm(nrow(x), sd = .1)
+  x$vi <- runif(nrow(x), .01, .05)
+  fit <- metafor::rma.mv(yi, vi, mods = ~ g, random = ~ 1 | study/effect, data = x, test = "t", dfs = "contain")
+  stock <- clubSandwich::Wald_test(fit, constraints = clubSandwich::constrain_zero(2:10),
+    vcov = clubSandwich::vcovCR(fit, cluster = x$study, type = "CR2"), test = "HTZ")
+  fast <- metaUI:::metaUI_moderator_omnibus(fit, x$study)
+  expect_equal(fast$statistic, stock$Fstat, tolerance = 1e-8)
+  expect_equal(fast$df_denom, stock$df_denom, tolerance = 1e-8)
+  expect_equal(fast$p_value, stock$p_val, tolerance = 1e-8)
+  names(x)[1:4] <- c("metaUI__study_id", "metaUI__effect_id", "metaUI__filter_g", "metaUI__effect_size")
+  x$metaUI__variance <- x$vi
+  fitted <- metaUI:::metaUI_moderator_fit(x, "metaUI__filter_g")
+  expect_true(fitted$omnibus)
+  expect_equal(fitted$model$QMp, fast$p_value, tolerance = 1e-6)
+})
+
 test_that("default models apply small-sample corrections", {
   skip_without_app_packages()
   d <- prepared(fixture()[1:6, ])
