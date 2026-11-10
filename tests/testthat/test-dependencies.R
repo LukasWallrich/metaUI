@@ -10,7 +10,7 @@ test_that("every generated-app package is declared in Suggests", {
 })
 
 test_that("missing generated-app packages are named with an install command", {
-  local_mocked_bindings(missing_app_packages = function(bayesian = FALSE, meta = FALSE) c("weightr", "zcurve"))
+  local_mocked_bindings(missing_app_packages = function(meta = FALSE) c("weightr", "zcurve"))
   expect_error(metaUI:::check_app_packages(), 'install.packages\\(c\\("weightr", "zcurve"\\)\\)')
 })
 
@@ -31,5 +31,4 @@ test_that("the About page lists the packages the generated app uses", {
   expect_false(grepl("<td>bayesmeta</td>", about, fixed = TRUE))
   expect_false(grepl("<td>meta</td>", about, fixed = TRUE))
   expect_match(metaUI:::create_about("Fixture", meta = TRUE), "<td>meta</td>", fixed = TRUE)
-  expect_match(metaUI:::create_about("Fixture", bayesian = TRUE), "<td>bayesmeta</td>", fixed = TRUE)
 })

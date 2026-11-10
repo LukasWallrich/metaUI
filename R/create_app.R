@@ -35,12 +35,12 @@ models_use_meta <- function(code) {
 metaUI_app_suggests <- c("clubSandwich", "DT", "ggplot2", "plotly", "puniform", "readxl",
   "robumeta", "shinycssloaders", "shinyjs", "weightr", "writexl", "zcurve")
 
-app_dependencies <- function(bayesian = FALSE, meta = FALSE) {
-  sort(unique(c(declared_imports(), metaUI_app_suggests, if (bayesian) "bayesmeta", if (meta) "meta")))
+app_dependencies <- function(meta = FALSE) {
+  sort(unique(c(declared_imports(), metaUI_app_suggests, if (meta) "meta")))
 }
 
-missing_app_packages <- function(bayesian = FALSE, meta = FALSE) {
-  pkgs <- app_dependencies(bayesian, meta)
+missing_app_packages <- function(meta = FALSE) {
+  pkgs <- app_dependencies(meta)
   missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
   if (meta && !"meta" %in% missing && utils::packageVersion("meta") < "7.0.0") missing <- c(missing, "meta")
   missing
@@ -48,8 +48,8 @@ missing_app_packages <- function(bayesian = FALSE, meta = FALSE) {
 
 metaUI_app_ready <- function() !length(missing_app_packages())
 
-check_app_packages <- function(bayesian = FALSE, meta = FALSE) {
-  missing <- missing_app_packages(bayesian, meta)
+check_app_packages <- function(meta = FALSE) {
+  missing <- missing_app_packages(meta)
   if (length(missing)) stop("Generated apps need packages that are not installed",
     if (meta) " (meta must be >= 7.0-0)", ": ",
     paste(missing, collapse = ", "), ". Install them with install.packages(c(",
@@ -85,7 +85,6 @@ metaUI_exclusions_html <- function(report) {
 #' @param list_packages Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 #' used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 #' a character vector with all packages to display.
-#' @param bayesian Is the optional Bayesian model enabled? If so, the default list includes bayesmeta.
 #' @param meta Does author model code use meta? If so, the default list includes it.
 #'
 #' @returns HTML code for the `About` panel of the Shiny app
@@ -94,7 +93,7 @@ metaUI_exclusions_html <- function(report) {
 
 
 create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE,
-                         bayesian = FALSE, meta = FALSE) {
+                         meta = FALSE) {
   out <- glue::glue("<h3>About this analysis</h3>
           <p><b>Last update:</b> {date}</p>
           {if (citation != '') glue::glue('<p><b>Citation:</b> {citation}</p>') else ''}
@@ -104,7 +103,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
           ")
 
   if (list_packages == TRUE) {
-    req_packages <- app_dependencies(bayesian, meta)
+    req_packages <- app_dependencies(meta)
   } else if (is.character(list_packages)) {
     req_packages <- list_packages
     list_packages <- TRUE
@@ -153,7 +152,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'   (a temporary folder when NA), then exported with precomputed results. Must
 #'   be outside save_to_folder. Static generation never launches the app.
 #' @param design Optional settings from [app_design()]. Use [design_app()] to preview and export them.
-#' @param bayesian NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.
+#' @param bayesian NULL (default), or list(enabled = TRUE, tau_scale = .5). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior, computed by grid quadrature over the heterogeneity (no extra package needed). Correlation default tau_scale is .25 on Fisher z. An optional `max_studies` (integer, at least 2) caps the number of studies; by default there is no cap. Sensitivity analyses use half and double the scale.
 #' @param study_info Optional study information shown to readers: a data frame (or CSV path) with one row per
 #' study and a `study` column matching the study IDs, as returned by [fetch_study_metadata()] or written by the
 #' authors. Recognised columns: `doi`, `url`, `title`, `authors` (separated by "; "), `year`, `journal`, `volume`,
@@ -258,7 +257,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   uses_meta <- models_use_meta(c(models_to_run$code,
     if (is.character(models)) readLines(models, warn = FALSE)))
   about <- do.call(create_about, c(list(dataset_name = dataset_name,
-    bayesian = !is.null(bayesian), meta = uses_meta), about_args))
+    meta = uses_meta), about_args))
   bayesian <- metaUI_bayesian_options(bayesian, dataset$metaUI__es_type[1])
   random_default <- identical(models_to_run, get_model_tibble(one_effect_per_study = TRUE))
   package_models <- random_default || identical(models_to_run, get_model_tibble())
@@ -267,7 +266,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     models_to_run <- dplyr::bind_rows(models_to_run, metaUI_bayesian_spec(bayesian))
   }
   opts$bayesian <- bayesian
-  check_app_packages(!is.null(bayesian), uses_meta)
+  check_app_packages(uses_meta)
   if (!is.null(primary_model) && (!is.character(primary_model) || length(primary_model) != 1L ||
       sum(models_to_run$name == primary_model) != 1L))
     stop("primary_model must name exactly one model in models_to_run: ", paste(models_to_run$name, collapse = "; "))
@@ -285,7 +284,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     assumptions = "Distinct studies are independent; multilevel V is diagonal (sampling covariance not supplied). Multilevel t tests use containment df. RVE uses correlated-effects weights with the same within-study correlation and the Tipton small-sample correction (small=TRUE). Neither N nor p is inferred by aggregation.")
   if (!is.null(bayesian)) report$bayesian <- c(bayesian, list(
     model = "Two-level normal-normal on aggregated studies", mean_prior = "Improper uniform on fitting scale",
-    latency = "Default cap 20 studies. Approximate benchmark: 20 seconds at 20 studies, 97 at 50. Each Update results blocks the server process while fitting; sensitivity/downloads can need two extra fits. Hard author override limit 50.",
+    computation = "Grid quadrature over tau (2,000 points, uniform in log(tau + tau0)); mu as the exact normal mixture over the grid. Within 1e-7 posterior SDs of adaptive numerical integration for mu and 2e-4 for tau quantiles (validation/bayesian-grid.md).",
+    latency = paste0("No default study cap", if (!is.null(bayesian$max_studies)) paste0(" (author cap: ", bayesian$max_studies, " studies)"), ". About 0.1 s per fit natively and 0.3 s in webR at 646 studies."),
     tau_prior = "Half-normal on fitting scale", interval = "95% central credible interval; posterior median",
     sensitivity = "Half and double tau_scale", aggregation = paste("GLS study-level average, within-study correlation", correlation),
     rationale = "Default scale is unit-information SD / 4: 0.5 for SMD and for log odds and risk ratios, 0.25 for Fisher z. An author choice, examined with sensitivity analysis.",
@@ -375,7 +375,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   file.copy(system.file("template_code", "analysis.R", package = "metaUI"),
             file.path(save_to_folder, "analysis.R"), overwrite = TRUE)
   jsonlite::write_json(report, file.path(save_to_folder, "validation.json"), auto_unbox = TRUE, pretty = TRUE, na = "null")
-  dependencies <- app_dependencies(!is.null(bayesian), uses_meta)
+  dependencies <- app_dependencies(uses_meta)
   versions <- data.frame(package = dependencies,
     version = vapply(dependencies, function(x) as.character(utils::packageVersion(x)), character(1)))
   utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
@@ -389,7 +389,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     citation = if (is.null(about_args$citation)) "" else as.character(about_args$citation), intro = if (is.null(opts$intro)) "" else as.character(opts$intro)), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
-  writeLines(c(generate_global.R(eff_size_type_label, bayesian, uses_meta), "",
+  writeLines(c(generate_global.R(eff_size_type_label, uses_meta), "",
     "# Draw one small plot when the app starts, so that the first reader's plots do not wait for",
     "# the graphics packages to load and compile.",
     "invisible(tryCatch(shiny::plotPNG(function() print(ggplot2::ggplot(data.frame(x = 1:3), ggplot2::aes(x)) + ggplot2::geom_histogram(bins = 3)),",
@@ -410,8 +410,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
 #'
 #' @noRd
 
-generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL, uses_meta = FALSE) {
-  req_packages <- app_dependencies(!is.null(bayesian), uses_meta)
+generate_global.R <- function(metaUI_eff_size_type_label, uses_meta = FALSE) {
+  req_packages <- app_dependencies(uses_meta)
 
 
   meta_check <- if (uses_meta) "if (utils::packageVersion('meta') < '7.0.0') stop('meta >= 7.0-0 is required; install dependencies before launch.')" else ""

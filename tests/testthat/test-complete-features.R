@@ -48,24 +48,31 @@ test_that("selection links validate build identity and recover exact categories"
   expect_error(metaUI:::metaUI_selection_query(r,"abc",NULL,d,filters),"Unknown")
 })
 
-test_that("Bayesian posterior agrees with an independent normal-mixture quadrature", {
-  skip_if_not_installed("bayesmeta")
+test_that("Bayesian grid posterior agrees with an independent adaptive integration", {
   y <- c(-.2,.1,.4,.7); sigma <- c(.1,.15,.2,.25); s <- .5
   x <- data.frame(metaUI__effect_size=y,metaUI__se=sigma,metaUI__study_id=letters[1:4])
   posterior <- metaUI:::metaUI_bayesian_fit(x,s)
-  tau <- seq(0,4,length.out=20001)
-  w <- 1/outer(tau^2,sigma^2,"+"); sw <- rowSums(w)
-  mu <- as.vector(w %*% y)/sw
-  logp <- -.5*(tau/s)^2 + .5*rowSums(log(w)) - .5*log(sw) - .5*rowSums(w*(matrix(y,length(tau),4,byrow=TRUE)-mu)^2)
-  p <- exp(logp-max(logp)); p[c(1,length(p))] <- p[c(1,length(p))]/2; p <- p/sum(p)
-  cdf <- function(z) sum(p*pnorm((z-mu)*sqrt(sw)))
-  qs <- vapply(c(.025,.5,.975),function(prob) uniroot(function(z)cdf(z)-prob,c(-3,3),tol=1e-8)$root,numeric(1))
-  expect_lt(max(abs(as.numeric(posterior$qposterior(mu.p=c(.025,.5,.975)))-qs)),1e-3)
+  # Marginal posterior of tau (mu integrated out under its flat prior), by stats::integrate.
+  logp <- function(t) vapply(t, function(tt) { w <- 1/(sigma^2+tt^2); m <- sum(w*y)/sum(w)
+    -.5*(tt/s)^2 + .5*sum(log(w)) - .5*log(sum(w)) - .5*sum(w*(y-m)^2) }, numeric(1))
+  dens <- function(t) exp(logp(t) - logp(.3))
+  z <- integrate(dens, 0, Inf, rel.tol = 1e-10)$value
+  cdf <- function(q) integrate(function(t) dens(t)*vapply(t, function(tt) { w <- 1/(sigma^2+tt^2)
+    pnorm((q - sum(w*y)/sum(w))*sqrt(sum(w))) }, numeric(1)), 0, Inf, rel.tol = 1e-10)$value/z
+  qs <- vapply(c(.025,.5,.975),function(prob) uniroot(function(q)cdf(q)-prob,c(-3,3),tol=1e-10)$root,numeric(1))
+  expect_lt(max(abs(posterior$qposterior(mu.p=c(.025,.5,.975))-qs)),1e-6)
+  tau_median <- uniroot(function(t) integrate(dens, 0, t, rel.tol = 1e-10)$value/z - .5, c(1e-4, 3), tol = 1e-10)$root
+  expect_lt(abs(posterior$qposterior(tau.p=.5) - tau_median), 1e-5)
+  expect_equal(posterior$pposterior(mu=qs), c(.025,.5,.975), tolerance = 1e-6)
+  expect_equal(posterior$labels, letters[1:4])
   expect_error(metaUI:::metaUI_bayesian_fit(x[1,,drop=FALSE],s),"two studies")
   expect_error(metaUI:::metaUI_bayesian_fit(x,s,2),"study limit")
   expect_error(metaUI:::metaUI_bayesian_options(list(tau_scale=-1),"SMD"),"positive")
-  expect_error(metaUI:::metaUI_bayesian_options(list(max_studies=51),"SMD"),"2 to 50")
-  expect_warning(metaUI:::metaUI_bayesian_options(list(max_studies=30),"SMD"),"block")
+  expect_error(metaUI:::metaUI_bayesian_options(list(max_studies=1),"SMD"),"at least 2")
+  expect_error(metaUI:::metaUI_bayesian_options(list(max_studies=2.5),"SMD"),"at least 2")
+  expect_null(metaUI:::metaUI_bayesian_options(list(enabled=TRUE),"SMD")$max_studies)
+  expect_silent(metaUI:::metaUI_bayesian_options(list(max_studies=500),"SMD"))
+  expect_match(metaUI:::metaUI_bayesian_spec(list(tau_scale=.5))$code, "^metaUI_bayesian_fit\\(df, tau_scale = 0.5\\)$")
   d <- prepared(); o <- metaUI:::metaUI_bayesian_options(list(enabled=TRUE),"SMD")
   result <- fit(d,metaUI:::metaUI_bayesian_spec(o))
   expect_equal(result$table$status,"ok")
@@ -74,6 +81,29 @@ test_that("Bayesian posterior agrees with an independent normal-mixture quadratu
   sensitivity <- metaUI:::metaUI_bayesian_sensitivity(result$df_agg,o,result$fits[[1]])
   expect_equal(sensitivity$tau_prior_scale,c(.25,.5,1))
   expect_true(all(sensitivity$status=="ok"))
+})
+
+test_that("Bayesian grid posterior matches bayesmeta on small and difficult datasets", {
+  skip_if_not_installed("bayesmeta")
+  cases <- list(
+    list(y = c(.1, .5), sigma = c(.2, .3), s = .5),
+    list(y = c(.3, .1, .9, -.4, .2), sigma = c(.01, .1, .3, 1, .05), s = .5),   # SE ratio 1:100
+    list(y = c(.2, .25, .22, 1.8, .19, .3), sigma = rep(.1, 6), s = .025),     # outlier, prior far below the data
+    list(y = c(.21, .19, .2, .2), sigma = c(.05, .08, .1, .06), s = 5))        # no heterogeneity, very wide prior
+  for (case in cases) {
+    df <- data.frame(metaUI__effect_size = case$y, metaUI__se = case$sigma, metaUI__study_id = seq_along(case$y))
+    grid <- metaUI:::metaUI_bayesian_fit(df, case$s)
+    ref <- bayesmeta::bayesmeta(y = case$y, sigma = case$sigma, interval.type = "central",
+      tau.prior = function(t) bayesmeta::dhalfnormal(t, scale = case$s))
+    p <- c(.025, .05, .5, .95, .975)
+    sd_mu <- ref$summary["sd", "mu"]; sd_tau <- ref$summary["sd", "tau"]
+    # bayesmeta approximates the mean's posterior by a coarser mixture (delta = .01), accurate to
+    # about .002 posterior SDs; the grid is closer to adaptive integration (see the test above and
+    # validation/bayesian-grid.md), so the tolerance is bayesmeta's.
+    expect_lt(max(abs(grid$qposterior(mu.p = p) - ref$qposterior(mu.p = p))) / sd_mu, 5e-3)
+    expect_lt(abs(grid$summary["mean", "mu"] - ref$summary["mean", "mu"]) / sd_mu, 5e-3)
+    expect_lt(max(abs(grid$qposterior(tau.p = c(.025, .5, .975)) - ref$qposterior(tau.p = c(.025, .5, .975)))) / sd_tau, 1e-3)
+  }
 })
 
 test_that("standalone alternative results and download provenance survive restoration timeout", {
@@ -135,7 +165,7 @@ test_that("review guards reject missing labels, odd option lists and percent-lik
   expect_error(metaUI:::metaUI_bayesian_options(list(TRUE), "SMD"), "uniquely named")
   expect_error(metaUI:::metaUI_bayesian_options(list(max_study = 3), "SMD"), "Unknown Bayesian option")
   old <- options(OutDec = ","); on.exit(options(old))
-  expect_match(metaUI:::metaUI_bayesian_spec(list(tau_scale = .5, max_studies = 20))$code, "tau_scale = 0.5", fixed = TRUE)
+  expect_match(metaUI:::metaUI_bayesian_spec(list(tau_scale = .5, max_studies = 20))$code, "tau_scale = 0.5, max_studies = 20", fixed = TRUE)
   options(old)
   expect_error(build_app(list(schema_version = TRUE, data = "x", dataset_name = "x", output = "x", mapping = list())), "schema_version")
   x <- fixture(); x$group <- factor(rep(c("50%25", "b"), 8)); x$year <- 2001:2016
