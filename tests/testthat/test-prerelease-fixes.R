@@ -70,3 +70,48 @@ test_that("default models apply small-sample corrections", {
   expect_equal(as.numeric(metaUI:::metaUI_multilevel_fit(d)$ddf), 2) # three studies: containment df = 3 - 1
   expect_match(metaUI:::metaUI_reader_message("Small-sample degrees of freedom below 4 (df = 1.6)"), "unreliable")
 })
+
+test_that("na.rm = TRUE drops rows missing a filter, p or N, and ignores unmapped columns", {
+  x <- fixture()
+  x$grp <- factor(rep(c("a", "b"), 8)); x$grp[3] <- NA
+  x$dose <- c(1:15, NA)
+  x$unused <- c(NA, rep(1, 15))
+  d <- prepared(x, filters = c(Group = "grp", Dose = "dose"), na.rm = TRUE)
+  expect_equal(nrow(d), 14)
+  expect_false("(Missing)" %in% levels(d$metaUI__filter_Group))
+  expect_true(1 %in% d$metaUI__effect_id[d$metaUI__study_id == "A"]) # row 1 is only missing `unused`
+  kept <- prepared(x, filters = c(Group = "grp", Dose = "dose"))
+  expect_equal(nrow(kept), 16)
+  expect_true("(Missing)" %in% levels(kept$metaUI__filter_Group))
+})
+
+test_that("alphabetical filter order follows the labels", {
+  x <- fixture(); x$a <- factor(rep(c("x", "y"), 8)); x$b <- factor(rep(c("u", "v"), 8))
+  d <- prepared(x, filters = c(Zeta = "a", Alpha = "b"), arrange_filters = "alphabetical")
+  expect_identical(grep("^metaUI__filter_", names(d), value = TRUE), c("metaUI__filter_Alpha", "metaUI__filter_Zeta"))
+})
+
+test_that("p-curve is drawn for correlations; only its effect estimate needs SMD", {
+  x <- fixture(); x$yi <- abs(x$yi) / 2; x$n <- 50
+  d <- prepare_data(x, "study", "yi", variance = "vi", es_label = "label", es_id = "id", es_type = "ZCOR",
+    variance_scale = "z", direction = "positive", sample_size = "n")
+  expect_s3_class(metaUI:::metaUI_pcurve_data(d), "data.frame")
+  expect_error(metaUI:::metaUI_pcurve_data(d, require_N = TRUE), "only for standardized mean differences")
+})
+
+test_that("links made before a data update apply what still fits and say what changed", {
+  x <- fixture(); x$group <- factor(rep(c("a", "b"), 8)); x$year <- 2001:2016
+  d <- prepared(x, filters = c("group", "year"))
+  filters <- list(list(id = "metaUI__filter_group", col = "metaUI__filter_group", type = "categorical"),
+    list(id = "metaUI__filter_year", col = "metaUI__filter_year", type = "numeric"))
+  r <- metaUI:::metaUI_parse_selection("?metaui=old&group=a,gone&year=1990,2005", "new", d, filters)
+  expect_true(r$stale)
+  expect_equal(r$filters$metaUI__filter_group$selection, "a")
+  expect_equal(as.numeric(r$filters$metaUI__filter_year$selection), c(2001, 2005))
+  expect_match(r$adjusted, "gone no longer in the data", all = FALSE)
+  expect_match(r$adjusted, "trimmed", all = FALSE)
+  none <- metaUI:::metaUI_parse_selection("?metaui=old&group=gone", "new", d, filters)
+  expect_setequal(none$filters$metaUI__filter_group$selection, c("a", "b"))
+  # The same link against the data it was made for is still strict.
+  expect_error(metaUI:::metaUI_parse_selection("?metaui=new&group=gone", "new", d, filters), "Unknown")
+})

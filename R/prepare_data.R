@@ -20,10 +20,10 @@
 #' @param es_label Character. Label for individual effect sizes - only needed when there are multiple effect sizes per study/sample. Defaults to NA. Defaults to NA, in that case, multiple effect sizes are simply numbered.
 #' @param na.rm Should rows with any missing values be removed? Can be TRUE, FALSE or "es_related" -
 #' the last is the default and drops rows with missing values for any of the variables used in the standard meta-analysis models, namely
-#' `study_label`, `es_field`, `variance`, and `se`. Optional p/N never remove rows under this default. Setting this to TRUE also drops rows with missing values on any of the filters
-#' etc, which might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
+#' `study_label`, `es_field`, `variance`, and `se`. Optional p/N never remove rows under this default. Setting this to TRUE also drops rows with a missing value in any filter (categorical
+#' filters then get no `(Missing)` level) or in the p-value or sample size when these are given; other columns of `data` are ignored. This might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
 #' or change the models and analyses to be included in the app. Invalid required inputs with FALSE cause an error.
-#' @param arrange_filters Character. How should the filters be arranged in the app? Options are "given" by the `filters` argument, "alphabetical" or "leave" (as they are in the dataset). Defaults to "given".
+#' @param arrange_filters Character. How should the filters be arranged in the app? Options are "given" by the `filters` argument, "alphabetical" (by label) or "leave" (as they are in the dataset). Defaults to "given".
 #' @param keep_missing_level Logical. Should a `(Missing)`-level be kept even for filters that do not have missing values? Might be advisable when you expect users to upload new data with missing values. Defaults to FALSE.
 #'
 #' @param categorical_filters Explicitly convert named filter columns to factors with radix-sorted levels. Useful for CSV/JSON builds.
@@ -97,7 +97,6 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   }
   for (field in c(es_field, se, variance, pvalue, sample_size))
     if (!is.numeric(data[[field]])) stop("Numeric input required: ", field)
-  unmapped_optional <- c(if (is.null(pvalue)) "metaUI__pvalue", if (is.null(sample_size)) "metaUI__N")
   if (is.null(pvalue)) { data$metaUI_input_p <- NA_real_; pvalue <- "metaUI_input_p" }
   if (is.null(sample_size)) { data$metaUI_input_N <- NA_real_; sample_size <- "metaUI_input_N" }
   consistent <- is.finite(data[[se]]) & is.finite(data[[variance]])
@@ -127,6 +126,11 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   }
   if (length(filters)) metaUI_check_filter_columns(paste0("metaUI__filter_", filter_names), data[filters])
 
+  # Under na.rm = TRUE, a row missing any filter, p-value or N it was given counts as incomplete;
+  # this is recorded before categorical NAs become "(Missing)". Unmapped columns do not count.
+  missing_mapped <- if (length(c(filters, setdiff(c(pvalue, sample_size), c("metaUI_input_p", "metaUI_input_N")))))
+    !stats::complete.cases(data[c(filters, setdiff(c(pvalue, sample_size), c("metaUI_input_p", "metaUI_input_N")))]) else rep(FALSE, nrow(data))
+
   # Set NA level for categorical filters ...
   for (i in seq_along(filters)) {
     if(is.factor(data[[filters[i]]])) {
@@ -142,7 +146,7 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   arrange_filters <- match.arg(arrange_filters)
   if (!arrange_filters == "leave") {
     if (arrange_filters == "alphabetical") {
-      filters <- sort(filters)
+      filters <- filters[order(filter_names[filters], method = "radix")]
     }
     data <- data %>% dplyr::select(dplyr::all_of(filters), dplyr::everything())
   }
@@ -200,10 +204,13 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   if (es_type == "COR") add_reason(is.finite(data$metaUI__effect_size) & abs(data$metaUI__effect_size) >= 1, "COR outside (-1, 1)")
   if (!(na.rm[1] %in% c("es_related", FALSE, TRUE))) stop('`na.rm` must be TRUE, FALSE or "es_related"')
   if (identical(na.rm, FALSE) && any(reason != "")) stop("Invalid required model inputs; use na.rm = 'es_related' to exclude with a report.")
-  if (identical(na.rm, TRUE)) add_reason(!stats::complete.cases(data[setdiff(names(data), unmapped_optional)]), "missing mapped or other input")
+  if (identical(na.rm, TRUE)) add_reason(missing_mapped, "missing filter, p-value or N")
   exclusions <- data.frame(row = original_rows[reason != ""], reason = reason[reason != ""])
   data <- data[reason == "", , drop = FALSE]
   if (!nrow(data)) stop("No eligible rows remain.")
+  # Levels, including "(Missing)", that only excluded rows had.
+  if (!keep_missing_level) for (field in grep("^metaUI__filter_", names(data), value = TRUE))
+    if (is.factor(data[[field]])) data[[field]] <- droplevels(data[[field]])
   data$metaUI__input_effect <- data$metaUI__effect_size
   data$metaUI__input_variance <- data$metaUI__variance
   data$metaUI__display_scale <- if (es_type %in% c("COR", "ZCOR")) "r" else "SMD"

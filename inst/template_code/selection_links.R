@@ -109,7 +109,10 @@ metaUI_parse_selection <- function(query, dataset_key, built, filters = list()) 
   keys <- tolower(metaUI_link_untext(sub("=.*$", "", pairs)))
   values <- sub("^[^=]*=", "", pairs)
   if (keys[1] != "metaui" || !grepl("^[A-Za-z0-9]{1,8}$", values[1])) damaged()
-  if (!identical(values[1], metaUI_link_key(dataset_key))) stop("This link was made for a different version of this app's data.")
+  # A link made before the data were updated is applied as far as it still fits: categories that
+  # are gone are dropped, ranges are trimmed to the new sliders, and each change is reported.
+  stale <- !identical(values[1], metaUI_link_key(dataset_key))
+  adjusted <- character()
   keys <- keys[-1]; values <- values[-1]
   excluded <- endsWith(keys, "!")
   keys <- sub("!$", "", keys)
@@ -133,12 +136,25 @@ metaUI_parse_selection <- function(query, dataset_key, built, filters = list()) 
       else if (grepl("_include_NA$", id) && length(items) == 1L && items %in% c("yes", "no")) c("FALSE", "TRUE")[(items == "yes") + 1L]
       else if (id == "computation") {
         at <- match(items, metaUI_computation_names(built))
-        if (length(at) != 1L || is.na(at)) stop("Unknown saved effect computation.")
+        if (length(at) != 1L || is.na(at)) {
+          if (!stale) stop("Unknown saved effect computation.")
+          adjusted <- c(adjusted, "its effect computation no longer exists, so the primary one is used")
+          next
+        }
         unname(metaUI_computations(built)[at])
       } else if (length(filter)) {
         lv <- levels(built[[filter[[1]]$col]])
         x <- tryCatch(metaUI_link_untext(items), error = function(e) damaged())
-        if (anyDuplicated(x) || any(!x %in% lv)) stop("Unknown or duplicated saved category.")
+        if (anyDuplicated(x)) damaged()
+        if (any(!x %in% lv)) {
+          if (!stale) stop("Unknown or duplicated saved category.")
+          label <- sub("^metaUI__filter_", "", filter[[1]]$col)
+          gone <- x[!x %in% lv]
+          x <- x[x %in% lv]
+          if (!excluded[i]) adjusted <- c(adjusted, if (length(x)) paste0(label, ": ", paste(gone, collapse = ", "), " no longer in the data")
+            else paste0(label, ": none of its categories remain, so all are included"))
+          if (!excluded[i] && !length(x)) next
+        }
         if (excluded[i]) setdiff(lv, x) else x
       } else damaged()
     saved[[id]] <- data.frame(id = rep(id, length(selection)), selection = as.character(selection))
@@ -157,12 +173,21 @@ metaUI_parse_selection <- function(query, dataset_key, built, filters = list()) 
       filter <- Filter(function(f) f$id == id, filters)[[1]]
       if (any(is.finite(built[[filter$col]]))) metaUI_slider_spec(built[[filter$col]])
     }
-    if (!is.null(spec) && (x[1] < spec$min - 1e-8 || x[2] > spec$max + 1e-8)) stop("Saved range is outside the built slider: ", id)
+    if (!is.null(spec) && (x[1] < spec$min - 1e-8 || x[2] > spec$max + 1e-8)) {
+      if (!stale) stop("Saved range is outside the built slider: ", id)
+      label <- if (id == "outliers_z_scores") "z-score" else sub("^metaUI__filter_", "", Filter(function(f) f$id == id, filters)[[1]]$col)
+      x <- c(max(x[1], spec$min), min(x[2], spec$max))
+      if (x[1] > x[2]) {
+        x <- c(spec$min, spec$max)
+        adjusted <- c(adjusted, paste0(label, ": its range no longer overlaps the data, so the full range is used"))
+      } else adjusted <- c(adjusted, paste0(label, ": its range was trimmed to the data"))
+      saved[[id]]$selection <- as.character(x)
+    }
   }
   for (filter in filters) if (filter$type != "numeric")
     saved[[filter$id]] <- data.frame(selection = as.character(saved[[filter$id]]$selection))
   if (!is.null(bound)) metaUI_interval_assessment(data.frame(Model = character(), status = character(), LCL = numeric(), UCL = numeric()), bound, built$metaUI__display_scale[1])
-  list(filters = saved, sesoi = bound)
+  list(filters = saved, sesoi = bound, stale = stale, adjusted = adjusted)
 }
 
 # Equivalence bound saved in a workbook; NA if none was chosen or recorded.

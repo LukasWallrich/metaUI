@@ -55,11 +55,11 @@ prepare_data(
 
 \item{na.rm}{Should rows with any missing values be removed? Can be TRUE, FALSE or "es_related" -
 the last is the default and drops rows with missing values for any of the variables used in the standard meta-analysis models, namely
-\code{study_label}, \code{es_field}, \code{variance}, and \code{se}. Optional p/N never remove rows under this default. Setting this to TRUE also drops rows with missing values on any of the filters
-etc, which might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
+\code{study_label}, \code{es_field}, \code{variance}, and \code{se}. Optional p/N never remove rows under this default. Setting this to TRUE also drops rows with a missing value in any filter (categorical
+filters then get no \code{(Missing)} level) or in the p-value or sample size when these are given; other columns of \code{data} are ignored. This might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
 or change the models and analyses to be included in the app. Invalid required inputs with FALSE cause an error.}
 
-\item{arrange_filters}{Character. How should the filters be arranged in the app? Options are "given" by the \code{filters} argument, "alphabetical" or "leave" (as they are in the dataset). Defaults to "given".}
+\item{arrange_filters}{Character. How should the filters be arranged in the app? Options are "given" by the \code{filters} argument, "alphabetical" (by label) or "leave" (as they are in the dataset). Defaults to "given".}
 
 \item{keep_missing_level}{Logical. Should a \code{(Missing)}-level be kept even for filters that do not have missing values? Might be advisable when you expect users to upload new data with missing values. Defaults to FALSE.}
 

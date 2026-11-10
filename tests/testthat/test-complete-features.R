@@ -33,7 +33,11 @@ test_that("selection links validate build identity and recover exact categories"
   expect_equal(parsed$filters$metaUI__filter_group$selection,"Über & ?")
   expect_equal(parsed$sesoi,.3)
   expect_null(metaUI:::metaUI_parse_selection(metaUI:::metaUI_selection_query(r,"abc",NULL,d,filters),"abc",d,filters)$sesoi)
-  expect_error(metaUI:::metaUI_parse_selection(q,"xyz",d,filters),"different version")
+  # A link from before a data update still applies, marked as such.
+  stale <- metaUI:::metaUI_parse_selection(q,"xyz",d,filters)
+  expect_true(stale$stale)
+  expect_equal(stale$filters$metaUI__filter_group$selection,"Über & ?")
+  expect_false(parsed$stale)
   expect_match(q, "^\\?metaui=abc&group=%C3%9Cber\\+%26\\+%3F&year=2002,2010&bound=0.3$")
   expect_equal(metaUI:::metaUI_parse_selection(paste0(q,"&fbclid=x1"),"abc",d,filters), parsed)
   expect_error(metaUI:::metaUI_parse_selection(sub("group=[^&]*", "group=Uber", q),"abc",d,filters),"Unknown")

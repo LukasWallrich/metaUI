@@ -40,7 +40,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       sample_moderation_main <- HTML("<h3>Simple tests of moderation</h3>")
       sample_moderation_notes <- HTML("<p class=\'metaui-note\'>One moderator at a time; correlations between moderators are ignored. Each moderator is added to the primary model where that is a multilevel metafor model, and otherwise to the random-effects multilevel model; tests and intervals are cluster-robust by study (CR2, with small-sample degrees of freedom), so they allow for dependent effects. The overall test uses the matching small-sample correction (HTZ); with many categories that hold few studies it has little power. These are exploratory tests without adjustment for multiple testing: trying many moderators or selections makes some false positives likely. <i>k</i> = number of effects.</p>")
 
-      pcurve_selection <- HTML("<p class=\'metaui-note\'>P-curve uses the first effect per study, an exploratory selection rule applied before direction screening. It excludes and counts effects that are zero or opposite to the expected direction, and uses normal Wald statistics, not the source p-values.</p>")
+      pcurve_selection <- HTML("<p class=\'metaui-note\'>P-curve uses the first effect per study, an exploratory selection rule applied before direction screening. It excludes and counts effects that are zero or opposite to the expected direction, and uses normal Wald statistics, not the source p-values.{if (correlations) " For correlations these are computed on Fisher\u2019s z." else ""}</p>")
       zcurve_selection <- HTML("<p class=\'metaui-note\'>Z-curve uses the first effect per study, an exploratory selection rule, and normal Wald statistics, not the source p-values.</p>")
 
       qrppb_main <- HTML("<h3>Publication bias and selective reporting</h3><p class=\'metaui-note\'>Exploratory small-study and selection diagnostics. A non-significant result does not show that there is no bias: these tests often have little power.</p>")
@@ -346,7 +346,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
           tabPanel(
             "Publication bias", results_panel(qrppb_main, uiOutput("bias_power_note"), funnel_main, uiOutput("funnel_key"), div(class = "metaui-plot", plotOutput("funnel", width = "100%", height = 400) %>% shinycssloaders::withSpinner()),
             eggers_main, uiOutput("eggers_reading"), div(class = "metaui-scroll", tableOutput("eggers")),
-            {if (identical(as.character(data$metaUI__es_type[1]), "SMD")) \'pcurve_main, pcurve_selection, uiOutput("pcurve_reading"), div(class = "metaui-scroll metaui-plot", plotOutput("pcurve", height = "auto") %>% shinycssloaders::withSpinner()), uiOutput("pcurve_notes"),\' else ""}
+            pcurve_main, pcurve_selection, uiOutput("pcurve_reading"), div(class = "metaui-scroll metaui-plot", plotOutput("pcurve", height = "auto") %>% shinycssloaders::withSpinner()), uiOutput("pcurve_notes"),
             # A warning qualifies the reading, so it comes first.
             zcurve_main, zcurve_selection, div(class = "metaui-note metaui-warning-text", textOutput("zcurve_warnings")), uiOutput("zcurve_reading"), div(class = "metaui-scroll metaui-plot", plotOutput("zcurve", height = "auto") %>% shinycssloaders::withSpinner()),
             uiOutput("zcurve_statistics"))
@@ -1447,7 +1447,7 @@ glue_string <- ('
       "</b> (expected discovery rate). ", verdict, " Of the significant results, an estimated <b>", percent(replicable), "</b> would be significant again in exact replications (expected replicability rate)."))),
       p(class = "metaui-note", "The curve is fitted to the significant results only (z above 1.96); the bars below that are shown for comparison. The expected discovery rate is shown without an interval, so treat its comparison with the observed rate as a rough guide.",
         # P-curve, where it applies, reports a power estimate for the same significant results.
-        if (identical(as.character(metaUI__df$metaUI__es_type[1]), "SMD")) " P-curve\\u2019s power estimate above also concerns the significant results. It assumes they all have the same power, which overstates it when power varies; z-curve allows for this, so the two can differ."))
+        " P-curve\\u2019s power estimate above also concerns the significant results. It assumes they all have the same power, which overstates it when power varies; z-curve allows for this, so the two can differ."))
   })
 
   output$zcurve_statistics <- renderUI({
@@ -1830,8 +1830,8 @@ glue_string <- ('
   })
 
 
-  output$link_notice <- renderText(if (isTRUE(state_values$link_failed)) NULL else state_values$link_notice)
-  output$link_banner <- renderUI(if (isTRUE(state_values$link_failed)) div(class = "metaui-link-banner", role = "alert", state_values$link_notice))
+  output$link_notice <- renderText(if (isTRUE(state_values$link_failed) || isTRUE(state_values$link_stale)) NULL else state_values$link_notice)
+  output$link_banner <- renderUI(if (isTRUE(state_values$link_failed) || isTRUE(state_values$link_stale)) div(class = "metaui-link-banner", role = "alert", state_values$link_notice))
   session$onFlushed(function() {
     isolate({
     query <- session$clientData$url_search
@@ -1840,16 +1840,17 @@ glue_string <- ('
     if (state_values$ever_analyzed || !is.null(state_values$uploaded_data)) return()
     restored <- tryCatch(metaUI_parse_selection(query, metaUI_dataset_key, metaUI__df, filters), error = function(e) e)
     if (inherits(restored, "error")) {
-      reason <- if (grepl("different version", conditionMessage(restored), fixed = TRUE)) "This link was made for a different version of this app\\u2019s data"
-        else "This link is incomplete or damaged"
-      state_values$link_notice <- paste0(reason, ", so its selection could not be restored. The results show every effect; set the filters yourself or ask for a new link.")
+      state_values$link_notice <- "This link is incomplete or damaged, so its selection could not be restored. The results show every effect; set the filters yourself or ask for a new link."
       state_values$link_failed <- TRUE
       return()
     }
     if (is.null(restored)) return()
     updateNumericInput(session, "sesoi", value = if (is.null(restored$sesoi)) NA_real_ else restored$sesoi)
     restore_filters(restored$filters, metaUI__df, "link")
-    state_values$link_notice <- "Selection restored from link."
+    state_values$link_notice <- if (isTRUE(restored$stale)) paste0("The data have been updated since this link was made. Its selection was applied as far as it still fits",
+      if (length(restored$adjusted)) paste0(" (", paste(restored$adjusted, collapse = "; "), ")") else "", ", so results can differ from those first shared.")
+      else "Selection restored from link."
+    state_values$link_stale <- isTRUE(restored$stale)
     })
   }, once = TRUE)
   selection_query <- reactive({

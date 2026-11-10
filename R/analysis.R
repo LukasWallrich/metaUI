@@ -1248,7 +1248,9 @@ metaUI_validate_upload <- function(df, built) {
 metaUI_pcurve_data <- function(df, selection = "first", require_N = FALSE) {
   metaUI_validate_prepared(df)
   if (!nrow(df)) stop("No eligible rows remain for p-curve.")
-  if (df$metaUI__es_type[1] != "SMD") stop("P-curve is available here only for standardized mean differences.")
+  # The curve and its tests use Wald z statistics (Fisher z for correlations); only the effect
+  # estimate is on the d scale, so only it needs standardized mean differences.
+  if (require_N && df$metaUI__es_type[1] != "SMD") stop("P-curve effect estimation is available only for standardized mean differences.")
   direction <- df$metaUI__direction[1]
   if (!direction %in% c("positive", "negative")) stop("P-curve requires explicit effect direction; it is not inferred.")
   if (!selection %in% c("first", "last")) stop("Unknown p-curve selection rule.")
