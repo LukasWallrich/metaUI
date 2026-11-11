@@ -25,7 +25,7 @@ scale. This resolves both a peak at τ = 0 and a long right tail.
 
 ## Validation (November 2026)
 
-Scripts are in `validation/bayesian-grid/` (run from the package root): `conditions.R` (datasets), `reference.R` (independent reference), `validate.R` and `run-all.sh` (fits), `analyse.R` (tables, saved as `tables.md`), `real-data.R`, `edge-cases.R` (with output) and `webr-bench.cjs`. Raw results are not tracked; `run-all.sh` rebuilds them in about two hours, mostly for bayesmeta.
+Scripts are in `validation/bayesian-grid/` (run from the package root): `conditions.R` (datasets), `reference.R` (independent reference), `validate.R` and `run-all.sh` (fits), `analyse.R` (tables, saved as `tables.md`), `real-data.R`, `edge-cases.R` (with output) and `webr-bench.cjs`. Raw results are not tracked; `run-all.sh` rebuilds them in about two hours, mostly for bayesmeta, which must be installed for the comparison arm (it is not a package dependency). These are one-off research scripts kept as a record of how the results were produced, not maintained tooling.
 
 - **Datasets:** 412 simulated datasets with k = 2, 3, 5, 10, 20, 50, 100 and 646
   studies. True τ was 0, 0.5 or 3 × the median SE. SEs were moderate or spread 1:100.
