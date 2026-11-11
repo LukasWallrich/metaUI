@@ -842,7 +842,7 @@ glue_string <- ('
     fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = digits))
     interval <- gsub(" ", "\\u00a0", if (grepl("^Confidence", row$interval_type)) ci_label else "95% interval", fixed = TRUE)
     unit <- metaUI_count_unit(row, length(unique(df_filtered()$metaUI__study_id)))
-    if (isTRUE(as.numeric(row$k) == 1)) unit <- sub("s$", "", unit)
+    if (isTRUE(as.numeric(row$k) == 1)) unit <- c(studies = "study", effects = "effect", "")[[if (unit %in% c("studies", "effects")) unit else 3L]]
     div(class = "metaui-primary", role = "region", `aria-label` = "Primary analysis",
       if (row$status == "ok") tags$p(class = "metaui-primary-value", HTML(paste0("Estimated effect: ", metaUI_label_html(if (metaUI__df$metaUI__es_type[1] == "ZCOR") "r" else metaUI_eff_size_type_label), " = <b>", fmt(row$es), "</b>, ",
         if (is.na(row$LCL) || is.na(row$UCL)) "no interval reported" else paste0(interval, "\\u00a0[", fmt(row$LCL), ", ", fmt(row$UCL), "]"))))

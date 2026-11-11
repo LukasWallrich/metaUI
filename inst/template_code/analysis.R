@@ -542,7 +542,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     effect_level <- ok && !independent && !isTRUE(row$aggregated) && "input_rows" %in% names(row) && !is.na(row$k)
     unit <- if (!ok) "" else if (effect_level) "effects" else metaUI_count_unit(row, studies)
     k_shown <- if (!ok || is.na(row$k)) "" else format(if (effect_level) row$input_rows else row$k, big.mark = ",")
-    if (k_shown == "1") unit <- sub("s$", "", unit)
+    if (k_shown == "1") unit <- c(studies = "study", effects = "effect", "")[[if (unit %in% c("studies", "effects")) unit else 3L]]
     track <- if (ok && i %in% clipped) paste0('<td class="metaui-track-cell">', metaUI_track_clipped(scale, row$es, row$LCL, row$UCL, band, ref), "</td>")
       else if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, band, ref = ref, diamond = TRUE), "</td>")
       else paste0('<td class="metaui-reason-cell"><b>', "Not estimated:</b> ", esc(metaUI_reader_reason(row$reason, row$warnings)), "</td>")

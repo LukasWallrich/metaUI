@@ -379,6 +379,8 @@ test_that("third review: I2, uploads with text IDs, plain messages for one effec
   expect_no_error(metaUI:::metaUI_validate_upload(upload, d))
   # Package messages for a one-effect selection read plainly.
   expect_identical(metaUI:::metaUI_reader_message("Processing terminated since k <= 1."), "Needs at least two effects.")
+  one <- data.frame(Model = "RE", status = "ok", es = .3, LCL = .1, UCL = .5, k = 1, aggregated = TRUE, interval_type = "Confidence interval", warnings = "", reason = "")
+  expect_match(metaUI:::metaUI_estimates_html(one, studies = 1), 'metaui-unit">study<', fixed = TRUE)
 })
 
 test_that("third review: uploads keep spaces in IDs and categories; one-study Bayesian sensitivity; numeric moderators need three studies", {

@@ -158,7 +158,7 @@ This release consolidates all changes since 0.1.1, including the unreleased
 
 - Moderation, small categories and selections:
   - With one effect per study, the moderator is added to the random-effects model with the Hartung-Knapp adjustment, as on the Summary, instead of using cluster-robust inference, which adds nothing there and is unstable in small categories.
-  - With dependent effects, a category shows no interval below 4 small-sample degrees of freedom (before, only with a single study), and the overall test compares the categories with at least two studies: a single-study category has a cluster-robust variance of zero by construction and could make the test spuriously significant.
+  - With dependent effects, a category shows no interval below 4 small-sample degrees of freedom (before, only with a single study), and the overall test compares the categories with at least two studies: a single-study category has a cluster-robust variance of zero by construction and could make the test spuriously significant. Where cluster-robust standard errors cannot be computed, levels and the test fall back to the model-based ones, as the note says.
   - A numeric moderator needs at least three studies with values; otherwise the tab says so instead of showing an error or an implausible *F*.
 - Heterogeneity reports *I*² (for multilevel models also split between and within studies), with a sentence on why τ and the prediction interval show better how much effects differ.
 - Uploads:

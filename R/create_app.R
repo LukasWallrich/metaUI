@@ -319,7 +319,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   report$study_info <- study_info_report(study_info, dataset)
   report$zcurve <- "First effect per study; normal Wald |effect/SE|, not supplied source p-values. Independence across study IDs is an author assumption."
   about <- paste0(about, metaUI_exclusions_html(report),
-                  "<details class='metaui-help'><summary>Technical record: data mapping and analysis settings</summary><pre tabindex='0' aria-label='Technical record'>",
+                  "<details class='metaui-help'><summary>Technical record: data mapping and analysis settings</summary><pre tabindex='0' role='region' aria-label='Technical record'>",
                   htmltools::htmlEscape(jsonlite::toJSON(report, auto_unbox = TRUE, pretty = TRUE, na = "null"), attribute = TRUE), "</pre></details>")
   defaults_models <- dplyr::bind_rows(get_model_tibble(), get_model_tibble(one_effect_per_study = TRUE)[1, ])
   opts$known_interval_models <- models_to_run$name[vapply(seq_len(nrow(models_to_run)), function(i) {
