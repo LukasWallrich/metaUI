@@ -278,8 +278,9 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
   data$metaUI__pvalue[invalid_p] <- NA_real_
   data$metaUI__N[invalid_n] <- NA_real_
   attr(data, "metaUI_validation") <- list(
-    source = source, mapping = list(study = study_label, effect = es_field,
-      variance = if (variance == "metaUI_input_variance") NULL else variance,
+    # Effects computed from counts have no source column of their own; derivations record how.
+    source = source, mapping = list(study = study_label, effect = if (is.null(counts)) es_field,
+      variance = if (variance %in% c("metaUI_input_variance", "metaUI_input_vi")) NULL else variance,
       SE = if (se == "metaUI_input_se") NULL else se,
       effect_id = es_id, label = es_label, p = if (pvalue == "metaUI_input_p") NULL else pvalue,
       N = if (sample_size == "metaUI_input_N") NULL else sample_size, filters = filters, counts = counts,

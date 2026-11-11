@@ -383,6 +383,18 @@
         {
           "required": [
             "es_field"
+          ],
+          "anyOf": [
+            {
+              "required": [
+                "variance"
+              ]
+            },
+            {
+              "required": [
+                "se"
+              ]
+            }
           ]
         },
         {
@@ -515,6 +527,18 @@
                 "const": "log"
               }
             }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "double_zero"
+            ]
+          },
+          "then": {
+            "required": [
+              "counts"
+            ]
           }
         }
       ]

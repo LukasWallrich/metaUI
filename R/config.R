@@ -67,7 +67,7 @@ build_app <- function(config, overwrite = FALSE) {
     stop("Mapping requires study_label, es_type, and es_field or counts")
   # A counts object, such as {"ai": "a", "n1i": "n1", ...}, becomes the named vector prepare_data() expects.
   if (!is.null(mapping$counts)) {
-    if (!is.list(mapping$counts) || is.null(names(mapping$counts)) || !all(vapply(mapping$counts, function(x) is.character(x) && length(x) == 1L, logical(1))))
+    if (!(is.list(mapping$counts) || is.character(mapping$counts)) || is.null(names(mapping$counts)) || !all(vapply(mapping$counts, function(x) is.character(x) && length(x) == 1L, logical(1))))
       stop("counts must be an object mapping ai, ci and n1i, n2i (or bi, di) to column names")
     mapping$counts <- unlist(mapping$counts)
   }

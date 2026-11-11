@@ -23,6 +23,10 @@ test_that("counts give metafor::escalc's log ratios, including its correction fo
     expect_equal(d$metaUI__variance, as.numeric(e$vi), tolerance = 1e-12)
     expect_equal(d$metaUI__display_scale[1], measure)
     expect_true(all(c("metaUI__ai", "metaUI__bi", "metaUI__ci", "metaUI__di") %in% names(d)))
+    # The report names the user's count columns, not internal ones.
+    mapping <- attr(d, "metaUI_validation")$mapping
+    expect_null(mapping$effect); expect_null(mapping$variance)
+    expect_equal(unname(mapping$counts), unname(bcg_counts))
   }
   # Group totals instead of non-events; a zero cell gets 0.5 added to every cell, as in metafor.
   x <- data.frame(id = 1:3, e1 = c(0, 4, 10), n1 = c(20, 30, 40), e2 = c(3, 0, 12), n2 = c(25, 30, 40))
@@ -192,6 +196,11 @@ test_that("a JSON configuration can map 2x2 counts", {
   built <- readRDS(file.path(root, "app", "dataset.rds"))
   expect_equal(built$metaUI__effect_size, bcg_prepared("RR")$metaUI__effect_size)
   expect_identical(attr(built, "metaUI_validation")$mapping$double_zero, "exclude")
+  # An R list may give counts as a named character vector, as prepare_data() does.
+  listed <- config; listed$data <- file.path(root, "bcg.csv"); listed$output <- file.path(root, "app2")
+  listed$mapping$counts <- c(ai = "tpos", bi = "tneg", ci = "cpos", di = "cneg")
+  suppressMessages(build_app(listed))
+  expect_true(file.exists(file.path(root, "app2", "dataset.rds")))
   config$schema_version <- 1; jsonlite::write_json(config, path, auto_unbox = TRUE)
   expect_error(build_app(path, overwrite = TRUE), "schema_version 2")
   config$schema_version <- 2; config$mapping$counts <- NULL; jsonlite::write_json(config, path, auto_unbox = TRUE)

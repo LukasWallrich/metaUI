@@ -349,6 +349,7 @@ tfoot.metaui-phone-axis { display: none; }
 .metaui-estimates .metaui-k { padding-right: 4px; }
 .metaui-estimates td.metaui-unit { padding-left: 0; color: var(--metaui-slate); }
 .metaui-note-mark { color: var(--metaui-attention); font-weight: 600; margin-left: 1px; }
+.metaui-note.metaui-clipped-note { color: var(--metaui-attention); }
 .metaui-warnings { margin: 0 0 10px; padding-left: 1.2em; font-size: .875rem; line-height: 1.4; color: var(--metaui-attention); max-width: 80ch; }
 .metaui-forest-scale td { border-bottom-color: transparent !important; padding-top: 6px !important; padding-bottom: 2px !important; }
 .metaui-row-note { display: block; font-size: .8125rem; font-weight: 400; color: var(--metaui-attention); line-height: 1.3; margin-top: 2px; }
