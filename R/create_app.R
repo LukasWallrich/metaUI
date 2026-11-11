@@ -228,7 +228,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   if (!is.null(study_info)) study_info <- validate_study_info(study_info, dataset)
 
   if (is.na(eff_size_type_label)) {
-    eff_size_type_label <- if (dataset$metaUI__es_type[1] == "ZCOR") "Correlation r" else dataset$metaUI__es_type[1]
+    eff_size_type_label <- switch(dataset$metaUI__es_type[1], ZCOR = "Correlation r", OR = "Odds ratio", RR = "Risk ratio", dataset$metaUI__es_type[1])
   }
 
   models_from_function <- models
@@ -280,7 +280,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     latency = "Default cap 20 studies. Approximate benchmark: 20 seconds at 20 studies, 97 at 50. Each Update results blocks the server process while fitting; sensitivity/downloads can need two extra fits. Hard author override limit 50.",
     tau_prior = "Half-normal on fitting scale", interval = "95% central credible interval; posterior median",
     sensitivity = "Half and double tau_scale", aggregation = paste("GLS study-level average, within-study correlation", correlation),
-    rationale = "Default scale is unit-information SD / 4: 0.5 for SMD, 0.25 for Fisher z. An author choice, examined with sensitivity analysis.",
+    rationale = "Default scale is unit-information SD / 4: 0.5 for SMD and for log odds and risk ratios, 0.25 for Fisher z. An author choice, examined with sensitivity analysis.",
     reference = "https://doi.org/10.1002/jrsm.1475"))
   report$performance <- list(fit_cache_entries = opts$fit_cache_entries,
     note = "Session-local exact data/model/config keys; cached warnings/failures and original fit times retained. Custom models default to no cache. Hidden outputs remain suspended by Shiny.")
@@ -373,11 +373,11 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
   file.copy(system.file("COPYRIGHTS", package = "metaUI"), file.path(save_to_folder, "COPYRIGHTS"), overwrite = TRUE)
   # Could consider keeping all labels in this file - but then ui.R needs less readable glue::glue syntax
-  writeLines(labels_and_options(dataset_name, correlation, primary_model, bayesian = !is.null(bayesian), correlations = identical(dataset$metaUI__es_type[1], "ZCOR"), custom_models = !package_models,
+  writeLines(labels_and_options(dataset_name, correlation, primary_model, bayesian = !is.null(bayesian), scale = dataset$metaUI__es_type[1], custom_models = !package_models,
     model_descriptions = { custom <- models_to_run[!models_to_run$name %in% opts$known_interval_models, , drop = FALSE]
       stats::setNames(if ("description" %in% names(custom)) as.character(custom$description) else rep(NA_character_, nrow(custom)), custom$name) },
     effects = nrow(dataset), studies = length(unique(dataset$metaUI__study_id)),
-    strip = metaUI_effects_strip(metaUI_show(dataset$metaUI__effect_size, dataset), eff_size_type_label),
+    strip = metaUI_effects_strip(metaUI_show(dataset$metaUI__effect_size, dataset), eff_size_type_label, metaUI_scale(dataset$metaUI__es_type[1])$ratio),
     citation = if (is.null(about_args$citation)) "" else as.character(about_args$citation), intro = if (is.null(opts$intro)) "" else as.character(opts$intro)), file.path(save_to_folder, "labels_and_options.R"))
   writeLines(ui, file.path(save_to_folder, "ui.R"))
   writeLines(server, file.path(save_to_folder, "server.R"))
