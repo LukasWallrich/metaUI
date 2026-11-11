@@ -204,3 +204,41 @@ test_that("one effect per study: one random-effects model replaces multilevel an
   table <- metaUI:::metaUI_fit_models(d, get_model_tibble()[1:2, ])$table
   expect_match(metaUI:::metaUI_estimates_html(table, independent = TRUE), "differs mainly in using a robust standard error", fixed = TRUE)
 })
+
+test_that("ordered moderators are estimated per level with treatment coding", {
+  skip_without_app_packages()
+  x <- fixture(); x$dose <- factor(rep(c("low", "mid", "high"), length.out = 16), levels = c("low", "mid", "high"))
+  plain <- prepared(x, filters = c(Dose = "dose"))
+  ordered <- plain; ordered$metaUI__filter_Dose <- factor(ordered$metaUI__filter_Dose, ordered = TRUE)
+  a <- metaUI:::metaUI_moderator_fit(plain, "metaUI__filter_Dose")
+  b <- metaUI:::metaUI_moderator_fit(ordered, "metaUI__filter_Dose")
+  la <- metaUI:::metaUI_moderator_levels(a$model, c("low", "mid", "high"))
+  lb <- metaUI:::metaUI_moderator_levels(b$model, c("low", "mid", "high"))
+  expect_equal(lb$b, la$b, tolerance = 1e-8)
+  expect_equal(lb$ci.lb, la$ci.lb, tolerance = 1e-8)
+})
+
+test_that("an app built for one effect per study refuses uploads with several effects in a study", {
+  skip_without_app_packages()
+  root <- tempfile(); on.exit(unlink(root, recursive = TRUE))
+  set.seed(3); x <- data.frame(study = paste0("S", 1:8), yi = rnorm(8, .3, .2), vi = runif(8, .01, .05))
+  d <- prepare_data(x, "study", "yi", variance = "vi")
+  suppressMessages(generate_shiny(d, "Independent upload", save_to_folder = root, launch_app = FALSE))
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
+    sheets <- data_list()
+    valid <- tempfile(fileext = ".xlsx"); on.exit(unlink(valid), add = TRUE)
+    writexl::write_xlsx(sheets, valid)
+    session$setInputs(uploadData = list(datapath = valid, name = "same.xlsx"), executeUpload = 1)
+    expect_false(is.null(state_values$uploaded_data))
+    state_values$uploaded_data <- NULL
+    sheets$dataset$metaUI__study_id[2] <- sheets$dataset$metaUI__study_id[1]
+    sheets$dataset$metaUI__effect_id[2] <- "2"
+    file <- tempfile(fileext = ".xlsx"); on.exit(unlink(file), add = TRUE)
+    writexl::write_xlsx(sheets, file)
+    session$setInputs(uploadData = list(datapath = file, name = "dependent.xlsx"), executeUpload = 1)
+    expect_null(state_values$uploaded_data)
+  })
+})

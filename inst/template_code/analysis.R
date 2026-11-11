@@ -738,7 +738,9 @@ metaUI_moderator_code <- function(code, mods, control = NULL) {
 # primary: list(name, code) of the authors' primary model, or NULL. Returns the fitted model
 # (robust where possible), which model it extends, and whether inference is cluster-robust.
 metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6) {
-  if (is.factor(df[[moderator]])) df[[moderator]] <- droplevels(df[[moderator]])
+  # Treatment coding, as metaUI_moderator_levels() assumes: an ordered factor would otherwise get
+  # polynomial contrasts. The level order is kept.
+  if (is.factor(df[[moderator]])) df[[moderator]] <- factor(droplevels(df[[moderator]]), ordered = FALSE)
   mods <- stats::as.formula(paste0("~`", moderator, "`"))
   env <- new.env(parent = environment(metaUI_moderator_fit))
   env$df <- df

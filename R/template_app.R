@@ -1728,6 +1728,12 @@ glue_string <- ('
       if (!all(c("dataset", "filters") %in% sheets)) stop("The workbook needs the dataset and filters sheets of a workbook downloaded from this app.", call. = FALSE)
       df <- readxl::read_xlsx(input$uploadData$datapath, "dataset")
       df <- metaUI_validate_upload(df, metaUI__df)
+      # An app built for one effect per study fits a model that treats effects as independent.
+      if (any(models_to_run$code == metaUI_code_random) && anyDuplicated(df$metaUI__study_id)) {
+        study <- df$metaUI__study_id[anyDuplicated(df$metaUI__study_id)]
+        stop("This app was built for one effect per study, and its random-effects model treats effects as independent, but study \\"", study,
+          "\\" has several. Give each effect its own study, or rebuild the app with generate_shiny() to use models for dependent effects.", call. = FALSE)
+      }
       new_levels <- list()
       <FILTER>
       for (i in filters) {
