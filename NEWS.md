@@ -267,6 +267,7 @@ This release consolidates all changes since 0.1.1, including the unreleased
 
 ## Bug fixes
 
+* Moderator tests use model-based standard errors, and say so, when a selection has no more studies than the model has coefficients. Cluster-robust (CR2) standard errors are not defined there, and some intervals came out as NaN.
 * Corrected the random-intercept specification in `rma.mv()` (now with
   `sparse = TRUE`), REML heterogeneity output, and Egger residual variance.
   Meaningless multilevel tau² is no longer shown; singleton-study variance splits
@@ -286,6 +287,8 @@ This release consolidates all changes since 0.1.1, including the unreleased
 
 ## Performance
 
+* The default multilevel model (and the default moderator model) uses sparse matrices only above 250 effects. Smaller fits were 2–10 times faster with dense matrices, on the server and in the browser; large fits stay sparse (20 times faster at 2,600 effects). Estimates are unchanged.
+* Generated apps set BLAS to one thread when `RhpcBLASctl` is installed on the server. A multithreaded BLAS such as OpenBLAS slowed a small model fit about 60-fold (8.3 s against 0.14 s) when other processes shared the cores. Static exports are unaffected.
 * P-curve deduplicates identical noncentrality solves without changing results.
 * Compatible multilevel/RVE fits are reused across diagnostics, and a session-local
   three-entry cache speeds repeated selections. Custom models default to no

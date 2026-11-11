@@ -49,6 +49,7 @@ Suggests:
     puniform,
     ragg,
     readxl,
+    RhpcBLASctl,
     rmarkdown,
     robumeta,
     shinycssloaders,

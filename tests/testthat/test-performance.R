@@ -126,3 +126,56 @@ test_that("uploads take new rows and IDs, and explain invalid cells by row", {
   expect_true(all(c("metaUI__effect_size", "metaUI__variance", "metaUI__se", "metaUI__es_z") %in% roles$column[roles$role == "Derived"]))
   expect_identical(names(metaUI:::metaUI_workbook_dataset(upload, d))[1], "metaUI__study_id")
 })
+
+test_that("the multilevel model uses dense matrices for small data and sparse ones for large data", {
+  small <- prepare_data(data.frame(study = rep(1:6, each = 2), id = rep(1:2, 6), yi = c(.1, .3, .2, .5, .0, .2, .4, .3, .1, .2, .6, .4), vi = .02),
+    "study", "yi", variance = "vi", es_id = "id")
+  expect_false(metaUI:::metaUI_multilevel_fit(small)$sparse)
+  set.seed(2)
+  large <- data.frame(study = rep(1:130, each = 2), id = rep(1:2, 130), yi = stats::rnorm(260, .2, .2), vi = .02)
+  large <- prepare_data(large, "study", "yi", variance = "vi", es_id = "id")
+  fit <- metaUI:::metaUI_multilevel_fit(large)
+  expect_true(fit$sparse)
+  # The switch sits at 250 effects: dense at 250, sparse at 251.
+  expect_false(metaUI:::metaUI_multilevel_fit(large[1:250, ])$sparse)
+  expect_true(metaUI:::metaUI_multilevel_fit(large[1:251, ])$sparse)
+  # Same estimates either way.
+  dense <- metafor::rma.mv(large$metaUI__effect_size, V = large$metaUI__variance, random = ~ 1 | metaUI__study_id/metaUI__effect_id,
+    data = large, test = "t", dfs = "contain", method = "REML", sparse = FALSE)
+  expect_equal(c(fit$b, fit$sigma2), c(dense$b, dense$sigma2), tolerance = 1e-6)
+})
+
+test_that("generated apps run BLAS on one thread where they can, without naming the package for static exports", {
+  global <- metaUI:::generate_global.R("Effect size")
+  expect_true(is.expression(parse(text = global)))
+  expect_match(global, "getExportedValue(blas_control, \"blas_set_num_threads\")(1)", fixed = TRUE)
+  expect_false(grepl("RhpcBLASctl::", global, fixed = TRUE))
+})
+
+test_that("moderator fits use model-based standard errors when there are too few studies for cluster-robust ones", {
+  skip_if_not_installed("clubSandwich")
+  x <- fixture(); x$year <- 2001:2016; x$group <- factor(rep(paste0("G", 1:8), each = 2))
+  d <- prepared(x, filters = c(Year = "year", Group = "group"))
+  # Two studies and two coefficients: the CR2 covariance is singular.
+  small <- d[d$metaUI__study_id %in% c("A", "B"), ]
+  for (moderator in c("metaUI__filter_Year", "metaUI__filter_Group")) {
+    fitted <- metaUI:::metaUI_moderator_fit(small, moderator)
+    expect_false(fitted$robust)
+    expect_true(all(is.finite(fitted$model$se)))
+  }
+  expect_true(metaUI:::metaUI_moderator_fit(d, "metaUI__filter_Year")$robust)
+  # Single-study categories keep robust inference for the other categories (3/3/1/1 studies).
+  x$group <- factor(rep(c("G1", "G1", "G1", "G2", "G2", "G2", "G3", "G4"), each = 2))
+  d <- prepared(x, filters = c(Group = "group"))
+  expect_true(metaUI:::metaUI_moderator_fit(d, "metaUI__filter_Group")$robust)
+})
+
+test_that("precomputing restores the author's BLAS threads after the app's global.R sets one", {
+  skip_if_not_installed("RhpcBLASctl")
+  before <- RhpcBLASctl::blas_get_num_procs()
+  on.exit(RhpcBLASctl::blas_set_num_threads(before), add = TRUE)
+  restore <- metaUI:::metaUI_blas_restorer()
+  RhpcBLASctl::blas_set_num_threads(1)
+  restore()
+  expect_equal(RhpcBLASctl::blas_get_num_procs(), before)
+})

@@ -715,7 +715,7 @@ metaUI_call_name <- function(e) {
 }
 
 metaUI_default_moderator_call <- quote(metafor::rma.mv(metaUI__effect_size, V = metaUI__variance,
-  random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df, test = "t", dfs = "contain", method = "REML", sparse = TRUE))
+  random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df, test = "t", dfs = "contain", method = "REML", sparse = nrow(df) > 250))
 
 # Model code with the moderator added to its one rma.mv call (a final robust() is dropped, as
 # robust inference is added afterwards); NULL when the code has no single such call to extend.
@@ -798,6 +798,14 @@ metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6
   # The cheap robust() Wald test only fills the object's slots until it is replaced.
   robust <- tryCatch(suppressWarnings(metafor::robust(model, cluster = df$metaUI__study_id, clubSandwich = TRUE, wald_test = "Naive-Fp")),
     error = function(e) NULL)
+  # CR2 needs more studies than coefficients; with fewer its covariance is singular, and some intervals
+  # come out NaN or meaninglessly narrow. The model-based covariance is then used, and the tab says so.
+  # For a numeric moderator the CR2 covariance must also be nonsingular, judged on the correlation scale so
+  # that coefficients on large scales (years) do not count. Categorical moderators are left to the handling
+  # of single-study categories below, whose zero robust variances make the full covariance singular.
+  valid <- function(v) all(is.finite(v)) && all(diag(v) > 0) &&
+    { e <- eigen(stats::cov2cor(v), symmetric = TRUE, only.values = TRUE)$values; min(e) > max(e) * 1e-10 }
+  if (!is.null(robust) && (length(unique(df$metaUI__study_id[model$not.na])) <= NCOL(model$X) || (!categorical && !valid(robust$vb)))) robust <- NULL
   if (is.null(robust)) {
     levels <- if (categorical) cbind(metaUI_moderator_levels(model, levels(df[[moderator]])), df = NA_real_, studies = unname(studies))
     return(list(model = model, working = working, method = "model", robust = FALSE, omnibus = TRUE, reason = NULL, levels = levels))
@@ -821,7 +829,8 @@ metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6
       if (length(multi) < length(studies)) constraints <- L[multi[-1L], , drop = FALSE] - L[rep(multi[1L], length(multi) - 1L), , drop = FALSE]
   }
   if (is.null(reason) && !is.null(vcov)) {
-    test <- if (is.null(model$W)) tryCatch(metaUI_moderator_omnibus(model, cluster, constraints = constraints, vcov = vcov), error = function(e) NULL) else {
+    # With very few studies the CR2 pieces can be NaN; the test is then dropped (non-finite p) without console noise.
+    test <- if (is.null(model$W)) tryCatch(suppressWarnings(metaUI_moderator_omnibus(model, cluster, constraints = constraints, vcov = vcov)), error = function(e) NULL) else {
       # Custom weights (an author's W): the fast route assumes inverse-variance weights, so clubSandwich's own
       # HTZ test is used where its q x q x studies x studies array stays small (about 70 MB at most).
       if (q * length(unique(cluster)) <= 3000L) tryCatch({
@@ -995,11 +1004,13 @@ metaUI_puni_star_interval <- function(mod, df, level = .90, alpha = .05) {
 }
 
 # Containment degrees of freedom: t tests count studies rather than effects, so that many effects
-# from few studies do not narrow the interval.
+# from few studies do not narrow the interval. Sparse matrices pay off only for larger data: up to
+# about 250 effects, dense fits were 2 to 10 times faster (native R and webR); at 2,600 effects,
+# sparse fits were 20 times faster. Estimates agree to 1e-9.
 metaUI_multilevel_fit <- function(df) {
   metafor::rma.mv(df$metaUI__effect_size, V = df$metaUI__variance,
     random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df,
-    test = "t", dfs = "contain", method = "REML", sparse = TRUE)
+    test = "t", dfs = "contain", method = "REML", sparse = nrow(df) > 250)
 }
 
 # The within-study correlation is the one declared for the app (metaUI_fit_models attaches it), .6 if none.
