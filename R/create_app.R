@@ -63,8 +63,10 @@ metaUI_exclusions_html <- function(report) {
   if (is.null(dropped) || !NROW(dropped)) return("")
   plain <- c("missing study ID" = "no study ID", "nonfinite effect" = "no effect size", "invalid variance" = "no valid variance",
     "invalid SE" = "no valid standard error", "COR outside (-1, 1)" = "a correlation outside \u22121 to 1",
-    "missing mapped or other input" = "a missing value in a mapped column")
-  reasons <- unlist(strsplit(as.character(dropped$reason), "; ", fixed = TRUE))
+    "missing filter, p-value or N" = "a missing filter value, p-value or N",
+    "no events (or only events) in both groups (double_zero = \"exclude\")" = "no events, or only events, in both groups")
+  # One reason per effect, the first and most basic (missing counts rather than the effect computed from them).
+  reasons <- sub("; .*$", "", as.character(dropped$reason))
   shown <- ifelse(reasons %in% names(plain), plain[reasons], reasons)
   counts <- table(factor(shown, levels = unique(shown)))
   number <- function(x) format(x, big.mark = ",")

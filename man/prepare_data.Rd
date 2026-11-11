@@ -27,7 +27,7 @@ prepare_data(
   alternatives = list(),
   primary_label = "As supplied",
   counts = NULL,
-  double_zero = c("keep", "exclude")
+  double_zero = c("exclude", "keep")
 )
 }
 \arguments{
@@ -86,11 +86,12 @@ Without \code{sample_size}, N is the total of the four cells; with it, N is chec
 rows that differ are named in a warning (N may legitimately count, say, everyone randomised).}
 
 \item{double_zero}{For \code{counts} only: what to do with tables that have no events in either group, or only
-events (a "double-zero" table, \code{ai = ci = 0} or \code{bi = di = 0}). \code{"keep"} (the default, as in
-\code{\link[metafor:escalc]{metafor::escalc()}}) adds 0.5 to every cell of such a table. A table without events then gives a ratio set
-mainly by the group sizes, with a large variance; for risk ratios, a table with events in everyone gives a
-ratio near 1 whose variance can be small. \code{"exclude"} leaves both kinds out with a reason, as
-\code{escalc(drop00 = TRUE)} does. The app's Methods state the choice.}
+events (a "double-zero" table, \code{ai = ci = 0} or \code{bi = di = 0}). \code{"exclude"} (the default, following the Cochrane
+Handbook for odds and risk ratios) leaves both kinds out with a reason, as \code{escalc(drop00 = TRUE)}
+does: such tables carry essentially no information about the ratio. \code{"keep"} (metafor's default) adds 0.5
+to every cell of such a table instead. A table without events then gives a ratio set mainly by the group
+sizes, and with unequal groups this can pull the pooled estimate; for risk ratios, a table with events in
+everyone gives a ratio near 1 whose variance can be small. The app's Methods state the choice and the count.}
 }
 \value{
 tibble with the data from the file/input reformatted for metaUI
