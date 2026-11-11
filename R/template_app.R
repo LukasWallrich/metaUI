@@ -78,7 +78,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
 metaUI_default_model_help <- function(random_default = FALSE, bayesian = FALSE) {
   bayes <- if (bayesian) " The Bayesian model also uses one combined effect per study, to estimate the average effect under a stated prior." else ""
   if (random_default) return(paste0("<p>The models make different assumptions, so their estimates need not agree. The first estimates the average effect from every selected effect. ",
-    "The others explore possible publication or reporting bias, each in its own way.", bayes, " Each entry gives the question first, then the specification.</p><dl>",
+    "The bias analyses explore possible publication or reporting bias, each in its own way.", bayes, " Each entry gives the question first, then the specification.</p><dl>",
     "<dt>Random-Effects Model</dt><dd>What is the average effect, if true effects differ between studies? Each study contributes one effect. ",
     "<span class='metaui-spec'>metafor::rma.uni, REML; Hartung-Knapp interval (a <i>t</i> distribution with <i>k</i> &minus; 1 degrees of freedom and an adjusted standard error).</span></dd>"))
   paste0("<p>The models make different assumptions, so their estimates need not agree. The first two estimate the average effect from every selected effect. ",
