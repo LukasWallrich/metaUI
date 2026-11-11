@@ -1625,7 +1625,9 @@ glue_string <- ('
       if (round(top$change, digits + 1L) > 0) "+" else "", metaUI_minus(formatC(top$change, format = "f", digits = digits + 1L)), ".")
     significance <- sum(table$significance_changes)
     reading <- paste(reading, if (!is.finite(full[["LCL"]])) "" else if (!significance) paste0("No single study changes whether the 95% CI ", if (excludes) "excludes" else "includes", " 0.") else
-      paste0("Leaving out ", if (significance == 1L) "<b>one</b> study" else paste0("<b>", significance, "</b> studies"), " (each on its own) makes the 95% CI ", if (excludes) "include" else "exclude", " 0: marked below."))
+      paste0("Leaving out ", if (significance == 1L) "<b>one</b> study" else paste0("<b>", significance, "</b> studies"), " (each on its own) makes the 95% CI ", if (excludes) "include" else "exclude", " 0: marked below.",
+        # Benchmarks: with variances held fixed, marks for intervals ending near 0 sometimes differ from refits.
+        if (!result$refit) " Marks for intervals that end close to 0 can change when the model is refitted." else ""))
     if (!is.null(bound)) {
       crossing <- sum(table$crosses_bound)
       reading <- paste(reading, if (!crossing) paste0("No single study moves the estimate across &plusmn;", format(bound), ".") else
@@ -1655,7 +1657,7 @@ glue_string <- ('
           if (!is.null(bound)) "The shaded band is your smallest effect size of interest." else ""),
         tags$p(HTML(paste0("Without a refit, the variances between and within studies are held at their estimates from all studies, and the average and its interval are recomputed exactly for the remaining studies (weighted least squares with those variances). ",
           "A full refit would also re-estimate these variances. With many studies the two agree closely; with few, a refit can move the estimate and its interval further, so quick refits run automatically."))),
-        tags$p("Marks: the 95% CI now includes (or excludes) 0, when the CI of the full selection excludes (or includes) it; and, with a smallest effect size of interest, the estimate itself moves across that bound. These are descriptive checks of single studies, not tests.")))
+        tags$p("Marks: the 95% CI now includes (or excludes) 0, when the CI of the full selection excludes (or includes) it; and, with a smallest effect size of interest, the estimate itself moves across that bound. These are descriptive checks of single studies, not tests. Without a refit, a mark for an interval that ends close to 0 can differ from what a refit would show.")))
   })
   output$loo_csv <- downloadHandler(filename = function() download_name("leave-one-study-out.csv"), content = function(file) {
     result <- loo_result()
