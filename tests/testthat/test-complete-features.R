@@ -112,31 +112,6 @@ test_that("Bayesian grid posterior agrees with an independent adaptive integrati
   expect_true(all(sensitivity$status=="ok"))
 })
 
-# Optional comparison with bayesmeta, which earlier versions used. Not needed for accuracy (the test
-# above is); it shows that results agree with the previous implementation within bayesmeta's own error.
-test_that("Bayesian grid posterior agrees with bayesmeta (previous implementation)", {
-  skip_if_not_installed("bayesmeta")
-  cases <- list(
-    list(y = c(.1, .5), sigma = c(.2, .3), s = .5),
-    list(y = c(.3, .1, .9, -.4, .2), sigma = c(.01, .1, .3, 1, .05), s = .5),   # SE ratio 1:100
-    list(y = c(.2, .25, .22, 1.8, .19, .3), sigma = rep(.1, 6), s = .025),     # outlier, prior far below the data
-    list(y = c(.21, .19, .2, .2), sigma = c(.05, .08, .1, .06), s = 5))        # no heterogeneity, very wide prior
-  for (case in cases) {
-    df <- data.frame(metaUI__effect_size = case$y, metaUI__se = case$sigma, metaUI__study_id = seq_along(case$y))
-    grid <- metaUI:::metaUI_bayesian_fit(df, case$s)
-    ref <- bayesmeta::bayesmeta(y = case$y, sigma = case$sigma, interval.type = "central",
-      tau.prior = function(t) bayesmeta::dhalfnormal(t, scale = case$s))
-    p <- c(.025, .05, .5, .95, .975)
-    sd_mu <- ref$summary["sd", "mu"]; sd_tau <- ref$summary["sd", "tau"]
-    # bayesmeta approximates the mean's posterior by a coarser mixture (delta = .01), accurate to
-    # about .002 posterior SDs; the grid is closer to adaptive integration (see the test above and
-    # validation/bayesian-grid.md), so the tolerance is bayesmeta's.
-    expect_lt(max(abs(grid$qposterior(mu.p = p) - ref$qposterior(mu.p = p))) / sd_mu, 5e-3)
-    expect_lt(abs(grid$summary["mean", "mu"] - ref$summary["mean", "mu"]) / sd_mu, 5e-3)
-    expect_lt(max(abs(grid$qposterior(tau.p = c(.025, .5, .975)) - ref$qposterior(tau.p = c(.025, .5, .975)))) / sd_tau, 1e-3)
-  }
-})
-
 test_that("standalone alternative results and download provenance survive restoration timeout", {
   path <- tempfile(); on.exit(unlink(path,recursive=TRUE))
   x <- fixture();x$alt <- x$yi*.9;x$year <- rep(2001:2008,each=2)
