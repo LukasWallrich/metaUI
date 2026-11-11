@@ -452,7 +452,9 @@ metaUI_reader_warnings <- function(warnings, failed = FALSE) {
 
 # Reader table of model estimates: one row per model, every model named, with reasons
 # where a model was not estimated. Downloads keep the full table.
-metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect size", bound = NULL, studies = NA) {
+# independent: every study contributes one effect, so effect-level and study-level models use the
+# same data and the multilevel model is the standard random-effects model.
+metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect size", bound = NULL, studies = NA, independent = FALSE) {
   digits <- metaUI_digits(table$LCL[table$status == "ok"], table$UCL[table$status == "ok"])
   fmt <- function(x) if (is.na(x)) "" else metaUI_minus(formatC(x, format = "f", digits = digits))
   esc <- function(x) htmltools::htmlEscape(as.character(x))
@@ -474,22 +476,23 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     row <- table[i, ]
     ok <- row$status == "ok"
     # The footnote mark follows the name, so that it cannot wrap onto a line of its own.
-    label <- paste0(esc(row$Model), if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"), if (i %in% first) paste0(' <span class="metaui-primary-tag">primary, ', if (row$aggregated) "study-level" else "effect-level", " fit</span>"),
+    label <- paste0(esc(row$Model), if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"), if (i %in% first) paste0(' <span class="metaui-primary-tag">primary', if (!independent) paste0(", ", if (row$aggregated) "study-level" else "effect-level", " fit"), "</span>"),
       # Confidence intervals need no note; only the rows that differ from them do.
       if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"),
-      if (ok && i %in% pet_peese) '<span class="metaui-row-note">PET-PEESE estimate</span>')
+      if (ok && i %in% pet_peese) '<span class="metaui-row-note">PET-PEESE estimate</span>',
+      if (independent && row$Model == "Random-Effects Multilevel Model") '<span class="metaui-row-note">the standard random-effects model, as each study has one effect</span>')
     # A row that is not estimated shows no numbers, even where an unreliable fit left some.
     interval <- if (!ok || (is.na(row$LCL) && is.na(row$UCL))) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
     # Effect-level rows all count the effects they use: RVE reports its studies, which would read
     # as a different sample beside the multilevel rows. Downloads keep each model's own k.
-    effect_level <- ok && !isTRUE(row$aggregated) && "input_rows" %in% names(row) && !is.na(row$k)
+    effect_level <- ok && !independent && !isTRUE(row$aggregated) && "input_rows" %in% names(row) && !is.na(row$k)
     unit <- if (!ok) "" else if (effect_level) "effects" else metaUI_count_unit(row, studies)
     k_shown <- if (!ok || is.na(row$k)) "" else format(if (effect_level) row$input_rows else row$k, big.mark = ",")
     track <- if (ok && i %in% clipped) paste0('<td class="metaui-track-cell">', metaUI_track_clipped(scale, row$es, row$LCL, row$UCL, bound, ref), "</td>")
       else if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = TRUE), "</td>")
       else paste0('<td class="metaui-reason-cell"><b>', "Not estimated:</b> ", esc(metaUI_reader_reason(row$reason, row$warnings)), "</td>")
     position <- match(i, order)
-    opens_group <- !(i %in% first) && (position == length(first) + 1L || table$aggregated[order[position - 1L]] != row$aggregated)
+    opens_group <- !independent && !(i %in% first) && (position == length(first) + 1L || table$aggregated[order[position - 1L]] != row$aggregated)
     # Methods explains the two levels; the headings stay short enough for one line on phones.
     level <- if (row$aggregated) "study-level estimators" else "effect-level estimators"
     group <- if (opens_group) paste0('<tr class="metaui-group-row"><td colspan="5">',
@@ -503,7 +506,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Other estimators answer different questions and are not interchangeable with the primary analysis.',
     if (!is.null(ref)) paste0(" Each diamond spans a model\u2019s ", interval_head, "; the dashed line marks the primary estimate."),
     if (any(grepl("trim", table$Model, ignore.case = TRUE))) " The trim-and-fill count includes imputed studies.", "</p>")
-  if (length(clipped)) others <- paste0(others, '<p class="metaui-note metaui-clipped-note">', if (length(clipped) == 1L) paste0("The interval of ", esc(table$Model[clipped]), " is far wider than the others and runs beyond the axis, which an arrow at the edge marks; its numbers are in the table.")
+  if (length(clipped)) others <- paste0(others, '<p class="metaui-note metaui-clipped-note" role="note">', if (length(clipped) == 1L) paste0("The interval of ", esc(table$Model[clipped]), " is far wider than the others and runs beyond the axis, which an arrow at the edge marks; its numbers are in the table.")
     else paste0("The intervals of ", paste(esc(table$Model[clipped]), collapse = " and "), " are far wider than the others and run beyond the axis, which arrows at the edge mark; their numbers are in the table."), "</p>")
   pet_p <- if (length(pet_peese)) stats::na.omit(table$pet_intercept_p)[1] else NA_real_
   bias <- c(if (length(pet_peese)) paste0("PET-PEESE estimate: the conditional rule reports PEESE when PET\u2019s intercept differs from zero (<i>p</i> &lt; .10), PET otherwise; here <i>p</i> ",

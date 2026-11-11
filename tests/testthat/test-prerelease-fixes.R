@@ -170,3 +170,13 @@ test_that("an interval far wider than the rest is clipped with an arrow, never t
   table$LCL[1] <- -20; table$UCL[1] <- 20
   expect_identical(metaUI:::metaUI_clipped_rows(table, 1L), integer())
 })
+
+test_that("with one effect per study the table drops the effect/study-level split", {
+  table <- data.frame(Model = c("Random-Effects Multilevel Model", "Trim-and-fill"), es = c(.3, .25), LCL = c(.1, .05), UCL = c(.5, .45),
+    k = 10, input_rows = 10, status = "ok", reason = "", warnings = "", aggregated = c(FALSE, TRUE), interval_type = "Confidence interval")
+  html <- metaUI:::metaUI_estimates_html(table, 1L, independent = TRUE)
+  expect_no_match(html, "metaui-group-row", fixed = TRUE)
+  expect_match(html, '<span class="metaui-primary-tag">primary</span>', fixed = TRUE)
+  expect_match(html, "the standard random-effects model, as each study has one effect", fixed = TRUE)
+  expect_match(metaUI:::metaUI_estimates_html(table, 1L), "effect-level fit", fixed = TRUE)
+})

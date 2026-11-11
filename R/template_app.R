@@ -842,7 +842,11 @@ glue_string <- ('
       "the Hedges-Vevea selection model and p-curve) are reported as unsupported rather than guessed.") else
       paste0("Direction the authors expected: ", direction, ". Direction-dependent methods (p-uniform*, the Hedges-Vevea selection model, p-curve) analyze effects in that direction",
         if (direction == "negative") "; their inputs are sign-flipped for fitting and their estimates flipped back for display" else "", ". PET-PEESE tests PET\'s intercept one-sided in that direction. Other models are two-sided.")
-    dependence_text <- paste0("Effects from the same study are assumed to correlate at ", correlation_dependent, ". ",
+    # With one effect per study there is no within-study dependence to describe.
+    dependence_text <- if (!anyDuplicated(df_filtered()$metaUI__study_id)) paste("In this selection every study contributes one effect, and studies are assumed independent.",
+        "Effect-level and study-level models therefore use the same data, and the multilevel model is the standard random-effects model (REML).",
+        "Its interval uses a t distribution with k \\u2212 1 degrees of freedom; trim-and-fill uses the Hartung-Knapp adjustment, so their intervals can differ slightly.") else
+      paste0("Effects from the same study are assumed to correlate at ", correlation_dependent, ". ",
       if (aggregation_method[1] == "first") "Study-level models use only the first selected effect from each study; RVE uses the correlation for its weights." else
       "Study-level models use it to combine the effects within each study (GLS average), and RVE for its weights.",
       " Effect-level models (by default multilevel and RVE) use every selected effect. Studies are assumed independent.")
@@ -858,7 +862,7 @@ glue_string <- ('
     metaUI_estimates_html(table, primary_index(table),
       axis_title = metaUI_eff_size_type_label,
       bound = tryCatch(chosen_bound(), error = function(e) NULL),
-      studies = length(unique(df_filtered()$metaUI__study_id)))
+      studies = length(unique(df_filtered()$metaUI__study_id)), independent = !anyDuplicated(df_filtered()$metaUI__study_id))
   })
 
 
