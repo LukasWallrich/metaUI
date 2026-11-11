@@ -14,3 +14,8 @@ tests/testthat/_problems/
 # shinylive exploration: exported static site (rebuild with export_static())
 work/shinylive/site/
 work/shinylive/*.log
+
+# Bayesian grid validation outputs (rebuild with validation/bayesian-grid/run-all.sh)
+validation/bayesian-grid/results/
+validation/bayesian-grid/*.log
+validation/bayesian-grid/*.rds

@@ -80,6 +80,12 @@ test_that("Bayesian grid posterior agrees with an independent adaptive integrati
     expect_lt(max(abs(grid$qposterior(tau.p = c(.025, .5, .975)) - ref$tau)) / grid$summary["sd", "tau"], 1e-3)
     expect_equal(grid$pposterior(mu = ref$mu), c(.025, .5, .975), tolerance = 1e-6)
   }
+  # No default study cap: a fit on 300 studies agrees with the reference.
+  set.seed(4); big_sigma <- runif(300, .05, .4); big_y <- rnorm(300, .3, sqrt(.04 + big_sigma^2))
+  big <- metaUI:::metaUI_bayesian_fit(data.frame(metaUI__effect_size = big_y, metaUI__se = big_sigma, metaUI__study_id = 1:300), .5)
+  ref <- bayes_reference(big_y, big_sigma, .5)
+  expect_lt(max(abs(big$qposterior(mu.p = c(.025, .5, .975)) - ref$mu)) / big$summary["sd", "mu"], 1e-6)
+  expect_lt(max(abs(big$qposterior(tau.p = c(.025, .5, .975)) - ref$tau)) / big$summary["sd", "tau"], 1e-3)
   # Shifting all effects shifts mu and leaves tau and the posterior SDs unchanged.
   a <- metaUI:::metaUI_bayesian_grid(c(.2, .2, .5), c(.1, .1, .2), .5); b <- metaUI:::metaUI_bayesian_grid(c(.2, .2, .5) + 1e6, c(.1, .1, .2), .5)
   expect_equal(b$qposterior(mu.p = c(.025, .5, .975)) - 1e6, a$qposterior(mu.p = c(.025, .5, .975)), tolerance = 1e-6)

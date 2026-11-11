@@ -186,7 +186,7 @@ numerical integration for the mean and 2 × 10<sup>-4</sup> for heterogeneity
 quantiles. It replaces `bayesmeta`, whose quantiles for the mean were up to 0.01
 posterior SDs off (its heterogeneity quantiles are more precise still); see
 `validation/bayesian-grid.md`. There is no study limit by default; authors can set
-one with `max_studies`.
+one with `max_studies` (an integer of at least 2).
 See [Röver et al.](https://doi.org/10.1002/jrsm.1475) for the prior rationale.
 
 ### Study details

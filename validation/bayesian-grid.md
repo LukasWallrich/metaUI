@@ -25,7 +25,7 @@ scale. This resolves both a peak at τ = 0 and a long right tail.
 
 ## Validation (November 2026)
 
-Full report, scripts and raw results: `work/review-2026-11/bayes-grid/` (not tracked).
+Scripts are in `validation/bayesian-grid/` (run from the package root): `conditions.R` (datasets), `reference.R` (independent reference), `validate.R` and `run-all.sh` (fits), `analyse.R` (tables, saved as `tables.md`), `real-data.R`, `edge-cases.R` (with output) and `webr-bench.cjs`. Raw results are not tracked; `run-all.sh` rebuilds them in about two hours, mostly for bayesmeta.
 
 - **Datasets:** 412 simulated datasets with k = 2, 3, 5, 10, 20, 50, 100 and 646
   studies. True τ was 0, 0.5 or 3 × the median SE. SEs were moderate or spread 1:100.
@@ -64,12 +64,12 @@ Largest error against the reference, in posterior SDs:
 
 ## Speed
 
-Median seconds per fit on Ubuntu 24.04 with R 4.6. Native grid times are from `tools/benchmark-bayesian.R` on an idle machine; bayesmeta times were measured during the validation run, which loaded the machine more heavily:
+Median seconds per fit on Ubuntu 24.04 with R 4.6. For 20 and 50 studies, both methods were timed on the same datasets in the same validation run (`validate.R`), and Coles in the same run of `real-data.R`. The other native grid times are from `tools/benchmark-bayesian.R`, and webR times from `webr-bench.cjs`.
 
 | Studies | Grid (native) | Grid (webR, Node) | bayesmeta |
 |---:|---:|---:|---:|
-| 20 | 0.008 s | 0.09 s | 16 s (median), up to 48 s |
-| 50 | 0.01 s | — | 59 s (median), up to 75 s |
+| 20 | 0.010 s | 0.09 s | 16 s (median), up to 48 s |
+| 50 | 0.011 s | — | 59 s (median), up to 75 s |
 | 97 (Coles) | 0.10 s | — | 510 s |
 | 100 | 0.013 s | 0.15 s | not run |
 | 646 | 0.06 s | 0.29 s | not run |

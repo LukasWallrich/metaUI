@@ -284,7 +284,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     assumptions = "Distinct studies are independent; multilevel V is diagonal (sampling covariance not supplied). Multilevel t tests use containment df. RVE uses correlated-effects weights with the same within-study correlation and the Tipton small-sample correction (small=TRUE). Neither N nor p is inferred by aggregation.")
   if (!is.null(bayesian)) report$bayesian <- c(bayesian, list(
     model = "Two-level normal-normal on aggregated studies", mean_prior = "Improper uniform on fitting scale",
-    computation = "Grid quadrature over tau (2,000 points, uniform in log(tau + tau0)); mu as the exact normal mixture over the grid. Within 1e-7 posterior SDs of adaptive numerical integration for mu and 2e-4 for tau quantiles (validation/bayesian-grid.md).",
+    computation = "Grid quadrature over tau (2,000 points, uniform in log(tau + tau0)); mu as the exact normal mixture over the grid. Within 1e-7 posterior SDs of adaptive numerical integration for mu and 2e-4 for tau quantiles (validation/bayesian-grid.md in the metaUI source repository, https://github.com/LukasWallrich/metaUI).",
     latency = paste0("No default study cap", if (!is.null(bayesian$max_studies)) paste0(" (author cap: ", bayesian$max_studies, " studies)"), ". About 0.1 s per fit natively and 0.3 s in webR at 646 studies."),
     tau_prior = "Half-normal on fitting scale", interval = "95% central credible interval; posterior median",
     sensitivity = "Half and double tau_scale", aggregation = paste("GLS study-level average, within-study correlation", correlation),
