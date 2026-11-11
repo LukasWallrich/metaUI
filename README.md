@@ -183,7 +183,8 @@ normal mixture. This needs no extra package and takes well under a second, even
 for 646 studies in the browser (webR). Across 412 simulated and two real datasets,
 its results were within 10<sup>-7</sup> posterior standard deviations of adaptive
 numerical integration for the mean and 2 × 10<sup>-4</sup> for heterogeneity
-quantiles, closer than `bayesmeta`, which it replaces; see
+quantiles. It replaces `bayesmeta`, whose quantiles for the mean were up to 0.01
+posterior SDs off (its heterogeneity quantiles are more precise still); see
 `validation/bayesian-grid.md`. There is no study limit by default; authors can set
 one with `max_studies`.
 See [Röver et al.](https://doi.org/10.1002/jrsm.1475) for the prior rationale.

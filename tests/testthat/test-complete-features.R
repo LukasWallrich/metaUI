@@ -48,22 +48,51 @@ test_that("selection links validate build identity and recover exact categories"
   expect_error(metaUI:::metaUI_selection_query(r,"abc",NULL,d,filters),"Unknown")
 })
 
-test_that("Bayesian grid posterior agrees with an independent adaptive integration", {
-  y <- c(-.2,.1,.4,.7); sigma <- c(.1,.15,.2,.25); s <- .5
-  x <- data.frame(metaUI__effect_size=y,metaUI__se=sigma,metaUI__study_id=letters[1:4])
-  posterior <- metaUI:::metaUI_bayesian_fit(x,s)
-  # Marginal posterior of tau (mu integrated out under its flat prior), by stats::integrate.
+# Independent reference for the Bayesian model: the marginal posterior of tau (mu integrated out
+# under its flat prior) by stats::integrate on geometric segments, with explicit residuals.
+bayes_reference <- function(y, sigma, s) {
   logp <- function(t) vapply(t, function(tt) { w <- 1/(sigma^2+tt^2); m <- sum(w*y)/sum(w)
     -.5*(tt/s)^2 + .5*sum(log(w)) - .5*log(sum(w)) - .5*sum(w*(y-m)^2) }, numeric(1))
-  dens <- function(t) exp(logp(t) - logp(.3))
-  z <- integrate(dens, 0, Inf, rel.tol = 1e-10)$value
-  cdf <- function(q) integrate(function(t) dens(t)*vapply(t, function(tt) { w <- 1/(sigma^2+tt^2)
-    pnorm((q - sum(w*y)/sum(w))*sqrt(sum(w))) }, numeric(1)), 0, Inf, rel.tol = 1e-10)$value/z
-  qs <- vapply(c(.025,.5,.975),function(prob) uniroot(function(q)cdf(q)-prob,c(-3,3),tol=1e-10)$root,numeric(1))
-  expect_lt(max(abs(posterior$qposterior(mu.p=c(.025,.5,.975))-qs)),1e-6)
-  tau_median <- uniroot(function(t) integrate(dens, 0, t, rel.tol = 1e-10)$value/z - .5, c(1e-4, 3), tol = 1e-10)$root
-  expect_lt(abs(posterior$qposterior(tau.p=.5) - tau_median), 1e-5)
-  expect_equal(posterior$pposterior(mu=qs), c(.025,.5,.975), tolerance = 1e-6)
+  brk <- c(0, 10^seq(-6, 2, by = .25)); c0 <- max(logp(brk))
+  dens <- function(t) exp(logp(t) - c0)
+  seg <- function(f, upper = Inf) sum(vapply(seq_len(length(brk)-1), function(i) if (brk[i] >= upper) 0 else
+    integrate(f, brk[i], min(brk[i+1], upper), rel.tol = 1e-10, abs.tol = 0)$value, numeric(1)))
+  z <- seg(dens)
+  cdf <- function(q) seg(function(t) dens(t)*vapply(t, function(tt) { w <- 1/(sigma^2+tt^2)
+    pnorm((q - sum(w*y)/sum(w))*sqrt(sum(w))) }, numeric(1)))/z
+  r <- range(y) + c(-1, 1)*3*max(sigma)
+  list(mu = vapply(c(.025,.5,.975), function(a) uniroot(function(q) cdf(q)-a, r, tol=1e-12)$root, numeric(1)),
+    tau = vapply(c(.025,.5,.975), function(a) exp(uniroot(function(lt) seg(dens, exp(lt))/z - a, log(c(1e-6, 100)),
+      tol = 1e-12)$root), numeric(1)))
+}
+
+test_that("Bayesian grid posterior agrees with an independent adaptive integration", {
+  cases <- list(
+    list(y = c(-.2, .1, .4, .7), sigma = c(.1, .15, .2, .25), s = .5),
+    list(y = c(.1, .5), sigma = c(.2, .3), s = .5),
+    list(y = c(.3, .1, .9, -.4, .2), sigma = c(.01, .1, .3, 1, .05), s = .5),   # SE ratio 1:100
+    list(y = c(.2, .25, .22, 1.8, .19, .3), sigma = rep(.1, 6), s = .025),     # outlier, prior far below the data
+    list(y = c(.21, .19, .2, .2), sigma = c(.05, .08, .1, .06), s = 5),        # no heterogeneity, very wide prior
+    list(y = c(0, 10, 10), sigma = c(1e-9, 1, 1), s = .5))                     # one study dominates the weights
+  for (case in cases) {
+    grid <- metaUI:::metaUI_bayesian_grid(case$y, case$sigma, case$s); ref <- bayes_reference(case$y, case$sigma, case$s)
+    expect_lt(max(abs(grid$qposterior(mu.p = c(.025, .5, .975)) - ref$mu)) / grid$summary["sd", "mu"], 1e-6)
+    expect_lt(max(abs(grid$qposterior(tau.p = c(.025, .5, .975)) - ref$tau)) / grid$summary["sd", "tau"], 1e-3)
+    expect_equal(grid$pposterior(mu = ref$mu), c(.025, .5, .975), tolerance = 1e-6)
+  }
+  # Shifting all effects shifts mu and leaves tau and the posterior SDs unchanged.
+  a <- metaUI:::metaUI_bayesian_grid(c(.2, .2, .5), c(.1, .1, .2), .5); b <- metaUI:::metaUI_bayesian_grid(c(.2, .2, .5) + 1e6, c(.1, .1, .2), .5)
+  expect_equal(b$qposterior(mu.p = c(.025, .5, .975)) - 1e6, a$qposterior(mu.p = c(.025, .5, .975)), tolerance = 1e-6)
+  expect_equal(b$summary[c("sd", "median"), "tau"], a$summary[c("sd", "median"), "tau"], tolerance = 1e-6)
+  expect_equal(b$summary["sd", "mu"], a$summary["sd", "mu"], tolerance = 1e-6)
+  # A very narrow posterior (prior and data in sharp conflict) is still resolved over many grid points.
+  narrow <- metaUI:::metaUI_bayesian_grid(c(-1, 1), c(1e-14, 1e-14), 1e-10)
+  expect_gt(sum(narrow$grid$weight > 1e-6), 100)
+  expect_lt(max(abs(narrow$qposterior(tau.p = c(.025, .975)) -
+    metaUI:::metaUI_bayesian_grid(c(-1, 1), c(1e-14, 1e-14), 1e-10, n = 20000L)$qposterior(tau.p = c(.025, .975)))) /
+    narrow$summary["sd", "tau"], 1e-3)
+  x <- data.frame(metaUI__effect_size=cases[[1]]$y,metaUI__se=cases[[1]]$sigma,metaUI__study_id=letters[1:4])
+  s <- cases[[1]]$s; posterior <- metaUI:::metaUI_bayesian_fit(x,s)
   expect_equal(posterior$labels, letters[1:4])
   expect_error(metaUI:::metaUI_bayesian_fit(x[1,,drop=FALSE],s),"two studies")
   expect_error(metaUI:::metaUI_bayesian_fit(x,s,2),"study limit")
@@ -83,7 +112,9 @@ test_that("Bayesian grid posterior agrees with an independent adaptive integrati
   expect_true(all(sensitivity$status=="ok"))
 })
 
-test_that("Bayesian grid posterior matches bayesmeta on small and difficult datasets", {
+# Optional comparison with bayesmeta, which earlier versions used. Not needed for accuracy (the test
+# above is); it shows that results agree with the previous implementation within bayesmeta's own error.
+test_that("Bayesian grid posterior agrees with bayesmeta (previous implementation)", {
   skip_if_not_installed("bayesmeta")
   cases <- list(
     list(y = c(.1, .5), sigma = c(.2, .3), s = .5),

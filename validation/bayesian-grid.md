@@ -16,7 +16,9 @@ scale. This resolves both a peak at τ = 0 and a long right tail.
    largest of the prior scale, the range of the effects and the smallest SE. The
    bound is multiplied by four until the density there is below e^-40 of its peak.
 2. The second pass places 2,000 points over the region where the density is within
-   e^-40 of its peak (plus one first-pass cell on each side).
+   e^-40 of its peak (plus one first-pass cell on each side). If that region covers
+   fewer than a quarter of the new points (a very narrow posterior), the grid zooms
+   in again, up to ten times.
 3. Trapezoid weights give the mixture weights. μ quantiles are found by root-finding
    on the exact mixture CDF. τ quantiles come from the cumulative trapezoid CDF,
    interpolated linearly in x.
@@ -52,6 +54,13 @@ Largest error against the reference, in posterior SDs:
   first-pass mass outside the final grid was at most 1e-18.
 - **Real datasets:** grid errors were within 3e-5 SDs for Coles and 2e-5 SDs for
   Diversity.
+- **Edge cases (external review):** the weighted residual sum of squares is computed
+  from explicit residuals, which stays accurate when one study's SE is far smaller
+  than the others' (y = 0, 10, 10 with SEs 1e-9, 1, 1 matches the reference to five
+  digits). Posterior SDs are computed around the mean, so they do not depend on the
+  location of the effects. A posterior narrower than one first-pass cell (two studies
+  with SE 1e-14 and prior scale 1e-10) is resolved over hundreds of points and stable
+  when the density is raised tenfold. These cases are in the tests.
 
 ## Speed
 
