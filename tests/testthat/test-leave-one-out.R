@@ -1,0 +1,154 @@
+skip_without_app_packages()
+
+loo_fixture <- function() {
+  set.seed(4)
+  x <- data.frame(study = rep(paste0("S", 1:9), times = c(1, 2, 3, 2, 1, 4, 2, 1, 2)))
+  x$id <- stats::ave(seq_len(nrow(x)), x$study, FUN = seq_along)
+  x$yi <- round(stats::rnorm(nrow(x), .3, .25), 3)
+  x$vi <- round(stats::runif(nrow(x), .01, .06), 4)
+  x$yi[x$study == "S6"] <- x$yi[x$study == "S6"] + .8
+  x
+}
+
+test_that("the fast route is the exact GLS update with variance components held fixed", {
+  d <- prepare_data(loo_fixture(), "study", "yi", variance = "vi", es_id = "id")
+  fit <- metaUI:::metaUI_multilevel_fit(d)
+  loo <- metaUI:::metaUI_loo_blocks(fit, d, c(fit$b, fit$ci.lb, fit$ci.ub))
+  expect_null(loo$reason)
+  fast <- metaUI:::metaUI_loo_estimates(loo)
+  for (s in unique(as.character(d$metaUI__study_id))) {
+    keep <- as.character(d$metaUI__study_id) != s
+    study <- as.character(d$metaUI__study_id)[keep]
+    M <- diag(d$metaUI__variance[keep]) + fit$sigma2[1] * outer(study, study, "==") + fit$sigma2[2] * diag(sum(keep))
+    w <- solve(M)
+    b <- sum(w %*% d$metaUI__effect_size[keep]) / sum(w)
+    se <- sqrt(1 / sum(w))
+    crit <- stats::qt(.975, length(unique(study)) - 1)
+    row <- fast[fast$study == s, ]
+    expect_equal(row$es, b, tolerance = 1e-10)
+    expect_equal(row$se, se, tolerance = 1e-10)
+    expect_equal(c(row$LCL, row$UCL), b + c(-1, 1) * crit * se, tolerance = 1e-10)
+    expect_equal(row$effects, sum(!keep))
+  }
+  # With nothing left out, the blocks give back the fitted model.
+  all <- metaUI:::metaUI_loo_estimates(loo, leave = FALSE)
+  expect_equal(c(all$es, all$LCL, all$UCL), c(as.numeric(fit$b), fit$ci.lb, fit$ci.ub), tolerance = 1e-10)
+})
+
+test_that("the fast route covers correlated sampling errors and study-level models, and declines what it cannot reproduce", {
+  d <- prepare_data(loo_fixture(), "study", "yi", variance = "vi", es_id = "id")
+  che <- metafor::rma.mv(metaUI__effect_size, V = metafor::vcalc(vi = metaUI__variance, cluster = metaUI__study_id, obs = metaUI__effect_id, rho = .6, data = d),
+    random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = d, test = "t", dfs = "contain", sparse = TRUE)
+  loo <- metaUI:::metaUI_loo_blocks(che, d, c(che$b, che$ci.lb, che$ci.ub))
+  expect_null(loo$reason)
+  # Against metafor itself: the same model without one study, with its variance components fixed.
+  s <- "S6"; rest <- d[d$metaUI__study_id != s, ]
+  fixed <- metafor::rma.mv(metaUI__effect_size, V = metafor::vcalc(vi = metaUI__variance, cluster = metaUI__study_id, obs = metaUI__effect_id, rho = .6, data = rest),
+    random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = rest, test = "t", dfs = "contain", sigma2 = che$sigma2)
+  row <- metaUI:::metaUI_loo_estimates(loo)
+  row <- row[row$study == s, ]
+  expect_equal(c(row$es, row$LCL, row$UCL), c(as.numeric(fixed$b), fixed$ci.lb, fixed$ci.ub), tolerance = 1e-8)
+
+  agg <- metaUI:::metaUI_aggregate(d)
+  for (test in c("z", "knha")) {
+    uni <- metafor::rma.uni(agg$metaUI__effect_size, agg$metaUI__variance, test = test)
+    loo <- metaUI:::metaUI_loo_blocks(uni, agg, c(uni$b, uni$ci.lb, uni$ci.ub))
+    expect_null(loo$reason)
+    fixed <- metafor::rma.uni(agg$metaUI__effect_size[-1], agg$metaUI__variance[-1], tau2 = uni$tau2, test = test)
+    row <- metaUI:::metaUI_loo_estimates(loo)[1, ]
+    expect_equal(c(row$es, row$LCL, row$UCL), c(as.numeric(fixed$b), fixed$ci.lb, fixed$ci.ub), tolerance = 1e-8)
+  }
+
+  mods <- metafor::rma.mv(metaUI__effect_size, metaUI__variance, mods = ~ metaUI__se, random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = d)
+  expect_match(metaUI:::metaUI_loo_blocks(mods, d, c(mods$b[1], mods$ci.lb[1], mods$ci.ub[1]))$reason, "moderators")
+  robust <- metafor::robust(che, cluster = d$metaUI__study_id)
+  expect_match(metaUI:::metaUI_loo_blocks(robust, d, c(robust$b, robust$ci.lb, robust$ci.ub))$reason, "model-based")
+  # An extraction that reports something other than the fitted interval is not reproduced.
+  expect_match(metaUI:::metaUI_loo_blocks(che, d, c(che$b, che$ci.lb - .1, che$ci.ub))$reason, "reproduced")
+  # Effects linked across studies (a shared random effect) cannot be left out one study at a time.
+  d$lab <- rep(c("a", "b"), length.out = nrow(d))
+  crossed <- metafor::rma.mv(metaUI__effect_size, metaUI__variance, random = list(~ 1 | metaUI__study_id, ~ 1 | lab), data = d)
+  expect_match(metaUI:::metaUI_loo_blocks(crossed, d, c(crossed$b, crossed$ci.lb, crossed$ci.ub))$reason, "different studies")
+
+  # metaUI_fit_models keeps the blocks for metafor models only.
+  fits <- metaUI:::metaUI_fit_models(d, get_model_tibble()[1:3, ])
+  expect_null(fits$loo[[1]]$reason)
+  expect_null(fits$loo[[2]])
+  expect_false(is.null(fits$loo[[3]]$reason))
+})
+
+test_that("the refit route equals refitting the model without each study", {
+  d <- prepare_data(loo_fixture(), "study", "yi", variance = "vi", es_id = "id")
+  slow <- metaUI:::metaUI_loo_refit(d, get_model_tibble()[1, ], studies = c("S6", "S2"))
+  for (s in c("S6", "S2")) {
+    fit <- metaUI:::metaUI_multilevel_fit(d[d$metaUI__study_id != s, ])
+    expect_equal(unlist(slow[slow$study == s, c("es", "LCL", "UCL")], use.names = FALSE), c(as.numeric(fit$b), fit$ci.lb, fit$ci.ub), tolerance = 1e-8)
+  }
+  expect_equal(slow$effects, c(4L, 2L))
+  # The budget stops the refits after the first that exceeds it.
+  expect_equal(nrow(metaUI:::metaUI_loo_refit(d, get_model_tibble()[1, ], budget = 0)), 1L)
+  # Any model can be refitted, RVE included.
+  rve <- metaUI:::metaUI_loo_refit(d, get_model_tibble()[2, ], correlation = .6, studies = "S1")
+  expect_equal(rve$status, "ok")
+})
+
+test_that("flags mark a change in whether the interval excludes zero and moves across the bound", {
+  df <- data.frame(metaUI__es_type = "SMD")
+  estimates <- data.frame(study = c("a", "b", "c"), effects = 1:3, es = c(.30, .12, .22), LCL = c(.10, -.02, .05), UCL = c(.50, .26, .40))
+  out <- metaUI:::metaUI_leave_one_out(estimates, c(es = .2, LCL = .03, UCL = .37), df, bound = .15)
+  expect_equal(out$study, c("a", "b", "c"))
+  expect_equal(out$change, c(.1, -.08, .02))
+  expect_equal(out$significance_changes, c(FALSE, TRUE, FALSE))
+  expect_equal(out$crosses_bound, c(FALSE, TRUE, FALSE))
+  expect_true(all(is.na(metaUI:::metaUI_leave_one_out(estimates, c(es = .2, LCL = .03, UCL = .37), df)$crosses_bound)))
+  # Correlations are fitted as Fisher z and shown as r; the bound is on the r scale.
+  zcor <- metaUI:::metaUI_leave_one_out(estimates, c(es = .2, LCL = .03, UCL = .37), data.frame(metaUI__es_type = "ZCOR"), bound = .2)
+  expect_equal(zcor$es[zcor$study == "a"], tanh(.3))
+  expect_equal(zcor$crosses_bound[zcor$study == "a"], TRUE)
+  html <- metaUI:::metaUI_loo_html(out, c(es = .2, LCL = .03, UCL = .37), bound = .15)
+  expect_match(html, "95% CI now includes 0", fixed = TRUE)
+  expect_match(html, "estimate now within ±0.15", fixed = TRUE)
+})
+
+test_that("a generated app shows the leave-one-out table for the primary model, or names the fallback", {
+  path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
+  d <- prepare_data(loo_fixture(), "study", "yi", variance = "vi", es_id = "id")
+  models <- get_model_tibble()
+  generate_shiny(d, "Leave one out", save_to_folder = path, launch_app = FALSE, models = models,
+    primary_model = "Robust Variance Estimation")
+  expect_true(all(vapply(c("server.R", "ui.R", "global.R"), function(f) is.expression(parse(file.path(path, f))), logical(1))))
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(path)
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  html <- as.character(env$ui)
+  expect_match(html, 'id="loo_panel"', fixed = TRUE)
+  shiny::testServer(env$server, {
+    # Quick refits would replace the fast route; timing-dependent, so they are switched off here.
+    assign("loo_quick_seconds", -1, envir = environment(loo_run_refits))
+    assign("loo_few_seconds", -1, envir = environment(loo_run_refits))
+    session$setInputs(outliers_z_scores = c(-10, 10), go = 1)
+    src <- loo_source()
+    expect_equal(src$model, "Random-Effects Multilevel Model")
+    expect_false(src$primary)
+    expect_equal(src$refit$model, "Robust Variance Estimation")
+    panel <- output$loo_panel$html
+    expect_match(panel, "From the Random-Effects Multilevel Model. The primary model, Robust Variance Estimation, is not used here because only metafor models", fixed = TRUE)
+    expect_match(panel, "metaui-loo", fixed = TRUE)
+    expect_match(panel, 'id="loo_refit"', fixed = TRUE)
+    expect_match(panel, "With so few studies", fixed = TRUE)
+    expect_false(loo_result()$refit)
+    loo_refits(loo_run_refits(src))
+    result <- loo_result()
+    expect_true(result$refit)
+    expect_equal(result$model, "Robust Variance Estimation")
+    expect_equal(result$table$study[1], "S6")
+    session$flushReact()
+    panel <- output$loo_panel$html
+    expect_match(panel, "Robust Variance Estimation, the primary model chosen by the authors. Each row refits the model without that study", fixed = TRUE)
+    session$setInputs(sesoi = .3)
+    expect_false(anyNA(loo_result()$table$crosses_bound))
+    csv <- utils::read.csv(output$loo_csv)
+    expect_equal(nrow(csv), 9L)
+    expect_true(all(c("study", "es", "LCL", "UCL", "change", "significance_changes", "crosses_bound", "model", "method") %in% names(csv)))
+    expect_equal(csv$method[1], "full refit")
+  })
+})

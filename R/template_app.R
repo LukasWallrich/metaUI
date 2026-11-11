@@ -53,6 +53,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       zcurve_main <- HTML("<h4>Z-curve of effects</h4>")
 
       diagnostics_main <- HTML("<h3>Distribution of effect sizes</h3><p class=\'metaui-note\'>Dots mark effects more than 1.5 interquartile ranges (IQR) beyond the middle 50%. Hover over or tap a dot for its study and <i>z</i>-score; the list below the plot gives them all.</p>")
+      diagnostics_loo <- HTML("<h3>Does one study drive the result?</h3><p class=\'metaui-note\'>The average effect with each study left out in turn, most influential first.</p>")
       diagnostics_het <- HTML("<h3>Heterogeneity (REML multilevel model)</h3>")
 
       forest_note <- HTML("<p class=\'metaui-note\'>Effects: observed, with normal 95% sampling intervals and no shrinkage. Combined rows: the study-level effects used by the study-level models (see Methods); with correlated effects of unequal precision they can lie away from the simple average. Summaries: the primary model, where the authors chose one, with multilevel and robust variance estimation (RVE).<span class=\'metaui-forest-numbering\'> Effects keep their numbers from the full dataset, so a selection can leave gaps.</span>{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
@@ -358,6 +359,8 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             div(class = "metaui-plot", plotly::plotlyOutput("violin", height = 400)) %>% shinycssloaders::withSpinner(),
             uiOutput("outlier_list"),
             uiOutput("distribution_note"),
+            diagnostics_loo,
+            uiOutput("loo_panel") %>% shinycssloaders::withSpinner(),
             diagnostics_het,
             uiOutput("heterogeneity_reading"),
             div(class = "metaui-scroll", tableOutput("heterogeneity") %>% shinycssloaders::withSpinner()))
@@ -1518,6 +1521,148 @@ glue_string <- ('
           tags$td(class = "num", two(shown[i])), tags$td(class = "num", paste0("[", two(lower[i]), ", ", two(upper[i]), "]")),
           tags$td(class = "num", two(z[i]))))))),
       p(class = "metaui-note", "95% CI: the effect\\u2019s normal sampling interval, without shrinkage. A wide interval marks an imprecise estimate; a narrow one far from the rest is more likely to matter."))
+  })
+
+  # LEAVE ONE STUDY OUT -----------------------------------------------------
+  # From the primary model when it is a metafor model whose estimate the per-study pieces reproduce
+  # (metaUI_loo_blocks); otherwise from the multilevel model, which is named. Drawn with this tab.
+  loo_source <- reactive({
+    df <- df_filtered()
+    results <- estimatesreactive()
+    req(results)
+    table <- results$table
+    if (length(unique(df$metaUI__study_id)) < 3L) return(list(error = "Leaving out one study at a time needs at least three studies."))
+    usable <- function(i) length(i) == 1L && table$status[i] == "ok" && !is.null(results$loo[[i]]) && is.null(results$loo[[i]]$reason)
+    # Saved opening fits were timed when the app was built; in the browser (webR), fits run several times slower.
+    slower <- if (isTRUE(results$precomputed) && grepl("emscripten", R.version$os)) loo_webr_factor else 1
+    from_row <- function(i) list(loo = results$loo[[i]], full = c(es = table$fit_es[i], LCL = table$fit_LCL[i], UCL = table$fit_UCL[i]),
+      spec = models_to_run[i, , drop = FALSE], seconds = table$fit_seconds[i] * slower, model = table$Model[i])
+    primary <- primary_index(table)
+    # The model whose refits the reader can ask for: the primary model, or the multilevel model without one.
+    multilevel <- which(models_to_run$code == metaUI_code_multilevel & !models_to_run$aggregated & table$status == "ok")
+    target <- if (length(primary)) primary[1] else if (length(multilevel)) multilevel[1] else integer()
+    refit <- if (length(target) && table$status[target] == "ok") from_row(target)
+    if (length(primary) && usable(primary[1])) return(c(from_row(primary[1]), list(primary = TRUE, why = NULL, refit = refit)))
+    why <- if (!length(primary)) NULL else if (table$status[primary[1]] != "ok") "it was not estimated for this selection" else
+      if (is.null(results$loo[[primary[1]]])) "only metafor models can be updated this way" else results$loo[[primary[1]]]$reason
+    multilevel <- multilevel[vapply(multilevel, usable, logical(1))]
+    if (length(multilevel)) return(c(from_row(multilevel[1]), list(primary = FALSE, why = why, refit = refit)))
+    fit <- tryCatch(metaUI_multilevel_fit(df), error = function(e) e)
+    if (inherits(fit, "error")) return(list(error = paste("The multilevel model could not be fitted:", metaUI_reader_reason(conditionMessage(fit), ""))))
+    full <- c(es = as.numeric(fit$b), LCL = fit$ci.lb, UCL = fit$ci.ub)
+    list(loo = metaUI_loo_blocks(fit, df, full), full = full, model = "Random-Effects Multilevel Model", primary = FALSE, why = why, refit = refit)
+  })
+  # Refits run without asking when they finish within a few seconds; slower ones wait for the reader,
+  # with a time estimate, and the slowest are not offered. Estimates use refits timed where the app runs.
+  loo_quick_seconds <- 3
+  loo_longest_seconds <- 600
+  loo_webr_factor <- 8
+  loo_few_studies <- 30L
+  loo_few_seconds <- 10
+  loo_refits <- reactiveVal(NULL)
+  loo_run_refits <- function(src, previous = NULL, budget = Inf, progress = NULL) {
+    df <- df_filtered()
+    done <- if (is.null(previous)) character() else previous$estimates$study
+    studies <- setdiff(unique(as.character(df$metaUI__study_id)), done)
+    more <- metaUI_loo_refit(df, src$refit$spec, correlation_dependent, aggregation_method[1], studies, budget, progress)
+    estimates <- rbind(if (!is.null(previous)) previous$estimates, more)
+    seconds <- (if (is.null(previous)) 0 else previous$seconds) + attr(more, "seconds")
+    list(df = df, model = src$refit$model, full = src$refit$full, estimates = estimates, seconds = seconds,
+      complete = nrow(estimates) == length(unique(df$metaUI__study_id)))
+  }
+  # Tried only when the fit time of the model leaves a chance of finishing within the budget.
+  loo_auto <- reactive({
+    src <- loo_source()
+    studies <- length(unique(df_filtered()$metaUI__study_id))
+    # Few studies are where refits matter, so they get a longer budget, still within a background tab.
+    budget <- if (studies < loo_few_studies) loo_few_seconds else loo_quick_seconds
+    if (is.null(src$error) && !is.null(src$refit) && src$refit$seconds * studies <= 10 * budget) loo_run_refits(src, budget = budget)
+  })
+  observeEvent(input$loo_refit, {
+    src <- loo_source()
+    req(!is.null(src$refit))
+    previous <- isolate(loo_auto())
+    result <- withProgress(message = "Refitting without each study", value = 0,
+      loo_run_refits(src, previous, progress = function(i, n) setProgress(i / n, detail = paste(i, "of", n))))
+    loo_refits(result)
+  })
+  loo_result <- reactive({
+    src <- loo_source()
+    validate(need(is.null(src$error), src$error))
+    df <- df_filtered()
+    bound <- tryCatch(chosen_bound(), error = function(e) NULL)
+    stored <- loo_refits()
+    if (is.null(stored) || !identical(stored$df, df)) stored <- loo_auto()
+    if (!is.null(stored) && stored$complete) return(list(table = metaUI_leave_one_out(stored$estimates, stored$full, df, bound), full = stored$full,
+      model = stored$model, primary = identical(stored$model, primary_model), refit = TRUE, why = NULL))
+    validate(need(is.null(src$loo$reason), paste("Leaving out one study is not available for this selection:", src$loo$reason)))
+    studies <- length(unique(df$metaUI__study_id))
+    # The time for the remaining refits, from those already timed, or else from the fit of the model itself.
+    estimate <- if (is.null(src$refit)) Inf else if (!is.null(stored) && nrow(stored$estimates)) stored$seconds / nrow(stored$estimates) * (studies - nrow(stored$estimates)) else src$refit$seconds * studies
+    list(table = metaUI_leave_one_out(metaUI_loo_estimates(src$loo), src$full, df, bound), full = src$full, model = src$model,
+      primary = src$primary, refit = FALSE, why = src$why, estimate = estimate, refit_model = src$refit$model)
+  })
+  loo_show_all <- reactiveVal(FALSE)
+  observeEvent(df_filtered(), loo_show_all(FALSE))
+  observeEvent(input$loo_all, loo_show_all(!loo_show_all()))
+  output$loo_panel <- renderUI({
+    result <- loo_result()
+    df <- df_filtered()
+    table <- result$table
+    full <- metaUI_show(result$full, df)
+    bound <- tryCatch(chosen_bound(), error = function(e) NULL)
+    digits <- metaUI_digits(c(full[["LCL"]], table$LCL), c(full[["UCL"]], table$UCL))
+    fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = digits))
+    studies <- nrow(table)
+    estimated <- is.finite(table$es)
+    flagged <- which(table$significance_changes | table$crosses_bound %in% TRUE)
+    # The most influential studies, and the most influential flagged ones wherever they rank.
+    shown <- if (loo_show_all()) seq_len(studies) else sort(union(seq_len(min(10L, studies)), utils::head(flagged, 10L)))
+    excludes <- is.finite(full[["LCL"]]) && (full[["LCL"]] > 0 || full[["UCL"]] < 0)
+    top <- table[1, ]
+    reading <- paste0("Leaving out one study at a time, the estimate ranges from <b>", fmt(min(table$es[estimated])), "</b> to <b>", fmt(max(table$es[estimated])),
+      "</b>; with all ", format(studies, big.mark = ","), " studies it is ", fmt(full[["es"]]), ". Leaving out ", htmltools::htmlEscape(top$study), " changes it most, by ",
+      if (round(top$change, digits + 1L) > 0) "+" else "", metaUI_minus(formatC(top$change, format = "f", digits = digits + 1L)), ".")
+    significance <- sum(table$significance_changes)
+    reading <- paste(reading, if (!is.finite(full[["LCL"]])) "" else if (!significance) paste0("No single study changes whether the 95% CI ", if (excludes) "excludes" else "includes", " 0.") else
+      paste0("Leaving out ", if (significance == 1L) "<b>one</b> study" else paste0("<b>", significance, "</b> studies"), " (each on its own) makes the 95% CI ", if (excludes) "include" else "exclude", " 0: marked below."))
+    if (!is.null(bound)) {
+      crossing <- sum(table$crosses_bound)
+      reading <- paste(reading, if (!crossing) paste0("No single study moves the estimate across &plusmn;", format(bound), ".") else
+        paste0("Leaving out ", if (crossing == 1L) "one study" else paste(crossing, "studies"), " moves the estimate ", if (abs(full[["es"]]) >= bound) "within" else "beyond", " &plusmn;", format(bound),
+          if (crossing > 10L) " (the 10 that move it most are marked below; show all to see every one)." else "."))
+    }
+    model_note <- paste0("From the ", htmltools::htmlEscape(result$model), if (result$primary) ", the primary model chosen by the authors" else "", ".",
+      if (!is.null(result$why)) paste0(" The primary model, ", htmltools::htmlEscape(primary_model), ", is not used here because ", htmltools::htmlEscape(result$why), ".") else "",
+      if (result$refit) " Each row refits the model without that study." else paste0(" Each row recomputes the estimate without that study, with the variation between and within studies held at its value for all studies (see below).",
+        # Benchmarks on 8 to 120 studies: below about 30, holding the variances fixed often misranks studies.
+        if (studies < loo_few_studies) " With so few studies, this can misstate how much one study matters; a refit gives exact values." else ""))
+    minutes <- function(s) if (s < 90) paste(max(5, 5 * round(s / 5)), "seconds") else paste(round(s / 60), "minutes")
+    refit_offer <- if (!result$refit && is.finite(result$estimate) && result$estimate <= loo_longest_seconds)
+      div(class = "metaui-export-actions metaui-loo-actions", actionButton("loo_refit", paste0("Refit ", if (identical(result$refit_model, result$model)) "the model" else htmltools::htmlEscape(result$refit_model), " without each study (about ", minutes(result$estimate), ")")))
+      else if (!result$refit && is.finite(result$estimate) && result$estimate > loo_longest_seconds)
+      p(class = "metaui-note", paste0("Refitting the model without each study would take about ", minutes(result$estimate), ", so it is not offered here."))
+    tagList(
+      p(class = "metaui-reading", HTML(reading)),
+      p(class = "metaui-note", HTML(model_note)),
+      div(class = "metaui-scroll", HTML(metaUI_loo_html(table[shown, , drop = FALSE], full, metaUI_eff_size_type_label, bound, show = length(shown)))),
+      div(class = "metaui-export-actions metaui-loo-actions",
+        if (studies > length(shown) || loo_show_all()) actionButton("loo_all", if (loo_show_all()) "Show the most influential studies" else paste("Show all", format(studies, big.mark = ","), "studies")),
+        downloadButton("loo_csv", "Download table (.csv)")),
+      refit_offer,
+      tags$details(class = "metaui-help", tags$summary("How this is computed"),
+        tags$p("Each row leaves out one study, with all its effects, and estimates the average effect again from the rest. Rows are sorted by how far the estimate moves; the dashed line marks the estimate with all studies.",
+          if (!is.null(bound)) "The shaded band is your smallest effect size of interest." else ""),
+        tags$p(HTML(paste0("Without a refit, the variances between and within studies are held at their estimates from all studies, and the average and its interval are recomputed exactly for the remaining studies (weighted least squares with those variances). ",
+          "A full refit would also re-estimate these variances. With many studies the two agree closely; with few, a refit can move the estimate and its interval further, so quick refits run automatically."))),
+        tags$p("Marks: the 95% CI now includes (or excludes) 0, when the CI of the full selection excludes (or includes) it; and, with a smallest effect size of interest, the estimate itself moves across that bound. These are descriptive checks of single studies, not tests.")))
+  })
+  output$loo_csv <- downloadHandler(filename = function() download_name("leave-one-study-out.csv"), content = function(file) {
+    result <- loo_result()
+    out <- result$table
+    out$model <- result$model
+    out$method <- if (result$refit) "full refit" else "variance components held at full-selection values"
+    utils::write.csv(out, file, row.names = FALSE)
   })
 
   output$violin <- plotly::renderPlotly({
