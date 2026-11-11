@@ -242,6 +242,13 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     models_to_run <- model_environment$models_to_run
   } else if (is.function(models)) {
     models_to_run <- models()
+    # With one effect per study, one random-effects model replaces the multilevel model and RVE.
+    if (identical(models, get_model_tibble) && nrow(dataset) && !anyDuplicated(dataset$metaUI__study_id)) {
+      models_to_run <- get_model_tibble(one_effect_per_study = TRUE)
+      message("Every study has one effect, so the default models use one random-effects model (metafor::rma.uni, REML, ",
+        "Hartung-Knapp interval) instead of the multilevel model and robust variance estimation. ",
+        "To keep those, pass models = get_model_tibble().")
+    }
   } else if (is.data.frame(models)) {
     models_to_run <- models
   } else {
@@ -253,7 +260,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   about <- do.call(create_about, c(list(dataset_name = dataset_name,
     bayesian = !is.null(bayesian), meta = uses_meta), about_args))
   bayesian <- metaUI_bayesian_options(bayesian, dataset$metaUI__es_type[1])
-  package_models <- identical(models_to_run, get_model_tibble())
+  random_default <- identical(models_to_run, get_model_tibble(one_effect_per_study = TRUE))
+  package_models <- random_default || identical(models_to_run, get_model_tibble())
   if (!is.null(bayesian)) {
     if (is.character(models)) stop("For Bayesian authoring, supply model specifications instead of a model file.")
     models_to_run <- dplyr::bind_rows(models_to_run, metaUI_bayesian_spec(bayesian))
@@ -305,7 +313,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   about <- paste0(about, metaUI_exclusions_html(report),
                   "<details class='metaui-help'><summary>Technical record: data mapping and analysis settings</summary><pre>",
                   htmltools::htmlEscape(jsonlite::toJSON(report, auto_unbox = TRUE, pretty = TRUE, na = "null"), attribute = TRUE), "</pre></details>")
-  defaults_models <- get_model_tibble()
+  defaults_models <- dplyr::bind_rows(get_model_tibble(), get_model_tibble(one_effect_per_study = TRUE)[1, ])
   opts$known_interval_models <- models_to_run$name[vapply(seq_len(nrow(models_to_run)), function(i) {
     idx <- match(models_to_run$name[i], defaults_models$name)
     !is.na(idx) && all(names(defaults_models) %in% names(models_to_run)) &&
@@ -373,7 +381,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   utils::write.csv(versions, file.path(save_to_folder, "dependencies.csv"), row.names = FALSE)
   file.copy(system.file("COPYRIGHTS", package = "metaUI"), file.path(save_to_folder, "COPYRIGHTS"), overwrite = TRUE)
   # Could consider keeping all labels in this file - but then ui.R needs less readable glue::glue syntax
-  writeLines(labels_and_options(dataset_name, correlation, primary_model, bayesian = !is.null(bayesian), correlations = identical(dataset$metaUI__es_type[1], "ZCOR"), custom_models = !package_models,
+  writeLines(labels_and_options(dataset_name, correlation, primary_model, bayesian = !is.null(bayesian), correlations = identical(dataset$metaUI__es_type[1], "ZCOR"), custom_models = !package_models, random_default = random_default,
     model_descriptions = { custom <- models_to_run[!models_to_run$name %in% opts$known_interval_models, , drop = FALSE]
       stats::setNames(if ("description" %in% names(custom)) as.character(custom$description) else rep(NA_character_, nrow(custom)), custom$name) },
     effects = nrow(dataset), studies = length(unique(dataset$metaUI__study_id)),

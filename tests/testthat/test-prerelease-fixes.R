@@ -180,3 +180,27 @@ test_that("with one effect per study the table drops the effect/study-level spli
   expect_match(html, "the standard random-effects model, as each study has one effect", fixed = TRUE)
   expect_match(metaUI:::metaUI_estimates_html(table, 1L), "effect-level fit", fixed = TRUE)
 })
+
+test_that("one effect per study: one random-effects model replaces multilevel and RVE by default", {
+  skip_without_app_packages()
+  set.seed(2); x <- data.frame(study = paste0("S", 1:12), yi = rnorm(12, .3, .2), vi = runif(12, .01, .05))
+  d <- prepare_data(x, "study", "yi", variance = "vi")
+  models <- get_model_tibble(one_effect_per_study = TRUE)
+  expect_identical(models$name[1], "Random-Effects Model")
+  expect_false(any(c("Random-Effects Multilevel Model", "Robust Variance Estimation") %in% models$name))
+  fit <- metaUI:::metaUI_fit_models(d, models)
+  reference <- metafor::rma.uni(x$yi, x$vi, method = "REML", test = "knha")
+  expect_equal(unname(unlist(fit$table[1, c("es", "LCL", "UCL")])), c(as.numeric(reference$b), reference$ci.lb, reference$ci.ub), tolerance = 1e-8)
+  het <- metaUI:::metaUI_heterogeneity(fit$components[[1]], d)
+  expect_equal(het$study_variance, reference$tau2, tolerance = 1e-8)
+  path <- tempfile()
+  expect_message(generate_shiny(d, "Independent", save_to_folder = path, launch_app = FALSE), "one random-effects model")
+  generated <- new.env(); sys.source(file.path(path, "models.R"), generated)
+  expect_identical(generated$models_to_run$name[1], "Random-Effects Model")
+  # Passing the tibble keeps the multilevel model and RVE; nested selections that happen to be
+  # independent mark RVE as close to the random-effects model.
+  path2 <- tempfile()
+  expect_no_message(generate_shiny(d, "Independent", models = get_model_tibble(), save_to_folder = path2, launch_app = FALSE), message = "one random-effects model")
+  table <- metaUI:::metaUI_fit_models(d, get_model_tibble()[1:2, ])$table
+  expect_match(metaUI:::metaUI_estimates_html(table, independent = TRUE), "differs mainly in using a robust standard error", fixed = TRUE)
+})

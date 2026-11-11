@@ -1,6 +1,6 @@
 # Wrap in function so that it can be saved more easily
 
-labels_and_options <- function(dataset_name, correlation = .6, primary_model = NULL, bayesian = FALSE, correlations = FALSE, custom_models = FALSE, model_descriptions = character(), effects = NA, studies = NA, strip = "", citation = "", intro = "") {
+labels_and_options <- function(dataset_name, correlation = .6, primary_model = NULL, bayesian = FALSE, correlations = FALSE, custom_models = FALSE, model_descriptions = character(), effects = NA, studies = NA, strip = "", citation = "", intro = "", random_default = FALSE) {
   glue::glue('
 
       # TK - defaults? Advanced options?
@@ -26,9 +26,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
        # Confidence level needs to be changed in all entries in model.R if you want to adjust it
       summary_table_notes <- HTML(glue::glue("<p>CI = <<ci_width>> confidence interval; its actual coverage depends on each model\\\'s assumptions. <i>k</i> is the number of effects or studies the model reports.{if (bayesian) " Bayesian rows show central credible intervals." else ""}</p>", .open = "<<", .close = ">>"))
       model_help <- HTML("<h4>Default models</h4>
-        <p>The models make different assumptions, so their estimates need not agree. The first two estimate the average effect from every selected effect. The others use one combined effect per study to explore possible publication or reporting bias, each in its own way. Each entry gives the question first, then the specification.</p><dl>
-        <dt>Random-Effects Multilevel Model</dt><dd>What is the average effect, if true effects differ both between studies and between effects within a study? <span class=\'metaui-spec\'>metafor::rma.mv, REML; random effects for studies and for effects within studies; sampling errors treated as independent; <i>t</i>-based intervals with containment degrees of freedom (based on the number of studies).</span></dd>
-        <dt>Robust Variance Estimation</dt><dd>What is the average effect, allowing for unknown correlations between effects from the same study? <span class=\'metaui-spec\'>robumeta::robu with correlated-effects weights, which use the within-study correlation given above to estimate between-study variation, and the small-sample correction of Tipton (2015). Below 4 small-sample degrees of freedom its interval is flagged as unreliable.</span></dd>
+        {metaUI_default_model_help(random_default)}
         <dt>Trim-and-fill</dt><dd>What would the average be if the funnel plot were symmetric? Studies are added as mirror images on the sparse side and the average is estimated again. The side to fill is chosen from the funnel plot&rsquo;s asymmetry (the sign of Egger&rsquo;s test), not from the direction the authors expected. Asymmetry can have causes other than publication bias. <span class=\'metaui-spec\'>Duval-Tweedie L0 estimator with common-effect trimming; random-effects model (ML) with Hartung-Knapp intervals. <i>k</i> includes the added studies.</span></dd>
         <dt>P-uniform* and the Hedges-Vevea selection model</dt><dd>What would the average be if significant results in the expected direction were more likely to be published? Both model this selection directly, so they need the direction the authors expected and are reported as unsupported without one. <span class=\'metaui-spec\'>puniform::puni_star (ML); weightr::weightfunct with one step at one-sided <i>p</i> = .025 and random effects.</span></dd>
         <dt>Precision Effect Test (PET); PEESE</dt><dd>What average effect would a study with no sampling error show, extending the link between effect size and its standard error (PET) or variance (PEESE)? <span class=\'metaui-spec\'>Weighted regressions of study-level effects on their standard error or variance; the intercept is reported.</span> Both rows are shown. The table also marks the conditional PET-PEESE estimate (<a href=\'https://doi.org/10.1002/jrsm.1095\'>Stanley &amp; Doucouliagos, 2014</a>): PEESE when PET&rsquo;s intercept differs from zero, PET otherwise. Following <a href=\'https://doi.org/10.1177/1948550617693062\'>Stanley (2017)</a>, the test is one-sided at the 10% level in the direction the authors expected, or two-sided at the 10% level when they stated none. The rule performs poorly when there are few studies, when all studies are small, or when effects vary a lot between studies (Stanley, 2017).</dd>
@@ -38,7 +36,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       sample_table <- HTML("<h3>Effects and studies</h3>")
       study_details_hint <- HTML("<p class=\'metaui-note\'>Select a study name for its reference and, where the authors could include it, its abstract.</p>")
       sample_moderation_main <- HTML("<h3>Simple tests of moderation</h3>")
-      sample_moderation_notes <- HTML("<p class=\'metaui-note\'>One moderator at a time; correlations between moderators are ignored. Each moderator is added to the primary model where that is a multilevel metafor model, and otherwise to the random-effects multilevel model; tests and intervals are cluster-robust by study (CR2, with small-sample degrees of freedom), so they allow for dependent effects. The overall test uses the matching small-sample correction (HTZ); with many categories that hold few studies it has little power. These are exploratory tests without adjustment for multiple testing: trying many moderators or selections makes some false positives likely. <i>k</i> = number of effects.</p>")
+      sample_moderation_notes <- HTML("<p class=\'metaui-note\'>One moderator at a time; correlations between moderators are ignored. Each moderator is added to the primary model where that is a multilevel metafor model, and otherwise to the random-effects {if (random_default) "" else "multilevel "}model; tests and intervals are cluster-robust by study (CR2, with small-sample degrees of freedom), so they allow for dependent effects. The overall test uses the matching small-sample correction (HTZ); with many categories that hold few studies it has little power. These are exploratory tests without adjustment for multiple testing: trying many moderators or selections makes some false positives likely. <i>k</i> = number of effects.</p>")
 
       pcurve_selection <- HTML("<p class=\'metaui-note\'>P-curve uses the first effect per study, an exploratory selection rule applied before direction screening. It excludes and counts effects that are zero or opposite to the expected direction, and uses normal Wald statistics, not the source p-values.{if (correlations) " For correlations these are computed on Fisher&rsquo;s z." else ""}</p>")
       zcurve_selection <- HTML("<p class=\'metaui-note\'>Z-curve uses the first effect per study, an exploratory selection rule, and normal Wald statistics, not the source p-values.</p>")
@@ -53,7 +51,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       zcurve_main <- HTML("<h4>Z-curve of effects</h4>")
 
       diagnostics_main <- HTML("<h3>Distribution of effect sizes</h3><p class=\'metaui-note\'>Dots mark effects more than 1.5 interquartile ranges (IQR) beyond the middle 50%. Hover over or tap a dot for its study and <i>z</i>-score; the list below the plot gives them all.</p>")
-      diagnostics_het <- HTML("<h3>Heterogeneity (REML multilevel model)</h3>")
+      diagnostics_het <- HTML("<h3>Heterogeneity (REML {if (random_default) "random-effects" else "multilevel"} model)</h3>")
 
       forest_note <- HTML("<p class=\'metaui-note\'>Effects: observed, with normal 95% sampling intervals and no shrinkage. Combined rows: the study-level effects used by the study-level models (see Methods); with correlated effects of unequal precision they can lie away from the simple average. Summaries: the primary model, where the authors chose one, with multilevel and robust variance estimation (RVE).<span class=\'metaui-forest-numbering\'> Effects keep their numbers from the full dataset, so a selection can leave gaps.</span>{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
       zscore_help <- HTML("<p class=\'metaui-help-text\'>z = (effect \\u2212 mean of all effects in the full dataset) / their SD, on the fitting scale. This is a simple standardization, not a model-based outlier test; Outlier diagnostics gives the values used.</p>")
@@ -74,6 +72,21 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
 
 # Methods text for models the authors added: their own descriptions, then a pointer for the rest.
 # Escaped for an HTML string inside a double-quoted R string in labels_and_options.R.
+# The opening of Methods' list of default models: the multilevel model and RVE, or, with one
+# effect per study, the standard random-effects model that replaces them.
+metaUI_default_model_help <- function(random_default = FALSE) {
+  if (random_default) return(paste0("<p>The models make different assumptions, so their estimates need not agree. The first estimates the average effect from every selected effect. ",
+    "The others explore possible publication or reporting bias, each in its own way. Each entry gives the question first, then the specification.</p><dl>",
+    "<dt>Random-Effects Model</dt><dd>What is the average effect, if true effects differ between studies? Each study contributes one effect. ",
+    "<span class='metaui-spec'>metafor::rma.uni, REML; Hartung-Knapp interval (a <i>t</i> distribution with <i>k</i> &minus; 1 degrees of freedom and an adjusted standard error).</span></dd>"))
+  paste0("<p>The models make different assumptions, so their estimates need not agree. The first two estimate the average effect from every selected effect. ",
+    "The others use one combined effect per study to explore possible publication or reporting bias, each in its own way. Each entry gives the question first, then the specification.</p><dl>",
+    "<dt>Random-Effects Multilevel Model</dt><dd>What is the average effect, if true effects differ both between studies and between effects within a study? ",
+    "<span class='metaui-spec'>metafor::rma.mv, REML; random effects for studies and for effects within studies; sampling errors treated as independent; <i>t</i>-based intervals with containment degrees of freedom (based on the number of studies).</span></dd>",
+    "<dt>Robust Variance Estimation</dt><dd>What is the average effect, allowing for unknown correlations between effects from the same study? ",
+    "<span class='metaui-spec'>robumeta::robu with correlated-effects weights, which use the within-study correlation given above to estimate between-study variation, and the small-sample correction of Tipton (2015). Below 4 small-sample degrees of freedom its interval is flagged as unreliable.</span></dd>")
+}
+
 metaUI_custom_model_help <- function(custom_models, descriptions) {
   if (!custom_models) return("")
   esc <- function(x) gsub("\\\\", "&#92;", htmltools::htmlEscape(x, attribute = TRUE))
@@ -653,7 +666,7 @@ glue_string <- ('
 
   # Six entries cover all computations of one selection; 0 keeps the cache opt-out.
   comparison_cache <- metaUI_fit_cache(if (<<opts$fit_cache_entries>> == 0) 0L else 6L, limit = 6L)
-  comparison_models <- models_to_run[models_to_run$code %in% c(metaUI_code_multilevel, metaUI_code_rve), , drop = FALSE]
+  comparison_models <- models_to_run[models_to_run$code %in% metaUI_summary_codes, , drop = FALSE]
   computations_comparison <- eventReactive(input$go, {
     df <- df_filtered()
     if (!nrow(df)) return(data.frame(computation = "All", Model = "Unavailable", es = NA_real_, LCL = NA_real_, UCL = NA_real_, status = "unsupported", reason = "No eligible rows selected"))
@@ -844,8 +857,9 @@ glue_string <- ('
         if (direction == "negative") "; their inputs are sign-flipped for fitting and their estimates flipped back for display" else "", ". PET-PEESE tests PET\'s intercept one-sided in that direction. Other models are two-sided.")
     # With one effect per study there is no within-study dependence to describe.
     dependence_text <- if (!anyDuplicated(df_filtered()$metaUI__study_id)) paste("In this selection every study contributes one effect, and studies are assumed independent.",
-        "Effect-level and study-level models therefore use the same data, and the multilevel model is the standard random-effects model (REML).",
-        "Its interval uses a t distribution with k \\u2212 1 degrees of freedom; trim-and-fill uses the Hartung-Knapp adjustment, so their intervals can differ slightly.") else
+        if (any(models_to_run$code == metaUI_code_multilevel)) paste("Effect-level and study-level models therefore use the same data, and the multilevel model is the standard random-effects model (REML).",
+          "Its interval uses a t distribution with k \\u2212 1 degrees of freedom; trim-and-fill uses the Hartung-Knapp adjustment, so their intervals can differ slightly.") else
+          "Effect-level and study-level models therefore use the same data.") else
       paste0("Effects from the same study are assumed to correlate at ", correlation_dependent, ". ",
       if (aggregation_method[1] == "first") "Study-level models use only the first selected effect from each study; RVE uses the correlation for its weights." else
       "Study-level models use it to combine the effects within each study (GLS average), and RVE for its weights.",
@@ -1098,7 +1112,7 @@ glue_string <- ('
       paste0(\'<p class="metaui-moderation-finding">No overall test could be computed for <b>\', htmltools::htmlEscape(name), "</b> in this selection, usually because some categories hold too few studies. Compare the levels\\u2019 intervals below.</p>")
     # Which model the test extends, and whether its inference allows for dependent effects.
     moderation_text <- paste0(moderation_text, \'<p class="metaui-note">\', "Tested in ",
-      if (fitted$working == "primary") paste0("the primary model (", htmltools::htmlEscape(primary_model), ")") else "the random-effects multilevel model",
+      if (fitted$working == "primary") paste0("the primary model (", htmltools::htmlEscape(primary_model), ")") else if (!anyDuplicated(df$metaUI__study_id)) "the random-effects model" else "the random-effects multilevel model",
       if (fitted$robust) paste0(" with cluster-robust standard errors by study (CR2).", if (fitted$omnibus && model_sig[["QMdf"]][2] < 4)
         " Its small-sample degrees of freedom are below 4, which happens when categories hold few studies, so the test has little power and its p-value is rough." else "") else
       ". Cluster-robust standard errors could not be computed for this selection, so the test is model-based and can be too liberal when effects from the same study are dependent.", "</p>")
@@ -1171,7 +1185,7 @@ glue_string <- ('
     counts <- table(x)
     summary <- estimatesfiltered()
     # The line is the primary estimate of the Summary, so that the same number appears on both tabs.
-    reference <- intersect(c(primary_index(summary), which(models_to_run$code == metaUI_code_multilevel)), which(summary$status == "ok"))
+    reference <- intersect(c(primary_index(summary), which(models_to_run$code %in% c(metaUI_code_multilevel, metaUI_code_random))), which(summary$status == "ok"))
     overall <- summary$es[reference]
     shown <- metaUI_show(df$metaUI__effect_size, df)
     metaUI_moderator_html(levels, metaUI_show(as.numeric(model$b), df), metaUI_show(model$ci.lb, df), metaUI_show(model$ci.ub, df),
@@ -1196,11 +1210,15 @@ glue_string <- ('
     results <- estimatesreactive()
     req(results)
     primary <- primary_index(results$table)
-    multilevel <- models_to_run$name[models_to_run$code == metaUI_code_multilevel & !models_to_run$aggregated]
+    # The default summary model: the multilevel model, or the random-effects model that replaces it.
+    summary_row <- which(models_to_run$code %in% c(metaUI_code_multilevel, metaUI_code_random) & !models_to_run$aggregated)[1]
+    code <- if (is.na(summary_row)) metaUI_code_multilevel else models_to_run$code[summary_row]
+    name <- if (is.na(summary_row)) "Random-Effects Multilevel Model" else models_to_run$name[summary_row]
     if (length(primary) && identical(results$fit_data, df) && results$table$status[primary[1]] == "ok" && !is.null(results$components[[primary[1]]]))
       return(list(model = primary_model, primary = TRUE, fit = results$components[[primary[1]]]))
-    list(model = if (length(multilevel)) multilevel[1] else "Random-Effects Multilevel Model", primary = length(multilevel) > 0L && identical(primary_model, multilevel[1]),
-      fit = tryCatch(metaUI_reuse_fit(results, models_to_run, metaUI_code_multilevel, df, function() metaUI_multilevel_fit(df)), error = function(e) e))
+    list(model = name, primary = !is.na(summary_row) && identical(primary_model, name),
+      fit = tryCatch(metaUI_reuse_fit(results, models_to_run, code, df, function() if (identical(code, metaUI_code_random))
+        metaUI_univariate(df$metaUI__effect_size, df$metaUI__se, method = "REML") else metaUI_multilevel_fit(df)), error = function(e) e))
   })
   # A selection too small for the multilevel model (one effect, say) gets a message, not an error.
   heterogeneity_fit <- reactive({

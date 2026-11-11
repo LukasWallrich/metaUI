@@ -2,6 +2,10 @@
 
 metaUI_code_multilevel <- "metaUI_multilevel_fit(df)"
 metaUI_code_rve <- "metaUI_rve_fit(df)"
+# With one effect per study the default is the standard random-effects model instead of the two above.
+metaUI_code_random <- 'metaUI_univariate(df$metaUI__effect_size, df$metaUI__se, method = "REML")'
+# Effect-level fits that summarise all selected effects: forest summaries, heterogeneity, moderation reference.
+metaUI_summary_codes <- c(metaUI_code_multilevel, metaUI_code_rve, metaUI_code_random)
 
 # Default estimator code. Renamed models are recognised by this exact code
 # (ignoring whitespace), so their input checks and sign handling still apply.
@@ -480,7 +484,8 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
       # Confidence intervals need no note; only the rows that differ from them do.
       if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"),
       if (ok && i %in% pet_peese) '<span class="metaui-row-note">PET-PEESE estimate</span>',
-      if (independent && row$Model == "Random-Effects Multilevel Model") '<span class="metaui-row-note">the standard random-effects model, as each study has one effect</span>')
+      if (independent && row$Model == "Random-Effects Multilevel Model") '<span class="metaui-row-note">the standard random-effects model, as each study has one effect</span>',
+      if (independent && row$Model == "Robust Variance Estimation") '<span class="metaui-row-note">close to the random-effects model here; it differs mainly in using a robust standard error</span>')
     # A row that is not estimated shows no numbers, even where an unreliable fit left some.
     interval <- if (!ok || (is.na(row$LCL) && is.na(row$UCL))) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
     # Effect-level rows all count the effects they use: RVE reports its studies, which would read
@@ -951,10 +956,14 @@ metaUI_reuse_fit <- function(results, models, code, df, fallback) {
 metaUI_heterogeneity <- function(mod, df) {
   # Needs replication both between and within studies.
   identified <- length(unique(df$metaUI__study_id)) > 1L && anyDuplicated(df$metaUI__study_id) > 0L
-  data.frame(study_variance = if (identified) mod$sigma2[1] else NA_real_,
-    effect_variance = if (identified) mod$sigma2[2] else NA_real_,
-    total_variance = sum(mod$sigma2), Q = mod$QE, Q_p = mod$QEp,
-    components = if (identified) "Study and within-study effects" else if (anyDuplicated(df$metaUI__study_id)) "Split not identified: only one study" else "Split not identified: one effect per study")
+  # A random-effects (rma.uni) fit has one variance, tau^2.
+  # It is all between-study variance.
+  sigma2 <- if (is.null(mod$sigma2)) mod$tau2 else mod$sigma2
+  single <- length(sigma2) == 1L
+  data.frame(study_variance = if (single) sigma2 else if (identified) sigma2[1] else NA_real_,
+    effect_variance = if (identified && !single) sigma2[2] else NA_real_,
+    total_variance = sum(sigma2), Q = mod$QE, Q_p = mod$QEp,
+    components = if (single) "Between studies only (one effect per study)" else if (identified) "Study and within-study effects" else if (anyDuplicated(df$metaUI__study_id)) "Split not identified: only one study" else "Split not identified: one effect per study")
 }
 
 metaUI_aggregate <- function(df, correlation = .6, method = "aggregate") {
@@ -985,7 +994,7 @@ metaUI_aggregate <- function(df, correlation = .6, method = "aggregate") {
 metaUI_model_role <- function(spec, fallback = spec$name) {
   normalise <- function(x) gsub("\\s+", "", x)
   defaults <- c("Random-Effects Multilevel Model" = metaUI_code_multilevel,
-                "Robust Variance Estimation" = metaUI_code_rve, metaUI_default_code)
+                "Robust Variance Estimation" = metaUI_code_rve, "Random-Effects Model" = metaUI_code_random, metaUI_default_code)
   hit <- names(defaults)[normalise(defaults) == normalise(spec$code)]
   if (length(hit)) hit[1] else fallback
 }
@@ -1088,9 +1097,11 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
           pred <- tryCatch(suppressWarnings(stats::predict(env$mod)), error = function(e) NULL)
           if (!is.null(pred$pi.lb) && all(is.finite(c(pred$pi.lb, pred$pi.ub)))) prediction <- if (reflected) -c(pred$pi.ub, pred$pi.lb) else c(pred$pi.lb, pred$pi.ub)
         }
-        if (bayesian || (!spec$aggregated && !reflected && spec$code %in% c(metaUI_code_multilevel, metaUI_code_rve))) fits[[i]] <<- env$mod
+        if (bayesian || (!spec$aggregated && !reflected && spec$code %in% metaUI_summary_codes)) fits[[i]] <<- env$mod
         if (!spec$aggregated && !reflected && inherits(env$mod, "rma.mv") && identical(unname(env$mod$s.names), c("metaUI__study_id", "metaUI__study_id/metaUI__effect_id")))
           components[[i]] <<- list(sigma2 = env$mod$sigma2, QE = env$mod$QE, QEp = env$mod$QEp)
+        if (!spec$aggregated && identical(spec$code, metaUI_code_random) && inherits(env$mod, "rma.uni"))
+          components[[i]] <<- list(sigma2 = env$mod$tau2, QE = env$mod$QE, QEp = env$mod$QEp)
         ""
       }, error = function(e) { status <<- "failed"; conditionMessage(e) })
       elapsed <- proc.time()[["elapsed"]] - started
@@ -1373,8 +1384,8 @@ metaUI_forest_rows <- function(df, estimates, models = NULL, primary = NULL) {
   if (df$metaUI__display_scale[1] == "r")
     rows[c("es", "LCL", "UCL")] <- lapply(rows[c("es", "LCL", "UCL")], tanh)
   summary_rows <- if (!is.null(models) && nrow(models) == nrow(estimates))
-    models$code %in% c(metaUI_code_multilevel, metaUI_code_rve) & !models$aggregated else
-    estimates$Model %in% c("Random-Effects Multilevel Model", "Robust Variance Estimation") & !estimates$aggregated
+    models$code %in% metaUI_summary_codes & !models$aggregated else
+    estimates$Model %in% c("Random-Effects Multilevel Model", "Robust Variance Estimation", "Random-Effects Model") & !estimates$aggregated
   # The authors' primary model leads, as it does on the Summary, and sets the reference line.
   chosen <- which((summary_rows | estimates$Model %in% primary) & estimates$status == "ok")
   summaries <- estimates[chosen[order(!estimates$Model[chosen] %in% primary)], ]

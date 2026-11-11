@@ -59,6 +59,16 @@ models; directional models require explicit direction. COR/ZCOR require explicit
 variance scales. Read the generated validation report before interpreting results.
 The introductory Dannheim data use signed Hedges g, not correlations. No public deployment is automatic.
 
+### Default models
+
+The default models estimate the average effect with a random-effects multilevel model
+and robust variance estimation, and explore publication bias with trim-and-fill,
+p-uniform*, a selection model and PET-PEESE. When every study in the data has one
+effect, one standard random-effects model (`metafor::rma.uni`, REML, Hartung-Knapp
+interval) replaces the multilevel model and robust variance estimation, which would
+otherwise nearly repeat it; pass `models = get_model_tibble()` to keep them. See
+`vignette("customise_models")` to change the models.
+
 ### Primary model
 
 Authors may name one primary model (`primary_model` in `generate_shiny()` or the
