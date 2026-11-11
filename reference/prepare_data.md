@@ -169,9 +169,10 @@ prepare_data(
   and its variance are computed with
   [`metafor::escalc()`](https://wviechtb.github.io/metafor/reference/escalc.html)
   and its defaults: 0.5 is added to every cell of a table that has a
-  zero cell, and tables without events (or without non-events) in both
-  groups are kept. Leave `es_field`, `variance` and `se` empty. The
-  count columns become editable in downloaded workbooks. Without
+  zero cell. Separately, metaUI leaves out tables without events (or
+  without non-events) in both groups by default, which `escalc()` would
+  keep (see `double_zero`). Leave `es_field`, `variance` and `se` empty.
+  The count columns become editable in downloaded workbooks. Without
   `sample_size`, N is the total of the four cells; with it, N is checked
   against that total and rows that differ are named in a warning (N may
   legitimately count, say, everyone randomised).

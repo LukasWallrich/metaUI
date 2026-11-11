@@ -166,7 +166,8 @@ or change the models and analyses to be included in the app. Invalid required in
 <dd><p>For OR and RR: named character vector mapping 2x2 count columns, as in <code><a href="https://wviechtb.github.io/metafor/reference/escalc.html" class="external-link">metafor::escalc()</a></code>:
 <code>ai</code> and <code>ci</code> (events in the first and second group) with either <code>n1i</code> and <code>n2i</code> (group totals) or <code>bi</code> and <code>di</code>
 (non-events). The log ratio and its variance are computed with <code><a href="https://wviechtb.github.io/metafor/reference/escalc.html" class="external-link">metafor::escalc()</a></code> and its defaults: 0.5 is added
-to every cell of a table that has a zero cell, and tables without events (or without non-events) in both groups are kept.
+to every cell of a table that has a zero cell. Separately, metaUI leaves out tables without events (or without
+non-events) in both groups by default, which <code>escalc()</code> would keep (see <code>double_zero</code>).
 Leave <code>es_field</code>, <code>variance</code> and <code>se</code> empty. The count columns become editable in downloaded workbooks.
 Without <code>sample_size</code>, N is the total of the four cells; with it, N is checked against that total and
 rows that differ are named in a warning (N may legitimately count, say, everyone randomised).</p></dd>

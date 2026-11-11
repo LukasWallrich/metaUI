@@ -106,15 +106,19 @@ generate_shiny(
   `citation`
 
   :   Citation requested by the author. Defaults to an empty string.
+      Inserted into About as HTML, so it can contain markup such as
+      `<i>`; write `&amp;` and `&lt;` for a literal `&` or `<`.
 
   `osf_link`
 
   :   Link to the OSF (or similar) project where data and materials are
-      available. Defaults to an empty string.
+      available. Defaults to an empty string. Inserted into About as a
+      link (HTML).
 
   `contact`
 
   :   Contact information, typically email. Defaults to an empty string.
+      Inserted into About as HTML.
 
   `list_packages`
 

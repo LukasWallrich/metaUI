@@ -224,19 +224,20 @@ computation inputs; their session-specific data are not encoded in URLs.
 ### Practical equivalence and forest exports
 
 Summary includes an interval assessment for a reader-chosen symmetric
-smallest effect size of interest, on the displayed SMD or r scale. No
-bound is assumed. The strict containment criterion uses each model’s 90%
-interval (two one-sided tests at .05) without refitting; model
-assumptions and small-sample limitations are shown beside the
-assessment. Downloads record the bound and classification in an
-`equivalence` sheet, and uploading the workbook restores the bound, as
-selection links do.
+smallest effect size of interest, on the displayed SMD, r or ratio scale
+(for ratios, a bound x means 1/x to x). No bound is assumed. The strict
+containment criterion uses each model’s 90% interval (two one-sided
+tests at .05) without refitting; model assumptions and small-sample
+limitations are shown beside the assessment. Downloads record the bound
+and classification in an `equivalence` sheet, and uploading the workbook
+restores the bound, as selection links do.
 
-Forest plots compare observed-effect intervals and available
-multilevel/RVE summary intervals. The PNG download is the page on
-screen. The PDF holds every selected study over several pages
-(`max_forest_plot_rows` effects to a page), and the CSV every selected
-row, with both fitting and displayed scales.
+Forest plots compare observed-effect intervals and the available summary
+intervals (multilevel and RVE, or the random-effects model with one
+effect per study). The PNG download is the page on screen. The PDF holds
+every selected study over several pages (`max_forest_plot_rows` effects
+to a page), and the CSV every selected row, with both fitting and
+displayed scales.
 
 ### Alternative effect-size computations
 
@@ -246,9 +247,9 @@ Authors can supply up to five alternative computations in
 correlations, and a `justification`. `primary_label` names the original
 computation. All alternatives use the same effects and fitting scale.
 Readers apply a computation with Update results; the comparison tab fits
-the configured multilevel/RVE models for the same selection. The
-descriptive z filter and source p-values remain anchored to the primary
-computation.
+the configured effect-level summary models (multilevel and RVE, or the
+random-effects model) for the same selection. The descriptive z filter
+and source p-values remain anchored to the primary computation.
 
 ### Bayesian analysis
 

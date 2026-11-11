@@ -114,13 +114,15 @@ estimated for a reader's selection, the app reports why and does not substitute 
 <dd><p>Date of the last update. Defaults to the current date.</p></dd>
 
     <dt><code>citation</code></dt>
-<dd><p>Citation requested by the author. Defaults to an empty string.</p></dd>
+<dd><p>Citation requested by the author. Defaults to an empty string. Inserted into About as HTML, so it
+can contain markup such as <code>&lt;i&gt;</code>; write <code>&amp;amp;</code> and <code>&amp;lt;</code> for a literal <code>&amp;</code> or <code>&lt;</code>.</p></dd>
 
     <dt><code>osf_link</code></dt>
-<dd><p>Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.</p></dd>
+<dd><p>Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.
+Inserted into About as a link (HTML).</p></dd>
 
     <dt><code>contact</code></dt>
-<dd><p>Contact information, typically email. Defaults to an empty string.</p></dd>
+<dd><p>Contact information, typically email. Defaults to an empty string. Inserted into About as HTML.</p></dd>
 
     <dt><code>list_packages</code></dt>
 <dd><p>Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
