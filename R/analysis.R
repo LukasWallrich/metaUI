@@ -735,9 +735,11 @@ metaUI_moderator_code <- function(code, mods, control = NULL) {
   if (found == 1L) expr else NULL
 }
 
-# primary: list(name, code) of the authors' primary model, or NULL. Returns the fitted model
-# (robust where possible), which model it extends, and whether inference is cluster-robust.
-metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6) {
+# primary: list(name, code) of the authors' primary model, or NULL. start: variance components (sigma2) of
+# the model without the moderator, used as starting values, which saves about a quarter of the fitting time
+# on large data and reaches the same optimum. Returns the fitted model (robust where possible), which model
+# it extends, whether inference is cluster-robust, and why an overall test is missing where that is known.
+metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6, start = NULL) {
   # Treatment coding, as metaUI_moderator_levels() assumes: an ordered factor would otherwise get
   # polynomial contrasts. The level order is kept.
   if (is.factor(df[[moderator]])) df[[moderator]] <- factor(droplevels(df[[moderator]]), ordered = FALSE)
@@ -750,6 +752,7 @@ metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6
   # A variance component at zero can stop the default optimizer short; more iterations, then
   # another optimizer, usually reach the same optimum.
   controls <- list(NULL, list(iter.max = 1000, rel.tol = 1e-8), list(optimizer = "BFGS"))
+  if (length(start) && all(is.finite(start))) controls <- c(list(list(sigma2.init = pmax(start, 1e-6))), controls)
   if (!is.null(primary)) {
     if (identical(primary$code, metaUI_code_multilevel)) working <- "primary" else {
       for (control in controls) {
@@ -775,8 +778,21 @@ metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6
   robust <- tryCatch(suppressWarnings(metafor::robust(model, cluster = df$metaUI__study_id, clubSandwich = TRUE, wald_test = "Naive-Fp")),
     error = function(e) NULL)
   omnibus <- FALSE
+  reason <- NULL
   if (!is.null(robust)) {
-    test <- tryCatch(metaUI_moderator_omnibus(model, df$metaUI__study_id[model$not.na]), error = function(e) NULL)
+    cluster <- df$metaUI__study_id[model$not.na]
+    test <- if (is.null(model$W)) tryCatch(metaUI_moderator_omnibus(model, cluster), error = function(e) NULL) else {
+      # Custom weights (an author's W): the fast route assumes inverse-variance weights, so clubSandwich's own
+      # HTZ test is used where its q x q x studies x studies array stays small (about 70 MB at most).
+      q <- NCOL(model$X) - 1L
+      if (q * length(unique(cluster)) <= 3000L) tryCatch({
+        w <- clubSandwich::Wald_test(model, clubSandwich::constrain_zero(seq_len(q) + 1L), vcov = "CR2", cluster = cluster, test = "HTZ")
+        data.frame(statistic = w$Fstat, df_num = w$df_num, df_denom = w$df_denom, p_value = w$p_val)
+      }, error = function(e) NULL) else {
+        reason <- "the primary model uses its own weights, and with this many categories and studies the overall test would need too much memory"
+        NULL
+      }
+    }
     if (!is.null(test) && is.finite(test$p_value)) {
       robust$QM <- test$statistic
       robust$QMdf <- c(test$df_num, test$df_denom)
@@ -784,7 +800,7 @@ metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6
       omnibus <- TRUE
     }
   }
-  list(model = if (is.null(robust)) model else robust, working = working, robust = !is.null(robust), omnibus = omnibus || is.null(robust))
+  list(model = if (is.null(robust)) model else robust, working = working, robust = !is.null(robust), omnibus = omnibus || is.null(robust), reason = reason)
 }
 
 # clubSandwich's HTZ Wald test (CR2, Tipton & Pustejovsky 2015, doi:10.3102/1076998615606099) of all
@@ -851,10 +867,14 @@ metaUI_moderator_levels <- function(model, levels) {
 # Moderator levels on the same drawn axis; the dots are the selected effects themselves.
 # Without the individual effects, the axis fits the level estimates and their intervals; with
 # them, it covers every effect, which can leave narrow intervals as slivers.
+# A level without an interval (a single study, where a cluster-robust interval does not exist) shows its
+# estimate as a point and "too few studies" in place of the interval.
 metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values, labels, axis_title, ref = NULL, se = NULL, show_effects = TRUE, keep_order = FALSE, ref_label = "Random-Effects Multilevel Model", ratio = FALSE) {
+  no_ci <- !is.finite(lcl) | !is.finite(ucl)
+  lcl[no_ci] <- NA_real_; ucl[no_ci] <- NA_real_
   digits <- metaUI_digits(lcl, ucl)
   fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = digits))
-  scale <- metaUI_track_scale(c(estimate, lcl, ucl, ref, if (show_effects) values), ratio)
+  scale <- metaUI_track_scale(c(estimate, lcl[!no_ci], ucl[!no_ci], ref, if (show_effects) values), ratio)
   # Largest estimate first, unless the author ordered the levels (metaUI_author_order); a missing-data level stays at the end.
   order <- order(levels == "(Missing)", if (keep_order) seq_along(levels) else -estimate)
   # Dots follow precision, as in the numeric moderator's plot.
@@ -863,15 +883,18 @@ metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values
     level <- as.character(effects) == as.character(levels[i])
     level[is.na(level)] <- FALSE
     paste0("<tr><td>", htmltools::htmlEscape(levels[i]), '</td><td class="num">', fmt(estimate[i]),
-      '</td><td class="num">[', fmt(lcl[i]), ", ", fmt(ucl[i]), ']</td><td class="num metaui-k">', k[i], '</td><td class="metaui-track-cell">',
-      metaUI_track_row(scale, estimate[i], lcl[i], ucl[i], dots = if (show_effects) values[level], dot_labels = if (show_effects) labels[level], ref = ref, dot_sizes = if (show_effects) sizes[level], diamond = TRUE,
-        hollow = isTRUE(lcl[i] <= scale$null && ucl[i] >= scale$null)), "</td></tr>")
+      '</td><td class="num">', if (no_ci[i]) '<span class="metaui-no-ci">too few studies</span>' else paste0("[", fmt(lcl[i]), ", ", fmt(ucl[i]), "]"),
+      '</td><td class="num metaui-k">', format(k[i], big.mark = ","), '</td><td class="metaui-track-cell">',
+      sub("metaui-track-point\"", if (no_ci[i]) "metaui-track-point metaui-track-bare\"" else "metaui-track-point\"",
+        metaUI_track_row(scale, estimate[i], lcl[i], ucl[i], dots = if (show_effects) values[level], dot_labels = if (show_effects) labels[level], ref = ref, dot_sizes = if (show_effects) sizes[level], diamond = TRUE,
+          hollow = isTRUE(lcl[i] <= scale$null && ucl[i] >= scale$null)), fixed = TRUE), "</td></tr>")
   }, character(1))
   paste0('<p class="metaui-note metaui-key metaui-forest-controls">',
     metaUI_switch("Individual effects", "metaui-moderator-effects", c(hide = "hidden", show = "shown"), if (show_effects) "show" else "hide"), "</p>",
     '<table class="table metaui-estimates metaui-moderators', if (!show_effects) " metaui-moderators-plain", ' metaui-custom"><thead><tr data-head="Level, estimate [95% CI]"><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k"><i>k</i></th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", paste(rows, collapse = ""), "</tbody></table>",
     '<p class="metaui-note metaui-key">Diamonds: level estimates from the moderator model named above; each spans its 95% CI, and is filled where the CI excludes ', if (ratio) "1" else "zero", ', outlined where it includes it.',
+    if (any(no_ci)) " Grey outlined squares: estimates of levels without an interval.",
     if (show_effects) '<span class="metaui-dots-note"> Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another.</span>',
     if (!is.null(ref)) paste0(" Dashed line: overall estimate of the ", htmltools::htmlEscape(ref_label), ", as on the Summary (", fmt(ref), ")."),
     if (show_effects) '<span class="metaui-hist-note" hidden> Levels with many effects show bars instead of dots: the number of effects in each range (tallest bar: <span class="metaui-hist-max"></span> effects).</span>',
@@ -1308,10 +1331,10 @@ metaUI_double_zero_text <- function(built) {
   what <- "Tables with no events in either group, or with events in everyone in both groups,"
   if (identical(validation$mapping$double_zero, "exclude")) {
     n <- sum(grepl("double_zero", validation$exclusions$reason, fixed = TRUE))
-    return(paste0(what, " were left out, as the authors chose", if (n) paste0(" (", n, if (n == 1L) " table" else " tables", ")") else "", ". "))
+    return(paste0(what, " were left out (", if (n) n else "none", " in these data), following the Cochrane Handbook: they carry almost no information about the ratio. "))
   }
   n <- sum(metaUI_count_effects(built, lapply(counts, function(col) built[[col]]), built$metaUI__es_type[1])$double_zero)
-  paste0(what, " were kept, as metafor does by default (", if (n) n else "none", " in these data). ",
+  paste0(what, " were kept, as the authors chose (metafor's default; ", if (n) n else "none", " in these data). ",
     if (n) paste0("With 0.5 added to each cell, a table without events gives a ratio set mainly by the group sizes, with a wide interval",
       if (built$metaUI__es_type[1] == "RR") "; a table with events in everyone gives a risk ratio near 1 that can have a narrow interval" else "", ". ") else "")
 }
@@ -1398,7 +1421,7 @@ metaUI_validate_upload <- function(df, built) {
     cells <- metaUI_count_effects(df, lapply(counts, function(col) number(col, "a count")), built$metaUI__es_type[1])
     if (any(cells$invalid)) stop("Counts must be whole numbers, not negative, and events must not exceed the group total (not in ", metaUI_upload_rows(cells$invalid), ").", call. = FALSE)
     if (identical(attr(built, "metaUI_validation")$mapping$double_zero, "exclude") && any(cells$double_zero))
-      stop("The authors excluded tables with no events (or only events) in both groups; ", metaUI_upload_rows(cells$double_zero),
+      stop("This app leaves out tables with no events (or only events) in both groups, and ", metaUI_upload_rows(cells$double_zero),
         " ", if (sum(cells$double_zero) > 1L) "are such tables" else "is such a table", ". Remove ", if (sum(cells$double_zero) > 1L) "them" else "it", " or change the counts.", call. = FALSE)
     df$metaUI__input_effect <- cells$yi; df$metaUI__input_variance <- cells$vi
     if (metaUI_count_N(built)) df$metaUI__N <- cells$total

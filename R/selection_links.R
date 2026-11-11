@@ -111,7 +111,9 @@ metaUI_parse_selection <- function(query, dataset_key, built, filters = list()) 
   if (keys[1] != "metaui" || !grepl("^[A-Za-z0-9]{1,8}$", values[1])) damaged()
   # A link made before the data were updated is applied as far as it still fits: categories that
   # are gone are dropped and ranges are trimmed to the new sliders, and these changes are reported.
-  # Keys that match no filter or computation are skipped without a note: they may be tracking tags.
+  # Keys that match no filter or computation are skipped: they may be tracking tags. In a link made for
+  # earlier data, such a key may instead name a filter that has since been renamed or removed, so it
+  # is reported unless it looks like a common tracking tag.
   stale <- !identical(values[1], metaUI_link_key(dataset_key))
   adjusted <- character()
   keys <- keys[-1]; values <- values[-1]
@@ -130,7 +132,13 @@ metaUI_parse_selection <- function(query, dataset_key, built, filters = list()) 
       next
     }
     id <- names(link_names)[link_names == keys[i]]
-    if (!length(id)) next # Not ours, such as a tracking tag a site added.
+    if (!length(id)) {
+      # A removed numeric filter's "-missing" key belongs to it and is not named again.
+      if (stale && !grepl("^(utm_.*|fbclid|gclid|dclid|msclkid|mc_cid|mc_eid|igshid|ref|_ga|_gl)$", keys[i]) &&
+        !(endsWith(keys[i], "-missing") && sub("-missing$", "", keys[i]) %in% keys))
+        adjusted <- c(adjusted, paste0("a filter it names (", keys[i], ") no longer exists, so all its values are included"))
+      next # Not ours, such as a tracking tag a site added.
+    }
     filter <- Filter(function(f) f$id == id, filters)
     selection <- if (excluded[i] && !(length(filter) && filter[[1]]$type != "numeric")) damaged()
       else if (id %in% ranges) items

@@ -376,7 +376,7 @@
             "keep",
             "exclude"
           ],
-          "description": "With counts: keep (default, as metafor) or exclude tables with no events, or only events, in both groups."
+          "description": "With counts: exclude (default, following the Cochrane Handbook) or keep (as metafor) tables with no events, or only events, in both groups."
         }
       },
       "anyOf": [
