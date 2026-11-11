@@ -1320,9 +1320,18 @@ glue_string <- ('
     pages <- metaUI_forest_chunks(forest_rows(), forest_screen_order(), <<opts$max_forest_plot_rows>>)
     capacity <- max(vapply(pages, nrow, integer(1)))
     # Cairo embeds the letters of any study name; the plain PDF device lacks some (\\u0131, say).
-    # A Mac without XQuartz reports cairo but cannot load it; the plain device then stands in.
-    cairo <- isTRUE(capabilities("cairo")) && !inherits(try(grDevices::cairo_pdf(file, width = 10, height = forest_height(capacity) / 96, onefile = TRUE), silent = TRUE), "try-error")
-    if (!cairo) grDevices::pdf(file, width = 10, height = forest_height(capacity) / 96)
+    # A Mac without XQuartz reports cairo but cannot load it (a warning, and no device opens);
+    # the plain device then stands in, and the log says that some letters may be missing.
+    before <- grDevices::dev.cur()
+    cairo <- isTRUE(capabilities("cairo")) && isTRUE(tryCatch({
+      grDevices::cairo_pdf(file, width = 10, height = forest_height(capacity) / 96, onefile = TRUE)
+      grDevices::dev.cur() != before
+    }, warning = function(w) FALSE, error = function(e) FALSE))
+    if (!cairo) {
+      if (grDevices::dev.cur() != before) grDevices::dev.off()
+      message("Forest plot PDF: cairo could not be loaded, so the plain PDF device is used; some letters in study names may be missing.")
+      grDevices::pdf(file, width = 10, height = forest_height(capacity) / 96)
+    }
     on.exit(grDevices::dev.off())
     for (rows in pages) print(forest_plot_for(rows, family = "", capacity = capacity))
   })
