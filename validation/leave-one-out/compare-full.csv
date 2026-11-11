@@ -1,0 +1,2 @@
+"set","model","studies","effects","full_es","full_fit_s","fast_s","refit_median_s","refit_total_s","failed","max_d_es","max_d_ci","max_change_slow","max_rel_err","sig_flags_fast","sig_flags_slow","sig_disagree","bound_disagree","top_same","rank_cor"
+"all646","CHE",646,2628,0.0243163962455317,10.918,0.000999999999999446,20.124,14827.354,0,0.000246567829420157,0.000383090865058999,0.00160963539599701,0.153182410149121,0,0,0,"0/0/0",TRUE,0.99950155696263
