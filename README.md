@@ -56,7 +56,9 @@ Assigning the app object to a variable postpones launch until you print it.
 
 Generation refuses a nonempty folder by default. p/N are optional for the primary
 models; directional models require explicit direction. COR/ZCOR require explicit
-variance scales. Read the generated validation report before interpreting results.
+variance scales. Odds and risk ratios (`es_type = "OR"` or `"RR"`) take log ratios with
+`variance_scale = "log"`, or 2x2 counts through `counts` (computed with `metafor::escalc()`);
+models are fitted to the log ratios and results are shown as ratios on log axes. Read the generated validation report before interpreting results.
 The introductory Dannheim data use signed Hedges g, not correlations. No public deployment is automatic.
 
 ### Primary model
@@ -159,7 +161,7 @@ and source p-values remain anchored to the primary computation.
 Enable study-level Bayesian analysis with
 `generate_shiny(..., bayesian = list(enabled = TRUE))`, after installing the
 optional `bayesmeta` package. The mean prior is flat; the heterogeneity prior is
-half-normal with scale 0.5 for SMD or 0.25 for Fisher z, configurable with
+half-normal with scale 0.5 for SMD and log odds or risk ratios, or 0.25 for Fisher z, configurable with
 `tau_scale`. Central 95% credible intervals and posterior medians are reported,
 and the sensitivity tab compares half and double that prior scale. This uses
 aggregated studies and the declared within-study correlation. Authors who edit

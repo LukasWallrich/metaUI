@@ -7,7 +7,7 @@
 prepare_data(
   data,
   study_label,
-  es_field,
+  es_field = NULL,
   se = NULL,
   pvalue = NULL,
   sample_size = NULL,
@@ -25,7 +25,8 @@ prepare_data(
   direction = c("unspecified", "positive", "negative"),
   categorical_filters = character(),
   alternatives = list(),
-  primary_label = "As supplied"
+  primary_label = "As supplied",
+  counts = NULL
 )
 }
 \arguments{
@@ -47,7 +48,7 @@ prepare_data(
 
 \item{url}{Character. Field with URLs or DOIs to link to. DOIs can be in the format "10.1234/5678" or full links. Defaults to NA.}
 
-\item{es_type}{Character. Input scale: SMD, COR (raw r), or ZCOR (Fisher z). COR needs r-scale variance and uses delta-method variance conversion; ZCOR needs z-scale variance.}
+\item{es_type}{Character. Input scale: SMD, COR (raw r), ZCOR (Fisher z), OR (log odds ratio) or RR (log risk ratio). COR needs r-scale variance and uses delta-method variance conversion; ZCOR needs z-scale variance. OR and RR take effects and variances on the log scale (\code{variance_scale = "log"}), as \code{\link[metafor:escalc]{metafor::escalc()}} returns them, or 2x2 counts (\code{counts}); models are fitted on the log scale and results shown as ratios.}
 
 \item{article_label}{Character. Field with article labels. Only used to report number of references in addition to number of independent samples.}
 
@@ -65,7 +66,7 @@ or change the models and analyses to be included in the app. Invalid required in
 
 \item{es_id}{Optional column with unique effect IDs within each study. Defaults to input row IDs.}
 
-\item{variance_scale}{Required for COR (r) and ZCOR (z); optional SMD for SMD.}
+\item{variance_scale}{Required for COR (r), ZCOR (z), and OR or RR given as log ratios (log); optional SMD for SMD.}
 
 \item{direction}{Explicit direction for one-sided bias models: unspecified, positive, or negative.}
 
@@ -74,6 +75,12 @@ or change the models and analyses to be included in the app. Invalid required in
 \item{alternatives}{Named list of up to five author-defined effect computations. Each entry supplies es_field, variance or se, es_type, variance_scale when required, and a nonempty justification. Every computation must retain the same effects and converge on the same fitting scale.}
 
 \item{primary_label}{Label for the primary computation when alternatives are provided.}
+
+\item{counts}{For OR and RR: named character vector mapping 2x2 count columns, as in \code{\link[metafor:escalc]{metafor::escalc()}}:
+\code{ai} and \code{ci} (events in the first and second group) with either \code{n1i} and \code{n2i} (group totals) or \code{bi} and \code{di}
+(non-events). The log ratio and its variance are computed with \code{metafor::escalc()} and its defaults: 0.5 is added
+to every cell of a table that has a zero cell, and tables without events (or without non-events) in both groups are kept.
+Leave \code{es_field}, \code{variance} and \code{se} empty. The count columns become editable in downloaded workbooks.}
 }
 \value{
 tibble with the data from the file/input reformatted for metaUI
