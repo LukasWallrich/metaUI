@@ -48,9 +48,11 @@ estimated for a reader's selection, the app reports why and does not substitute 
   Arguments passed on to \code{\link{create_about}}
   \describe{
     \item{\code{date}}{Date of the last update. Defaults to the current date.}
-    \item{\code{citation}}{Citation requested by the author. Defaults to an empty string.}
-    \item{\code{osf_link}}{Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.}
-    \item{\code{contact}}{Contact information, typically email. Defaults to an empty string.}
+    \item{\code{citation}}{Citation requested by the author. Defaults to an empty string. Inserted into About as HTML, so it
+can contain markup such as \verb{<i>}; write \verb{&amp;} and \verb{&lt;} for a literal \code{&} or \code{<}.}
+    \item{\code{osf_link}}{Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.
+Inserted into About as a link (HTML).}
+    \item{\code{contact}}{Contact information, typically email. Defaults to an empty string. Inserted into About as HTML.}
     \item{\code{list_packages}}{Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 a character vector with all packages to display.}

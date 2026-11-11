@@ -480,6 +480,8 @@ metaUI_reader_messages <- c(
   "exactly singular" = "This selection has too little variation to fit the model.",
   "There must be at least 10 z-scores in the fitting range" = "Needs at least 10 significant results (z between 1.96 and 6); far more are recommended.",
   "Two or less significant" = "Needs at least three significant results (p < .05).",
+  "Processing terminated since k <= 1" = "Needs at least two effects.",
+  "non-conformable arguments" = "The model could not be fitted to so few effects.",
   "Small-sample degrees of freedom below 4" = "Too few studies for robust variance estimation (small-sample degrees of freedom below 4): its interval and p-value are unreliable.")
 metaUI_reader_message <- function(x) {
   hit <- names(metaUI_reader_messages)[vapply(names(metaUI_reader_messages), grepl, logical(1), x = x, fixed = TRUE)]
@@ -531,8 +533,8 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
       # Confidence intervals need no note; only the rows that differ from them do.
       if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"),
       if (ok && i %in% pet_peese) '<span class="metaui-row-note">PET-PEESE estimate</span>',
-      if (independent && row$Model == "Random-Effects Multilevel Model") '<span class="metaui-row-note">the standard random-effects model, as each study has one effect</span>',
-      if (independent && row$Model == "Robust Variance Estimation") '<span class="metaui-row-note">close to the random-effects model here; it differs mainly in using a robust standard error</span>')
+      if (ok && independent && row$Model == "Random-Effects Multilevel Model") '<span class="metaui-row-note">the standard random-effects model, as each study has one effect</span>',
+      if (ok && independent && row$Model == "Robust Variance Estimation") '<span class="metaui-row-note">close to the random-effects model here; it differs mainly in using a robust standard error</span>')
     # A row that is not estimated shows no numbers, even where an unreliable fit left some.
     interval <- if (!ok || (is.na(row$LCL) && is.na(row$UCL))) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
     # Effect-level rows all count the effects they use: RVE reports its studies, which would read
@@ -540,6 +542,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     effect_level <- ok && !independent && !isTRUE(row$aggregated) && "input_rows" %in% names(row) && !is.na(row$k)
     unit <- if (!ok) "" else if (effect_level) "effects" else metaUI_count_unit(row, studies)
     k_shown <- if (!ok || is.na(row$k)) "" else format(if (effect_level) row$input_rows else row$k, big.mark = ",")
+    if (k_shown == "1") unit <- sub("s$", "", unit)
     track <- if (ok && i %in% clipped) paste0('<td class="metaui-track-cell">', metaUI_track_clipped(scale, row$es, row$LCL, row$UCL, band, ref), "</td>")
       else if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, band, ref = ref, diamond = TRUE), "</td>")
       else paste0('<td class="metaui-reason-cell"><b>', "Not estimated:</b> ", esc(metaUI_reader_reason(row$reason, row$warnings)), "</td>")
@@ -737,13 +740,31 @@ metaUI_moderator_code <- function(code, mods, control = NULL) {
 
 # primary: list(name, code) of the authors' primary model, or NULL. start: variance components (sigma2) of
 # the model without the moderator, used as starting values, which saves about a quarter of the fitting time
-# on large data and reaches the same optimum. Returns the fitted model (robust where possible), which model
-# it extends, whether inference is cluster-robust, and why an overall test is missing where that is known.
+# on large data and reaches the same optimum. Returns the fitted model, which model it extends, how inference
+# was made ("knha", "robust" or "model"), whether there is an overall test and why not where that is known,
+# and, for a categorical moderator, its levels (estimate, interval, small-sample df, number of studies).
 metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6, start = NULL) {
   # Treatment coding, as metaUI_moderator_levels() assumes: an ordered factor would otherwise get
   # polynomial contrasts. The level order is kept.
-  if (is.factor(df[[moderator]])) df[[moderator]] <- factor(droplevels(df[[moderator]]), ordered = FALSE)
+  categorical <- is.factor(df[[moderator]])
+  if (categorical) df[[moderator]] <- factor(droplevels(df[[moderator]]), ordered = FALSE)
   mods <- stats::as.formula(paste0("~`", moderator, "`"))
+  studies <- if (categorical) vapply(split(df$metaUI__study_id, df[[moderator]]), function(x) length(unique(x)), integer(1)) else NULL
+  # One effect per study: clustering by study protects against nothing, and cluster-robust intervals are
+  # unstable in small categories, so the moderator is added to the random-effects model with the
+  # Hartung-Knapp adjustment, the inference the Summary uses.
+  if (!anyDuplicated(df$metaUI__study_id)) {
+    model <- NULL
+    for (control in list(list(), list(stepadj = .5, maxiter = 1000))) {
+      model <- tryCatch(suppressWarnings(metafor::rma.uni(metaUI__effect_size, metaUI__variance, mods = mods, data = df, method = "REML", test = "knha", control = control)),
+        error = function(e) NULL)
+      if (!is.null(model)) break
+    }
+    if (is.null(model)) stop("The random-effects model with the moderator could not be fitted.")
+    if (model$k - model$p < 1L) stop("Too few studies for the number of categories.")
+    levels <- if (categorical) cbind(metaUI_moderator_levels(model, levels(df[[moderator]])), df = model$k - model$p, studies = unname(studies))
+    return(list(model = model, working = "random", method = "knha", robust = FALSE, omnibus = TRUE, reason = NULL, levels = levels))
+  }
   env <- new.env(parent = environment(metaUI_moderator_fit))
   env$df <- df
   attr(env$df, "metaUI_correlation") <- correlation
@@ -777,30 +798,49 @@ metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6
   # The cheap robust() Wald test only fills the object's slots until it is replaced.
   robust <- tryCatch(suppressWarnings(metafor::robust(model, cluster = df$metaUI__study_id, clubSandwich = TRUE, wald_test = "Naive-Fp")),
     error = function(e) NULL)
-  omnibus <- FALSE
+  if (is.null(robust)) {
+    levels <- if (categorical) cbind(metaUI_moderator_levels(model, levels(df[[moderator]])), df = NA_real_, studies = unname(studies))
+    return(list(model = model, working = working, method = "model", robust = FALSE, omnibus = TRUE, reason = NULL, levels = levels))
+  }
+  cluster <- df$metaUI__study_id[model$not.na]
+  vcov <- tryCatch(clubSandwich::vcovCR(model, cluster = cluster, type = "CR2"), error = function(e) NULL)
+  q <- NCOL(model$X) - 1L
+  levels <- NULL
+  constraints <- NULL
   reason <- NULL
-  if (!is.null(robust)) {
-    cluster <- df$metaUI__study_id[model$not.na]
-    test <- if (is.null(model$W)) tryCatch(metaUI_moderator_omnibus(model, cluster), error = function(e) NULL) else {
+  if (categorical) {
+    # Each level's estimate with its own small-sample df (the same intervals as predict() on the robust fit).
+    L <- cbind(1, rbind(rep(0, q), diag(q)))
+    lc <- if (is.null(vcov)) NULL else tryCatch(as.data.frame(clubSandwich::linear_contrast(model, vcov = vcov, contrasts = L, test = "Satterthwaite")), error = function(e) NULL)
+    levels <- if (is.null(lc)) cbind(metaUI_moderator_levels(robust, levels(df[[moderator]])), df = NA_real_, studies = unname(studies)) else
+      data.frame(level = levels(df[[moderator]]), b = lc$Est, ci.lb = lc$CI_L, ci.ub = lc$CI_U, df = lc$df, studies = unname(studies))
+    # A category with one study has a cluster-robust variance of zero by construction, which would let it
+    # dominate the overall test; the test compares the categories with at least two studies.
+    multi <- which(studies >= 2L)
+    if (length(multi) < 2L) reason <- "fewer than two categories hold at least two studies" else
+      if (length(multi) < length(studies)) constraints <- L[multi[-1L], , drop = FALSE] - L[rep(multi[1L], length(multi) - 1L), , drop = FALSE]
+  }
+  if (is.null(reason) && !is.null(vcov)) {
+    test <- if (is.null(model$W)) tryCatch(metaUI_moderator_omnibus(model, cluster, constraints = constraints, vcov = vcov), error = function(e) NULL) else {
       # Custom weights (an author's W): the fast route assumes inverse-variance weights, so clubSandwich's own
       # HTZ test is used where its q x q x studies x studies array stays small (about 70 MB at most).
-      q <- NCOL(model$X) - 1L
       if (q * length(unique(cluster)) <= 3000L) tryCatch({
-        w <- clubSandwich::Wald_test(model, clubSandwich::constrain_zero(seq_len(q) + 1L), vcov = "CR2", cluster = cluster, test = "HTZ")
+        w <- clubSandwich::Wald_test(model, if (is.null(constraints)) clubSandwich::constrain_zero(seq_len(q) + 1L) else constraints,
+          vcov = vcov, test = "HTZ")
         data.frame(statistic = w$Fstat, df_num = w$df_num, df_denom = w$df_denom, p_value = w$p_val)
       }, error = function(e) NULL) else {
         reason <- "the primary model uses its own weights, and with this many categories and studies the overall test would need too much memory"
         NULL
       }
     }
-    if (!is.null(test) && is.finite(test$p_value)) {
-      robust$QM <- test$statistic
-      robust$QMdf <- c(test$df_num, test$df_denom)
-      robust$QMp <- test$p_value
-      omnibus <- TRUE
-    }
+  } else test <- NULL
+  omnibus <- !is.null(test) && is.finite(test$p_value)
+  if (omnibus) {
+    robust$QM <- test$statistic
+    robust$QMdf <- c(test$df_num, test$df_denom)
+    robust$QMp <- test$p_value
   }
-  list(model = if (is.null(robust)) model else robust, working = working, robust = !is.null(robust), omnibus = omnibus || is.null(robust), reason = reason)
+  list(model = robust, working = working, method = "robust", robust = TRUE, omnibus = omnibus, reason = reason, levels = levels)
 }
 
 # clubSandwich's HTZ Wald test (CR2, Tipton & Pustejovsky 2015, doi:10.3102/1076998615606099) of all
@@ -1034,9 +1074,17 @@ metaUI_heterogeneity <- function(mod, df) {
   # It is all between-study variance.
   sigma2 <- if (is.null(mod$sigma2)) mod$tau2 else mod$sigma2
   single <- length(sigma2) == 1L
+  # I^2: the share of the variance of observed effects that is between true effects, against the "typical"
+  # sampling variance of Higgins & Thompson (2002, doi:10.1002/sim.1186); for multilevel models, per level
+  # as in Cheung (2014, doi:10.1037/a0032968). For rma.uni this equals metafor's I2.
+  w <- 1 / df$metaUI__variance[is.finite(df$metaUI__variance) & df$metaUI__variance > 0]
+  typical <- if (length(w) > 1L) (length(w) - 1) * sum(w) / (sum(w)^2 - sum(w^2)) else NA_real_
+  share <- function(x) if (is.finite(x) && is.finite(typical)) 100 * x / (sum(sigma2) + typical) else NA_real_
   data.frame(study_variance = if (single) sigma2 else if (identified) sigma2[1] else NA_real_,
     effect_variance = if (identified && !single) sigma2[2] else NA_real_,
     total_variance = sum(sigma2), Q = mod$QE, Q_p = mod$QEp,
+    I2 = share(sum(sigma2)), I2_study = if (identified && !single) share(sigma2[1]) else NA_real_,
+    I2_effect = if (identified && !single) share(sigma2[2]) else NA_real_,
     components = if (single) "Between studies only (one effect per study)" else if (identified) "Study and within-study effects" else if (anyDuplicated(df$metaUI__study_id)) "Split not identified: only one study" else "Split not identified: one effect per study")
 }
 
@@ -1388,10 +1436,9 @@ metaUI_validate_upload <- function(df, built) {
   ids <- df$metaUI__effect_id
   added <- is.na(ids) | trimws(as.character(ids)) == ""
   if (any(added)) {
-    if (is.numeric(built$metaUI__effect_id) && is.numeric(ids) || all(is.na(ids))) {
+    if (is.numeric(built$metaUI__effect_id) && (is.numeric(ids) || all(is.na(ids)))) {
       ids <- as.numeric(ids)
       ids[added] <- max(c(0, built$metaUI__effect_id, ids), na.rm = TRUE) + seq_len(sum(added))
-      if (!is.numeric(built$metaUI__effect_id)) ids <- as.character(ids)
     } else {
       ids <- as.character(ids)
       taken <- unique(c(as.character(built$metaUI__effect_id), ids))

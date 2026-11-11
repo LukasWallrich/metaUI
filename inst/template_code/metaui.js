@@ -10,7 +10,12 @@
     document.querySelectorAll('.shiny-input-container .selectize-control').forEach(function (control) {
       var box = control.querySelector('.selectize-input input');
       var label = control.closest('.shiny-input-container').querySelector('.control-label');
-      if (box && label && !box.hasAttribute('aria-label')) box.setAttribute('aria-label', label.textContent.trim());
+      if (box && label && !box.hasAttribute('aria-label')) {
+        // The name leaves out a filter's help button ("?").
+        var copy = label.cloneNode(true);
+        copy.querySelectorAll('.metaui-range, .metaui-filter-help').forEach(function (el) { el.remove(); });
+        box.setAttribute('aria-label', copy.textContent.replace(/\s+/g, ' ').trim());
+      }
     });
     document.querySelectorAll('.shiny-input-container input[type="text"][readonly]').forEach(function (box) {
       if (!box.hasAttribute('aria-label')) box.setAttribute('aria-label', 'Selected file');
@@ -999,7 +1004,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var button = $(select).parent().find('button.dropdown-toggle')[0];
     if (!label || !button) return;
     var text = button.querySelector('.filter-option-inner-inner');
-    button.setAttribute('aria-label', label.textContent.trim() + ': ' + (text ? text.textContent.trim() : ''));
+    var copy = label.cloneNode(true);
+    copy.querySelectorAll('.metaui-range, .metaui-filter-help').forEach(function (el) { el.remove(); });
+    button.setAttribute('aria-label', copy.textContent.replace(/\s+/g, ' ').trim() + ': ' + (text ? text.textContent.trim() : ''));
   }
   $(document).on('loaded.bs.select rendered.bs.select changed.bs.select refreshed.bs.select', 'select', function () {
     var select = this; setTimeout(function () { name(select); }, 0);

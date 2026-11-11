@@ -32,7 +32,7 @@
 #' @param counts For OR and RR: named character vector mapping 2x2 count columns, as in [metafor::escalc()]:
 #'   `ai` and `ci` (events in the first and second group) with either `n1i` and `n2i` (group totals) or `bi` and `di`
 #'   (non-events). The log ratio and its variance are computed with `metafor::escalc()` and its defaults: 0.5 is added
-#'   to every cell of a table that has a zero cell, and tables without events (or without non-events) in both groups are kept.
+#'   to every cell of a table that has a zero cell, and tables without events (or without non-events) in both groups are left out by default (see `double_zero`).
 #'   Leave `es_field`, `variance` and `se` empty. The count columns become editable in downloaded workbooks.
 #'   Without `sample_size`, N is the total of the four cells; with it, N is checked against that total and
 #'   rows that differ are named in a warning (N may legitimately count, say, everyone randomised).
