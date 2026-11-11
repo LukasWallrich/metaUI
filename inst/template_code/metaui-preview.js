@@ -1,5 +1,13 @@
 // Runs before webR starts; never show full-data results for a linked selection.
 (function () {
+  // The live app's iframe needs a name for screen readers, whether or not the preview runs.
+  document.addEventListener('DOMContentLoaded', function () {
+    var tries = 0, timer = setInterval(function () {
+      var live = document.querySelector('#root iframe');
+      if (live && !live.title) live.title = document.title || 'Interactive meta-analysis app';
+      if (live || ++tries > 600) clearInterval(timer);
+    }, 500);
+  });
   var query = new URLSearchParams(location.search);
   if (query.get('metaui')) return;
   window.metauiPrecomputed = true;

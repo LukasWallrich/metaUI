@@ -410,6 +410,28 @@ metaUI_track_row <- function(scale, es, lcl, ucl, band = NULL, dots = NULL, dot_
     "</div>")
 }
 
+# An interval several times wider than is typical in the table (an estimator that broke down on
+# few studies, say) would squeeze the rest into dots. Such rows are drawn to the axis edge with
+# an arrow; the primary model's interval is never clipped. Comparing with the median width keeps
+# two broken estimators from shielding each other. Widths of ratios are compared on the log scale they are drawn on.
+metaUI_clipped_rows <- function(table, first = integer(), times = 5, ratio = FALSE) {
+  width <- ifelse(table$status == "ok", if (ratio) suppressWarnings(log(table$UCL) - log(table$LCL)) else table$UCL - table$LCL, NA_real_)
+  ok <- which(is.finite(width) & width > 0)
+  if (length(ok) < 3L) return(integer())
+  setdiff(ok[width[ok] > times * stats::median(width[ok])], first)
+}
+
+metaUI_track_clipped <- function(scale, es, lcl, ucl, band = NULL, ref = NULL) {
+  # The axis ends as values (ratios, where the axis is drawn on the log scale).
+  limits <- if (isTRUE(scale$ratio)) exp(scale$limits) else scale$limits
+  lo <- max(lcl, limits[1]); hi <- min(ucl, limits[2])
+  inside <- is.finite(es) && es >= limits[1] && es <= limits[2]
+  row <- metaUI_track_row(scale, if (inside) es else NA_real_, lo, hi, band, ref = ref)
+  arrows <- paste0(if (lcl < limits[1]) '<i class="metaui-track-arrow metaui-track-arrow-left"></i>',
+    if (ucl > limits[2]) '<i class="metaui-track-arrow metaui-track-arrow-right"></i>')
+  sub("</div>$", paste0(arrows, "</div>"), row)
+}
+
 # First screen: the selected effects themselves, before any model is fitted.
 metaUI_effects_strip <- function(values, axis_title, ratio = FALSE) {
   scale <- metaUI_track_scale(values, ratio)
@@ -484,7 +506,9 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   rest <- setdiff(seq_len(nrow(table)), first)
   order <- c(first, rest[order(table$aggregated[rest])])
   band <- if (!is.null(bound)) metaUI_bounds(bound, ratio)
-  scale <- metaUI_track_scale(c(table$es, table$LCL, table$UCL, band), ratio)
+  clipped <- metaUI_clipped_rows(table, first, ratio = ratio)
+  shown <- setdiff(seq_len(nrow(table)), clipped)
+  scale <- metaUI_track_scale(c(table$es[shown], table$LCL[shown], table$UCL[shown], band), ratio)
   types <- unique(stats::na.omit(table$interval_type[table$status == "ok"]))
   pet_peese <- if ("pet_peese_selected" %in% names(table)) which(table$pet_peese_selected %in% TRUE) else integer()
   ref <- if (length(first) && table$status[first[1]] == "ok") table$es[first[1]] else NULL
@@ -507,8 +531,9 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     # as a different sample beside the multilevel rows. Downloads keep each model's own k.
     effect_level <- ok && !isTRUE(row$aggregated) && "input_rows" %in% names(row) && !is.na(row$k)
     unit <- if (!ok) "" else if (effect_level) "effects" else metaUI_count_unit(row, studies)
-    k_shown <- if (!ok || is.na(row$k)) "" else if (effect_level) row$input_rows else row$k
-    track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, band, ref = ref, diamond = TRUE), "</td>")
+    k_shown <- if (!ok || is.na(row$k)) "" else format(if (effect_level) row$input_rows else row$k, big.mark = ",")
+    track <- if (ok && i %in% clipped) paste0('<td class="metaui-track-cell">', metaUI_track_clipped(scale, row$es, row$LCL, row$UCL, band, ref), "</td>")
+      else if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, band, ref = ref, diamond = TRUE), "</td>")
       else paste0('<td class="metaui-reason-cell"><b>', "Not estimated:</b> ", esc(metaUI_reader_reason(row$reason, row$warnings)), "</td>")
     position <- match(i, order)
     opens_group <- !(i %in% first) && (position == length(first) + 1L || table$aggregated[order[position - 1L]] != row$aggregated)
@@ -525,6 +550,8 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Other estimators answer different questions and are not interchangeable with the primary analysis.',
     if (!is.null(ref)) paste0(" Each diamond spans a model\u2019s ", interval_head, "; the dashed line marks the primary estimate."),
     if (any(grepl("trim", table$Model, ignore.case = TRUE))) " The trim-and-fill count includes imputed studies.", "</p>")
+  if (length(clipped)) others <- paste0(others, '<p class="metaui-note metaui-clipped-note">', if (length(clipped) == 1L) paste0("The interval of ", esc(table$Model[clipped]), " is far wider than the others and runs beyond the axis, which an arrow at the edge marks; its numbers are in the table.")
+    else paste0("The intervals of ", paste(esc(table$Model[clipped]), collapse = " and "), " are far wider than the others and run beyond the axis, which arrows at the edge mark; their numbers are in the table."), "</p>")
   pet_p <- if (length(pet_peese)) stats::na.omit(table$pet_intercept_p)[1] else NA_real_
   bias <- c(if (length(pet_peese)) paste0("PET-PEESE estimate: the conditional rule reports PEESE when PET\u2019s intercept differs from zero (<i>p</i> &lt; .10), PET otherwise; here <i>p</i> ",
       if (pet_p < .001) "&lt; .001" else paste("=", sub("^0", "", formatC(pet_p, format = "f", digits = 3))), ". Methods explains the test."),
@@ -644,14 +671,14 @@ metaUI_bars_html <- function(counts, name) {
   counts <- counts[order(as.character(counts[[name]]) == "(Missing)"), , drop = FALSE]
   levels <- as.character(counts[[name]])
   bucket <- levels == ".metaUI_other"
-  levels[bucket] <- paste(length(other), "other categories")
+  levels[bucket] <- paste(length(other), "further categories")
   largest <- max(counts$Count, 1)
   rows <- sprintf('<tr%s><td>%s</td><td class="num">%s</td><td class="num">%s</td><td class="metaui-bar-cell" aria-hidden="true"><span class="metaui-bar" style="width:%s%%"></span></td></tr>',
-    ifelse(counts$Count == 0, ' class="metaui-zero"', ifelse(levels == "(Missing)", ' class="metaui-missing"', "")), htmltools::htmlEscape(levels), counts$Count,
+    ifelse(counts$Count == 0, ' class="metaui-zero"', ifelse(levels == "(Missing)", ' class="metaui-missing"', "")), htmltools::htmlEscape(levels), format(counts$Count, big.mark = ","),
     sprintf("%.1f%%", 100 * counts$Count / max(sum(counts$Count), 1)), round(100 * counts$Count / largest, 1))
   paste0('<table class="table metaui-bars metaui-custom"><thead><tr><th><span class="sr-only">', htmltools::htmlEscape(name),
     '</span></th><th class="num">Effects</th><th class="num">Share</th><th class="metaui-bar-cell"></th></tr></thead><tbody>', paste(rows, collapse = ""), "</tbody></table>",
-    if (any(bucket)) paste0('<details class="metaui-help metaui-other-levels"><summary>The ', length(other), " other categories</summary><p>", htmltools::htmlEscape(paste(other, collapse = ", ")), "</p></details>"),
+    if (any(bucket)) paste0('<details class="metaui-help metaui-other-levels"><summary>The ', length(other), " further categories</summary><p>", htmltools::htmlEscape(paste(other, collapse = ", ")), "</p></details>"),
     if (empty) paste0('<p class="metaui-note">', empty, if (empty == 1L) " category has" else " categories have", " no selected effects.</p>"))
 }
 

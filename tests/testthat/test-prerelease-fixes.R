@@ -143,3 +143,30 @@ test_that("the table marks the conditional PET-PEESE estimate and notes trim-and
   expect_false(isTRUE(null$trimfill_away_from_zero[null$Model == "Trim-and-fill"]))
   expect_no_match(html, "moved the estimate further from zero")
 })
+
+test_that("character filters point to categorical_filters; the JSON config accepts an intro", {
+  x <- fixture(); x$grp <- rep(c("a", "b"), 8)
+  expect_error(prepared(x, filters = c(Group = "grp")), 'categorical_filters = "grp"', fixed = TRUE)
+  schema <- jsonlite::fromJSON(system.file("examples", "config.schema.json", package = "metaUI"), simplifyVector = FALSE)
+  expect_true("intro" %in% names(schema$properties$options$properties))
+  expect_true("source" %in% unlist(schema$properties$design$properties$font$enum))
+})
+
+test_that("an interval far wider than the rest is clipped with an arrow, never the primary one", {
+  table <- data.frame(Model = c("Primary", "Other", "PET"), es = c(.3, .25, 0), LCL = c(.1, .05, -13.6), UCL = c(.5, .45, 13.3),
+    k = 3, status = "ok", reason = "", warnings = "", aggregated = c(FALSE, TRUE, TRUE), interval_type = "Confidence interval")
+  expect_identical(metaUI:::metaUI_clipped_rows(table, 1L), 3L)
+  html <- metaUI:::metaUI_estimates_html(table, 1L)
+  expect_match(html, "metaui-track-arrow-left", fixed = TRUE)
+  expect_match(html, "metaui-track-arrow-right", fixed = TRUE)
+  expect_match(html, "The interval of PET is far wider")
+  expect_match(html, "[−13.60, 13.30]", fixed = TRUE)
+  # Two broken estimators do not shield each other.
+  two <- rbind(table[c(1, 2, 2, 2, 2), ], table[3, ], transform(table[3, ], Model = "PEESE", LCL = -4.6, UCL = 4.7))
+  expect_identical(metaUI:::metaUI_clipped_rows(two, 1L), 6:7)
+  # Comparable widths: nothing is clipped, and a wide primary interval is never clipped.
+  table$LCL[3] <- -.5; table$UCL[3] <- .5
+  expect_identical(metaUI:::metaUI_clipped_rows(table, 1L), integer())
+  table$LCL[1] <- -20; table$UCL[1] <- 20
+  expect_identical(metaUI:::metaUI_clipped_rows(table, 1L), integer())
+})

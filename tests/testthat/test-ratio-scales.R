@@ -197,3 +197,15 @@ test_that("a JSON configuration can map 2x2 counts", {
   config$schema_version <- 2; config$mapping$counts <- NULL; jsonlite::write_json(config, path, auto_unbox = TRUE)
   expect_error(build_app(path, overwrite = TRUE), "es_field or counts")
 })
+
+test_that("very wide ratio intervals are clipped by their width on the log scale", {
+  table <- data.frame(Model = letters[1:4], es = c(.5, .6, .55, .5), LCL = c(.4, .45, .42, .001), UCL = c(.62, .8, .72, 250),
+    k = 5, status = "ok", reason = "", warnings = "", aggregated = FALSE, interval_type = "Confidence interval")
+  expect_identical(metaUI:::metaUI_clipped_rows(table, 1L, ratio = TRUE), 4L)
+  # On the raw scale the same table would clip by the upper bound alone; [0.5, 2] and [0.25, 1] are equally wide on the log scale.
+  even <- transform(table[1:3, ], LCL = c(.5, .25, .5), UCL = c(2, 1, 2))
+  expect_identical(metaUI:::metaUI_clipped_rows(even, 1L, ratio = TRUE), integer())
+  html <- metaUI:::metaUI_estimates_html(table, 1L, "Odds ratio", ratio = TRUE)
+  expect_match(html, "metaui-track-arrow-left")
+  expect_match(html, "metaui-track-arrow-right")
+})

@@ -75,7 +75,8 @@ build_app <- function(config, overwrite = FALSE) {
   if (!is.null(mapping$categorical_filters)) mapping$categorical_filters <- unlist(mapping$categorical_filters)
   dataset <- do.call(prepare_data, c(list(data = resolve(config$data)), mapping))
   opts <- config$options
-  if (!is.null(opts) && (!is.list(opts) || (length(opts) && (is.null(names(opts)) || any(!nzchar(names(opts))))) || length(setdiff(names(opts), c("correlation_dependent", "max_forest_plot_rows", "selection_list_threshold", "shiny_theme", "fit_cache_entries"))))) stop("Invalid options fields")
+  if (!is.null(opts) && (!is.list(opts) || (length(opts) && (is.null(names(opts)) || any(!nzchar(names(opts))))) || length(setdiff(names(opts), c("correlation_dependent", "max_forest_plot_rows", "selection_list_threshold", "shiny_theme", "fit_cache_entries", "intro"))))) stop("Invalid options fields")
+  if (!is.null(opts$intro) && (!is.character(opts$intro) || length(opts$intro) != 1L)) stop("options.intro must be one string of HTML.")
   if (!is.null(config$primary_model) && (!is.character(config$primary_model) || length(config$primary_model) != 1L))
     stop("primary_model must be one model name")
   about <- config$about

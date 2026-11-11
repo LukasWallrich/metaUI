@@ -153,7 +153,8 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
   }
   for (i in seq_along(filters)) {
     if(!is.factor(data[[filters[i]]]) && !is.numeric(data[[filters[i]]])) {
-      stop("All filters/moderators must be factors or numeric. This check failed first for ", filters[i])
+      stop("All filters/moderators must be factors or numeric. This check failed first for ", filters[i],
+        if (is.character(data[[filters[i]]]) || is.logical(data[[filters[i]]])) paste0(". To use a text column as categories, name it in categorical_filters, e.g. categorical_filters = \"", filters[i], "\".") else "")
     }
   }
 

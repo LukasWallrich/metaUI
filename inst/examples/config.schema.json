@@ -543,6 +543,10 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 3
+        },
+        "intro": {
+          "type": "string",
+          "description": "Optional HTML shown under the title: one or two sentences stating the question and what positive values mean."
         }
       }
     },
@@ -605,6 +609,7 @@
         },
         "font": {
           "enum": [
+            "source",
             "system",
             "arial",
             "verdana",

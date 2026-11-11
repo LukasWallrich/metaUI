@@ -1,8 +1,21 @@
-# metaUI (development version)
+# metaUI 0.2.0
+
+This release consolidates all changes since 0.1.1, including the unreleased
+0.1.2 development versions.
+
+## Odds and risk ratios
 
 - Odds ratios and risk ratios are supported effect-size scales (`es_type = "OR"` or `"RR"`). `prepare_data()` takes log ratios with `variance_scale = "log"`, or 2x2 counts through the new `counts` argument, converted with `metafor::escalc()` and its defaults (0.5 added to every cell of a table with a zero cell). Tables with no events (or only events) in both groups are kept by default, as in metafor, or left out with `double_zero = "exclude"`; Methods says which. Without `sample_size`, N is the count total; a supplied N that differs from it is named in a warning. JSON configurations (schema version 2) can map `counts` and `double_zero`. Models are fitted to the log ratios, so estimates match `metafor` on the log scale; estimates, confidence, prediction and 90% intervals are exponentiated for display, with 1 as no effect, and the Summary, Forest plot, Moderation, funnel, distribution and forest download use log axes. Moderator slopes, heterogeneity variances and Egger's test stay on the log scale and are labelled so. The equivalence bound is entered as a ratio *x* and assessed against 1/*x* and *x* ("Exceeds upper/lower bound"). P-curve and z-curve tests use the Wald *z* of the log ratios; p-curve effect estimation stays limited to standardized mean differences. Count columns are editable in downloaded workbooks, and uploads recompute the effects from them. The Bayesian heterogeneity prior defaults to half-normal(0.5) on the log scale.
 - The forest plot download no longer drops the top summary diamond (or the bottom study's shading), which fell just outside the plot's range.
 
+## Pre-release review and polish
+
+- Summary: an interval more than five times wider than the median interval in the table (an estimator that broke down on few studies, say) is drawn to the edge of the axis with an arrow, so that the other diamonds stay readable; a note names it, and the table keeps its numbers. The primary model's interval is never clipped.
+- Outlier diagnostics: when the Q test is not significant, the reading says that the test does not detect more variation and has little power with few studies, rather than that effects vary no more than sampling error; it gives the typical spread of true effects, τ. The list of effects beyond 1.5 IQR and the plot's hover show the z the z-score filter uses, also under an alternative effect-size computation. The funnel caption puts its own random-effects estimate next to that line and names the primary model only when there is one.
+- Counts in the Summary table and the Sample breakdowns have thousands separators; the bucket of rare levels reads "3 further categories". Download names follow one pattern (`<date>-<dataset>-metaUI-data.xlsx`, `…-metaUI-selection.R`, `…-metaUI-forest-plot.pdf`) without spaces, quotes or brackets; the exported script also finds workbooks with the older names.
+- Accessibility: drop-down and search boxes, the file box and the static site's app frame have accessible names, slider range buttons name their filter, and disclosure headings are at least 24 px tall. The browser console no longer warns about the empty equivalence bound, and static sites no longer log dplyr's start-up messages.
+- `prepare_data()` suggests `categorical_filters` when a filter is a text column. JSON configurations accept `options.intro`, and the schema lists the `source` font.
+- Packaging: no start-up message; Guido Schwarzer (adapted trim-and-fill code) and Mathias Harrer (p-curve code) are listed as contributors and copyright holders, with `Copyright: see file COPYRIGHTS`; the font notices name Adobe's copyright lines.
 - Small-sample corrections in the default models. Robust variance estimation uses Tipton's (2015) correction (`robumeta::robu(small = TRUE)`) and flags its row as unreliable below 4 small-sample degrees of freedom; the multilevel model's *t* tests use containment degrees of freedom (`dfs = "contain"`), which count studies rather than effects. With few studies the intervals are wider than before; with many they barely change. Equivalence assessments inherit the wider 90% intervals.
 - Moderator tests allow for dependent effects. Each moderator is added to the primary model where that is an effect-level `metafor::rma.mv` model (a CHE model, say), and otherwise to the default multilevel model (REML, no longer ML); tests and level intervals are cluster-robust by study (CR2 with small-sample degrees of freedom, via clubSandwich, now a dependency of generated apps). The overall test is clubSandwich's HTZ test for any number of categories, computed by an equivalent fast route (33 categories on 2,628 effects in under a second rather than over 15 minutes and 9 GB). The tab says which model a test extends, and the note says that the tests are exploratory and unadjusted for multiple testing.
 - Uploads re-derive what can be derived. The workbook's new first sheet, `instructions`, marks each dataset column as Edit, Derived, Fixed or Other, and the dataset sheet lists the editable columns first. On upload, the effect size and variance on the fitting scale, the SE and the z-score are recomputed from the supplied effect and variance; fixed columns and empty effect IDs are filled in for new rows; new categories are added to their filter and selected. Upload errors name the column and workbook rows, and a file that is not a workbook is reported as such.
@@ -124,11 +137,6 @@
 * metaUI no longer depends on forcats, and generated apps no longer need psych;
   base R replaces both. The R Markdown skeleton's example recode now treats
   `-999` as missing (shown as `(Missing)`) instead of a level named "NA".
-
-# metaUI 0.2.0
-
-This release consolidates all changes since 0.1.1, including the unreleased
-0.1.2 development versions.
 
 ## Breaking changes
 

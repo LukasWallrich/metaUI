@@ -312,7 +312,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
               model_help),
             tags$details(class = "metaui-help metaui-equivalence", tags$summary("Assess practical equivalence"),
             htmltools::tagAppendAttributes(numericInput("sesoi", {sesoi_text[1]},
-              value = NA_real_, min = 0), class = "metaui-sesoi"),
+              value = NULL, min = 0), class = "metaui-sesoi"),
             p(class = "metaui-note", {sesoi_text[2]}, " There is no universal default; justify it substantively. The assessment uses each model\\u2019s 90% interval, not the 95% interval shown elsewhere: a 90% interval inside the bounds is the usual equivalence test, two one-sided tests at .05 (TOST). The last column gives the narrowest bound that each 90% interval lies within."),
             uiOutput("equivalence_verdict"),
             div(class = "metaui-scroll", tableOutput("equivalence")),
@@ -830,7 +830,7 @@ glue_string <- ('
       { label <- trimws(paste0(if (row$status != "ok") paste0(row$Model, ". Primary analysis, chosen by the authors.") else "",
           if (grepl("hedges|cohen|standardi[sz]ed mean|^smd$", metaUI_eff_size_type_label, ignore.case = TRUE)) " Effects are standardized mean differences, in standard deviations." else
           # The headline names r alone; a qualified label (adjusted for attenuation, say) is given here.
-          if (metaUI__df$metaUI__es_type[1] == "ZCOR" && !identical(metaUI_eff_size_type_label, "r")) paste0(" Effects are correlations: ", metaUI_eff_size_type_label, ".") else
+          if (metaUI__df$metaUI__es_type[1] == "ZCOR" && !tolower(metaUI_eff_size_type_label) %in% c("r", "correlation r", "correlation")) paste0(" Effects are correlations: ", metaUI_eff_size_type_label, ".") else
           if (ratio_scale) paste0(" Effects are ", metaUI_scale(metaUI__df$metaUI__es_type[1])$name, "s: 1 means no difference between the groups.") else ""))
         if (nzchar(label)) tags$p(class = "metaui-primary-label", label) },
       if (row$status == "ok" && nzchar(row$warnings)) tags$p(class = "metaui-primary-warning", paste("Warnings:", metaUI_reader_warnings(row$warnings))),
@@ -1231,8 +1231,12 @@ glue_string <- ('
     source <- heterogeneity_fit()
     het <- metaUI_heterogeneity(source$fit, df)
     req(!is.na(het$Q_p))
-    tagList(p(class = "metaui-reading", HTML(paste0("Effects vary <b>", if (het$Q_p < .05) "more" else "no more", "</b> than sampling error alone would predict (",
-      "<i>Q</i> test, <i>p</i> ", fmt_p(het$Q_p), ")."))),
+    # A non-significant Q is not evidence of no variation: with few studies the test has little power.
+    tau <- if (is.finite(het$total_variance)) paste0(" The typical spread of true effects is &tau; = ", formatC(sqrt(het$total_variance), format = "f", digits = 2),
+      if (df$metaUI__es_type[1] == "ZCOR") " on the Fisher <i>z</i> scale" else "", " (the square root of the total &sigma;<sup>2</sup> below).") else ""
+    reading <- if (het$Q_p < .05) paste0("Effects vary <b>more</b> than sampling error alone would predict (<i>Q</i> test, <i>p</i> ", fmt_p(het$Q_p), ").") else
+      paste0("The <i>Q</i> test does not detect more variation than sampling error would produce (<i>p</i> ", fmt_p(het$Q_p), "); with few studies it has little power to do so.")
+    tagList(p(class = "metaui-reading", HTML(paste0(reading, tau))),
       p(class = "metaui-note", if (!is.null(primary_model) && !source$primary) paste0("From the ", source$model, "; the primary model, ", primary_model, ", does not report these variance components.")
         else paste0("From the ", source$model, ".")))
   })
@@ -1345,8 +1349,9 @@ glue_string <- ('
   })
 
   output$funnel_key <- renderUI({
-    p(class = "metaui-note metaui-key", HTML(paste0("Shaded regions: <i>p</i> &lt; .05 against ", if (ratio_scale) "a ratio of 1" else "zero", ". Vertical dashed line: the random-effects estimate from the study-level effects shown here, which can differ from the Summary\\u2019s primary estimate (",
-      metaUI_minus(round_(metaUI_show(as.numeric(meta_agg()$b), metaUI__df), metaUI_digits(meta_agg()$ci.lb, meta_agg()$ci.ub))), "). Sloping dashed lines: where 95% of studies with that standard error would fall if they all estimated this effect; they widen as studies get smaller.",
+    p(class = "metaui-note metaui-key", HTML(paste0("Shaded regions: <i>p</i> &lt; .05 against ", if (ratio_scale) "a ratio of 1" else "zero", ". Vertical dashed line: the random-effects estimate from the study-level effects shown here (",
+      metaUI_minus(round_(metaUI_show(as.numeric(meta_agg()$b), metaUI__df), metaUI_digits(meta_agg()$ci.lb, meta_agg()$ci.ub))), ")",
+      if (!is.null(primary_model)) paste0(", which can differ from the primary estimate on the Summary, from the ", htmltools::htmlEscape(primary_model)) else "", ". Sloping dashed lines: where 95% of studies with that standard error would fall if they all estimated this effect; they widen as studies get smaller.",
       if (metaUI__df$metaUI__es_type[1] == "ZCOR") " Positions follow the Fisher <i>z</i> scale, on which standard errors do not depend on the effect, so the <i>r</i> ticks are unevenly spaced." else
       if (ratio_scale) " Positions follow the log scale, on which the standard errors are measured, so the ratio ticks are unevenly spaced." else "")))
   })
@@ -1516,7 +1521,8 @@ glue_string <- ('
     flagged <- df[effects < qs[[1]] - 1.5 * diff(qs) | effects > qs[[2]] + 1.5 * diff(qs), , drop = FALSE]
     if (!nrow(flagged)) return(p(class = "metaui-note", "No effects lie beyond 1.5 IQR."))
     flagged <- flagged[order(flagged$metaUI__effect_size), , drop = FALSE]
-    z <- (flagged$metaUI__effect_size - mean(metaUI__df$metaUI__effect_size)) / sd(metaUI__df$metaUI__effect_size)
+    # The stored z, which the z-score filter uses, so that the list explains that filter.
+    z <- flagged$metaUI__es_z
     shown <- metaUI_show(flagged$metaUI__effect_size, df)
     # Sample size and sampling interval tell a small, noisy study from a precise one far from the rest.
     lower <- metaUI_show(flagged$metaUI__effect_size - stats::qnorm(.975) * flagged$metaUI__se, df)
@@ -1539,16 +1545,12 @@ glue_string <- ('
     df <- df_filtered()
     effects <- df$metaUI__effect_size
 
-    # Standardise against the built dataset, like the z-score filter (metaUI__es_z)
-    efm <- mean(metaUI__df$metaUI__effect_size)
-    efsd <- sd(metaUI__df$metaUI__effect_size)
-
     # Outliers follow the boxplot rule: quartiles +/- 1.5 * IQR
     qs <- quantile(effects, c(.25, .5, .75))
     bounds <- c(qs[[1]] - 1.5 * diff(qs[c(1, 3)]), qs[[3]] + 1.5 * diff(qs[c(1, 3)]))
     outliers <- df[effects < bounds[1] | effects > bounds[2], , drop = FALSE]
     # Which effects stand out is settled on the fitting scale; the plot shows them as readers read them.
-    z <- (outliers$metaUI__effect_size - efm) / efsd
+    z <- outliers$metaUI__es_z # the z the filter uses
     # Ratios are binned and drawn on the log scale, with the axis and values given as ratios.
     if (!ratio_scale) {
       effects <- metaUI_show(effects, df); qs[] <- metaUI_show(qs, df)
@@ -1616,7 +1618,7 @@ glue_string <- ('
   })
 
 
-  workbook_name <- function() paste0(Sys.Date(), "-", gsub(" ", "_", dataset_name), "-metaUIdata.xlsx")
+  workbook_name <- function() paste0(Sys.Date(), "-", gsub("^_+|_+$", "", gsub("[^A-Za-z0-9-]+", "_", dataset_name)), "-metaUI-data.xlsx")
 
   output$executeDownload <- downloadHandler(
     filename = function() {
@@ -1659,9 +1661,9 @@ glue_string <- ('
         exported = format(Sys.time(), "%Y-%m-%d %H:%M %Z")),
       app_dir = metaUI_app_dir, env = environment(metaUI_fit_models))
   }
-  code_name <- function(extension) sub("metaUIdata[.]xlsx$", paste0("metaUI-selection.", extension), workbook_name())
+  code_name <- function(extension) sub("metaUI-data[.]xlsx$", paste0("metaUI-selection.", extension), workbook_name())
   # Other downloads share the date and data name of the workbook, so that files from two apps or days stay apart.
-  download_name <- function(what) sub("metaUIdata[.]xlsx$", what, workbook_name())
+  download_name <- function(what) sub("metaUI-data[.]xlsx$", paste0("metaUI-", what), workbook_name())
   output$executeCodeDownload <- downloadHandler(filename = function() code_name("R"),
     content = function(file) writeLines(reproduction_code("R"), file, useBytes = TRUE))
   output$executeQuartoDownload <- downloadHandler(filename = function() code_name("qmd"),

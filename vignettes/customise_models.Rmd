@@ -28,7 +28,7 @@ To remove models, you can add a comment (`#`) in front of the line where it is *
 
 ```{r eval=FALSE}
    "Robust Variance Estimation",                      FALSE,       "as.numeric(mod$reg_table$b.r)",      ... 
-#   "Trim-and-fill",                                   TRUE,        "mod$TE.random",                     ...
+#   "Trim-and-fill",                                   TRUE,        "mod$b",                              ...
    "P-uniform star",                                  TRUE,        "mod$est",                            ...  
 ```
 
@@ -47,6 +47,8 @@ And then code within "" that allows you to export the following from the model o
 - `LCL` & `UCL`: the lower and upper bounds of the 95% confidence intervals for the effect size
 -  `k`: the model-specific count (state whether effects, studies, or imputed effects)
 - `LCL90` & `UCL90` (optional): the bounds of the 90% interval, used only by the equivalence assessment, where a 90% interval inside the bounds corresponds to two one-sided tests at .05. A model without them is not assessed there.
+- `interval_type` (optional): what the interval is, such as `"Confidence interval"`. Without it, the app labels a custom model's interval "Author-defined interval (type and coverage unknown)".
+- `description` (optional): a sentence that the app's Methods section shows for the model.
 
 For `models_code`, you need to provide code, again in "", that estimates the model based on fields available in the dataset produced by `prepare_data()` (for models where `aggregated = FALSE`) or aggregated by `metaUI_aggregate()` in the generated `analysis.R`. Aggregation retains the first row’s metadata but does not infer aggregate p-values or N; do not interpret retained metadata as a new scientific aggregation rule.
 
@@ -59,10 +61,38 @@ helpers requires restarting the app. `generate_shiny(overwrite=TRUE)` replaces
 all generated files, including `analysis.R`; build into a fresh folder and compare
 changes to preserve hand edits. It never clears unrelated files from the folder.
 
+## A worked example: a correlated and hierarchical effects model
+
+The meta-analysis of team diversity and performance (Wallrich et al., 2024) used a
+correlated and hierarchical effects (CHE) model. This adds it as the primary analysis,
+next to the default models:
+
+```{r eval=FALSE}
+models <- get_model_tibble()
+che <- models[models$name == "Random-Effects Multilevel Model", ]
+che$name <- "Correlated and Hierarchical Effects Model (as in paper)"
+che$code <- 'metafor::rma.mv(
+  yi = metaUI__effect_size,
+  V = metafor::vcalc(vi = metaUI__variance, cluster = metaUI__study_id,
+                     obs = metaUI__effect_id, rho = 0.6, data = df),
+  random = ~ 1 | metaUI__study_id/metaUI__effect_id,
+  test = "t", dfs = "contain", data = df, method = "REML", sparse = TRUE)'
+che$interval_type <- "Confidence interval"
+che$description <- "The paper's main analysis: random effects for studies and for effects within studies, with sampling errors of effects from the same study assumed to correlate at 0.6."
+models <- dplyr::bind_rows(che, models)
+
+generate_shiny(my_data, dataset_name = "Diversity and team performance",
+               models = models, primary_model = che$name, save_to_folder = "app")
+```
+
+Copying the multilevel row keeps its extraction code (`mod$b`, `mod$ci.lb`, ...) and its
+90% interval, so only the name, the model code, `interval_type` and `description` change.
+Moderator tests extend this model too, because it is an effect-level `metafor::rma.mv` model.
+
 If you add an author model that is your primary analysis (such as the Dannheim
 example's source-reference row), pass its name as `generate_shiny(primary_model = ...)`.
 Renaming that model later requires the same change in `labels_and_options.R`; the
-app reports a declared primary model it cannot find instead of picking another.
+app reports a primary model it cannot find instead of picking another.
 
 Custom models default to `options=list(fit_cache_entries=0)`. Only explicitly
 opt deterministic code into a 1–3-entry session cache. Random models or code that

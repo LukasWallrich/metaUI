@@ -1,4 +1,8 @@
-Google Inc.
+Source Sans 3 (source-sans-3*.woff2, plot-*.ttf):
+Copyright 2023 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+
+Source Serif 4 (source-serif-4*.woff2):
+Copyright 2014 - 2021 Adobe Systems Incorporated (http://www.adobe.com/), with Reserved Font Name 'Source'.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
