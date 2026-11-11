@@ -1320,9 +1320,9 @@ glue_string <- ('
     pages <- metaUI_forest_chunks(forest_rows(), forest_screen_order(), <<opts$max_forest_plot_rows>>)
     capacity <- max(vapply(pages, nrow, integer(1)))
     # Cairo embeds the letters of any study name; the plain PDF device lacks some (\\u0131, say).
-    cairo <- isTRUE(capabilities("cairo"))
-    if (cairo) grDevices::cairo_pdf(file, width = 10, height = forest_height(capacity) / 96, onefile = TRUE)
-    else grDevices::pdf(file, width = 10, height = forest_height(capacity) / 96)
+    # A Mac without XQuartz reports cairo but cannot load it; the plain device then stands in.
+    cairo <- isTRUE(capabilities("cairo")) && !inherits(try(grDevices::cairo_pdf(file, width = 10, height = forest_height(capacity) / 96, onefile = TRUE), silent = TRUE), "try-error")
+    if (!cairo) grDevices::pdf(file, width = 10, height = forest_height(capacity) / 96)
     on.exit(grDevices::dev.off())
     for (rows in pages) print(forest_plot_for(rows, family = "", capacity = capacity))
   })
