@@ -1,0 +1,28 @@
+1. y = 0,10,10; sigma = 1e-9,1,1; scale .5  [mu 2.5/50/97.5, tau 2.5/50/97.5, mu sd]
+                                                              mu_sd
+v1        -8.1114e-09 5.0950 8.2519 5.7474e-10 1.7048 2.3998 3.0965
+fixed      3.7423e+00 6.0741 8.5251 1.4602e+00 1.9064 2.4627 1.2145
+reference  3.7423e+00 6.0741 8.5251 1.4602e+00 1.9064 2.4627 1.2145
+
+2. y = -1,1; sigma = 1e-14 x2; scale 1e-10 (prior and data in sharp conflict); grid density n = 2000 vs 20000
+                                                                      
+v1           -1.6481e-05 0 1.6481e-05 1.1892e-05 1.1892e-05 1.1892e-05
+v1_n20000    -1.6481e-05 0 1.6481e-05 1.1892e-05 1.1892e-05 1.1892e-05
+fixed        -1.6481e-05 0 1.6481e-05 1.1892e-05 1.1892e-05 1.1892e-05
+fixed_n20000 -1.6481e-05 0 1.6481e-05 1.1892e-05 1.1892e-05 1.1892e-05
+                  mu_sd
+v1           8.4089e-06
+v1_n20000    8.4090e-06
+fixed        8.4090e-06
+fixed_n20000 8.4090e-06
+
+3. Translation: equal effects .2 vs 1e8 (+ .2 shift removed), SE .1, scale .5
+           [,1]      [,2]
+v1    0.2354534 0.0000000
+fixed 0.2354534 0.2354534
+
+2b. Case 2 tau quantiles in posterior SDs of tau, relative to the fixed grid at n = 20000
+               [,1]          [,2]         [,3]
+v1    -7.405877e+00 -8.723818e-01 5.661401e+00
+fixed -6.416871e-05  6.125742e-08 7.226434e-05
+tau posterior SD: 5e-11 ; nodes with weight > 1e-6: v1 1  fixed 618 

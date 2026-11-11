@@ -605,8 +605,7 @@
         },
         "max_studies": {
           "type": "integer",
-          "minimum": 2,
-          "maximum": 50
+          "minimum": 2
         }
       }
     },

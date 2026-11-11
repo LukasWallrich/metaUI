@@ -68,7 +68,7 @@ a character vector with all packages to display.}
 
 \item{overwrite}{Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.}
 
-\item{bayesian}{NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.}
+\item{bayesian}{NULL (default), or list(enabled = TRUE, tau_scale = .5). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior, computed by grid quadrature over the heterogeneity (no extra package needed). Correlation default tau_scale is .25 on Fisher z. An optional \code{max_studies} (integer, at least 2) caps the number of studies; by default there is no cap. Sensitivity analyses use half and double the scale.}
 
 \item{design}{Optional settings from \code{\link[=app_design]{app_design()}}. Use \code{\link[=design_app]{design_app()}} to preview and export them.}
 

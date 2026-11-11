@@ -114,9 +114,8 @@ test_that("exported Quarto file has the same analysis and renders to the same ro
   x$z <- atanh(x$r); x$vz <- x$vr / (1 - x$r^2)^2
   d <- prepare_data(x, "study", "r", variance = "vr", es_id = "id", es_type = "COR", variance_scale = "r",
     alternatives = list(Z = list(es_field = "z", variance = "vz", es_type = "ZCOR", variance_scale = "z", justification = "Same information on Fisher z")))
-  bayes <- if (requireNamespace("bayesmeta", quietly = TRUE)) list(enabled = TRUE) else NULL
   app_dir <- file.path(root, "app")
-  generate_shiny(d, "Export correlations", models = get_model_tibble()[c(1, 2, 6), ], bayesian = bayes,
+  generate_shiny(d, "Export correlations", models = get_model_tibble()[c(1, 2, 6), ], bayesian = list(enabled = TRUE),
     save_to_folder = app_dir, launch_app = FALSE)
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(app_dir)
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
@@ -132,7 +131,10 @@ test_that("exported Quarto file has the same analysis and renders to the same ro
     expect_true(any(grepl("^```\\{r fit\\}$", lines)))
     expect_true(any(lines == "#| code-fold: true"))
     expect_true(any(grepl("atanh(y)", lines, fixed = TRUE)))  # primary COR computation
-    if (!is.null(bayes)) expect_true(any(grepl("metaUI_bayesian_fit <- function", lines, fixed = TRUE)))
+    # The Bayesian row is refitted by the copied grid function, without bayesmeta.
+    expect_true(any(grepl("metaUI_bayesian_fit <- function", lines, fixed = TRUE)))
+    expect_true(any(grepl("metaUI_bayesian_grid <- function", lines, fixed = TRUE)))
+    expect_false(any(grepl("bayesmeta", lines, fixed = TRUE)))
     purled <- file.path(run, "purled.R")
     knitr::purl(qmd, purled, quiet = TRUE)
     result <- run_export(run, purled, workbook)

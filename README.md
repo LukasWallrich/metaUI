@@ -169,20 +169,24 @@ and source p-values remain anchored to the primary computation.
 ### Bayesian analysis
 
 Enable study-level Bayesian analysis with
-`generate_shiny(..., bayesian = list(enabled = TRUE))`, after installing the
-optional `bayesmeta` package. The mean prior is flat; the heterogeneity prior is
-half-normal with scale 0.5 for SMD and log odds or risk ratios, or 0.25 for Fisher z, configurable with
-`tau_scale`. Central 95% credible intervals and posterior medians are reported,
-and the sensitivity tab compares half and double that prior scale. This uses
-aggregated studies and the declared within-study correlation. Authors who edit
-`aggregation_method` in the generated `labels_and_options.R` to `"first"` switch it
-to the first-effect rule; the build records the priors and the default aggregation.
-The default cap of 20 studies protects interactive use: first-fit benchmarks took
-about 20 seconds at 20 studies and 97 seconds at 50 on the review machine.
-Authors can set `max_studies` from 2 to 50, with a build warning above 20. Each
-Update results blocks the Shiny server process while fitting, and with it every other
-reader served by that process; serve busy apps with several workers or instances. Prior sensitivity runs
-when its tab or download is requested and can require two extra fits.
+`generate_shiny(..., bayesian = list(enabled = TRUE))`. The mean prior is flat;
+the heterogeneity prior is half-normal with scale 0.5 for SMD and log odds or risk ratios, or 0.25 for
+Fisher z, configurable with `tau_scale`. Central 95% credible intervals and posterior
+medians are reported, and the sensitivity tab compares half and double that prior
+scale. This uses aggregated studies and the declared within-study correlation.
+Authors who edit `aggregation_method` in the generated `labels_and_options.R` to
+`"first"` switch it to the first-effect rule; the build records the priors and the
+default aggregation.
+The posterior is computed by numerical integration over the between-study SD on a
+2,000-point grid; given that SD, the mean is exactly normal, so its posterior is a
+normal mixture. This needs no extra package and takes well under a second, even
+for 646 studies in the browser (webR). Across 412 simulated and two real datasets,
+its results were within 10<sup>-7</sup> posterior standard deviations of adaptive
+numerical integration for the mean and 2 × 10<sup>-4</sup> for heterogeneity
+quantiles. It replaces `bayesmeta`, whose quantiles for the mean were up to 0.01
+posterior SDs off (its heterogeneity quantiles are more precise still); see
+`validation/bayesian-grid.md`. There is no study limit by default; authors can set
+one with `max_studies` (an integer of at least 2).
 See [Röver et al.](https://doi.org/10.1002/jrsm.1475) for the prior rationale.
 
 ### Study details
