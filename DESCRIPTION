@@ -39,7 +39,6 @@ Imports:
     tibble,
     tidyr
 Suggests: 
-    bayesmeta,
     clubSandwich,
     DT,
     ggplot2,

@@ -7,6 +7,10 @@ This release consolidates all changes since 0.1.1, including the unreleased
 
 - Odds ratios and risk ratios are supported effect-size scales (`es_type = "OR"` or `"RR"`). `prepare_data()` takes log ratios with `variance_scale = "log"`, or 2x2 counts through the new `counts` argument, converted with `metafor::escalc()` and its defaults (0.5 added to every cell of a table with a zero cell). Tables with no events (or only events) in both groups are kept by default, as in metafor, or left out with `double_zero = "exclude"`; Methods says which. Without `sample_size`, N is the count total; a supplied N that differs from it is named in a warning. JSON configurations (schema version 2) can map `counts` and `double_zero`. Models are fitted to the log ratios, so estimates match `metafor` on the log scale; estimates, confidence, prediction and 90% intervals are exponentiated for display, with 1 as no effect, and the Summary, Forest plot, Moderation, funnel, distribution and forest download use log axes. Moderator slopes, heterogeneity variances and Egger's test stay on the log scale and are labelled so. The equivalence bound is entered as a ratio *x* and assessed against 1/*x* and *x* ("Exceeds upper/lower bound"). P-curve and z-curve tests use the Wald *z* of the log ratios; p-curve effect estimation stays limited to standardized mean differences. Count columns are editable in downloaded workbooks, and uploads recompute the effects from them. The Bayesian heterogeneity prior defaults to half-normal(0.5) on the log scale.
 
+## Bayesian model by grid quadrature
+
+- The Bayesian model is computed by numerical integration over the between-study SD (a 2,000-point grid; the mean given that SD is exactly normal) instead of `bayesmeta`, which is no longer needed. A fit takes well under a second at 646 studies, natively and in webR, instead of about a minute at 50, so the default cap of 20 studies and the hard limit of 50 are gone; `max_studies` remains as an optional author cap. Across 412 simulated datasets (2 to 646 studies) and two real ones, results are within 1e-7 posterior SDs of adaptive numerical integration for the mean and 2e-4 for heterogeneity quantiles; `bayesmeta`'s quantiles for the mean differ from it by up to 0.01 SDs, and it failed on 2 of 340 datasets (`validation/bayesian-grid.md`). Bayesian estimates and intervals can therefore shift slightly from earlier builds (by up to 0.01 posterior SDs). The reproduction script copies the grid function and reproduces the app's Bayesian row exactly. The Methods list describes the Bayesian row, and its sensitivity tab is prepared in the background like the other tabs.
+
 ## Pre-release review and polish
 
 - The forest plot download no longer drops the top summary diamond (or the bottom study's shading), which fell just outside the plot's range.
@@ -194,8 +198,7 @@ This release consolidates all changes since 0.1.1, including the unreleased
 * Author-defined effect-size computations, with explicit scale and variance
   contracts, consistent row selection, comparisons, provenance and workbook
   restoration.
-* Opt-in Bayesian normal-normal analysis (requires the suggested bayesmeta
-  package): posterior medians, central credible intervals, disclosed priors and
+* Opt-in Bayesian normal-normal analysis: posterior medians, central credible intervals, disclosed priors and
   heterogeneity-prior sensitivity.
 * Readers can share applied selections through build-specific, validated URLs.
   Uploaded datasets remain workbook-only.

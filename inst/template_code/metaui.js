@@ -582,11 +582,11 @@
       return pane;
     }).filter(Boolean);
   }
-  // Bayesian and computation fits can take minutes, so they wait for the reader. The others
+  // Computation comparisons refit every model and can take minutes, so they wait for the reader. The others
   // follow the order of the tabs, which is the order readers usually open them in.
   function backgroundOrder() {
     return panes().filter(function (pane) {
-      return pane.querySelector('.shiny-bound-output') && !pane.querySelector('#bayesian_sensitivity, #computation_comparison');
+      return pane.querySelector('.shiny-bound-output') && !pane.querySelector('#computation_comparison');
     });
   }
   var listening = false;
