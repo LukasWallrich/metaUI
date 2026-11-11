@@ -13,13 +13,17 @@ multilevel model (ML). The full data were run once with CHE; subsets of 8, 15,
 and run with both models. Estimates are on the display scale (r).
 
 Script: `leave-one-out/compare.R`. Results, one row per selection and model:
-`leave-one-out/compare-full.csv` and `leave-one-out/compare-subsets.csv`.
+`leave-one-out/compare-full.csv` and `leave-one-out/compare-subsets.csv`. They
+were produced at commit f29bfed, when an omission that could not be estimated
+counted as no change in significance; the current script and app treat it as
+missing. This affects only the significance counts of the three runs with
+failed refits.
 
 ## Agreement
 
 | Selection | Max abs. difference in estimate | Max abs. difference in CI bound | Largest change from a refit | Same most influential study | Rank correlation of changes | Significance marks: refit / disagreements |
 |---|---|---|---|---|---|---|
-| All 646 studies (CHE) | 0.00025 | 0.00038 | 0.0016 | yes | 1.00 | 0 / 0 |
+| All 646 studies (CHE) | 0.00025 | 0.00038 | 0.0016 | yes | 0.9995 | 0 / 0 |
 | 120 studies (×6) | ≤ 0.0018 | ≤ 0.0024 | ≤ 0.0054 | 5 of 6 | 0.96–1.00 | up to 53 / up to 5 |
 | 60 studies (×6) | ≤ 0.0098 | ≤ 0.011 | ≤ 0.0085 | 3 of 6 | 0.87–0.99 | 0 / 1 |
 | 30 studies (×6) | ≤ 0.0049 | ≤ 0.028 | ≤ 0.024 | 6 of 6 | 0.91–0.99 | 1 / 1 |
@@ -54,6 +58,6 @@ in parallel), so the times are inflated:
   646 refits: 14,827 s of CPU time.
 - Refits of the subsets: median 1.1 s (8 studies) to 5.2 s (60 studies) each.
 
-Later single-process timings showed that multithreaded OpenBLAS inflated small
-dense fits on this loaded box by up to 50 times (8.3 s against 0.14 s with one
+Later single-process timings showed that multithreaded OpenBLAS inflated a small
+dense fit on this loaded box about 60-fold (8.3 s against 0.14 s with one
 thread for 30 studies). The agreement results above do not depend on timing.

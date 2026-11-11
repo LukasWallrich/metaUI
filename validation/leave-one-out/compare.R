@@ -48,10 +48,10 @@ results <- lapply(sets, function(set) {
     full_fit_s = t_full, fast_s = t_fast, refit_median_s = median(slow$secs), refit_total_s = sum(slow$secs), failed = sum(slow$status != "ok"),
     max_d_es = max(abs(fz$es - sz$es), na.rm = TRUE), max_d_ci = max(abs(c(fz$LCL - sz$LCL, fz$UCL - sz$UCL)), na.rm = TRUE),
     max_change_slow = max(abs(sz$change), na.rm = TRUE), max_rel_err = max(abs(fz$change - sz$change), na.rm = TRUE) / max(abs(sz$change), na.rm = TRUE),
-    sig_flags_fast = sum(fz$significance_changes), sig_flags_slow = sum(sz$significance_changes), sig_disagree = sum(fz$significance_changes != sz$significance_changes, na.rm = TRUE),
+    sig_flags_fast = sum(fz$significance_changes, na.rm = TRUE), sig_flags_slow = sum(sz$significance_changes, na.rm = TRUE), sig_disagree = sum(fz$significance_changes != sz$significance_changes, na.rm = TRUE),
     bound_disagree = paste(flags, collapse = "/"), top_same = fz$study[1] == sz$study[order(-abs(sz$change))][1],
     rank_cor = suppressWarnings(cor(abs(fz$change), abs(sz$change), method = "spearman")))
 })
-summary <- do.call(rbind, lapply(results, function(r) as.data.frame(r[setdiff(names(r), "reason")])))
+summary <- dplyr::bind_rows(lapply(results, as.data.frame))
 utils::write.csv(summary, file.path("validation", "leave-one-out", paste0("compare-", which_set, ".csv")), row.names = FALSE)
 print(summary)
