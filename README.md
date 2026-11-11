@@ -56,8 +56,20 @@ Assigning the app object to a variable postpones launch until you print it.
 
 Generation refuses a nonempty folder by default. p/N are optional for the primary
 models; directional models require explicit direction. COR/ZCOR require explicit
-variance scales. Read the generated validation report before interpreting results.
+variance scales. Odds and risk ratios (`es_type = "OR"` or `"RR"`) take log ratios with
+`variance_scale = "log"`, or 2x2 counts through `counts` (computed with `metafor::escalc()`);
+models are fitted to the log ratios and results are shown as ratios on log axes. Read the generated validation report before interpreting results.
 The introductory Dannheim data use signed Hedges g, not correlations. No public deployment is automatic.
+
+### Default models
+
+The default models estimate the average effect with a random-effects multilevel model
+and robust variance estimation, and explore publication bias with trim-and-fill,
+p-uniform*, a selection model and PET-PEESE. When every study in the data has one
+effect, one standard random-effects model (`metafor::rma.uni`, REML, Hartung-Knapp
+interval) replaces the multilevel model and robust variance estimation, which would
+otherwise nearly repeat it; pass `models = get_model_tibble()` to keep them. See
+`vignette("customise_models")` to change the models.
 
 ### Primary model
 
@@ -97,6 +109,13 @@ Downloads preserve the full current input dataset and saved filter selections; t
 summary sheet describes the selected rows. An empty selection stays empty on
 re-upload and reports no eligible rows, while the original inputs remain available.
 
+Readers can update the data: the workbook's first sheet, `instructions`, marks
+which dataset columns to edit (study, effect ID, the effect size and variance as
+supplied, optional p, N and source fields, and filters) and which are derived.
+On upload the app recomputes the derived columns (fitting-scale effect and
+variance, SE and z-score), numbers new effects, and adds new categories to their
+filters.
+
 After an analysis, readers can download an R script or a Quarto file that
 reproduces the applied selection (filters, missing-value choices, effect-size
 computation and equivalence bound) and the model rows on the Summary tab. The
@@ -127,15 +146,15 @@ in URLs.
 
 Summary includes an interval assessment for a reader-chosen symmetric smallest
 effect size of interest, on the displayed SMD or r scale. No bound is assumed.
-The strict containment criterion uses the reported intervals without refitting;
+The strict containment criterion uses each model's 90% interval (two one-sided tests at .05) without refitting;
 model assumptions and small-sample limitations are shown beside the assessment.
 Downloads record the bound and classification in an `equivalence` sheet, and
 uploading the workbook restores the bound, as selection links do.
 
 Forest plots compare observed-effect intervals and available multilevel/RVE
-summary intervals. PDF, PNG and CSV downloads use the same selected rows; the
-CSV retains both fitting and displayed scales. The configured row limit also
-applies to exports.
+summary intervals. The PNG download is the page on screen. The PDF holds every selected study over
+several pages (`max_forest_plot_rows` effects to a page), and the CSV every selected
+row, with both fitting and displayed scales.
 
 ### Alternative effect-size computations
 
@@ -150,19 +169,24 @@ and source p-values remain anchored to the primary computation.
 ### Bayesian analysis
 
 Enable study-level Bayesian analysis with
-`generate_shiny(..., bayesian = list(enabled = TRUE))`, after installing the
-optional `bayesmeta` package. The mean prior is flat; the heterogeneity prior is
-half-normal with scale 0.5 for SMD or 0.25 for Fisher z, configurable with
-`tau_scale`. Central 95% credible intervals and posterior medians are reported,
-and the sensitivity tab compares half and double that prior scale. This uses
-aggregated studies and the declared within-study correlation. Authors who edit
-`aggregation_method` in the generated `labels_and_options.R` to `"first"` switch it
-to the first-effect rule; the build records the priors and the default aggregation.
-The default cap of 20 studies protects interactive use: first-fit benchmarks took
-about 20 seconds at 20 studies and 97 seconds at 50 on the review machine.
-Authors can set `max_studies` from 2 to 50, with a build warning above 20. Each
-Analyze blocks the Shiny server process while fitting. Prior sensitivity runs
-when its tab or download is requested and can require two extra fits.
+`generate_shiny(..., bayesian = list(enabled = TRUE))`. The mean prior is flat;
+the heterogeneity prior is half-normal with scale 0.5 for SMD and log odds or risk ratios, or 0.25 for
+Fisher z, configurable with `tau_scale`. Central 95% credible intervals and posterior
+medians are reported, and the sensitivity tab compares half and double that prior
+scale. This uses aggregated studies and the declared within-study correlation.
+Authors who edit `aggregation_method` in the generated `labels_and_options.R` to
+`"first"` switch it to the first-effect rule; the build records the priors and the
+default aggregation.
+The posterior is computed by numerical integration over the between-study SD on a
+2,000-point grid; given that SD, the mean is exactly normal, so its posterior is a
+normal mixture. This needs no extra package and takes well under a second, even
+for 646 studies in the browser (webR). Across 412 simulated and two real datasets,
+its results were within 10<sup>-7</sup> posterior standard deviations of adaptive
+numerical integration for the mean and 2 × 10<sup>-4</sup> for heterogeneity
+quantiles. It replaces `bayesmeta`, whose quantiles for the mean were up to 0.01
+posterior SDs off (its heterogeneity quantiles are more precise still); see
+`validation/bayesian-grid.md`. There is no study limit by default; authors can set
+one with `max_studies` (an integer of at least 2).
 See [Röver et al.](https://doi.org/10.1002/jrsm.1475) for the prior rationale.
 
 ### Study details
@@ -269,7 +293,21 @@ Host the site over HTTPS (for example, on GitHub Pages), or serve it from
 localhost to preview it. Opening `index.html` as a file does not work.
 The full dataset and code are sent to every visitor, so publish only material
 that may be shared. Precomputed results appear at once; controls work after
-roughly 20 seconds on a typical laptop, depending on the connection and device.
+about a minute on a typical laptop, depending on the connection and device.
+
+## Not included, and why
+
+Some analyses are left out on purpose. Suggestions and arguments are welcome as
+[issues](https://github.com/LukasWallrich/metaUI/issues).
+
+- **Meta-regression with several moderators.** Moderation takes one moderator at a
+  time. With sparse categories and correlated moderators, a reader-built model with
+  several of them invites searching for a significant combination, and fair use
+  would need model-building controls and warnings beyond the scope of an
+  exploration app.
+- **Cumulative meta-analysis.** Showing how the estimate changed as studies
+  accumulated mainly serves the history of a literature rather than readers'
+  questions about subsets of it.
 
 ## Sources
 

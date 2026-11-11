@@ -7,7 +7,7 @@
 prepare_data(
   data,
   study_label,
-  es_field,
+  es_field = NULL,
   se = NULL,
   pvalue = NULL,
   sample_size = NULL,
@@ -25,7 +25,9 @@ prepare_data(
   direction = c("unspecified", "positive", "negative"),
   categorical_filters = character(),
   alternatives = list(),
-  primary_label = "As supplied"
+  primary_label = "As supplied",
+  counts = NULL,
+  double_zero = c("keep", "exclude")
 )
 }
 \arguments{
@@ -43,11 +45,11 @@ prepare_data(
 
 \item{variance}{Character. Name of the field to use as the sampling variances.}
 
-\item{filters}{Character. List of fields to use as filters - can be named if different labels should be displayed}
+\item{filters}{Character. List of fields to use as filters - can be named if different labels should be displayed. Labels must be distinct, contain no backticks, and stay distinct when spaces and symbols are replaced by underscores (as in Shiny input IDs); a numeric filter needs at least one value.}
 
 \item{url}{Character. Field with URLs or DOIs to link to. DOIs can be in the format "10.1234/5678" or full links. Defaults to NA.}
 
-\item{es_type}{Character. Input scale: SMD, COR (raw r), or ZCOR (Fisher z). COR needs r-scale variance and uses delta-method variance conversion; ZCOR needs z-scale variance.}
+\item{es_type}{Character. Input scale: SMD, COR (raw r), ZCOR (Fisher z), OR (log odds ratio) or RR (log risk ratio). COR needs r-scale variance and uses delta-method variance conversion; ZCOR needs z-scale variance. OR and RR take effects and variances on the log scale (\code{variance_scale = "log"}), as \code{\link[metafor:escalc]{metafor::escalc()}} returns them, or 2x2 counts (\code{counts}); models are fitted on the log scale and results shown as ratios.}
 
 \item{article_label}{Character. Field with article labels. Only used to report number of references in addition to number of independent samples.}
 
@@ -55,17 +57,17 @@ prepare_data(
 
 \item{na.rm}{Should rows with any missing values be removed? Can be TRUE, FALSE or "es_related" -
 the last is the default and drops rows with missing values for any of the variables used in the standard meta-analysis models, namely
-\code{study_label}, \code{es_field}, \code{variance}, and \code{se}. Optional p/N never remove rows under this default. Setting this to TRUE also drops rows with missing values on any of the filters
-etc, which might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
+\code{study_label}, \code{es_field}, \code{variance}, and \code{se}. Optional p/N never remove rows under this default. Setting this to TRUE also drops rows with a missing value in any filter (categorical
+filters then get no \code{(Missing)} level) or in the p-value or sample size when these are given; other columns of \code{data} are ignored. This might often be unnecessary. Conversely, setting this to FALSE might lead to issues in the model - unless you post-process the data
 or change the models and analyses to be included in the app. Invalid required inputs with FALSE cause an error.}
 
-\item{arrange_filters}{Character. How should the filters be arranged in the app? Options are "given" by the \code{filters} argument, "alphabetical" or "leave" (as they are in the dataset). Defaults to "given".}
+\item{arrange_filters}{Character. How should the filters be arranged in the app? Options are "given" by the \code{filters} argument, "alphabetical" (by label) or "leave" (as they are in the dataset). Defaults to "given".}
 
 \item{keep_missing_level}{Logical. Should a \code{(Missing)}-level be kept even for filters that do not have missing values? Might be advisable when you expect users to upload new data with missing values. Defaults to FALSE.}
 
 \item{es_id}{Optional column with unique effect IDs within each study. Defaults to input row IDs.}
 
-\item{variance_scale}{Required for COR (r) and ZCOR (z); optional SMD for SMD.}
+\item{variance_scale}{Required for COR (r), ZCOR (z), and OR or RR given as log ratios (log); optional SMD for SMD.}
 
 \item{direction}{Explicit direction for one-sided bias models: unspecified, positive, or negative.}
 
@@ -74,6 +76,21 @@ or change the models and analyses to be included in the app. Invalid required in
 \item{alternatives}{Named list of up to five author-defined effect computations. Each entry supplies es_field, variance or se, es_type, variance_scale when required, and a nonempty justification. Every computation must retain the same effects and converge on the same fitting scale.}
 
 \item{primary_label}{Label for the primary computation when alternatives are provided.}
+
+\item{counts}{For OR and RR: named character vector mapping 2x2 count columns, as in \code{\link[metafor:escalc]{metafor::escalc()}}:
+\code{ai} and \code{ci} (events in the first and second group) with either \code{n1i} and \code{n2i} (group totals) or \code{bi} and \code{di}
+(non-events). The log ratio and its variance are computed with \code{metafor::escalc()} and its defaults: 0.5 is added
+to every cell of a table that has a zero cell, and tables without events (or without non-events) in both groups are kept.
+Leave \code{es_field}, \code{variance} and \code{se} empty. The count columns become editable in downloaded workbooks.
+Without \code{sample_size}, N is the total of the four cells; with it, N is checked against that total and
+rows that differ are named in a warning (N may legitimately count, say, everyone randomised).}
+
+\item{double_zero}{For \code{counts} only: what to do with tables that have no events in either group, or only
+events (a "double-zero" table, \code{ai = ci = 0} or \code{bi = di = 0}). \code{"keep"} (the default, as in
+\code{\link[metafor:escalc]{metafor::escalc()}}) adds 0.5 to every cell of such a table. A table without events then gives a ratio set
+mainly by the group sizes, with a large variance; for risk ratios, a table with events in everyone gives a
+ratio near 1 whose variance can be small. \code{"exclude"} leaves both kinds out with a reason, as
+\code{escalc(drop00 = TRUE)} does. The app's Methods state the choice.}
 }
 \value{
 tibble with the data from the file/input reformatted for metaUI

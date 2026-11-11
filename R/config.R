@@ -34,7 +34,7 @@ build_app <- function(config, overwrite = FALSE) {
   unknown <- setdiff(names(config), allowed)
   if (length(unknown)) stop("Unknown configuration fields: ", paste(unknown, collapse = ", "))
   if (length(config$schema_version) != 1L || !is.numeric(config$schema_version) || !config$schema_version %in% c(1, 2)) stop("schema_version must be 1 or 2")
-  if (config$schema_version == 1 && (any(c("bayesian", "study_info") %in% names(config)) || any(c("alternatives", "primary_label") %in% names(config$mapping)))) stop("New computation/Bayesian/study_info fields require schema_version 2")
+  if (config$schema_version == 1 && (any(c("bayesian", "study_info") %in% names(config)) || any(c("alternatives", "primary_label", "counts", "double_zero") %in% names(config$mapping)))) stop("New computation/Bayesian/study_info/count fields require schema_version 2")
   for (key in c("data", "dataset_name", "output"))
     if (!is.character(config[[key]]) || length(config[[key]]) != 1L || !nzchar(config[[key]])) stop("Required scalar string: ", key)
   if ("static_folder" %in% names(config) &&
@@ -63,12 +63,21 @@ build_app <- function(config, overwrite = FALSE) {
   if (!is.list(mapping) || is.null(names(mapping))) stop("mapping must be an object")
   allowed_mapping <- setdiff(names(formals(prepare_data)), "data")
   if (length(setdiff(names(mapping), allowed_mapping))) stop("Unknown mapping fields")
-  if (!all(c("study_label", "es_field", "es_type") %in% names(mapping))) stop("Mapping requires study_label, es_field and es_type")
+  if (!all(c("study_label", "es_type") %in% names(mapping)) || (is.null(mapping$es_field) && is.null(mapping$counts)))
+    stop("Mapping requires study_label, es_type, and es_field or counts")
+  # A counts object, such as {"ai": "a", "n1i": "n1", ...}, becomes the named vector prepare_data() expects.
+  if (!is.null(mapping$counts)) {
+    if (!(is.list(mapping$counts) || is.character(mapping$counts)) || is.null(names(mapping$counts)) || !all(vapply(mapping$counts, function(x) is.character(x) && length(x) == 1L, logical(1))))
+      stop("counts must be an object mapping ai, ci and n1i, n2i (or bi, di) to column names")
+    if (!length(mapping$counts)) stop("counts must not be empty: map ai, ci and n1i, n2i (or bi, di) to column names")
+    mapping$counts <- unlist(mapping$counts)
+  }
   if (!is.null(mapping$filters)) mapping$filters <- unlist(mapping$filters)
   if (!is.null(mapping$categorical_filters)) mapping$categorical_filters <- unlist(mapping$categorical_filters)
   dataset <- do.call(prepare_data, c(list(data = resolve(config$data)), mapping))
   opts <- config$options
-  if (!is.null(opts) && (!is.list(opts) || (length(opts) && (is.null(names(opts)) || any(!nzchar(names(opts))))) || length(setdiff(names(opts), c("correlation_dependent", "max_forest_plot_rows", "selection_list_threshold", "shiny_theme", "fit_cache_entries"))))) stop("Invalid options fields")
+  if (!is.null(opts) && (!is.list(opts) || (length(opts) && (is.null(names(opts)) || any(!nzchar(names(opts))))) || length(setdiff(names(opts), c("correlation_dependent", "max_forest_plot_rows", "selection_list_threshold", "shiny_theme", "fit_cache_entries", "intro"))))) stop("Invalid options fields")
+  if (!is.null(opts$intro) && (!is.character(opts$intro) || length(opts$intro) != 1L)) stop("options.intro must be one string of HTML.")
   if (!is.null(config$primary_model) && (!is.character(config$primary_model) || length(config$primary_model) != 1L))
     stop("primary_model must be one model name")
   about <- config$about

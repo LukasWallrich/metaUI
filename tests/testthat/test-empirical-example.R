@@ -12,7 +12,7 @@ test_that("CC-BY example retains exact native-scale membership and reference fit
   expect_identical(d$metaUI__effect_size, x$g)
   expect_true(all(is.na(d$metaUI__N)) && all(is.na(d$metaUI__pvalue)))
   env <- new.env(); sys.source(file.path(root, "models.R"), env)
-  expect_equal(env$models_to_run[1:7, ], get_model_tibble())
+  expect_equal(env$models_to_run[1:7, names(get_model_tibble())], get_model_tibble())
   source_spec <- env$models_to_run[8, ]
   actual <- metaUI:::metaUI_fit_models(d, source_spec)$table
   reference <- metafor::rma(yi = x$g, sei = x$se_g, method = "REML", test = "knha")

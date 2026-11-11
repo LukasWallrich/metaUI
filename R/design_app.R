@@ -146,12 +146,11 @@ design_preview <- function(d) {
       shiny::div(class = "col-sm-9",
         shiny::tags$ul(class = "nav nav-tabs", shiny::tags$li(class = "active", shiny::tags$a(href = "#", "Summary")), shiny::tags$li(shiny::tags$a(href = "#", "Sample")), shiny::tags$li(shiny::tags$a(href = "#", "Forest plot"))),
         shiny::div(class = "tab-content", shiny::h3("Effect size estimates"),
-          shiny::div(class = "metaui-primary", shiny::p(class = "metaui-primary-value", "0.24"),
-            shiny::p(class = "metaui-primary-name", shiny::tags$b("Random-effects multilevel model"), shiny::tags$br(),
-              shiny::tags$span(class = "metaui-primary-ci", "95% CI [0.11, 0.38]"), shiny::tags$br(), "SMD. k = 16; effect-level fit."),
-            shiny::p(class = "metaui-primary-label", "Primary analysis, declared by the authors")),
+          shiny::div(class = "metaui-primary", shiny::p(class = "metaui-primary-value", shiny::HTML("Estimated effect: SMD = <b>0.24</b>, 95%&nbsp;CI&nbsp;[0.11, 0.38]")),
+            shiny::p(class = "metaui-primary-reading", "Positive values are in the direction the authors expected."),
+            shiny::p(class = "metaui-primary-label", "Effects are standardized mean differences, in standard deviations.")),
           shiny::HTML(metaUI_estimates_html(data.frame(Model = c("Random-effects multilevel model", "Robust variance estimation"),
-            es = c(.24, .23), LCL = c(.11, .03), UCL = c(.38, .43), k = c(16L, 8L), status = "ok", reason = "", warnings = "",
-            aggregated = c(FALSE, TRUE), interval_type = "Confidence interval (coverage model-dependent)"), 1L, axis_title = "SMD")))))))
+            es = c(.24, .23), LCL = c(.11, .03), UCL = c(.38, .43), k = c(16L, 8L), input_rows = c(16L, 16L), status = "ok", reason = "", warnings = "",
+            aggregated = c(FALSE, FALSE), interval_type = "Confidence interval (coverage model-dependent)"), 1L, axis_title = "SMD")))))))
   paste0('<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="shinythemes/css/yeti.min.css"><link rel="stylesheet" href="metaui-design/metaui.css"><style>', design_css(d), '</style></head><body>', as.character(html), '</body></html>')
 }

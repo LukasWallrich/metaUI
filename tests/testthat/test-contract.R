@@ -11,7 +11,8 @@ test_that("optional fields preserve membership and invalid required rows are rep
   expect_error(prepared(x, na.rm = FALSE), "Invalid required")
   x <- fixture(); x$id[2] <- 1
   expect_error(prepared(x), "unique within study")
-  expect_error(prepared(es_type = "OR"), "Supported metrics")
+  expect_error(prepared(es_type = "MD"), "Supported metrics")
+  expect_error(prepared(es_type = "OR"), "log ratios")
   expect_error(prepare_data(fixture(), "study", "yi"), "Supply variance")
   x <- fixture(); x$se <- rep(2, 16)
   expect_error(prepare_data(x, "study", "yi", se = "se", variance = "vi"), "disagree")
@@ -23,16 +24,16 @@ test_that("optional fields preserve membership and invalid required rows are rep
 
 test_that("true per-effect nesting and RVE agree with independent R fits", {
   x <- fixture(); d <- prepared(x); r <- fit(d)$table
-  ref <- metafor::rma.mv(yi, V = vi, random = ~ 1 | study/id, data = x, method = "REML", test = "t", sparse = TRUE)
+  ref <- metafor::rma.mv(yi, V = vi, random = ~ 1 | study/id, data = x, method = "REML", test = "t", dfs = "contain", sparse = TRUE)
   # RVE assumes the declared within-study correlation, .6 by default.
-  rve <- robumeta::robu(yi ~ 1, data = x, studynum = study, var.eff.size = vi, rho = .6, small = FALSE)
+  rve <- robumeta::robu(yi ~ 1, data = x, studynum = study, var.eff.size = vi, rho = .6, small = TRUE)
   expect_equal(r$fit_es, c(as.numeric(ref$b), as.numeric(rve$reg_table$b.r)), tolerance = 1e-8)
-  rve3 <- robumeta::robu(yi ~ 1, data = x, studynum = study, var.eff.size = vi, rho = .3, small = FALSE)
+  rve3 <- robumeta::robu(yi ~ 1, data = x, studynum = study, var.eff.size = vi, rho = .3, small = TRUE)
   r3 <- metaUI:::metaUI_fit_models(d, get_model_tibble()[1:2, ], correlation = .3)$table
   expect_equal(r3$fit_LCL[2], rve3$reg_table$CI.L, tolerance = 1e-8)
   expect_equal(r$fit_LCL, c(ref$ci.lb, rve$reg_table$CI.L), tolerance = 1e-8)
   expect_equal(r$status, c("ok", "ok"))
-  wrong <- metafor::rma.mv(yi, V = vi, random = ~ 1 | study/yi, data = x, method = "REML", test = "t", sparse = TRUE)
+  wrong <- metafor::rma.mv(yi, V = vi, random = ~ 1 | study/yi, data = x, method = "REML", test = "t", dfs = "contain", sparse = TRUE)
   expect_gt(abs(as.numeric(ref$b) - as.numeric(wrong$b)), 1e-6)
   d2 <- prepare_data(x, "study", "yi", variance = "vi", es_label = "label")
   expect_equal(length(unique(d2$metaUI__effect_id)), 16)

@@ -4,7 +4,13 @@
 \alias{get_model_tibble}
 \title{Get model specifications}
 \usage{
-get_model_tibble()
+get_model_tibble(one_effect_per_study = FALSE)
+}
+\arguments{
+\item{one_effect_per_study}{If \code{TRUE}, the multilevel model and robust variance estimation
+are replaced by one standard random-effects model (\code{metafor::rma.uni}, REML, Hartung-Knapp
+interval). \code{\link[=generate_shiny]{generate_shiny()}} uses this when every study in the data has one effect, and refuses it
+for data in which a study has several effects.}
 }
 \value{
 A tibble with the models to be included in the app - including details on how to estimate them

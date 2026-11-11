@@ -52,6 +52,8 @@ source_model <- tibble::tibble(
   name = "Source-reference: REML / Hartung-Knapp (rounded inputs)", aggregated = FALSE,
   es = "mod$b", LCL = "mod$ci.lb", UCL = "mod$ci.ub", k = "mod$k",
   LCL90 = "predict(mod, level = 90)$ci.lb", UCL90 = "predict(mod, level = 90)$ci.ub",
+  interval_type = "Confidence interval",
+  description = "The source's reference analysis: one effect per study, REML with Hartung-Knapp intervals, on the rounded inputs.",
   code = 'if (anyDuplicated(df$metaUI__study_id)) stop("Source-reference requires one effect per independent study.")
     metaUI_univariate(df$metaUI__effect_size, df$metaUI__se, method = "REML")'
 )

@@ -7,8 +7,10 @@ Authors@R: c(
            comment = c(ORCID = "0000-0003-2121-5177")),
     person("Lukas", "Röseler", , "lukas.roeseler@uni-bamberg.de", role = c("aut", "cph"),
            comment = c(ORCID = "0000-0002-6446-1901")),
-    person("Mathias", "Harrer", , "mathias.h.harrer@gmail.com", role = "cph",
-           comment = c(ORCID = "0000-0001-7016-2687", "Author of included p-curve code and related helper functions (from dmetar package)"))
+    person("Mathias", "Harrer", , "mathias.h.harrer@gmail.com", role = c("ctb", "cph"),
+           comment = c(ORCID = "0000-0001-7016-2687", "Author of included p-curve code and related helper functions (from dmetar package)")),
+    person("Guido", "Schwarzer", role = c("ctb", "cph"),
+           comment = "Author of the trim-and-fill code adapted from the meta package")
   )
 Description: Readers of meta-analyses are often interested in how
     analytical choices influence results, or what the effects are for
@@ -16,6 +18,7 @@ Description: Readers of meta-analyses are often interested in how
     'Shiny' apps that answer such questions, and that allow anyone to rerun
     analyses with updated/modified datasets.
 License: GPL (>= 3)
+Copyright: see file COPYRIGHTS
 URL: https://lukaswallrich.github.io/metaUI/,
     https://github.com/LukasWallrich/metaUI
 BugReports: https://github.com/LukasWallrich/metaUI/issues
@@ -36,7 +39,7 @@ Imports:
     tibble,
     tidyr
 Suggests: 
-    bayesmeta,
+    clubSandwich,
     DT,
     ggplot2,
     knitr,
@@ -59,6 +62,5 @@ VignetteBuilder:
     knitr
 Config/testthat/edition: 3
 Encoding: UTF-8
-LazyData: true
 Roxygen: list(markdown = TRUE)
 Config/roxygen2/version: 8.1.1

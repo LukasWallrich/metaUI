@@ -5,6 +5,16 @@
   function declutter() {
     // The chosen range is written beside the filter name; the scale ends stay under the track.
     document.documentElement.classList.add('metaui-js');
+    // Selectize types into its own box, which the input's <label for> does not reach;
+    // give that box the label's name, and the file input's text box one of its own.
+    document.querySelectorAll('.shiny-input-container .selectize-control').forEach(function (control) {
+      var box = control.querySelector('.selectize-input input');
+      var label = control.closest('.shiny-input-container').querySelector('.control-label');
+      if (box && label && !box.hasAttribute('aria-label')) box.setAttribute('aria-label', label.textContent.trim());
+    });
+    document.querySelectorAll('.shiny-input-container input[type="text"][readonly]').forEach(function (box) {
+      if (!box.hasAttribute('aria-label')) box.setAttribute('aria-label', 'Selected file');
+    });
     document.querySelectorAll('.irs').forEach(function (slider) {
       // Negative values get a true minus sign, as elsewhere in the app.
       slider.querySelectorAll('.irs-grid-text, .irs-min, .irs-max, .irs-from, .irs-to, .irs-single').forEach(function (el) {
@@ -24,7 +34,9 @@
       var text = from.textContent + ' to ' + to.textContent;
       if (range.textContent !== text) {
         range.textContent = text;
-        range.setAttribute('aria-label', text + '. Type exact values');
+        // The filter's name comes first, so that the button makes sense on its own.
+        var name = label.firstChild && label.firstChild.nodeType === 3 ? label.firstChild.textContent.trim() : '';
+        range.setAttribute('aria-label', (name ? name + ': ' : '') + text + '. Type exact values');
       }
     });
     document.querySelectorAll('.irs').forEach(function (slider) {
@@ -570,11 +582,11 @@
       return pane;
     }).filter(Boolean);
   }
-  // Bayesian and computation fits can take minutes, so they wait for the reader. The others
+  // Computation comparisons refit every model and can take minutes, so they wait for the reader. The others
   // follow the order of the tabs, which is the order readers usually open them in.
   function backgroundOrder() {
     return panes().filter(function (pane) {
-      return pane.querySelector('.shiny-bound-output') && !pane.querySelector('#bayesian_sensitivity, #computation_comparison');
+      return pane.querySelector('.shiny-bound-output') && !pane.querySelector('#computation_comparison');
     });
   }
   var listening = false;

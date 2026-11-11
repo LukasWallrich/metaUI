@@ -153,13 +153,30 @@ summarise_numeric <- function(x, name) {
   if (length(x) == 0) {
     return(NULL)
   }
-  tibble::tribble(
-    ~Var, ~`Mean (SD)`, ~`Min`, ~`Max`, ~`Share missing`,
-    name, paste0(round(mean(x, na.rm = TRUE), if (abs(mean(x, na.rm = TRUE)) >= 100) 1 else 2), " (", round(sd(x, na.rm = TRUE), if (abs(mean(x, na.rm = TRUE)) >= 100) 1 else 2), ")"),
-    round(min(x, na.rm = TRUE), 2), round(max(x, na.rm = TRUE), 2), paste0(round(mean(is.na(x))*100, 1), "%")
-  )  %>% dplyr::mutate(dplyr::across(dplyr::everything(), as.character))  %>%
+  values <- x[!is.na(x)]
+  # A selection can hold no value of a filter, or one; the summary then says so instead of failing.
+  if (!length(values)) {
+    out <- tibble::tibble(Var = name, `Mean (SD)` = "No values", Min = "\u2014", Max = "\u2014", `Share missing` = "100%")
+  } else {
+    digits <- if (abs(mean(values)) >= 100) 1 else 2
+    spread <- if (length(values) > 1L) round(stats::sd(values), digits) else "\u2014"
+    out <- tibble::tibble(Var = name, `Mean (SD)` = paste0(round(mean(values), digits), " (", spread, ")"),
+      Min = round(min(values), 2), Max = round(max(values), 2), `Share missing` = paste0(round(mean(is.na(x)) * 100, 1), "%"))
+  }
+  out %>% dplyr::mutate(dplyr::across(dplyr::everything(), as.character)) %>%
     tidyr::pivot_longer(dplyr::everything(), names_to = "Statistic", values_to = "Value")
 }
+
+# Shiny input ID of a filter column. Only letters, digits, "_" and "-" survive, so that labels
+# with quotes, brackets or other symbols give IDs that are safe in R code, HTML and CSS selectors.
+# Input IDs keep ASCII letters, digits, "_" and "-"; other ASCII characters become "_", and each
+# non-ASCII character its code point, so labels that differ only in accented or non-Latin letters
+# keep distinct IDs.
+metaUI_filter_id <- function(col) vapply(enc2utf8(as.character(col)), function(x) {
+  chars <- strsplit(x, "")[[1]]
+  codes <- vapply(chars, utf8ToInt, integer(1))
+  paste(ifelse(grepl("^[A-Za-z0-9_-]$", chars), chars, ifelse(codes > 127L, sprintf("_u%x_", codes), "_")), collapse = "")
+}, character(1), USE.NAMES = FALSE)
 
 # Whether a factor's levels are in an order the author chose (ordered, or not alphabetical once
 # "Other" and "(Missing)" are set aside); such levels are listed in that order, not by size.
