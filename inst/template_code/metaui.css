@@ -836,3 +836,7 @@ table.metaui-forest tr.metaui-found > td:first-child { box-shadow: inset 3px 0 0
 }
 .metaui-range-box { -moz-appearance: textfield; appearance: textfield; }
 .metaui-range-box::-webkit-outer-spin-button, .metaui-range-box::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+/* An interval that runs beyond the axis ends in an arrow at the edge. */
+.metaui-track-arrow { position: absolute; top: var(--metaui-mark-y); width: 0; height: 0; margin-top: -5px; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+.metaui-track-arrow-left { left: 0; border-right: 7px solid var(--metaui-slate); }
+.metaui-track-arrow-right { right: 0; border-left: 7px solid var(--metaui-slate); }
