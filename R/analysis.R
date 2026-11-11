@@ -2,6 +2,10 @@
 
 metaUI_code_multilevel <- "metaUI_multilevel_fit(df)"
 metaUI_code_rve <- "metaUI_rve_fit(df)"
+# With one effect per study the default is the standard random-effects model instead of the two above.
+metaUI_code_random <- 'metaUI_univariate(df$metaUI__effect_size, df$metaUI__se, method = "REML")'
+# Effect-level fits that summarise all selected effects: forest summaries, heterogeneity, moderation reference.
+metaUI_summary_codes <- c(metaUI_code_multilevel, metaUI_code_rve, metaUI_code_random)
 
 # Default estimator code. Renamed models are recognised by this exact code
 # (ignoring whitespace), so their input checks and sign handling still apply.
@@ -61,8 +65,40 @@ metaUI_label_spot <- function(spots, width, height, obstacles, pad = 0) {
   spots[which.min(inside), , drop = FALSE]
 }
 
-# Correlations are fitted as Fisher z; readers see r. Slopes and variances have no r equivalent.
-metaUI_show <- function(x, df) if (identical(as.character(df$metaUI__es_type[1]), "ZCOR")) tanh(x) else x
+# How each fitting scale is shown to readers. Correlations are fitted as Fisher z and shown as r;
+# odds and risk ratios are fitted as logs and shown as ratios, with no effect at 1. Slopes,
+# variances and test statistics have no equivalent on the shown scale and stay on the fitting
+# scale, named by `fit` (HTML) where it differs from the shown one.
+metaUI_scale <- function(type) {
+  type <- as.character(type[1])
+  switch(type,
+    ZCOR = list(type = type, fit = "Fisher <i>z</i>", back = tanh, null = 0, ratio = FALSE),
+    OR = list(type = type, fit = "log odds ratio", back = exp, null = 1, ratio = TRUE, name = "odds ratio"),
+    RR = list(type = type, fit = "log risk ratio", back = exp, null = 1, ratio = TRUE, name = "risk ratio"),
+    list(type = type, fit = "", back = identity, null = 0, ratio = FALSE))
+}
+metaUI_show <- function(x, df) metaUI_scale(df$metaUI__es_type[1])$back(x)
+# " (Fisher z)" or " (log odds ratio)" after a statistic that stays on the fitting scale; "" otherwise.
+metaUI_fit_suffix <- function(df) { fit <- metaUI_scale(df$metaUI__es_type[1])$fit; if (nzchar(fit)) paste0(" (", fit, ")") else "" }
+
+# Ticks for a ratio axis drawn on the log scale (limits are logs): evenly spaced ratios for a
+# narrow range, else the finest of 1-1.5-2-3-5-7, 1-2-5, 1-3 and 1 steps per decade that keeps n + 2 ticks at most.
+metaUI_ratio_ticks <- function(limits, n = 5) {
+  lo <- exp(limits[1]); hi <- exp(limits[2])
+  if (diff(limits) < log(4)) { ticks <- pretty(c(lo, hi), n); return(ticks[ticks > 0 & ticks >= lo & ticks <= hi]) }
+  powers <- 10^(floor(log10(lo)):ceiling(log10(hi)))
+  for (steps in list(c(1, 1.5, 2, 3, 5, 7), c(1, 2, 5), c(1, 3), 1)) {
+    ticks <- sort(unique(signif(as.vector(outer(steps, powers)), 6)))
+    ticks <- ticks[ticks >= lo & ticks <= hi]
+    if (length(ticks) <= n + 2L) break
+  }
+  ticks
+}
+metaUI_tick_labels <- function(x) metaUI_minus(format(x, trim = TRUE, drop0trailing = TRUE))
+
+# The equivalence region for a bound: symmetric around 0, or around 1 on the log scale for ratios.
+# For ratios, 0.8 and 1.25 name the same pair.
+metaUI_bounds <- function(bound, ratio = FALSE) if (ratio) sort(c(1 / bound, bound)) else c(-bound, bound)
 
 # Two decimals, or three where an interval is too narrow for two to show it.
 metaUI_digits <- function(lcl, ucl) {
@@ -71,8 +107,11 @@ metaUI_digits <- function(lcl, ucl) {
 }
 
 # width: the plot's width on screen in pixels, which sets how much of the axis a label covers.
-# back: draw on the fitting scale, where the limits are straight, with the axis labelled in r.
+# back: draw on the fitting scale, where the limits are straight, with the axis labelled in r
+# (TRUE or "ZCOR") or as ratios ("OR", "RR").
 metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours(), width = NULL, back = FALSE) {
+  scale <- metaUI_scale(if (isTRUE(back)) "ZCOR" else if (is.character(back)) back else "")
+  back <- !identical(scale$back, identity)
   if (is.null(width)) width <- 700
   # On phones every other tick, counted from zero, so that their labels keep apart.
   thin <- function(ticks, range) {
@@ -112,7 +151,7 @@ metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours(), width = NU
   # Beside a limit line, the text clears the line at the box's lower edge, where the line is furthest out.
   beside <- function(y) c(centre + z * (y + text_height / 2) + gap, centre - z * (y + text_height / 2) - gap)
   y_pooled <- text_height / 2 + .005 * ymax
-  pooled_text <- paste0("pooled ", metaUI_minus(formatC(if (back) tanh(centre) else centre, format = "f", digits = metaUI_digits(fit$ci.lb, fit$ci.ub))))
+  pooled_text <- paste0("pooled ", metaUI_minus(formatC(scale$back(centre), format = "f", digits = if (scale$ratio) metaUI_digits(exp(fit$ci.lb), exp(fit$ci.ub)) else metaUI_digits(fit$ci.lb, fit$ci.ub))))
   # Near the apex if there is room there, else lower down the centre line, where large datasets thin out.
   down <- seq(.3, .95, by = .13) * ymax
   pooled <- place(rbind(data.frame(x = beside(y_pooled), y = y_pooled, hjust = c(0, 1)),
@@ -140,11 +179,14 @@ metaUI_funnel <- function(fit, xlab, colours = metaUI_plot_colours(), width = NU
     label(above, 'italic(p) >= ".05"', colours$slate, parse = TRUE) +
     label(pooled, pooled_text, colours$accent) +
     ggplot2::scale_y_reverse(breaks = metaUI_funnel_ticks(se), expand = c(0, 0)) +
-    (if (back) {
+    (if (scale$ratio) {
+      ticks <- metaUI_ratio_ticks(limits, if (width >= 560) 8 else 5)
+      ggplot2::scale_x_continuous(limits = limits, expand = c(0, 0), breaks = log(ticks), labels = metaUI_tick_labels(ticks))
+    } else if (back) {
       ticks <- thin(pretty(tanh(limits), 8), tanh(limits)); ticks <- ticks[abs(ticks) < 1]
       ggplot2::scale_x_continuous(limits = limits, expand = c(0, 0), breaks = atanh(ticks), labels = metaUI_minus(format(ticks, trim = TRUE)))
     } else ggplot2::scale_x_continuous(limits = limits, expand = c(0, 0), breaks = thin(pretty(limits, 8), limits), labels = function(x) metaUI_minus(format(x, trim = TRUE)))) +
-    ggplot2::labs(x = metaUI_label_expr(xlab), y = if (back) "Standard error (Fisher z)" else "Standard error") +
+    ggplot2::labs(x = metaUI_label_expr(xlab), y = if (back) paste0("Standard error (", gsub("</?i>", "", scale$fit), ")") else "Standard error") +
     metaUI_plot_theme(colours) +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 }
@@ -316,33 +358,38 @@ metaUI_plot_theme <- function(colours, family = colours$family) {
 
 # Shared axis for intervals drawn in table rows. Positions are percentages of the cell,
 # so the drawing follows the column width and stays sharp at any pixel density.
-metaUI_track_scale <- function(values) {
-  values <- c(0, values[is.finite(values)])
-  ticks <- pretty(values, n = 5)
-  limits <- range(values)
+# ratio: values are ratios, drawn on the log scale around 1, so that symmetric intervals look symmetric.
+metaUI_track_scale <- function(values, ratio = FALSE) {
+  null <- if (ratio) 1 else 0
+  values <- c(null, values[is.finite(values) & (!ratio | values > 0)])
+  position <- function(x) if (ratio) log(x) else x
+  limits <- range(position(values))
   pad <- max(diff(limits), .1) * .04
   limits <- limits + c(-pad, pad)
-  ticks <- ticks[ticks >= limits[1] & ticks <= limits[2]]
-  list(limits = limits, ticks = ticks, at = function(x) 100 * (x - limits[1]) / diff(limits))
+  ticks <- if (ratio) metaUI_ratio_ticks(limits) else pretty(values, n = 5)
+  ticks <- ticks[position(ticks) >= limits[1] & position(ticks) <= limits[2]]
+  list(limits = limits, ticks = ticks, null = null, ratio = ratio, at = function(x) 100 * (position(x) - limits[1]) / diff(limits))
 }
 
 metaUI_track_style <- function(left, width = NULL) {
   paste0("left:", round(left, 2), "%", if (!is.null(width)) paste0(";width:", round(width, 2), "%"))
 }
 
+# band: the lower and upper equivalence bounds, shaded between.
 metaUI_track_grid <- function(scale, band = NULL) {
+  null <- if (is.null(scale$null)) 0 else scale$null
   paste0(
-    if (!is.null(band)) sprintf('<i class="metaui-track-band" style="%s"></i>',
-      metaUI_track_style(scale$at(max(-band, scale$limits[1])), scale$at(min(band, scale$limits[2])) - scale$at(max(-band, scale$limits[1])))),
-    paste(sprintf('<i class="%s" style="%s"></i>', ifelse(scale$ticks == 0, "metaui-track-zero", "metaui-track-grid"),
+    if (!is.null(band)) { from <- max(0, scale$at(band[1])); to <- min(100, scale$at(band[2]))
+      sprintf('<i class="metaui-track-band" style="%s"></i>', metaUI_track_style(from, to - from)) },
+    paste(sprintf('<i class="%s" style="%s"></i>', ifelse(scale$ticks == null, "metaui-track-zero", "metaui-track-grid"),
       metaUI_track_style(scale$at(scale$ticks))), collapse = ""),
-    if (!0 %in% scale$ticks) sprintf('<i class="metaui-track-zero" style="%s"></i>', metaUI_track_style(scale$at(0))))
+    if (!null %in% scale$ticks) sprintf('<i class="metaui-track-zero" style="%s"></i>', metaUI_track_style(scale$at(null))))
 }
 
 metaUI_track_axis <- function(scale, title) {
   paste0('<div class="metaui-track metaui-axis" aria-hidden="true"><span class="metaui-axis-title">', metaUI_label_html(title), '</span>',
     paste(sprintf('<span class="metaui-axis-tick" style="%s">%s</span>', metaUI_track_style(scale$at(scale$ticks)),
-      metaUI_minus(format(scale$ticks, trim = TRUE))), collapse = ""), '</div>')
+      if (isTRUE(scale$ratio)) metaUI_tick_labels(scale$ticks) else metaUI_minus(format(scale$ticks, trim = TRUE))), collapse = ""), '</div>')
 }
 
 # hollow: an outlined diamond, for an interval that includes zero.
@@ -357,9 +404,9 @@ metaUI_track_row <- function(scale, es, lcl, ucl, band = NULL, dots = NULL, dot_
       if (length(dot_sizes)) sprintf(";width:%1$.1fpx;height:%1$.1fpx;margin:%2$.2fpx 0 0 %2$.2fpx", dot_sizes, -dot_sizes / 2) else "",
       if (length(dot_labels)) sprintf(' title="%s"', htmltools::htmlEscape(dot_labels, attribute = TRUE)) else ""), collapse = ""),
     if (spans && hollow) sprintf('<svg class="metaui-track-diamond metaui-track-hollow" style="%1$s" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true"><polygon points="0.8,5 %2$.1f,0.8 99.2,5 %2$.1f,9.2" vector-effect="non-scaling-stroke"/></svg>',
-      metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl)), 100 * (es - lcl) / (ucl - lcl))
+      metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl)), 100 * (scale$at(es) - scale$at(lcl)) / (scale$at(ucl) - scale$at(lcl)))
     else if (spans) sprintf('<i class="metaui-track-diamond" style="%1$s;clip-path:polygon(0 50%%,%2$.1f%% 0,100%% 50%%,%2$.1f%% 100%%)"></i>',
-      metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl)), 100 * (es - lcl) / (ucl - lcl))
+      metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl)), 100 * (scale$at(es) - scale$at(lcl)) / (scale$at(ucl) - scale$at(lcl)))
     else paste0(
       if (has_interval) sprintf('<i class="metaui-track-ci" style="%s"></i>', metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl))),
       if (is.finite(es)) sprintf('<i class="metaui-track-point%s" style="%s%s"></i>', if (combined) " metaui-track-combined" else "", metaUI_track_style(scale$at(es)),
@@ -367,12 +414,35 @@ metaUI_track_row <- function(scale, es, lcl, ucl, band = NULL, dots = NULL, dot_
     "</div>")
 }
 
+# An interval several times wider than is typical in the table (an estimator that broke down on
+# few studies, say) would squeeze the rest into dots. Such rows are drawn to the axis edge with
+# an arrow; the primary model's interval is never clipped. Comparing with the median width keeps
+# two broken estimators from shielding each other. Widths of ratios are compared on the log scale they are drawn on.
+metaUI_clipped_rows <- function(table, first = integer(), times = 5, ratio = FALSE) {
+  width <- ifelse(table$status == "ok", if (ratio) suppressWarnings(log(table$UCL) - log(table$LCL)) else table$UCL - table$LCL, NA_real_)
+  ok <- which(is.finite(width) & width > 0)
+  if (length(ok) < 3L) return(integer())
+  setdiff(ok[width[ok] > times * stats::median(width[ok])], first)
+}
+
+metaUI_track_clipped <- function(scale, es, lcl, ucl, band = NULL, ref = NULL) {
+  # The axis ends as values (ratios, where the axis is drawn on the log scale).
+  limits <- if (isTRUE(scale$ratio)) exp(scale$limits) else scale$limits
+  lo <- max(lcl, limits[1]); hi <- min(ucl, limits[2])
+  inside <- is.finite(es) && es >= limits[1] && es <= limits[2]
+  row <- metaUI_track_row(scale, if (inside) es else NA_real_, lo, hi, band, ref = ref)
+  arrows <- paste0(if (lcl < limits[1]) '<i class="metaui-track-arrow metaui-track-arrow-left"></i>',
+    if (ucl > limits[2]) '<i class="metaui-track-arrow metaui-track-arrow-right"></i>')
+  sub("</div>$", paste0(arrows, "</div>"), row)
+}
+
 # First screen: the selected effects themselves, before any model is fitted.
-metaUI_effects_strip <- function(values, axis_title) {
-  scale <- metaUI_track_scale(values)
-  # A dot histogram: one dot per effect, stacked within narrow bins.
+metaUI_effects_strip <- function(values, axis_title, ratio = FALSE) {
+  scale <- metaUI_track_scale(values, ratio)
+  # A dot histogram: one dot per effect, stacked within narrow bins (of log ratios, for ratios).
   width <- diff(scale$limits) / 120
-  bins <- round(values / width) * width
+  bins <- round((if (ratio) log(values) else values) / width) * width
+  if (ratio) bins <- exp(bins)
   rank <- stats::ave(seq_along(bins), bins, FUN = seq_along)
   step <- min(5.5, 110 / max(rank))
   height <- ceiling(max(rank) * step + 6)
@@ -398,7 +468,7 @@ metaUI_reader_messages <- c(
   "Model extraction must return one value per field" = "The model gave no usable estimate.",
   "Regression requires variable precision" = "Needs at least three studies with different standard errors.",
   "No eligible rows" = "No effects selected.",
-  "Requires explicit positive or negative effect direction" = "Needs an expected direction, which the authors did not declare.",
+  "Requires explicit positive or negative effect direction" = "Needs an expected direction, which the authors did not state.",
   "P-curve effect estimation only supported for SMD" = "Available only for standardized mean differences.",
   "Bayesian analysis requires at least two studies" = "Needs at least two studies.",
   "p-value intervals contains no effect sizes" = "No studies fall in one of the p-value ranges the model compares, so its estimate is unstable.",
@@ -432,14 +502,19 @@ metaUI_reader_warnings <- function(warnings, failed = FALSE) {
 
 # Reader table of model estimates: one row per model, every model named, with reasons
 # where a model was not estimated. Downloads keep the full table.
-metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect size", bound = NULL, studies = NA) {
+# independent: every study contributes one effect, so effect-level and study-level models use the
+# same data and the multilevel model is the standard random-effects model.
+metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect size", bound = NULL, studies = NA, independent = FALSE, ratio = FALSE) {
   digits <- metaUI_digits(table$LCL[table$status == "ok"], table$UCL[table$status == "ok"])
   fmt <- function(x) if (is.na(x)) "" else metaUI_minus(formatC(x, format = "f", digits = digits))
   esc <- function(x) htmltools::htmlEscape(as.character(x))
   # Other estimators sit under the primary analysis, grouped by the level they are fitted at.
   rest <- setdiff(seq_len(nrow(table)), first)
   order <- c(first, rest[order(table$aggregated[rest])])
-  scale <- metaUI_track_scale(c(table$es, table$LCL, table$UCL, if (!is.null(bound)) c(-bound, bound)))
+  band <- if (!is.null(bound)) metaUI_bounds(bound, ratio)
+  clipped <- metaUI_clipped_rows(table, first, ratio = ratio)
+  shown <- setdiff(seq_len(nrow(table)), clipped)
+  scale <- metaUI_track_scale(c(table$es[shown], table$LCL[shown], table$UCL[shown], band), ratio)
   types <- unique(stats::na.omit(table$interval_type[table$status == "ok"]))
   pet_peese <- if ("pet_peese_selected" %in% names(table)) which(table$pet_peese_selected %in% TRUE) else integer()
   ref <- if (length(first) && table$status[first[1]] == "ok") table$es[first[1]] else NULL
@@ -452,26 +527,29 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     row <- table[i, ]
     ok <- row$status == "ok"
     # The footnote mark follows the name, so that it cannot wrap onto a line of its own.
-    label <- paste0(esc(row$Model), if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"), if (i %in% first) paste0(' <span class="metaui-primary-tag">primary, ', if (row$aggregated) "study-level" else "effect-level", " fit</span>"),
+    label <- paste0(esc(row$Model), if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"), if (i %in% first) paste0(' <span class="metaui-primary-tag">primary', if (!independent) paste0(", ", if (row$aggregated) "study-level" else "effect-level", " fit"), "</span>"),
       # Confidence intervals need no note; only the rows that differ from them do.
       if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"),
-      if (ok && i %in% pet_peese) '<span class="metaui-row-note">PET-PEESE estimate</span>')
+      if (ok && i %in% pet_peese) '<span class="metaui-row-note">PET-PEESE estimate</span>',
+      if (independent && row$Model == "Random-Effects Multilevel Model") '<span class="metaui-row-note">the standard random-effects model, as each study has one effect</span>',
+      if (independent && row$Model == "Robust Variance Estimation") '<span class="metaui-row-note">close to the random-effects model here; it differs mainly in using a robust standard error</span>')
     # A row that is not estimated shows no numbers, even where an unreliable fit left some.
     interval <- if (!ok || (is.na(row$LCL) && is.na(row$UCL))) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
     # Effect-level rows all count the effects they use: RVE reports its studies, which would read
     # as a different sample beside the multilevel rows. Downloads keep each model's own k.
-    effect_level <- ok && !isTRUE(row$aggregated) && "input_rows" %in% names(row) && !is.na(row$k)
+    effect_level <- ok && !independent && !isTRUE(row$aggregated) && "input_rows" %in% names(row) && !is.na(row$k)
     unit <- if (!ok) "" else if (effect_level) "effects" else metaUI_count_unit(row, studies)
     k_shown <- if (!ok || is.na(row$k)) "" else format(if (effect_level) row$input_rows else row$k, big.mark = ",")
-    track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = TRUE), "</td>")
+    track <- if (ok && i %in% clipped) paste0('<td class="metaui-track-cell">', metaUI_track_clipped(scale, row$es, row$LCL, row$UCL, band, ref), "</td>")
+      else if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, band, ref = ref, diamond = TRUE), "</td>")
       else paste0('<td class="metaui-reason-cell"><b>', "Not estimated:</b> ", esc(metaUI_reader_reason(row$reason, row$warnings)), "</td>")
     position <- match(i, order)
-    opens_group <- !(i %in% first) && (position == length(first) + 1L || table$aggregated[order[position - 1L]] != row$aggregated)
+    opens_group <- !independent && !(i %in% first) && (position == length(first) + 1L || table$aggregated[order[position - 1L]] != row$aggregated)
     # Methods explains the two levels; the headings stay short enough for one line on phones.
     level <- if (row$aggregated) "study-level estimators" else "effect-level estimators"
     group <- if (opens_group) paste0('<tr class="metaui-group-row"><td colspan="5">',
         if (length(first) && any(table$aggregated[first] == row$aggregated)) paste("Other", level) else paste0(toupper(substr(level, 1, 1)), substring(level, 2)),
-        '</td><td class="metaui-track-cell">', metaUI_track_row(scale, NA_real_, NA_real_, NA_real_, bound, ref = ref), "</td></tr>")
+        '</td><td class="metaui-track-cell">', metaUI_track_row(scale, NA_real_, NA_real_, NA_real_, band, ref = ref), "</td></tr>")
     paste0(group, '<tr', if (i %in% first) ' class="metaui-primary-row"', "><td>", label, '</td><td class="num">', if (ok) fmt(row$es) else "",
       '</td><td class="num">', interval, '</td><td class="num metaui-k">', k_shown,
       '</td><td class="metaui-unit">', unit, "</td>", track, "</tr>")
@@ -480,11 +558,13 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Other estimators answer different questions and are not interchangeable with the primary analysis.',
     if (!is.null(ref)) paste0(" Each diamond spans a model\u2019s ", interval_head, "; the dashed line marks the primary estimate."),
     if (any(grepl("trim", table$Model, ignore.case = TRUE))) " The trim-and-fill count includes imputed studies.", "</p>")
+  if (length(clipped)) others <- paste0(others, '<p class="metaui-note metaui-clipped-note" role="note">', if (length(clipped) == 1L) paste0("The interval of ", esc(table$Model[clipped]), " is far wider than the others and runs beyond the axis, which an arrow at the edge marks; its numbers are in the table.")
+    else paste0("The intervals of ", paste(esc(table$Model[clipped]), collapse = " and "), " are far wider than the others and run beyond the axis, which arrows at the edge mark; their numbers are in the table."), "</p>")
   pet_p <- if (length(pet_peese)) stats::na.omit(table$pet_intercept_p)[1] else NA_real_
   bias <- c(if (length(pet_peese)) paste0("PET-PEESE estimate: the conditional rule reports PEESE when PET\u2019s intercept differs from zero (<i>p</i> &lt; .10), PET otherwise; here <i>p</i> ",
       if (pet_p < .001) "&lt; .001" else paste("=", sub("^0", "", formatC(pet_p, format = "f", digits = 3))), ". Methods explains the test."),
     if ("trimfill_away_from_zero" %in% names(table) && any(table$trimfill_away_from_zero %in% TRUE & table$status == "ok"))
-      "Trim-and-fill added studies on the same side as the overall estimate, so it moved the estimate further from zero rather than towards it. This happens when smaller studies show weaker effects than larger ones.")
+      paste0("Trim-and-fill added studies on the same side as the overall estimate, so it moved the estimate further from ", if (ratio) "a ratio of 1" else "zero", " rather than towards it. This happens when smaller studies show weaker effects than larger ones."))
   bias <- if (length(bias)) paste0('<p class="metaui-note metaui-bias-notes">', paste(bias, collapse = " "), "</p>")
   notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(note_text[warned]), "</li>", collapse = ""), "</ol>")
   paste0('<table class="table metaui-estimates metaui-models metaui-custom"><thead><tr data-head="Model, estimate [', interval_head, ']"><th>Model</th><th class="num">Estimate</th><th class="num">',
@@ -522,11 +602,11 @@ metaUI_forest_order <- function(rows, studies = NULL, sort = "name") {
 }
 
 # found: a study the reader searched for, marked so that it stands out on its page.
-metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL, page = 1L, sort = "name", page_size = 50L, found = NULL) {
+metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL, page = 1L, sort = "name", page_size = 50L, found = NULL, ratio = FALSE) {
   fmt <- function(x, digits = 2L) metaUI_minus(formatC(x, format = "f", digits = digits))
   esc <- function(x) htmltools::htmlEscape(as.character(x))
   # Combined rows count too: correlated weights can put them beyond their effects.
-  scale <- metaUI_track_scale(c(rows$es, rows$LCL, rows$UCL, studies$es, studies$LCL, studies$UCL))
+  scale <- metaUI_track_scale(c(rows$es, rows$LCL, rows$UCL, studies$es, studies$LCL, studies$UCL), ratio)
   summaries <- rows[rows$kind == "Model summary", , drop = FALSE]
   # A custom or Bayesian summary may not be a confidence interval, so it must not be called one.
   types <- attr(rows, "interval_types")
@@ -534,7 +614,9 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL,
   interval_head <- if (any(nzchar(vapply(summaries$label, other_type, character(1))))) "95% interval" else "95% CI"
   effects <- rows[rows$kind == "Selected effect", , drop = FALSE]
   ref <- if (nrow(summaries)) summaries$es[1] else NULL
-  width <- effects$UCL - effects$LCL
+  # Marker size follows precision: interval width on the drawn (log, for ratios) scale.
+  span <- function(lcl, ucl) if (ratio) log(ucl) - log(lcl) else ucl - lcl
+  width <- span(effects$LCL, effects$UCL)
   size <- pmin(13, pmax(6, 7 * stats::median(width) / width))
   # Only model summaries are narrow enough to need more decimals; study rows stay aligned.
   values <- function(row, digits = 2L) {
@@ -546,7 +628,7 @@ metaUI_forest_html <- function(rows, axis_title, studies = NULL, details = NULL,
   groups <- rle(as.character(effects$study))
   ends <- cumsum(groups$lengths); starts <- ends - groups$lengths + 1L
   if (is.null(studies)) studies <- data.frame(study = character(), es = numeric(), LCL = numeric(), UCL = numeric())
-  study_size <- pmin(13, pmax(6, 7 * stats::median(width) / (studies$UCL - studies$LCL)))
+  study_size <- pmin(13, pmax(6, 7 * stats::median(width) / span(studies$LCL, studies$UCL)))
   shown <- metaUI_forest_sorted(groups, starts, effects, studies, sort)
   pages <- max(1L, ceiling(length(shown) / page_size))
   page <- suppressWarnings(as.integer(page))
@@ -653,10 +735,14 @@ metaUI_moderator_code <- function(code, mods, control = NULL) {
   if (found == 1L) expr else NULL
 }
 
-# primary: list(name, code) of the authors' primary model, or NULL. Returns the fitted model
-# (robust where possible), which model it extends, and whether inference is cluster-robust.
-metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6) {
-  if (is.factor(df[[moderator]])) df[[moderator]] <- droplevels(df[[moderator]])
+# primary: list(name, code) of the authors' primary model, or NULL. start: variance components (sigma2) of
+# the model without the moderator, used as starting values, which saves about a quarter of the fitting time
+# on large data and reaches the same optimum. Returns the fitted model (robust where possible), which model
+# it extends, whether inference is cluster-robust, and why an overall test is missing where that is known.
+metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6, start = NULL) {
+  # Treatment coding, as metaUI_moderator_levels() assumes: an ordered factor would otherwise get
+  # polynomial contrasts. The level order is kept.
+  if (is.factor(df[[moderator]])) df[[moderator]] <- factor(droplevels(df[[moderator]]), ordered = FALSE)
   mods <- stats::as.formula(paste0("~`", moderator, "`"))
   env <- new.env(parent = environment(metaUI_moderator_fit))
   env$df <- df
@@ -666,6 +752,7 @@ metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6
   # A variance component at zero can stop the default optimizer short; more iterations, then
   # another optimizer, usually reach the same optimum.
   controls <- list(NULL, list(iter.max = 1000, rel.tol = 1e-8), list(optimizer = "BFGS"))
+  if (length(start) && all(is.finite(start))) controls <- c(list(list(sigma2.init = pmax(start, 1e-6))), controls)
   if (!is.null(primary)) {
     if (identical(primary$code, metaUI_code_multilevel)) working <- "primary" else {
       for (control in controls) {
@@ -691,8 +778,21 @@ metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6
   robust <- tryCatch(suppressWarnings(metafor::robust(model, cluster = df$metaUI__study_id, clubSandwich = TRUE, wald_test = "Naive-Fp")),
     error = function(e) NULL)
   omnibus <- FALSE
+  reason <- NULL
   if (!is.null(robust)) {
-    test <- tryCatch(metaUI_moderator_omnibus(model, df$metaUI__study_id[model$not.na]), error = function(e) NULL)
+    cluster <- df$metaUI__study_id[model$not.na]
+    test <- if (is.null(model$W)) tryCatch(metaUI_moderator_omnibus(model, cluster), error = function(e) NULL) else {
+      # Custom weights (an author's W): the fast route assumes inverse-variance weights, so clubSandwich's own
+      # HTZ test is used where its q x q x studies x studies array stays small (about 70 MB at most).
+      q <- NCOL(model$X) - 1L
+      if (q * length(unique(cluster)) <= 3000L) tryCatch({
+        w <- clubSandwich::Wald_test(model, clubSandwich::constrain_zero(seq_len(q) + 1L), vcov = "CR2", cluster = cluster, test = "HTZ")
+        data.frame(statistic = w$Fstat, df_num = w$df_num, df_denom = w$df_denom, p_value = w$p_val)
+      }, error = function(e) NULL) else {
+        reason <- "the primary model uses its own weights, and with this many categories and studies the overall test would need too much memory"
+        NULL
+      }
+    }
     if (!is.null(test) && is.finite(test$p_value)) {
       robust$QM <- test$statistic
       robust$QMdf <- c(test$df_num, test$df_denom)
@@ -700,7 +800,7 @@ metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6
       omnibus <- TRUE
     }
   }
-  list(model = if (is.null(robust)) model else robust, working = working, robust = !is.null(robust), omnibus = omnibus || is.null(robust))
+  list(model = if (is.null(robust)) model else robust, working = working, robust = !is.null(robust), omnibus = omnibus || is.null(robust), reason = reason)
 }
 
 # clubSandwich's HTZ Wald test (CR2, Tipton & Pustejovsky 2015, doi:10.3102/1076998615606099) of all
@@ -767,10 +867,14 @@ metaUI_moderator_levels <- function(model, levels) {
 # Moderator levels on the same drawn axis; the dots are the selected effects themselves.
 # Without the individual effects, the axis fits the level estimates and their intervals; with
 # them, it covers every effect, which can leave narrow intervals as slivers.
-metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values, labels, axis_title, ref = NULL, se = NULL, show_effects = TRUE, keep_order = FALSE, ref_label = "Random-Effects Multilevel Model") {
+# A level without an interval (a single study, where a cluster-robust interval does not exist) shows its
+# estimate as a point and "too few studies" in place of the interval.
+metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values, labels, axis_title, ref = NULL, se = NULL, show_effects = TRUE, keep_order = FALSE, ref_label = "Random-Effects Multilevel Model", ratio = FALSE) {
+  no_ci <- !is.finite(lcl) | !is.finite(ucl)
+  lcl[no_ci] <- NA_real_; ucl[no_ci] <- NA_real_
   digits <- metaUI_digits(lcl, ucl)
   fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = digits))
-  scale <- metaUI_track_scale(c(estimate, lcl, ucl, ref, if (show_effects) values))
+  scale <- metaUI_track_scale(c(estimate, lcl[!no_ci], ucl[!no_ci], ref, if (show_effects) values), ratio)
   # Largest estimate first, unless the author ordered the levels (metaUI_author_order); a missing-data level stays at the end.
   order <- order(levels == "(Missing)", if (keep_order) seq_along(levels) else -estimate)
   # Dots follow precision, as in the numeric moderator's plot.
@@ -779,15 +883,18 @@ metaUI_moderator_html <- function(levels, estimate, lcl, ucl, k, effects, values
     level <- as.character(effects) == as.character(levels[i])
     level[is.na(level)] <- FALSE
     paste0("<tr><td>", htmltools::htmlEscape(levels[i]), '</td><td class="num">', fmt(estimate[i]),
-      '</td><td class="num">[', fmt(lcl[i]), ", ", fmt(ucl[i]), ']</td><td class="num metaui-k">', k[i], '</td><td class="metaui-track-cell">',
-      metaUI_track_row(scale, estimate[i], lcl[i], ucl[i], dots = if (show_effects) values[level], dot_labels = if (show_effects) labels[level], ref = ref, dot_sizes = if (show_effects) sizes[level], diamond = TRUE,
-        hollow = isTRUE(lcl[i] <= 0 && ucl[i] >= 0)), "</td></tr>")
+      '</td><td class="num">', if (no_ci[i]) '<span class="metaui-no-ci">too few studies</span>' else paste0("[", fmt(lcl[i]), ", ", fmt(ucl[i]), "]"),
+      '</td><td class="num metaui-k">', format(k[i], big.mark = ","), '</td><td class="metaui-track-cell">',
+      sub("metaui-track-point\"", if (no_ci[i]) "metaui-track-point metaui-track-bare\"" else "metaui-track-point\"",
+        metaUI_track_row(scale, estimate[i], lcl[i], ucl[i], dots = if (show_effects) values[level], dot_labels = if (show_effects) labels[level], ref = ref, dot_sizes = if (show_effects) sizes[level], diamond = TRUE,
+          hollow = isTRUE(lcl[i] <= scale$null && ucl[i] >= scale$null)), fixed = TRUE), "</td></tr>")
   }, character(1))
   paste0('<p class="metaui-note metaui-key metaui-forest-controls">',
     metaUI_switch("Individual effects", "metaui-moderator-effects", c(hide = "hidden", show = "shown"), if (show_effects) "show" else "hide"), "</p>",
     '<table class="table metaui-estimates metaui-moderators', if (!show_effects) " metaui-moderators-plain", ' metaui-custom"><thead><tr data-head="Level, estimate [95% CI]"><th>Level</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k"><i>k</i></th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>", paste(rows, collapse = ""), "</tbody></table>",
-    '<p class="metaui-note metaui-key">Diamonds: level estimates from the moderator model named above; each spans its 95% CI, and is filled where the CI excludes zero, outlined where it includes it.',
+    '<p class="metaui-note metaui-key">Diamonds: level estimates from the moderator model named above; each spans its 95% CI, and is filled where the CI excludes ', if (ratio) "1" else "zero", ', outlined where it includes it.',
+    if (any(no_ci)) " Grey outlined squares: estimates of levels without an interval.",
     if (show_effects) '<span class="metaui-dots-note"> Grey dots beneath: selected effects, larger when more precise, stacked only so that none hides another.</span>',
     if (!is.null(ref)) paste0(" Dashed line: overall estimate of the ", htmltools::htmlEscape(ref_label), ", as on the Summary (", fmt(ref), ")."),
     if (show_effects) '<span class="metaui-hist-note" hidden> Levels with many effects show bars instead of dots: the number of effects in each range (tallest bar: <span class="metaui-hist-max"></span> effects).</span>',
@@ -923,10 +1030,14 @@ metaUI_reuse_fit <- function(results, models, code, df, fallback) {
 metaUI_heterogeneity <- function(mod, df) {
   # Needs replication both between and within studies.
   identified <- length(unique(df$metaUI__study_id)) > 1L && anyDuplicated(df$metaUI__study_id) > 0L
-  data.frame(study_variance = if (identified) mod$sigma2[1] else NA_real_,
-    effect_variance = if (identified) mod$sigma2[2] else NA_real_,
-    total_variance = sum(mod$sigma2), Q = mod$QE, Q_p = mod$QEp,
-    components = if (identified) "Study and within-study effects" else if (anyDuplicated(df$metaUI__study_id)) "Split not identified: only one study" else "Split not identified: one effect per study")
+  # A random-effects (rma.uni) fit has one variance, tau^2.
+  # It is all between-study variance.
+  sigma2 <- if (is.null(mod$sigma2)) mod$tau2 else mod$sigma2
+  single <- length(sigma2) == 1L
+  data.frame(study_variance = if (single) sigma2 else if (identified) sigma2[1] else NA_real_,
+    effect_variance = if (identified && !single) sigma2[2] else NA_real_,
+    total_variance = sum(sigma2), Q = mod$QE, Q_p = mod$QEp,
+    components = if (single) "Between studies only (one effect per study)" else if (identified) "Study and within-study effects" else if (anyDuplicated(df$metaUI__study_id)) "Split not identified: only one study" else "Split not identified: one effect per study")
 }
 
 metaUI_aggregate <- function(df, correlation = .6, method = "aggregate") {
@@ -957,7 +1068,7 @@ metaUI_aggregate <- function(df, correlation = .6, method = "aggregate") {
 metaUI_model_role <- function(spec, fallback = spec$name) {
   normalise <- function(x) gsub("\\s+", "", x)
   defaults <- c("Random-Effects Multilevel Model" = metaUI_code_multilevel,
-                "Robust Variance Estimation" = metaUI_code_rve, metaUI_default_code)
+                "Robust Variance Estimation" = metaUI_code_rve, "Random-Effects Model" = metaUI_code_random, metaUI_default_code)
   hit <- names(defaults)[normalise(defaults) == normalise(spec$code)]
   if (length(hit)) hit[1] else fallback
 }
@@ -1067,9 +1178,11 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
         }
         se <- tryCatch(as.numeric(if (inherits(env$mod, "rma")) env$mod$se else if (inherits(env$mod, "robu")) env$mod$reg_table$SE else NA)[1], error = function(e) NA_real_)
         if (inherits(env$mod, "robu") && NROW(env$mod$reg_table) == 1L) tau <- tryCatch(sqrt(as.numeric(env$mod$mod_info$tau.sq)[1]), error = function(e) NA_real_)
-        if (bayesian || (!spec$aggregated && !reflected && spec$code %in% c(metaUI_code_multilevel, metaUI_code_rve))) fits[[i]] <<- env$mod
+        if (bayesian || (!spec$aggregated && !reflected && spec$code %in% metaUI_summary_codes)) fits[[i]] <<- env$mod
         if (!spec$aggregated && !reflected && inherits(env$mod, "rma.mv") && identical(unname(env$mod$s.names), c("metaUI__study_id", "metaUI__study_id/metaUI__effect_id")))
           components[[i]] <<- list(sigma2 = env$mod$sigma2, QE = env$mod$QE, QEp = env$mod$QEp)
+        if (!spec$aggregated && identical(spec$code, metaUI_code_random) && inherits(env$mod, "rma.uni"))
+          components[[i]] <<- list(sigma2 = env$mod$tau2, QE = env$mod$QE, QEp = env$mod$QEp)
         if (!reflected && inherits(env$mod, c("rma.uni", "rma.mv"))) loo[[i]] <<- tryCatch(metaUI_loo_blocks(env$mod, x, result[c("es", "LCL", "UCL")]),
           error = function(e) list(reason = conditionMessage(e)))
         ""
@@ -1097,7 +1210,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
     row$fit_PI_LCL <- row$PI_LCL; row$fit_PI_UCL <- row$PI_UCL
     row$tau <- if (status == "ok") tau else NA_real_
     shown <- c("es", "LCL", "UCL", "PI_LCL", "PI_UCL", "LCL90", "UCL90")
-    if (df$metaUI__es_type[1] == "ZCOR") row[shown] <- lapply(row[shown], tanh)
+    row[shown] <- lapply(row[shown], metaUI_show, df)
     row
   })
   table <- dplyr::bind_rows(rows)
@@ -1134,7 +1247,8 @@ metaUI_validate_prepared <- function(df) {
   for (field in c("metaUI__es_type", "metaUI__display_scale", "metaUI__direction"))
     if (anyNA(df[[field]]) || length(unique(df[[field]])) != 1L) stop("Mixed or missing prepared scale/direction metadata.")
   metric <- df$metaUI__es_type[1]
-  if (!metric %in% c("SMD", "ZCOR") || df$metaUI__display_scale[1] != if (metric == "ZCOR") "r" else "SMD") stop("Prepared scale contract failed.")
+  display <- c(SMD = "SMD", ZCOR = "r", OR = "OR", RR = "RR")
+  if (!metric %in% names(display) || df$metaUI__display_scale[1] != display[[metric]]) stop("Prepared scale contract failed.")
   if (!df$metaUI__direction[1] %in% c("unspecified", "positive", "negative")) stop("Invalid prepared direction.")
   invisible(TRUE)
 }
@@ -1146,8 +1260,14 @@ metaUI_upload_roles <- function(built) {
   specs <- metaUI_computation_specs(built)
   input_scale <- attr(built, "metaUI_validation")$input_scale
   if (is.null(input_scale)) input_scale <- built$metaUI__es_type[1]
-  scale <- c(SMD = "standardized mean difference", COR = "correlation r", ZCOR = "Fisher z")[[input_scale]]
-  fitting <- if (built$metaUI__es_type[1] == "ZCOR") "Fisher z" else "standardized mean difference"
+  scales <- c(SMD = "standardized mean difference", COR = "correlation r", ZCOR = "Fisher z", OR = "log odds ratio", RR = "log risk ratio")
+  scale <- scales[[input_scale]]
+  fitting <- scales[[built$metaUI__es_type[1]]]
+  # Effects computed from 2x2 counts are recomputed from the counts, which are the columns to edit.
+  counts <- metaUI_count_columns(built)
+  count_notes <- c(ai = "Events in the first group.", bi = "Non-events in the first group.", n1i = "Total in the first group.",
+    ci = "Events in the second group.", di = "Non-events in the second group.", n2i = "Total in the second group.")
+  count_notes <- stats::setNames(paste(count_notes[names(counts)], "A count."), counts)
   edit <- c(metaUI__study_id = "Study name or ID. Rows with the same value form one study.",
     metaUI__effect_id = "Effect ID, unique within its study. Leave it empty in a new row to number the row automatically.",
     metaUI__es_label = "Label of the effect, shown in the forest plot. Optional.",
@@ -1168,7 +1288,16 @@ metaUI_upload_roles <- function(built) {
   alt_derived <- unlist(lapply(specs, function(x) stats::setNames(paste0(x$name, ": ", c("effect size", "variance"), " on the scale the models use."), c(x$fit_effect, x$fit_variance))))
   fixed <- c(metaUI__es_type = "Effect-size scale the models use.", metaUI__display_scale = "Scale results are shown on.",
     metaUI__direction = "Direction of the effect the authors expected.")
-  notes <- c(edit[names(edit) %in% names(built)], filter_notes, alt_edit)
+  if (length(counts)) {
+    derived <- c(stats::setNames(c(paste0("Effect size (", scale, ") computed from the counts by metafor::escalc, adding 0.5 to every cell of a table with a zero cell."),
+      "Its sampling variance, computed from the counts."), c("metaUI__input_effect", "metaUI__input_variance")), derived)
+    edit <- edit[!names(edit) %in% c("metaUI__input_effect", "metaUI__input_variance")]
+    if (metaUI_count_N(built)) {
+      derived <- c(metaUI__N = "Sample size: the total of the four counts.", derived)
+      edit <- edit[names(edit) != "metaUI__N"]
+    }
+  }
+  notes <- c(edit[names(edit) %in% names(built)], count_notes, filter_notes, alt_edit)
   roles <- data.frame(column = c(names(notes), names(derived), names(alt_derived), names(fixed)),
     role = c(rep("Edit", length(notes)), rep("Derived", length(derived) + length(alt_derived)), rep("Fixed", length(fixed))),
     notes = unname(c(notes, derived, alt_derived, fixed)), stringsAsFactors = FALSE)
@@ -1176,6 +1305,50 @@ metaUI_upload_roles <- function(built) {
   other <- setdiff(names(built), roles$column)
   rbind(roles, data.frame(column = other, role = rep("Other", length(other)),
     notes = rep("Kept with the data. The app's default models do not use it; the authors' own models may.", length(other)), stringsAsFactors = FALSE))
+}
+
+# Log odds or risk ratios from 2x2 counts with metafor::escalc and its defaults (add = 1/2, to = "only0",
+# drop00 = FALSE). `invalid` marks rows with missing, negative, fractional or impossible counts (more events than total);
+# `double_zero` marks tables with no events, or only events, in both groups (escalc's drop00 rule).
+# counts: named vector of column names in data, or named list of the count vectors themselves.
+metaUI_count_effects <- function(data, counts, measure) {
+  x <- lapply(counts, function(col) if (is.character(col)) as.numeric(data[[col]]) else as.numeric(col))
+  cells <- list(ai = x$ai, bi = if (is.null(x$bi)) x$n1i - x$ai else x$bi, ci = x$ci, di = if (is.null(x$di)) x$n2i - x$ci else x$di)
+  invalid <- !Reduce(`&`, lapply(cells, function(v) is.finite(v) & v >= 0 & v == round(v)))
+  cells <- lapply(cells, function(v) { v[invalid] <- NA_real_; v })
+  out <- suppressWarnings(metafor::escalc(measure, ai = cells$ai, bi = cells$bi, ci = cells$ci, di = cells$di))
+  list(yi = as.numeric(out$yi), vi = as.numeric(out$vi), invalid = invalid, total = Reduce(`+`, cells),
+    double_zero = !invalid & ((cells$ai == 0 & cells$ci == 0) | (cells$bi == 0 & cells$di == 0)))
+}
+
+# Columns of 2x2 counts behind the effects, named by their metafor::escalc argument (ai, n1i, ...).
+metaUI_count_columns <- function(built) {
+  counts <- attr(built, "metaUI_validation")$mapping$counts
+  if (is.null(counts)) return(character())
+  stats::setNames(paste0("metaUI__", names(counts)), names(counts))
+}
+
+# Whether N was the total of the counts (no sample size given), and so is recomputed with them.
+metaUI_count_N <- function(built) {
+  mapping <- attr(built, "metaUI_validation")$mapping
+  length(metaUI_count_columns(built)) > 0L && is.null(mapping$N)
+}
+
+# Methods sentence on tables with no events in either group, or with events in everyone in both groups
+# (escalc's drop00 rule), for apps built from counts.
+metaUI_double_zero_text <- function(built) {
+  counts <- metaUI_count_columns(built)
+  if (!length(counts)) return("")
+  validation <- attr(built, "metaUI_validation")
+  what <- "Tables with no events in either group, or with events in everyone in both groups,"
+  if (identical(validation$mapping$double_zero, "exclude")) {
+    n <- sum(grepl("double_zero", validation$exclusions$reason, fixed = TRUE))
+    return(paste0(what, " were left out (", if (n) n else "none", " in these data), following the Cochrane Handbook: they carry almost no information about the ratio. "))
+  }
+  n <- sum(metaUI_count_effects(built, lapply(counts, function(col) built[[col]]), built$metaUI__es_type[1])$double_zero)
+  paste0(what, " were kept, as the authors chose (metafor's default; ", if (n) n else "none", " in these data). ",
+    if (n) paste0("With 0.5 added to each cell, a table without events gives a ratio set mainly by the group sizes, with a wide interval",
+      if (built$metaUI__es_type[1] == "RR") "; a table with events in everyone gives a risk ratio near 1 that can have a narrow interval" else "", ". ") else "")
 }
 
 # The dataset sheet in the order of the roles above, so that the columns to edit come first.
@@ -1254,6 +1427,17 @@ metaUI_validate_upload <- function(df, built) {
     x
   }
   input_scale <- attr(built, "metaUI_validation")$input_scale
+  # Effects from 2x2 counts are computed again from the (edited) counts, as prepare_data() did.
+  counts <- metaUI_count_columns(built)
+  if (length(counts)) {
+    cells <- metaUI_count_effects(df, lapply(counts, function(col) number(col, "a count")), built$metaUI__es_type[1])
+    if (any(cells$invalid)) stop("Counts must be whole numbers, not negative, and events must not exceed the group total (not in ", metaUI_upload_rows(cells$invalid), ").", call. = FALSE)
+    if (identical(attr(built, "metaUI_validation")$mapping$double_zero, "exclude") && any(cells$double_zero))
+      stop("This app leaves out tables with no events (or only events) in both groups, and ", metaUI_upload_rows(cells$double_zero),
+        " ", if (sum(cells$double_zero) > 1L) "are such tables" else "is such a table", ". Remove ", if (sum(cells$double_zero) > 1L) "them" else "it", " or change the counts.", call. = FALSE)
+    df$metaUI__input_effect <- cells$yi; df$metaUI__input_variance <- cells$vi
+    if (metaUI_count_N(built)) df$metaUI__N <- cells$total
+  }
   # Source to fitting scale, as prepare_data() did: atanh(r), with delta-method variance.
   to_fit <- function(y, v, scale, what) {
     if (identical(scale, "COR")) {
@@ -1341,7 +1525,7 @@ metaUI_forest_studies <- function(aggregated) {
   se <- aggregated$metaUI__se
   out <- data.frame(study = as.character(aggregated$metaUI__study_id), es = aggregated$metaUI__effect_size,
     LCL = aggregated$metaUI__effect_size - stats::qnorm(.975) * se, UCL = aggregated$metaUI__effect_size + stats::qnorm(.975) * se)
-  if (identical(aggregated$metaUI__display_scale[1], "r")) out[c("es", "LCL", "UCL")] <- lapply(out[c("es", "LCL", "UCL")], tanh)
+  out[c("es", "LCL", "UCL")] <- lapply(out[c("es", "LCL", "UCL")], metaUI_show, aggregated)
   out
 }
 
@@ -1354,11 +1538,10 @@ metaUI_forest_rows <- function(df, estimates, models = NULL, primary = NULL) {
     fit_LCL = df$metaUI__effect_size - stats::qnorm(.975) * df$metaUI__se,
     fit_UCL = df$metaUI__effect_size + stats::qnorm(.975) * df$metaUI__se)
   rows$es <- rows$fit_es; rows$LCL <- rows$fit_LCL; rows$UCL <- rows$fit_UCL
-  if (df$metaUI__display_scale[1] == "r")
-    rows[c("es", "LCL", "UCL")] <- lapply(rows[c("es", "LCL", "UCL")], tanh)
+  rows[c("es", "LCL", "UCL")] <- lapply(rows[c("es", "LCL", "UCL")], metaUI_show, df)
   summary_rows <- if (!is.null(models) && nrow(models) == nrow(estimates))
-    models$code %in% c(metaUI_code_multilevel, metaUI_code_rve) & !models$aggregated else
-    estimates$Model %in% c("Random-Effects Multilevel Model", "Robust Variance Estimation") & !estimates$aggregated
+    models$code %in% metaUI_summary_codes & !models$aggregated else
+    estimates$Model %in% c("Random-Effects Multilevel Model", "Robust Variance Estimation", "Random-Effects Model") & !estimates$aggregated
   # The authors' primary model leads, as it does on the Summary, and sets the reference line.
   chosen <- which((summary_rows | estimates$Model %in% primary) & estimates$status == "ok")
   summaries <- estimates[chosen[order(!estimates$Model[chosen] %in% primary)], ]
@@ -1400,6 +1583,8 @@ metaUI_forest_plot <- function(rows, scale, colours = metaUI_plot_colours(), lab
   # As on screen: model summaries first, and an effect is named by its study, with its number
   # only where the study has several.
   rows <- rbind(rows[rows$kind == "Model summary", , drop = FALSE], rows[rows$kind != "Model summary", , drop = FALSE])
+  # Ratios are drawn on a log axis around 1, so that symmetric intervals look symmetric.
+  ratio <- scale %in% c("OR", "RR")
   capacity <- max(nrow(rows), capacity)
   rows$row <- rev(seq_len(nrow(rows))) + capacity - nrow(rows)
   if (!is.null(rows$study)) {
@@ -1432,15 +1617,17 @@ metaUI_forest_plot <- function(rows, scale, colours = metaUI_plot_colours(), lab
   diamonds <- do.call(rbind, lapply(seq_len(nrow(summaries)), function(i) data.frame(id = i,
     x = c(summaries$LCL[i], summaries$es[i], summaries$UCL[i], summaries$es[i]), y = summaries$row[i] + c(0, .32, 0, -.32))))
   ggplot2::ggplot(rows, ggplot2::aes(x = .data$es, y = .data$row)) +
-    ggplot2::geom_rect(data = bands, ggplot2::aes(xmin = -Inf, xmax = Inf, ymin = .data$ymin, ymax = .data$ymax), inherit.aes = FALSE, fill = colours$shade, colour = NA) +
-    ggplot2::geom_vline(xintercept = 0, colour = colours$slate, linewidth = .4) +
+    ggplot2::geom_rect(data = bands, ggplot2::aes(xmin = if (ratio) 0 else -Inf, xmax = Inf, ymin = .data$ymin, ymax = .data$ymax), inherit.aes = FALSE, fill = colours$shade, colour = NA) +
+    ggplot2::geom_vline(xintercept = if (ratio) 1 else 0, colour = colours$slate, linewidth = .4) +
     {if (nrow(summaries)) ggplot2::geom_hline(yintercept = min(summaries$row) - .5, colour = colours$ink, linewidth = .4)} +
     ggplot2::geom_segment(data = effects, ggplot2::aes(x = .data$LCL, xend = .data$UCL, yend = .data$row), colour = colours$ink, linewidth = .4) +
     ggplot2::geom_point(data = effects, shape = 16, size = 1.9, colour = colours$ink) +
     {if (nrow(summaries)) ggplot2::geom_polygon(data = diamonds, ggplot2::aes(x = .data$x, y = .data$y, group = .data$id), inherit.aes = FALSE, fill = colours$accent)} +
-    ggplot2::scale_y_continuous(breaks = rows$row, labels = rows$label, limits = c(1, capacity), expand = ggplot2::expansion(add = .8),
+    # The top diamond reaches beyond the last row; keep it rather than drop it as out of range.
+    ggplot2::scale_y_continuous(breaks = rows$row, labels = rows$label, limits = c(1, capacity), expand = ggplot2::expansion(add = .8), oob = function(x, range) x,
       sec.axis = ggplot2::dup_axis(labels = values, name = NULL)) +
     ggplot2::scale_x_continuous(limits = limits, sec.axis = if (top_axis) ggplot2::dup_axis() else ggplot2::waiver(),
+      transform = if (ratio) "log" else "identity", breaks = if (ratio) function(x) metaUI_ratio_ticks(log(x), 6) else ggplot2::waiver(),
       # The PDF device's default font has no true minus sign.
       labels = function(x) { x <- format(x, trim = TRUE, drop0trailing = TRUE); if (nzchar(family)) metaUI_minus(x) else x }) +
     ggplot2::labs(x = if (is.null(axis_title)) paste("Effect size (", scale, ")", sep = "") else metaUI_label_expr(axis_title), y = NULL) +
@@ -1453,22 +1640,28 @@ metaUI_forest_plot <- function(rows, scale, colours = metaUI_plot_colours(), lab
 # Descriptive containment of each model's 90% interval, without refitting or assuming
 # custom-model coverage. A 90% CI inside the bounds is the conventional pair of one-sided
 # tests at .05 (TOST). Equality at a bound is deliberately inconclusive.
+# For odds and risk ratios (scale "OR" or "RR") the bounds are 1/bound and bound, symmetric
+# around 1 on the log scale; a bound below 1 names the same pair, so it is turned into its inverse.
 metaUI_interval_assessment <- function(estimates, bound = NULL, scale = "SMD", known_models = character()) {
+  ratio <- scale %in% c("OR", "RR")
   if (!is.null(bound) && (length(bound) != 1L || !is.numeric(bound) || !is.finite(bound) ||
-      bound <= 0 || (scale == "r" && bound >= 1)))
-    stop(if (scale == "r") "Enter a bound strictly between 0 and 1 for r." else "Enter a positive finite bound.")
+      bound <= 0 || (scale == "r" && bound >= 1) || (ratio && bound == 1)))
+    stop(if (scale == "r") "Enter a bound strictly between 0 and 1 for r." else if (ratio) "Enter a ratio above 1 (or below 1); 1 means no effect." else "Enter a positive finite bound.")
+  if (ratio && !is.null(bound)) bound <- max(bound, 1 / bound)
   lower <- if ("LCL90" %in% names(estimates)) estimates$LCL90 else rep(NA_real_, nrow(estimates))
   upper <- if ("UCL90" %in% names(estimates)) estimates$UCL90 else rep(NA_real_, nrow(estimates))
-  valid <- estimates$status == "ok" & is.finite(lower) & is.finite(upper) & lower <= upper
+  valid <- estimates$status == "ok" & is.finite(lower) & is.finite(upper) & lower <= upper & (!ratio | lower > 0)
   threshold <- rep(NA_real_, nrow(estimates))
-  threshold[valid] <- pmax(abs(lower[valid]), abs(upper[valid]))
+  # The narrowest bound that holds the interval: on the log scale for ratios.
+  threshold[valid] <- if (ratio) exp(pmax(abs(log(lower[valid])), abs(log(upper[valid])))) else pmax(abs(lower[valid]), abs(upper[valid]))
   assessment <- rep("Not assessed", nrow(estimates))
   assessment[valid] <- "No bound chosen"
   if (!is.null(bound)) {
+    region <- metaUI_bounds(bound, ratio)
     assessment[valid] <- "Inconclusive"
-    assessment[valid & lower > -bound & upper < bound] <- "Interval within bounds"
-    assessment[valid & lower > bound] <- "Exceeds positive bound"
-    assessment[valid & upper < -bound] <- "Exceeds negative bound"
+    assessment[valid & lower > region[1] & upper < region[2]] <- "Interval within bounds"
+    assessment[valid & lower > region[2]] <- if (ratio) "Exceeds upper bound" else "Exceeds positive bound"
+    assessment[valid & upper < region[1]] <- if (ratio) "Exceeds lower bound" else "Exceeds negative bound"
   }
   bayesian <- if ("interval_type" %in% names(estimates)) grepl("credible", estimates$interval_type) else rep(FALSE, nrow(estimates))
   data.frame(Model = estimates$Model, bound = rep(if (is.null(bound)) NA_real_ else bound, nrow(estimates)),

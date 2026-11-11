@@ -56,8 +56,20 @@ Assigning the app object to a variable postpones launch until you print it.
 
 Generation refuses a nonempty folder by default. p/N are optional for the primary
 models; directional models require explicit direction. COR/ZCOR require explicit
-variance scales. Read the generated validation report before interpreting results.
+variance scales. Odds and risk ratios (`es_type = "OR"` or `"RR"`) take log ratios with
+`variance_scale = "log"`, or 2x2 counts through `counts` (computed with `metafor::escalc()`);
+models are fitted to the log ratios and results are shown as ratios on log axes. Read the generated validation report before interpreting results.
 The introductory Dannheim data use signed Hedges g, not correlations. No public deployment is automatic.
+
+### Default models
+
+The default models estimate the average effect with a random-effects multilevel model
+and robust variance estimation, and explore publication bias with trim-and-fill,
+p-uniform*, a selection model and PET-PEESE. When every study in the data has one
+effect, one standard random-effects model (`metafor::rma.uni`, REML, Hartung-Knapp
+interval) replaces the multilevel model and robust variance estimation, which would
+otherwise nearly repeat it; pass `models = get_model_tibble()` to keep them. See
+`vignette("customise_models")` to change the models.
 
 ### Primary model
 
@@ -87,6 +99,14 @@ default to no cache. Pass `options = list(fit_cache_entries = 0)` to `generate_s
 `"options": {"fit_cache_entries": 0}` in the build JSON) to disable caching;
 keep it disabled for random models or code depending on external state. Uploads
 are validated, stored in session state, and clear prior cached results.
+
+After each Update, an app also prepares the other result tabs in the background,
+including the Moderation tab, which adds the moderator to the primary model and
+refits it. On large dependent data (thousands of effects) one Update can then
+take two full model fits, during which a single R process serves no other reader.
+For apps that several people use at once, run more than one R process (for
+example, several workers on Posit Connect or shinyapps.io), or publish a static
+version (below), where each reader computes in their own browser.
 
 [Performance measurements](https://github.com/LukasWallrich/metaUI/blob/main/validation/performance-optimisation.md) distinguish
 faster p-curve calculations/fit reuse from cache hits and first-time fitting costs.
@@ -157,20 +177,22 @@ and source p-values remain anchored to the primary computation.
 ### Bayesian analysis
 
 Enable study-level Bayesian analysis with
-`generate_shiny(..., bayesian = list(enabled = TRUE))`, after installing the
-optional `bayesmeta` package. The mean prior is flat; the heterogeneity prior is
-half-normal with scale 0.5 for SMD or 0.25 for Fisher z, configurable with
-`tau_scale`. Central 95% credible intervals and posterior medians are reported,
-and the sensitivity tab compares half and double that prior scale. This uses
-aggregated studies and the declared within-study correlation. Authors who edit
-`aggregation_method` in the generated `labels_and_options.R` to `"first"` switch it
-to the first-effect rule; the build records the priors and the default aggregation.
-The default cap of 20 studies protects interactive use: first-fit benchmarks took
-about 20 seconds at 20 studies and 97 seconds at 50 on the review machine.
-Authors can set `max_studies` from 2 to 50, with a build warning above 20. Each
-Update results blocks the Shiny server process while fitting, and with it every other
-reader served by that process; serve busy apps with several workers or instances. Prior sensitivity runs
-when its tab or download is requested and can require two extra fits.
+`generate_shiny(..., bayesian = list(enabled = TRUE))`. The mean prior is flat;
+the heterogeneity prior is half-normal with scale 0.5 for SMD and log odds or risk ratios, or 0.25 for
+Fisher z, configurable with `tau_scale`. Central 95% credible intervals and posterior
+medians are reported, and the sensitivity tab compares half and double that prior
+scale. This uses aggregated studies and the declared within-study correlation.
+Authors who edit `aggregation_method` in the generated `labels_and_options.R` to
+`"first"` switch it to the first-effect rule; the build records the priors and the
+default aggregation.
+The posterior is computed by numerical integration over the between-study SD on a
+2,000-point grid; given that SD, the mean is exactly normal, so its posterior is a
+normal mixture. This needs no extra package and takes well under a second, even
+for 646 studies in the browser (webR). Across 412 simulated and two real datasets,
+its results were within 10<sup>-7</sup> posterior standard deviations of adaptive
+numerical integration for the mean and 2 × 10<sup>-4</sup> for heterogeneity
+quantiles (see `validation/bayesian-grid.md`). There is no study limit by default; authors can set
+one with `max_studies` (an integer of at least 2).
 See [Röver et al.](https://doi.org/10.1002/jrsm.1475) for the prior rationale.
 
 ### Study details

@@ -44,7 +44,6 @@
       "additionalProperties": false,
       "required": [
         "study_label",
-        "es_field",
         "es_type"
       ],
       "properties": {
@@ -82,14 +81,17 @@
           "enum": [
             "SMD",
             "COR",
-            "ZCOR"
+            "ZCOR",
+            "OR",
+            "RR"
           ]
         },
         "variance_scale": {
           "enum": [
             "SMD",
             "r",
-            "z"
+            "z",
+            "log"
           ]
         },
         "direction": {
@@ -174,14 +176,17 @@
                 "enum": [
                   "SMD",
                   "COR",
-                  "ZCOR"
+                  "ZCOR",
+                  "OR",
+                  "RR"
                 ]
               },
               "variance_scale": {
                 "enum": [
                   "SMD",
                   "r",
-                  "z"
+                  "z",
+                  "log"
                 ]
               },
               "justification": {
@@ -256,6 +261,28 @@
                     }
                   }
                 }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "es_type": {
+                      "enum": [
+                        "OR",
+                        "RR"
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "variance_scale"
+                  ],
+                  "properties": {
+                    "variance_scale": {
+                      "const": "log"
+                    }
+                  }
+                }
               }
             ]
           },
@@ -266,17 +293,113 @@
               "const": "As supplied"
             }
           }
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "For es_type OR or RR: 2x2 count columns, as in metafor::escalc. Events ai and ci with group totals n1i and n2i, or non-events bi and di. Leave es_field, variance, se and variance_scale out.",
+          "properties": {
+            "ai": {
+              "type": "string",
+              "minLength": 1
+            },
+            "bi": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ci": {
+              "type": "string",
+              "minLength": 1
+            },
+            "di": {
+              "type": "string",
+              "minLength": 1
+            },
+            "n1i": {
+              "type": "string",
+              "minLength": 1
+            },
+            "n2i": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "oneOf": [
+            {
+              "required": [
+                "ai",
+                "ci",
+                "n1i",
+                "n2i"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "bi"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "di"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "required": [
+                "ai",
+                "bi",
+                "ci",
+                "di"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "n1i"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "n2i"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "double_zero": {
+          "enum": [
+            "keep",
+            "exclude"
+          ],
+          "description": "With counts: exclude (default, following the Cochrane Handbook) or keep (as metafor) tables with no events, or only events, in both groups."
         }
       },
       "anyOf": [
         {
           "required": [
-            "variance"
+            "es_field"
+          ],
+          "anyOf": [
+            {
+              "required": [
+                "variance"
+              ]
+            },
+            {
+              "required": [
+                "se"
+              ]
+            }
           ]
         },
         {
           "required": [
-            "se"
+            "counts"
           ]
         }
       ],
@@ -333,6 +456,89 @@
                 "const": "SMD"
               }
             }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "counts"
+            ]
+          },
+          "then": {
+            "properties": {
+              "es_type": {
+                "enum": [
+                  "OR",
+                  "RR"
+                ]
+              }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "es_field"
+                  ]
+                },
+                {
+                  "required": [
+                    "variance"
+                  ]
+                },
+                {
+                  "required": [
+                    "se"
+                  ]
+                },
+                {
+                  "required": [
+                    "variance_scale"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "es_type"
+            ],
+            "properties": {
+              "es_type": {
+                "enum": [
+                  "OR",
+                  "RR"
+                ]
+              }
+            },
+            "not": {
+              "required": [
+                "counts"
+              ]
+            }
+          },
+          "then": {
+            "required": [
+              "variance_scale"
+            ],
+            "properties": {
+              "variance_scale": {
+                "const": "log"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "double_zero"
+            ]
+          },
+          "then": {
+            "required": [
+              "counts"
+            ]
           }
         }
       ]
@@ -399,8 +605,7 @@
         },
         "max_studies": {
           "type": "integer",
-          "minimum": 2,
-          "maximum": 50
+          "minimum": 2
         }
       }
     },
@@ -524,6 +729,16 @@
                     {
                       "required": [
                         "primary_label"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "counts"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "double_zero"
                       ]
                     }
                   ]

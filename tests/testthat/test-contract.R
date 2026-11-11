@@ -11,7 +11,8 @@ test_that("optional fields preserve membership and invalid required rows are rep
   expect_error(prepared(x, na.rm = FALSE), "Invalid required")
   x <- fixture(); x$id[2] <- 1
   expect_error(prepared(x), "unique within study")
-  expect_error(prepared(es_type = "OR"), "Supported metrics")
+  expect_error(prepared(es_type = "MD"), "Supported metrics")
+  expect_error(prepared(es_type = "OR"), "log ratios")
   expect_error(prepare_data(fixture(), "study", "yi"), "Supply variance")
   x <- fixture(); x$se <- rep(2, 16)
   expect_error(prepare_data(x, "study", "yi", se = "se", variance = "vi"), "disagree")

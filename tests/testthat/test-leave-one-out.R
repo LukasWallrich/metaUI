@@ -224,3 +224,16 @@ test_that("a generated app shows the leave-one-out table for the primary model, 
     expect_equal(csv$left_out[1], "source")
   })
 })
+
+test_that("with one effect per study, the standard random-effects model is left out study by study", {
+  x <- loo_fixture(); x <- x[!duplicated(x$study), ]
+  d <- prepare_data(x, "study", "yi", variance = "vi", es_id = "id")
+  models <- get_model_tibble(one_effect_per_study = TRUE)
+  i <- which(models$code == metaUI:::metaUI_code_random & !models$aggregated)
+  fits <- metaUI:::metaUI_fit_models(d, models)
+  expect_null(fits$loo[[i]]$reason)
+  full <- metaUI:::metaUI_univariate(d$metaUI__effect_size, d$metaUI__se, method = "REML")
+  fixed <- metafor::rma.uni(d$metaUI__effect_size[-1], sei = d$metaUI__se[-1], tau2 = full$tau2, test = "knha")
+  row <- metaUI:::metaUI_loo_estimates(fits$loo[[i]])[1, ]
+  expect_equal(c(row$es, row$LCL, row$UCL), c(as.numeric(fixed$b), fixed$ci.lb, fixed$ci.ub), tolerance = 1e-8)
+})

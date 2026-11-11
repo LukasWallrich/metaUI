@@ -106,7 +106,7 @@ test_that("upload scale and descriptive-z contracts are explicit", {
   expect_equal(metaUI:::metaUI_validate_upload(as.data.frame(cor), cor)$metaUI__effect_size, cor$metaUI__effect_size)
 })
 
-test_that("uploads take new rows, IDs and categories, and explain invalid cells by row", {
+test_that("uploads take new rows and IDs, and explain invalid cells by row", {
   d <- prepared()
   upload <- as.data.frame(d); attr(upload, "metaUI_validation") <- NULL
   new <- upload[1, ]; new[] <- NA

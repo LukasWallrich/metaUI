@@ -16,7 +16,7 @@
 #' @param filters Character. List of fields to use as filters - can be named if different labels should be displayed. Labels must be distinct, contain no backticks, and stay distinct when spaces and symbols are replaced by underscores (as in Shiny input IDs); a numeric filter needs at least one value.
 #' @param url Character. Field with URLs or DOIs to link to. DOIs can be in the format "10.1234/5678" or full links. Defaults to NA.
 #' @param article_label Character. Field with article labels. Only used to report number of references in addition to number of independent samples.
-#' @param es_type Character. Input scale: SMD, COR (raw r), or ZCOR (Fisher z). COR needs r-scale variance and uses delta-method variance conversion; ZCOR needs z-scale variance.
+#' @param es_type Character. Input scale: SMD, COR (raw r), ZCOR (Fisher z), OR (log odds ratio) or RR (log risk ratio). COR needs r-scale variance and uses delta-method variance conversion; ZCOR needs z-scale variance. OR and RR take effects and variances on the log scale (`variance_scale = "log"`), as [metafor::escalc()] returns them, or 2x2 counts (`counts`); models are fitted on the log scale and results shown as ratios.
 #' @param es_label Character. Label for individual effect sizes - only needed when there are multiple effect sizes per study/sample. Defaults to NA. Defaults to NA, in that case, multiple effect sizes are simply numbered.
 #' @param na.rm Should rows with any missing values be removed? Can be TRUE, FALSE or "es_related" -
 #' the last is the default and drops rows with missing values for any of the variables used in the standard meta-analysis models, namely
@@ -28,7 +28,21 @@
 #'
 #' @param categorical_filters Explicitly convert named filter columns to factors with radix-sorted levels. Useful for CSV/JSON builds.
 #' @param es_id Optional column with unique effect IDs within each study. Defaults to input row IDs.
-#' @param variance_scale Required for COR (r) and ZCOR (z); optional SMD for SMD.
+#' @param variance_scale Required for COR (r), ZCOR (z), and OR or RR given as log ratios (log); optional SMD for SMD.
+#' @param counts For OR and RR: named character vector mapping 2x2 count columns, as in [metafor::escalc()]:
+#'   `ai` and `ci` (events in the first and second group) with either `n1i` and `n2i` (group totals) or `bi` and `di`
+#'   (non-events). The log ratio and its variance are computed with `metafor::escalc()` and its defaults: 0.5 is added
+#'   to every cell of a table that has a zero cell, and tables without events (or without non-events) in both groups are kept.
+#'   Leave `es_field`, `variance` and `se` empty. The count columns become editable in downloaded workbooks.
+#'   Without `sample_size`, N is the total of the four cells; with it, N is checked against that total and
+#'   rows that differ are named in a warning (N may legitimately count, say, everyone randomised).
+#' @param double_zero For `counts` only: what to do with tables that have no events in either group, or only
+#'   events (a "double-zero" table, `ai = ci = 0` or `bi = di = 0`). `"exclude"` (the default, following the Cochrane
+#'   Handbook for odds and risk ratios) leaves both kinds out with a reason, as `escalc(drop00 = TRUE)`
+#'   does: such tables carry essentially no information about the ratio. `"keep"` (metafor's default) adds 0.5
+#'   to every cell of such a table instead. A table without events then gives a ratio set mainly by the group
+#'   sizes, and with unequal groups this can pull the pooled estimate; for risk ratios, a table with events in
+#'   everyone gives a ratio near 1 whose variance can be small. The app's Methods state the choice and the count.
 #' @param direction Explicit direction for one-sided bias models: unspecified, positive, or negative.
 #' @param primary_label Label for the primary computation when alternatives are provided.
 #' @param alternatives Named list of up to five author-defined effect computations. Each entry supplies es_field, variance or se, es_type, variance_scale when required, and a nonempty justification. Every computation must retain the same effects and converge on the same fitting scale.
@@ -37,11 +51,13 @@
 #' @examples
 #' raw <- data.frame(study = letters[1:4], d = c(.1, .3, -.1, .4), vi = rep(.02, 4))
 #' prepare_data(raw, "study", "d", variance = "vi")
-prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, sample_size = NULL, variance = NULL, filters = character(),
+prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue = NULL, sample_size = NULL, variance = NULL, filters = character(),
                          url = NA, es_type = "SMD", article_label = NA, es_label = NA, na.rm = "es_related",
                          arrange_filters = c("given", "alphabetical", "leave"), keep_missing_level = FALSE, es_id = NULL,
                          variance_scale = NULL, direction = c("unspecified", "positive", "negative"),
-                         categorical_filters = character(), alternatives = list(), primary_label = "As supplied") {
+                         categorical_filters = character(), alternatives = list(), primary_label = "As supplied", counts = NULL, double_zero = c("exclude", "keep")) {
+  # The p-value and N columns the author gave; internal placeholders added later do not count for na.rm.
+  supplied_pn <- c(pvalue, sample_size)
   source <- list(kind = if (is.character(data)) "CSV" else "data.frame",
                  file = if (is.character(data)) basename(data) else NULL,
                  md5 = if (is.character(data)) unname(tools::md5sum(data)) else NULL)
@@ -65,8 +81,38 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
 
   if (!is.character(primary_label) || length(primary_label) != 1L || is.na(primary_label) || !nzchar(trimws(primary_label)) || primary_label %in% names(alternatives)) stop("primary_label must be a unique nonempty string.")
   direction <- match.arg(direction)
-  if (!es_type %in% c("SMD", "COR", "ZCOR"))
-    stop("Supported metrics are SMD, COR and ZCOR; other metrics require custom analysis.")
+  if (!es_type %in% c("SMD", "COR", "ZCOR", "OR", "RR"))
+    stop("Supported metrics are SMD, COR, ZCOR, OR and RR; other metrics require custom analysis.")
+  derived <- character()
+  count_cells <- NULL
+  count_N_mismatches <- NA_integer_
+  if (!is.null(counts)) {
+    if (!es_type %in% c("OR", "RR")) stop("counts are used only for es_type OR or RR.")
+    if (!is.null(es_field) || !is.null(variance) || !is.null(se) || !is.null(variance_scale))
+      stop("With counts, leave es_field, variance, se and variance_scale empty: the effects are computed from the counts.")
+    double_zero <- match.arg(double_zero)
+    counts <- metaUI_check_counts(counts, data)
+    count_cells <- metaUI_count_effects(data, counts, es_type)
+    data$metaUI_input_yi <- count_cells$yi
+    data$metaUI_input_vi <- count_cells$vi
+    es_field <- "metaUI_input_yi"; variance <- "metaUI_input_vi"; variance_scale <- "log"
+    derived <- c(derived, paste0("log ", if (es_type == "OR") "odds" else "risk", " ratio and variance from 2x2 counts with metafor::escalc(measure = \"", es_type,
+      "\"): 0.5 added to every cell of tables with a zero cell; tables with no events (or only events) in both groups ", if (double_zero == "keep") "kept" else "excluded"))
+    if (is.null(sample_size)) {
+      data$metaUI_input_N <- count_cells$total
+      sample_size <- "metaUI_input_N"
+      derived <- c(derived, "N = total of the 2x2 counts")
+    } else if (is.numeric(data[[sample_size]])) {
+      differs <- which(is.finite(data[[sample_size]]) & is.finite(count_cells$total) & abs(data[[sample_size]] - count_cells$total) > 1e-8)
+      if (length(differs)) warning("Sample size (", sample_size, ") differs from the total of the 2x2 counts in ", length(differs),
+        if (length(differs) == 1L) " row" else " rows", " (rows ", paste(utils::head(differs, 10), collapse = ", "), if (length(differs) > 10L) ", ..." else "",
+        "). Check whether N counts the same people; leave sample_size empty to use the count total.", call. = FALSE)
+      count_N_mismatches <- length(differs)
+    }
+  } else if (!missing(double_zero)) stop("double_zero applies only with counts.")
+  if (is.null(es_field)) stop("Supply es_field, or counts for OR and RR.")
+  if (es_type %in% c("OR", "RR") && !identical(variance_scale, "log"))
+    stop(es_type, " takes log ratios: set variance_scale = 'log' for effects and variances on the log scale (as metafor::escalc returns them), or supply 2x2 counts.")
   if (es_type == "COR" && !identical(variance_scale, "r"))
     stop("COR requires variance_scale = 'r' with supplied r-scale variance. No N-based variance is inferred.")
   if (es_type == "ZCOR" && !identical(variance_scale, "z"))
@@ -74,7 +120,7 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   if (es_type == "SMD" && !is.null(variance_scale) && variance_scale != "SMD")
     stop("SMD requires SMD-scale variance.")
   if (is.null(variance) && is.null(se)) stop("Supply variance or se on the declared input scale.")
-  mappings <- c(study_label, es_field, se, pvalue, sample_size, variance, filters, es_id)
+  mappings <- c(study_label, es_field, se, pvalue, sample_size, variance, filters, es_id, unname(counts))
   if (any(!mappings %in% names(data))) stop("Mapped column not found: ", paste(setdiff(mappings, names(data)), collapse = ", "))
   if (anyDuplicated(mappings)) stop("Column mappings must be distinct.")
   original_rows <- seq_len(nrow(data))
@@ -84,7 +130,6 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
     if (!es_label %in% names(data)) stop("Mapped label column not found: ", es_label)
     labels_input <- data[[es_label]]
   }
-  derived <- character()
   if (is.null(se)) {
     data$metaUI_input_se <- sqrt(data[[variance]])
     se <- "metaUI_input_se"
@@ -129,8 +174,7 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
 
   # Under na.rm = TRUE, a row missing any filter, p-value or N it was given counts as incomplete;
   # this is recorded before categorical NAs become "(Missing)". Unmapped columns do not count.
-  missing_mapped <- if (length(c(filters, setdiff(c(pvalue, sample_size), c("metaUI_input_p", "metaUI_input_N")))))
-    !stats::complete.cases(data[c(filters, setdiff(c(pvalue, sample_size), c("metaUI_input_p", "metaUI_input_N")))]) else rep(FALSE, nrow(data))
+  missing_mapped <- if (length(c(filters, supplied_pn))) !stats::complete.cases(data[c(filters, supplied_pn)]) else rep(FALSE, nrow(data))
 
   # Set NA level for categorical filters ...
   for (i in seq_along(filters)) {
@@ -162,6 +206,8 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
     ) %>%
     dplyr::rename_with(~ if (length(.x)) paste0("metaUI__filter_", filter_names[.x]) else character(), .cols = dplyr::all_of(filters)) %>%
     dplyr::mutate(metaUI__es_type = !!es_type)
+  # Counts keep stable names, so that an uploaded workbook can recompute the effects from them.
+  if (!is.null(counts)) data <- dplyr::rename(data, !!!rlang::syms(stats::setNames(unname(counts), paste0("metaUI__", names(counts)))))
 
   if (!is.na(url)) {
     data <- data %>%
@@ -198,7 +244,11 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   add_reason <- function(bad, text) {
     reason[bad] <<- ifelse(reason[bad] == "", text, paste(reason[bad], text, sep = "; "))
   }
+  # The most basic reason comes first (About names only the first): counts before the effect, variance
+  # and SE derived from them. Reasons contain no "; ".
   add_reason(is.na(data$metaUI__study_id) | trimws(as.character(data$metaUI__study_id)) == "", "missing study ID")
+  if (!is.null(count_cells)) add_reason(count_cells$invalid, "missing, negative, fractional or impossible counts")
+  if (!is.null(count_cells) && double_zero == "exclude") add_reason(count_cells$double_zero, "no events (or only events) in both groups (double_zero = \"exclude\")")
   add_reason(!is.finite(data$metaUI__effect_size), "nonfinite effect")
   add_reason(!is.finite(data$metaUI__variance) | data$metaUI__variance <= 0, "invalid variance")
   add_reason(!is.finite(data$metaUI__se) | data$metaUI__se <= 0, "invalid SE")
@@ -214,7 +264,7 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
     if (is.factor(data[[field]])) data[[field]] <- droplevels(data[[field]])
   data$metaUI__input_effect <- data$metaUI__effect_size
   data$metaUI__input_variance <- data$metaUI__variance
-  data$metaUI__display_scale <- if (es_type %in% c("COR", "ZCOR")) "r" else "SMD"
+  data$metaUI__display_scale <- c(SMD = "SMD", COR = "r", ZCOR = "r", OR = "OR", RR = "RR")[[es_type]]
   if (es_type == "COR") {
     # Delta-method propagation of supplied r variance; not the N-based 1/(N-3) rule.
     data$metaUI__variance <- data$metaUI__variance / (1 - data$metaUI__effect_size^2)^2
@@ -232,16 +282,18 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
   data$metaUI__pvalue[invalid_p] <- NA_real_
   data$metaUI__N[invalid_n] <- NA_real_
   attr(data, "metaUI_validation") <- list(
-    source = source, mapping = list(study = study_label, effect = es_field,
-      variance = if (variance == "metaUI_input_variance") NULL else variance,
+    # Effects computed from counts have no source column of their own; derivations record how.
+    source = source, mapping = list(study = study_label, effect = if (is.null(counts)) es_field,
+      variance = if (variance %in% c("metaUI_input_variance", "metaUI_input_vi")) NULL else variance,
       SE = if (se == "metaUI_input_se") NULL else se,
       effect_id = es_id, label = es_label, p = if (pvalue == "metaUI_input_p") NULL else pvalue,
-      N = if (sample_size == "metaUI_input_N") NULL else sample_size, filters = filters),
+      N = if (sample_size == "metaUI_input_N") NULL else sample_size, filters = filters, counts = counts,
+      double_zero = if (!is.null(counts)) double_zero),
     input_rows = length(original_rows), retained_rows = nrow(data), exclusions = exclusions,
     input_scale = es_type, fitting_scale = data$metaUI__es_type[1],
     display_scale = data$metaUI__display_scale[1], direction = direction, derivations = derived,
     optional_inputs = list(missing_p = sum(is.na(data$metaUI__pvalue)), missing_N = sum(is.na(data$metaUI__N)),
-                           invalid_p = sum(invalid_p), invalid_N = sum(invalid_n)))
+                           invalid_p = sum(invalid_p), invalid_N = sum(invalid_n), N_differs_from_counts = count_N_mismatches))
   specs <- lapply(seq_along(alternatives), function(i) {
     spec <- alternatives[[i]]
     required <- c("es_field", "es_type", "justification")
@@ -252,7 +304,7 @@ prepare_data <- function(data, study_label, es_field, se = NULL, pvalue = NULL, 
         !is.character(spec$justification) || length(spec$justification) != 1L || is.na(spec$justification) || !nzchar(trimws(spec$justification)))
       stop("Alternative must declare effect, variance/SE, scale and justification: ", names(alternatives)[i])
     args <- alternative_base
-    args$se <- NULL; args$variance <- NULL; args$variance_scale <- NULL
+    args$se <- NULL; args$variance <- NULL; args$variance_scale <- NULL; args$counts <- NULL; args$double_zero <- NULL
     for (key in setdiff(names(spec), "justification")) args[[key]] <- spec[[key]]
     kept <- raw_data[original_rows[reason == ""], , drop = FALSE]
     args$na.rm <- FALSE
@@ -355,4 +407,14 @@ metaUI_check_filter_columns <- function(cols, values = NULL) {
     if (is.numeric(x) && !any(is.finite(x))) stop("Numeric filter \"", labels[i], "\" has no values. Leave it out until it is coded.")
   }
   invisible(TRUE)
+}
+
+# Count columns for OR and RR: ai and ci with n1i and n2i (group totals) or bi and di (non-events).
+metaUI_check_counts <- function(counts, data) {
+  if (!is.character(counts) || is.null(names(counts)) || anyDuplicated(names(counts)) ||
+      !(setequal(names(counts), c("ai", "ci", "n1i", "n2i")) || setequal(names(counts), c("ai", "bi", "ci", "di"))))
+    stop("counts must name columns as c(ai = , n1i = , ci = , n2i = ) (events and totals per group) or c(ai = , bi = , ci = , di = ) (events and non-events).")
+  if (any(!counts %in% names(data))) stop("Count column not found: ", paste(setdiff(counts, names(data)), collapse = ", "))
+  for (col in counts) if (!is.numeric(data[[col]])) stop("Numeric input required: ", col)
+  counts[intersect(c("ai", "bi", "n1i", "ci", "di", "n2i"), names(counts))]
 }

@@ -11,7 +11,6 @@ create_about(
   osf_link = "",
   contact = "",
   list_packages = TRUE,
-  bayesian = FALSE,
   meta = FALSE
 )
 }
@@ -29,8 +28,6 @@ create_about(
 \item{list_packages}{Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 a character vector with all packages to display.}
-
-\item{bayesian}{Is the optional Bayesian model enabled? If so, the default list includes bayesmeta.}
 
 \item{meta}{Does author model code use meta? If so, the default list includes it.}
 }

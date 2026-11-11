@@ -5,6 +5,10 @@
 #' If you want to change the default models, have a look at the vignette and/or the source code of this function
 #' (by running \code{get_model_tibble} in the console) and modify it accordingly.
 #'
+#' @param one_effect_per_study If `TRUE`, the multilevel model and robust variance estimation
+#'   are replaced by one standard random-effects model (`metafor::rma.uni`, REML, Hartung-Knapp
+#'   interval). [generate_shiny()] uses this when every study in the data has one effect, and refuses it
+#'   for data in which a study has several effects.
 #' @return A tibble with the models to be included in the app - including details on how to estimate them
 #'   and how to extract the relevant information from the model output.
 #' @export
@@ -20,7 +24,7 @@
 #'     eff_size_type_label = "Declared effect scale")
 #' }
 
-get_model_tibble <- function() {
+get_model_tibble <- function(one_effect_per_study = FALSE) {
 
         models_to_run <- tibble::tribble(
         ~name, ~aggregated, ~es, ~LCL, ~UCL, ~k,
@@ -70,7 +74,16 @@ get_model_tibble <- function() {
         # Put helpers in the author model file; generated apps source it locally.
         # The two default fit helpers are in the editable analysis.R file.
 
+        models_to_run <- models_to_run %>% dplyr::left_join(models_code, by = "name")
+        # With one effect per study, the multilevel model is the standard random-effects model and
+        # RVE adds little, so one random-effects row replaces both.
+        if (isTRUE(one_effect_per_study)) {
+          random <- tibble::tibble(name = "Random-Effects Model", aggregated = FALSE, es = "mod$b", LCL = "mod$ci.lb", UCL = "mod$ci.ub", k = "mod$k",
+            LCL90 = "predict(mod, level = 90)$ci.lb", UCL90 = "predict(mod, level = 90)$ci.ub", code = metaUI_code_random)
+          models_to_run <- dplyr::bind_rows(random, models_to_run[!models_to_run$code %in% c(metaUI_code_multilevel, metaUI_code_rve), ])
+        }
+
         # Keep this at the end of the file!
-        models_to_run %>% dplyr::left_join(models_code, by = "name")
+        models_to_run
 
 }

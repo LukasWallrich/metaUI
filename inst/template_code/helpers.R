@@ -169,7 +169,14 @@ summarise_numeric <- function(x, name) {
 
 # Shiny input ID of a filter column. Only letters, digits, "_" and "-" survive, so that labels
 # with quotes, brackets or other symbols give IDs that are safe in R code, HTML and CSS selectors.
-metaUI_filter_id <- function(col) gsub("[^A-Za-z0-9_-]", "_", col)
+# Input IDs keep ASCII letters, digits, "_" and "-"; other ASCII characters become "_", and each
+# non-ASCII character its code point, so labels that differ only in accented or non-Latin letters
+# keep distinct IDs.
+metaUI_filter_id <- function(col) vapply(enc2utf8(as.character(col)), function(x) {
+  chars <- strsplit(x, "")[[1]]
+  codes <- vapply(chars, utf8ToInt, integer(1))
+  paste(ifelse(grepl("^[A-Za-z0-9_-]$", chars), chars, ifelse(codes > 127L, sprintf("_u%x_", codes), "_")), collapse = "")
+}, character(1), USE.NAMES = FALSE)
 
 # Whether a factor's levels are in an order the author chose (ordered, or not alphabetical once
 # "Other" and "(Missing)" are set aside); such levels are listed in that order, not by size.
