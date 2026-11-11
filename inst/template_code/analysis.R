@@ -1566,16 +1566,20 @@ metaUI_leave_one_out <- function(estimates, full, df, bound = NULL) {
   out <- data.frame(study = estimates$study, effects = estimates$effects,
     es = show(estimates$es), LCL = show(estimates$LCL), UCL = show(estimates$UCL), row.names = NULL)
   out$change <- out$es - show(full[["es"]])
-  out$significance_changes <- excludes_zero(estimates$LCL, estimates$UCL) != excludes_zero(full[["LCL"]], full[["UCL"]]) &
-    is.finite(estimates$LCL) & is.finite(full[["LCL"]])
-  out$crosses_bound <- if (is.null(bound)) NA else (abs(out$es) >= bound) != (abs(show(full[["es"]])) >= bound)
+  # A study whose omission could not be estimated has no flags (NA), rather than "no change".
+  estimated <- is.finite(out$es)
+  out$significance_changes <- ifelse(estimated & is.finite(estimates$LCL) & is.finite(full[["LCL"]]),
+    excludes_zero(estimates$LCL, estimates$UCL) != excludes_zero(full[["LCL"]], full[["UCL"]]), NA)
+  out$crosses_bound <- if (is.null(bound)) NA else ifelse(estimated, (abs(out$es) >= bound) != (abs(show(full[["es"]])) >= bound), NA)
+  out$status <- if (is.null(estimates$status)) ifelse(estimated, "ok", "not estimated") else estimates$status
+  out$reason <- if (is.null(estimates$reason)) NA_character_ else estimates$reason
   out <- out[order(-abs(out$change), out$study), , drop = FALSE]
   rownames(out) <- NULL
   out
 }
 
 # The reader's view of metaUI_leave_one_out(): the estimate with all studies, then the first `show`
-# rows (most influential first), drawn on the axis of the model table. `full` is on the display scale.
+# rows (largest change first), drawn on the axis of the model table. `full` is on the display scale.
 metaUI_loo_html <- function(table, full, axis_title = "Effect size", bound = NULL, show = 10L) {
   rows <- utils::head(table, show)
   digits <- metaUI_digits(c(full[["LCL"]], table$LCL), c(full[["UCL"]], table$UCL))

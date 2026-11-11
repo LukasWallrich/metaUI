@@ -108,6 +108,14 @@ test_that("flags mark a change in whether the interval excludes zero and moves a
   html <- metaUI:::metaUI_loo_html(out, c(es = .2, LCL = .03, UCL = .37), bound = .15)
   expect_match(html, "95% CI now includes 0", fixed = TRUE)
   expect_match(html, "estimate now within ±0.15", fixed = TRUE)
+  # An omission that could not be estimated keeps its status and has no flags, rather than "no change".
+  estimates$es[2] <- estimates$LCL[2] <- estimates$UCL[2] <- NA
+  estimates$status <- c("ok", "error", "ok"); estimates$reason <- c(NA, "did not converge", NA)
+  failed <- metaUI:::metaUI_leave_one_out(estimates, c(es = .2, LCL = .03, UCL = .37), df, bound = .15)
+  expect_equal(failed$study[3], "b")
+  expect_equal(failed$status, c("ok", "ok", "error"))
+  expect_true(is.na(failed$significance_changes[3]) && is.na(failed$crosses_bound[3]))
+  expect_match(metaUI:::metaUI_loo_html(failed, c(es = .2, LCL = .03, UCL = .37), bound = .15), "not estimated without this study", fixed = TRUE)
 })
 
 test_that("a generated app shows the leave-one-out table for the primary model, or names the fallback", {
@@ -150,5 +158,13 @@ test_that("a generated app shows the leave-one-out table for the primary model, 
     expect_equal(nrow(csv), 9L)
     expect_true(all(c("study", "es", "LCL", "UCL", "change", "significance_changes", "crosses_bound", "model", "method") %in% names(csv)))
     expect_equal(csv$method[1], "full refit")
+    # A failed refit is reported and listed, and the panel still renders with a bound.
+    stored <- loo_refits(); stored$estimates[stored$estimates$study == "S2", c("es", "LCL", "UCL")] <- NA
+    stored$estimates$status[stored$estimates$study == "S2"] <- "error"; loo_refits(stored)
+    session$flushReact()
+    panel <- output$loo_panel$html
+    expect_match(panel, "Without one study the model could not be estimated (listed below); what follows covers the other 8.", fixed = TRUE)
+    expect_match(panel, "S2<span", fixed = TRUE)
+    expect_match(panel, "does not show how the variation between studies changes", fixed = TRUE)
   })
 })

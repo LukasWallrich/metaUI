@@ -53,7 +53,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       zcurve_main <- HTML("<h4>Z-curve of effects</h4>")
 
       diagnostics_main <- HTML("<h3>Distribution of effect sizes</h3><p class=\'metaui-note\'>Dots mark effects more than 1.5 interquartile ranges (IQR) beyond the middle 50%. Hover over or tap a dot for its study and <i>z</i>-score; the list below the plot gives them all.</p>")
-      diagnostics_loo <- HTML("<h3>Does one study drive the result?</h3><p class=\'metaui-note\'>The average effect with each study left out in turn, most influential first.</p>")
+      diagnostics_loo <- HTML("<h3>Does one study drive the result?</h3><p class=\'metaui-note\'>The average effect with each study left out in turn, largest change first.</p>")
       diagnostics_het <- HTML("<h3>Heterogeneity (REML multilevel model)</h3>")
 
       forest_note <- HTML("<p class=\'metaui-note\'>Effects: observed, with normal 95% sampling intervals and no shrinkage. Combined rows: the study-level effects used by the study-level models (see Methods); with correlated effects of unequal precision they can lie away from the simple average. Summaries: the primary model, where the authors chose one, with multilevel and robust variance estimation (RVE).<span class=\'metaui-forest-numbering\'> Effects keep their numbers from the full dataset, so a selection can leave gaps.</span>{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
@@ -1615,21 +1615,24 @@ glue_string <- ('
     fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = digits))
     studies <- nrow(table)
     estimated <- is.finite(table$es)
-    flagged <- which(table$significance_changes | table$crosses_bound %in% TRUE)
-    # The most influential studies, and the most influential flagged ones wherever they rank.
-    shown <- if (loo_show_all()) seq_len(studies) else sort(union(seq_len(min(10L, studies)), utils::head(flagged, 10L)))
+    failed <- which(!estimated)
+    flagged <- which(table$significance_changes %in% TRUE | table$crosses_bound %in% TRUE)
+    # The largest changes, the largest flagged ones wherever they rank, and every omission that could not be estimated.
+    shown <- if (loo_show_all()) seq_len(studies) else sort(union(union(seq_len(min(10L, studies)), utils::head(flagged, 10L)), failed))
     excludes <- is.finite(full[["LCL"]]) && (full[["LCL"]] > 0 || full[["UCL"]] < 0)
     top <- table[1, ]
-    reading <- paste0("Leaving out one study at a time, the estimate ranges from <b>", fmt(min(table$es[estimated])), "</b> to <b>", fmt(max(table$es[estimated])),
+    reading <- if (!any(estimated)) "The model could not be estimated without any single study, so this check is not available for this selection." else paste0(
+      if (length(failed)) paste0("Without ", if (length(failed) == 1L) "one study" else paste(length(failed), "studies"), " the model could not be estimated (listed below); what follows covers the other ", format(sum(estimated), big.mark = ","), ". ") else "",
+      "Leaving out one study at a time, the estimate ranges from <b>", fmt(min(table$es[estimated])), "</b> to <b>", fmt(max(table$es[estimated])),
       "</b>; with all ", format(studies, big.mark = ","), " studies it is ", fmt(full[["es"]]), ". Leaving out ", htmltools::htmlEscape(top$study), " changes it most, by ",
       if (round(top$change, digits + 1L) > 0) "+" else "", metaUI_minus(formatC(top$change, format = "f", digits = digits + 1L)), ".")
-    significance <- sum(table$significance_changes)
-    reading <- paste(reading, if (!is.finite(full[["LCL"]])) "" else if (!significance) paste0("No single study changes whether the 95% CI ", if (excludes) "excludes" else "includes", " 0.") else
-      paste0("Leaving out ", if (significance == 1L) "<b>one</b> study" else paste0("<b>", significance, "</b> studies"), " (each on its own) makes the 95% CI ", if (excludes) "include" else "exclude", " 0: marked below.",
-        # Benchmarks: with variances held fixed, marks for intervals ending near 0 sometimes differ from refits.
-        if (!result$refit) " Marks for intervals that end close to 0 can change when the model is refitted." else ""))
-    if (!is.null(bound)) {
-      crossing <- sum(table$crosses_bound)
+    significance <- sum(table$significance_changes, na.rm = TRUE)
+    reading <- paste(reading, if (!is.finite(full[["LCL"]]) || !any(estimated)) "" else if (!significance) paste0("No single study changes whether the 95% CI ", if (excludes) "excludes" else "includes", " 0.") else
+      paste0("Leaving out ", if (significance == 1L) "<b>one</b> study" else paste0("<b>", significance, "</b> studies"), " (each on its own) makes the 95% CI ", if (excludes) "include" else "exclude", " 0: marked below."),
+      # Benchmarks: with variances held fixed, intervals ending near 0 are sometimes marked differently than after refits, in both directions.
+      if (is.finite(full[["LCL"]]) && any(estimated) && !result$refit) "Intervals that end close to 0 can be marked differently when the model is refitted." else "")
+    if (!is.null(bound) && any(estimated)) {
+      crossing <- sum(table$crosses_bound, na.rm = TRUE)
       reading <- paste(reading, if (!crossing) paste0("No single study moves the estimate across &plusmn;", format(bound), ".") else
         paste0("Leaving out ", if (crossing == 1L) "one study" else paste(crossing, "studies"), " moves the estimate ", if (abs(full[["es"]]) >= bound) "within" else "beyond", " &plusmn;", format(bound),
           if (crossing > 10L) " (the 10 that move it most are marked below; show all to see every one)." else "."))
@@ -1638,7 +1641,8 @@ glue_string <- ('
       if (!is.null(result$why)) paste0(" The primary model, ", htmltools::htmlEscape(primary_model), ", is not used here because ", htmltools::htmlEscape(result$why), ".") else "",
       if (result$refit) " Each row refits the model without that study." else paste0(" Each row recomputes the estimate without that study, with the variation between and within studies held at its value for all studies (see below).",
         # Benchmarks on 8 to 120 studies: below about 30, holding the variances fixed often misranks studies.
-        if (studies < loo_few_studies) " With so few studies, this can misstate how much one study matters; a refit gives exact values." else ""))
+        if (studies < loo_few_studies) " With so few studies, this can misstate how much one study matters; a refit gives exact values." else ""),
+      " This checks one study at a time for the average effect. It does not show how the variation between studies changes, or whether several related studies together drive the result.")
     minutes <- function(s) if (s < 90) paste(max(5, 5 * round(s / 5)), "seconds") else paste(round(s / 60), "minutes")
     refit_offer <- if (!result$refit && is.finite(result$estimate) && result$estimate <= loo_longest_seconds)
       div(class = "metaui-export-actions metaui-loo-actions", actionButton("loo_refit", paste0("Refit ", if (identical(result$refit_model, result$model)) "the model" else htmltools::htmlEscape(result$refit_model), " without each study (about ", minutes(result$estimate), ")")))
@@ -1649,7 +1653,7 @@ glue_string <- ('
       p(class = "metaui-note", HTML(model_note)),
       div(class = "metaui-scroll", HTML(metaUI_loo_html(table[shown, , drop = FALSE], full, metaUI_eff_size_type_label, bound, show = length(shown)))),
       div(class = "metaui-export-actions metaui-loo-actions",
-        if (studies > length(shown) || loo_show_all()) actionButton("loo_all", if (loo_show_all()) "Show the most influential studies" else paste("Show all", format(studies, big.mark = ","), "studies")),
+        if (studies > length(shown) || loo_show_all()) actionButton("loo_all", if (loo_show_all()) "Show the largest changes" else paste("Show all", format(studies, big.mark = ","), "studies")),
         downloadButton("loo_csv", "Download table (.csv)")),
       refit_offer,
       tags$details(class = "metaui-help", tags$summary("How this is computed"),
