@@ -198,8 +198,7 @@ This release consolidates all changes since 0.1.1, including the unreleased
 * Author-defined effect-size computations, with explicit scale and variance
   contracts, consistent row selection, comparisons, provenance and workbook
   restoration.
-* Opt-in Bayesian normal-normal analysis (requires the suggested bayesmeta
-  package): posterior medians, central credible intervals, disclosed priors and
+* Opt-in Bayesian normal-normal analysis: posterior medians, central credible intervals, disclosed priors and
   heterogeneity-prior sensitivity.
 * Readers can share applied selections through build-specific, validated URLs.
   Uploaded datasets remain workbook-only.
