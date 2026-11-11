@@ -80,7 +80,8 @@ or change the models and analyses to be included in the app. Invalid required in
 \item{counts}{For OR and RR: named character vector mapping 2x2 count columns, as in \code{\link[metafor:escalc]{metafor::escalc()}}:
 \code{ai} and \code{ci} (events in the first and second group) with either \code{n1i} and \code{n2i} (group totals) or \code{bi} and \code{di}
 (non-events). The log ratio and its variance are computed with \code{metafor::escalc()} and its defaults: 0.5 is added
-to every cell of a table that has a zero cell, and tables without events (or without non-events) in both groups are kept.
+to every cell of a table that has a zero cell. Separately, metaUI leaves out tables without events (or without
+non-events) in both groups by default, which \code{escalc()} would keep (see \code{double_zero}).
 Leave \code{es_field}, \code{variance} and \code{se} empty. The count columns become editable in downloaded workbooks.
 Without \code{sample_size}, N is the total of the four cells; with it, N is checked against that total and
 rows that differ are named in a warning (N may legitimately count, say, everyone randomised).}

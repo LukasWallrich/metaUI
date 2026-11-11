@@ -34,8 +34,10 @@ call names the same CRAN packages with the latest publication date among the
 installed versions; groundhog then installs the versions current on that date,
 which match the app's versions where the app's library was up to date on that
 date. The last section embeds the app's estimates,
-intervals, k and status for every row and reports agreement within 1e-6 (or that
-neither fitted a model, for an empty selection). The R script also accepts the
+intervals, k and status for every row and reports agreement: the same status and,
+for rows the app estimated, the same k and estimates and bounds within 1e-6 (relative
+to the value for values above 1, such as large ratios), or that neither fitted a
+model, for an empty selection. The R script also accepts the
 workbook path as its first command-line argument. The Quarto file folds the
 copied functions and widens printed tables.
 
