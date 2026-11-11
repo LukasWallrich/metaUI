@@ -115,3 +115,31 @@ test_that("links made before a data update apply what still fits and say what ch
   # The same link against the data it was made for is still strict.
   expect_error(metaUI:::metaUI_parse_selection("?metaui=new&group=gone", "new", d, filters), "Unknown")
 })
+
+test_that("the table marks the conditional PET-PEESE estimate and notes trim-and-fill moving away from zero", {
+  skip_without_app_packages()
+  models <- get_model_tibble()
+  models <- models[models$name %in% c("Trim-and-fill", "Precision Effect Test", "Precision Effect Estimate using Standard Error"), ]
+  one_per_study <- function(yi, se, direction) prepare_data(data.frame(study = paste0("S", seq_along(yi)), id = 1, yi = yi, vi = se^2),
+    "study", "yi", variance = "vi", es_id = "id", direction = direction)
+  se <- seq(.05, .4, length.out = 20)
+  # A genuine effect, unrelated to precision: PET's intercept is clearly positive, so PEESE is reported.
+  genuine <- metaUI:::metaUI_fit_models(one_per_study(.5 + rep(c(-.05, .05), 10), se, "positive"), models)$table
+  pet_fit <- lm(yi ~ se, weights = 1 / se^2, data = data.frame(yi = .5 + rep(c(-.05, .05), 10), se = se))
+  expect_equal(genuine$pet_intercept_p[genuine$Model == "Precision Effect Test"],
+    pt(summary(pet_fit)$coefficients[1, "t value"], pet_fit$df.residual, lower.tail = FALSE))
+  expect_identical(genuine$Model[genuine$pet_peese_selected], "Precision Effect Estimate using Standard Error")
+  # Effects that only follow their standard errors: no evidence of an effect, so PET is reported.
+  null <- metaUI:::metaUI_fit_models(one_per_study(2 * se + rep(c(-.05, .05), 10), se, "unspecified"), models)$table
+  expect_identical(null$Model[null$pet_peese_selected], "Precision Effect Test")
+  html <- metaUI:::metaUI_estimates_html(null)
+  expect_match(html, "PET-PEESE estimate</span>", fixed = TRUE)
+  expect_match(html, "the conditional rule reports PEESE")
+  # Smaller studies show weaker effects: filling on the side of the estimate moves it away from zero.
+  weaker <- metaUI:::metaUI_fit_models(one_per_study(.6 - se + rep(c(-.03, .03), 10), se, "positive"), models)$table
+  tf <- weaker[weaker$Model == "Trim-and-fill", ]
+  expect_true(tf$trimfill_away_from_zero)
+  expect_match(metaUI:::metaUI_estimates_html(weaker), "moved the estimate further from zero")
+  expect_false(isTRUE(null$trimfill_away_from_zero[null$Model == "Trim-and-fill"]))
+  expect_no_match(html, "moved the estimate further from zero")
+})

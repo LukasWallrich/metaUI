@@ -441,6 +441,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   order <- c(first, rest[order(table$aggregated[rest])])
   scale <- metaUI_track_scale(c(table$es, table$LCL, table$UCL, if (!is.null(bound)) c(-bound, bound)))
   types <- unique(stats::na.omit(table$interval_type[table$status == "ok"]))
+  pet_peese <- if ("pet_peese_selected" %in% names(table)) which(table$pet_peese_selected %in% TRUE) else integer()
   ref <- if (length(first) && table$status[first[1]] == "ok") table$es[first[1]] else NULL
   # Warnings are footnotes, so that one long message does not break the rows.
   # A failed row whose reason is its warning needs no footnote.
@@ -453,7 +454,8 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     # The footnote mark follows the name, so that it cannot wrap onto a line of its own.
     label <- paste0(esc(row$Model), if (i %in% warned) paste0('<sup class="metaui-note-mark">', match(i, warned), "</sup>"), if (i %in% first) paste0(' <span class="metaui-primary-tag">primary, ', if (row$aggregated) "study-level" else "effect-level", " fit</span>"),
       # Confidence intervals need no note; only the rows that differ from them do.
-      if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"))
+      if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"),
+      if (ok && i %in% pet_peese) '<span class="metaui-row-note">PET-PEESE estimate</span>')
     # A row that is not estimated shows no numbers, even where an unreliable fit left some.
     interval <- if (!ok || (is.na(row$LCL) && is.na(row$UCL))) "" else paste0("[", fmt(row$LCL), ", ", fmt(row$UCL), "]")
     # Effect-level rows all count the effects they use: RVE reports its studies, which would read
@@ -478,10 +480,16 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Other estimators answer different questions and are not interchangeable with the primary analysis.',
     if (!is.null(ref)) paste0(" Each diamond spans a model\u2019s ", interval_head, "; the dashed line marks the primary estimate."),
     if (any(grepl("trim", table$Model, ignore.case = TRUE))) " The trim-and-fill count includes imputed studies.", "</p>")
+  pet_p <- if (length(pet_peese)) stats::na.omit(table$pet_intercept_p)[1] else NA_real_
+  bias <- c(if (length(pet_peese)) paste0("PET-PEESE estimate: the conditional rule reports PEESE when PET\u2019s intercept differs from zero (<i>p</i> &lt; .10), PET otherwise; here <i>p</i> ",
+      if (pet_p < .001) "&lt; .001" else paste("=", sub("^0", "", formatC(pet_p, format = "f", digits = 3))), ". Methods explains the test."),
+    if ("trimfill_away_from_zero" %in% names(table) && any(table$trimfill_away_from_zero %in% TRUE & table$status == "ok"))
+      "Trim-and-fill added studies on the same side as the overall estimate, so it moved the estimate further from zero rather than towards it. This happens when smaller studies show weaker effects than larger ones.")
+  bias <- if (length(bias)) paste0('<p class="metaui-note metaui-bias-notes">', paste(bias, collapse = " "), "</p>")
   notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(note_text[warned]), "</li>", collapse = ""), "</ol>")
   paste0('<table class="table metaui-estimates metaui-models metaui-custom"><thead><tr data-head="Model, estimate [', interval_head, ']"><th>Model</th><th class="num">Estimate</th><th class="num">',
     interval_head, '</th><th class="num metaui-k" title="Number of effects or studies the model reports; trim-and-fill includes imputed studies."><i>k</i></th><th></th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
-    paste(rows, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="5"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", others, notes)
+    paste(rows, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="5"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", others, bias, notes)
 }
 
 # The forest plot as a table: the same drawn axis, with exact values beside each interval,
@@ -821,6 +829,7 @@ metaUI_trimfill <- function(df, control = list(), n.iter.max = 50L) {
   if (!left) yy <- -yy
   fit <- metaUI_univariate(yy, ss, control = control)
   fit$k0 <- k0; fit$left <- unname(left); fit$n.iter <- iteration
+  fit$unfilled <- as.numeric(initial$b)
   fit
 }
 
@@ -999,6 +1008,9 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
     reflected <- FALSE
     prediction <- c(NA_real_, NA_real_)
     interval90 <- c(NA_real_, NA_real_)
+    role <- metaUI_model_role(spec, NA_character_)
+    pet_p <- NA_real_
+    trimfill_away <- NA
     if (is.null(reason)) {
       started <- proc.time()[["elapsed"]]
       reason <- tryCatch({
@@ -1027,6 +1039,16 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
           if (any(!is.finite(value)) || value[1] > value[2]) c(NA_real_, NA_real_) else if (reflected) -rev(unname(value)) else unname(value)
         }, error = function(e) c(NA_real_, NA_real_))
         status <- "ok"
+        # PET's test of its intercept decides the conditional PET-PEESE estimate (Stanley, 2017):
+        # one-sided in the expected direction, two-sided without one.
+        if (identical(role, "Precision Effect Test") && inherits(env$mod, "lm")) {
+          t_value <- summary(env$mod)$coefficients[1, "t value"]
+          pet_p <- switch(x$metaUI__direction[1], positive = stats::pt(t_value, env$mod$df.residual, lower.tail = FALSE),
+            negative = stats::pt(t_value, env$mod$df.residual), 2 * stats::pt(-abs(t_value), env$mod$df.residual))
+        }
+        # Filling can move the estimate away from zero, when smaller studies show weaker effects.
+        if (identical(role, "Trim-and-fill") && !is.null(env$mod$unfilled))
+          trimfill_away <- env$mod$k0 > 0L && abs(as.numeric(env$mod$b)) > abs(env$mod$unfilled)
         # NaN standard errors mean the fit sits where its curvature is invalid (a variance at its
         # boundary, say): its estimate and interval are not trustworthy. Downloads keep them, marked.
         if (any(grepl("NaNs produced", warnings, fixed = TRUE))) {
@@ -1056,6 +1078,9 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
       if (!is.null(spec[["interval_type"]]) && !is.na(spec[["interval_type"]])) as.character(spec[["interval_type"]]) else
       if (is.na(metaUI_model_role(spec, NA_character_))) "Author-defined interval (type and coverage unknown)" else
       "Confidence interval (coverage model-dependent)"
+    row$pet_intercept_p <- pet_p
+    row$trimfill_away_from_zero <- trimfill_away
+    row$role <- role
     row$PI_LCL <- prediction[1]; row$PI_UCL <- prediction[2]
     row$LCL90 <- interval90[1]; row$UCL90 <- interval90[2]
     row$fit_es <- row$es; row$fit_LCL <- row$LCL; row$fit_UCL <- row$UCL
@@ -1063,7 +1088,23 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
     if (df$metaUI__es_type[1] == "ZCOR") row[shown] <- lapply(row[shown], tanh)
     row
   })
-  list(df_agg = df_agg, table = dplyr::bind_rows(rows), fits = fits, components = components, fit_data = df)
+  table <- dplyr::bind_rows(rows)
+  table$pet_peese_selected <- metaUI_pet_peese(table)
+  table$role <- NULL
+  list(df_agg = df_agg, table = table, fits = fits, components = components, fit_data = df)
+}
+
+# The conditional PET-PEESE estimate (Stanley & Doucouliagos, 2014): PEESE when PET's intercept
+# differs from zero at the 10% level (Stanley, 2017), PET otherwise. Marked only when both rows
+# are estimated, and only for one PET and one PEESE row.
+metaUI_pet_peese <- function(table) {
+  selected <- rep(FALSE, nrow(table))
+  ok <- table$status == "ok"
+  pet <- which(ok & table$role %in% "Precision Effect Test")
+  peese <- which(ok & table$role %in% "Precision Effect Estimate using Standard Error")
+  if (length(pet) != 1L || length(peese) != 1L || !is.finite(table$pet_intercept_p[pet])) return(selected)
+  selected[if (table$pet_intercept_p[pet] < .10) peese else pet] <- TRUE
+  selected
 }
 
 metaUI_validate_prepared <- function(df) {
@@ -1114,7 +1155,7 @@ metaUI_upload_roles <- function(built) {
     metaUI__es_z = "z-score of the effect against the authors' data, used by the z-score filter.")
   alt_derived <- unlist(lapply(specs, function(x) stats::setNames(paste0(x$name, ": ", c("effect size", "variance"), " on the scale the models use."), c(x$fit_effect, x$fit_variance))))
   fixed <- c(metaUI__es_type = "Effect-size scale the models use.", metaUI__display_scale = "Scale results are shown on.",
-    metaUI__direction = "Expected direction of the effect, declared by the authors.")
+    metaUI__direction = "Direction of the effect the authors expected.")
   notes <- c(edit[names(edit) %in% names(built)], filter_notes, alt_edit)
   roles <- data.frame(column = c(names(notes), names(derived), names(alt_derived), names(fixed)),
     role = c(rep("Edit", length(notes)), rep("Derived", length(derived) + length(alt_derived)), rep("Fixed", length(fixed))),

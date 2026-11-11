@@ -149,7 +149,7 @@ design_preview <- function(d) {
           shiny::div(class = "metaui-primary", shiny::p(class = "metaui-primary-value", "0.24"),
             shiny::p(class = "metaui-primary-name", shiny::tags$b("Random-effects multilevel model"), shiny::tags$br(),
               shiny::tags$span(class = "metaui-primary-ci", "95% CI [0.11, 0.38]"), shiny::tags$br(), "SMD. k = 16; effect-level fit."),
-            shiny::p(class = "metaui-primary-label", "Primary analysis, declared by the authors")),
+            shiny::p(class = "metaui-primary-label", "Primary analysis, chosen by the authors")),
           shiny::HTML(metaUI_estimates_html(data.frame(Model = c("Random-effects multilevel model", "Robust variance estimation"),
             es = c(.24, .23), LCL = c(.11, .03), UCL = c(.38, .43), k = c(16L, 8L), status = "ok", reason = "", warnings = "",
             aggregated = c(FALSE, TRUE), interval_type = "Confidence interval (coverage model-dependent)"), 1L, axis_title = "SMD")))))))

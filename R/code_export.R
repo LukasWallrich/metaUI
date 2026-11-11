@@ -140,12 +140,12 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
 
   helper_section <- section("Fitting functions",
     paste0("Copied from the app's ", paste(helper_files, collapse = ", "), ". `metaUI_fit_models()` is the function the app calls. ",
-      "For each model it checks the inputs the estimator needs, fits it, flips the effects for right-sided selection models when the declared ",
-      "direction is negative, extracts the estimate, interval and k, and back-transforms correlations to r.", pcurve_note),
+      "For each model it checks the inputs the estimator needs, fits it, flips the effects for right-sided selection models when the direction ",
+      "the authors expected is negative, extracts the estimate, interval and k, and back-transforms correlations to r.", pcurve_note),
     vapply(helpers, function(x) x$text, character(1)), "functions")
 
-  primary_text <- if (is.null(settings$primary_model)) "The authors declared no primary model; the rows are alternative estimators." else
-    paste0("The authors declared \"", settings$primary_model, "\" as their primary analysis. Other rows are explorations.")
+  primary_text <- if (is.null(settings$primary_model)) "The authors chose no primary model; the rows are alternative estimators." else
+    paste0("The authors chose \"", settings$primary_model, "\" as their primary analysis. Other rows are explorations.")
   models_section <- section("Model specifications",
     c(paste(models_note, "Each row names a model, whether it uses study-level (aggregated) data, the code that fits it to `df`,",
       "and the expressions that extract the estimate, interval limits and k from the fitted object `mod`."), primary_text),

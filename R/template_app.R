@@ -17,9 +17,9 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       # Optional introduction shown under the title; leave empty for none.
       welcome_text <- HTML({paste(deparse(intro), collapse = "\n")})
       dataset_name <- {paste(deparse(as.character(dataset_name)), collapse = "\n")}
-      not_analysed <- HTML(paste0("<p class=\'metaui-empty-title\'>{effects} effects from {studies} studies</p>", {paste(deparse(strip), collapse = "\n")}, "<p class=\'metaui-fitting\'>Each dot is one effect. Fitting the models\u2026</p>", {paste(deparse(if (nzchar(citation)) paste0("<p class=\'metaui-note\'>", citation, "</p>") else ""), collapse = "\n")}))
+      not_analysed <- HTML(paste0("<p class=\'metaui-empty-title\'>{effects} effects from {studies} studies</p>", {paste(deparse(strip), collapse = "\n")}, "<p class=\'metaui-fitting\'>Each dot is one effect. Fitting the models&hellip;</p>", {paste(deparse(if (nzchar(citation)) paste0("<p class=\'metaui-note\'>", citation, "</p>") else ""), collapse = "\n")}))
 
-      fitting_note <- HTML("<p class=\'metaui-fitting\'>Fitting the models\u2026</p>")
+      fitting_note <- HTML("<p class=\'metaui-fitting\'>Fitting the models&hellip;</p>")
 
       summary_overview_main <- HTML("<h3>Selected sample</h3>")
       summary_table_main <- HTML("<h3>Effect size estimates</h3>")
@@ -29,9 +29,9 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
         <p>The models make different assumptions, so their estimates need not agree. The first two estimate the average effect from every selected effect. The others use one combined effect per study to explore possible publication or reporting bias, each in its own way. Each entry gives the question first, then the specification.</p><dl>
         <dt>Random-Effects Multilevel Model</dt><dd>What is the average effect, if true effects differ both between studies and between effects within a study? <span class=\'metaui-spec\'>metafor::rma.mv, REML; random effects for studies and for effects within studies; sampling errors treated as independent; <i>t</i>-based intervals with containment degrees of freedom (based on the number of studies).</span></dd>
         <dt>Robust Variance Estimation</dt><dd>What is the average effect, allowing for unknown correlations between effects from the same study? <span class=\'metaui-spec\'>robumeta::robu with correlated-effects weights, which use the within-study correlation given above to estimate between-study variation, and the small-sample correction of Tipton (2015). Below 4 small-sample degrees of freedom its interval is flagged as unreliable.</span></dd>
-        <dt>Trim-and-fill</dt><dd>What would the average be if the funnel plot were symmetric? Studies are added as mirror images on the sparse side and the average is estimated again. Asymmetry can have causes other than publication bias. <span class=\'metaui-spec\'>Duval-Tweedie L0 estimator with common-effect trimming; random-effects model (ML) with Hartung-Knapp intervals. <i>k</i> includes the added studies.</span></dd>
-        <dt>P-uniform* and the Hedges-Vevea selection model</dt><dd>What would the average be if significant results in the expected direction were more likely to be published? Both model this selection directly, so they need a declared expected direction and are reported as unsupported without one. <span class=\'metaui-spec\'>puniform::puni_star (ML); weightr::weightfunct with one step at one-sided <i>p</i> = .025 and random effects.</span></dd>
-        <dt>Precision Effect Test (PET); PEESE</dt><dd>What average effect would a study with no sampling error show, extending the link between effect size and its standard error (PET) or variance (PEESE)? <span class=\'metaui-spec\'>Weighted regressions of study-level effects on their standard error or variance; the intercept is reported.</span></dd>
+        <dt>Trim-and-fill</dt><dd>What would the average be if the funnel plot were symmetric? Studies are added as mirror images on the sparse side and the average is estimated again. The side to fill is chosen from the funnel plot&rsquo;s asymmetry (the sign of Egger&rsquo;s test), not from the direction the authors expected. Asymmetry can have causes other than publication bias. <span class=\'metaui-spec\'>Duval-Tweedie L0 estimator with common-effect trimming; random-effects model (ML) with Hartung-Knapp intervals. <i>k</i> includes the added studies.</span></dd>
+        <dt>P-uniform* and the Hedges-Vevea selection model</dt><dd>What would the average be if significant results in the expected direction were more likely to be published? Both model this selection directly, so they need the direction the authors expected and are reported as unsupported without one. <span class=\'metaui-spec\'>puniform::puni_star (ML); weightr::weightfunct with one step at one-sided <i>p</i> = .025 and random effects.</span></dd>
+        <dt>Precision Effect Test (PET); PEESE</dt><dd>What average effect would a study with no sampling error show, extending the link between effect size and its standard error (PET) or variance (PEESE)? <span class=\'metaui-spec\'>Weighted regressions of study-level effects on their standard error or variance; the intercept is reported.</span> Both rows are shown. The table also marks the conditional PET-PEESE estimate (<a href=\'https://doi.org/10.1002/jrsm.1095\'>Stanley &amp; Doucouliagos, 2014</a>): PEESE when PET&rsquo;s intercept differs from zero, PET otherwise. Following <a href=\'https://doi.org/10.1177/1948550617693062\'>Stanley (2017)</a>, the test is one-sided at the 10% level in the direction the authors expected, or two-sided at the 10% level when they stated none. The rule performs poorly when there are few studies, when all studies are small, or when effects vary a lot between studies (Stanley, 2017).</dd>
         </dl>{metaUI_custom_model_help(custom_models, model_descriptions)}")
 
       sample_overview_main <- HTML("<h3>Sample breakdown</h3>")
@@ -40,7 +40,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       sample_moderation_main <- HTML("<h3>Simple tests of moderation</h3>")
       sample_moderation_notes <- HTML("<p class=\'metaui-note\'>One moderator at a time; correlations between moderators are ignored. Each moderator is added to the primary model where that is a multilevel metafor model, and otherwise to the random-effects multilevel model; tests and intervals are cluster-robust by study (CR2, with small-sample degrees of freedom), so they allow for dependent effects. The overall test uses the matching small-sample correction (HTZ); with many categories that hold few studies it has little power. These are exploratory tests without adjustment for multiple testing: trying many moderators or selections makes some false positives likely. <i>k</i> = number of effects.</p>")
 
-      pcurve_selection <- HTML("<p class=\'metaui-note\'>P-curve uses the first effect per study, an exploratory selection rule applied before direction screening. It excludes and counts effects that are zero or opposite to the expected direction, and uses normal Wald statistics, not the source p-values.{if (correlations) " For correlations these are computed on Fisher\u2019s z." else ""}</p>")
+      pcurve_selection <- HTML("<p class=\'metaui-note\'>P-curve uses the first effect per study, an exploratory selection rule applied before direction screening. It excludes and counts effects that are zero or opposite to the expected direction, and uses normal Wald statistics, not the source p-values.{if (correlations) " For correlations these are computed on Fisher&rsquo;s z." else ""}</p>")
       zcurve_selection <- HTML("<p class=\'metaui-note\'>Z-curve uses the first effect per study, an exploratory selection rule, and normal Wald statistics, not the source p-values.</p>")
 
       qrppb_main <- HTML("<h3>Publication bias and selective reporting</h3><p class=\'metaui-note\'>Exploratory small-study and selection diagnostics. A non-significant result does not show that there is no bias: these tests often have little power.</p>")
@@ -55,7 +55,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       diagnostics_main <- HTML("<h3>Distribution of effect sizes</h3><p class=\'metaui-note\'>Dots mark effects more than 1.5 interquartile ranges (IQR) beyond the middle 50%. Hover over or tap a dot for its study and <i>z</i>-score; the list below the plot gives them all.</p>")
       diagnostics_het <- HTML("<h3>Heterogeneity (REML multilevel model)</h3>")
 
-      forest_note <- HTML("<p class=\'metaui-note\'>Effects: observed, with normal 95% sampling intervals and no shrinkage. Combined rows: the study-level effects used by the study-level models (see Methods); with correlated effects of unequal precision they can lie away from the simple average. Summaries: the primary model, where the authors declared one, with multilevel and robust variance estimation (RVE).<span class=\'metaui-forest-numbering\'> Effects keep their numbers from the full dataset, so a selection can leave gaps.</span>{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
+      forest_note <- HTML("<p class=\'metaui-note\'>Effects: observed, with normal 95% sampling intervals and no shrinkage. Combined rows: the study-level effects used by the study-level models (see Methods); with correlated effects of unequal precision they can lie away from the simple average. Summaries: the primary model, where the authors chose one, with multilevel and robust variance estimation (RVE).<span class=\'metaui-forest-numbering\'> Effects keep their numbers from the full dataset, so a selection can leave gaps.</span>{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
       zscore_help <- HTML("<p class=\'metaui-help-text\'>z = (effect \\u2212 mean of all effects in the full dataset) / their SD, on the fitting scale. This is a simple standardization, not a model-based outlier test; Outlier diagnostics gives the values used.</p>")
       # Result tabs show not_analysed until the first analysis has finished. A tab with
       # precomputed content (opening = TRUE) shows it from the first paint instead.
@@ -334,7 +334,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             DT::dataTableOutput("sample_table")
             )
           ),
-          {if (!is.null(opts$bayesian)) \'tabPanel("Bayesian sensitivity", results_panel(p(class = "metaui-note", "Study-level normal-normal model: flat prior on the mean; half-normal prior on heterogeneity at half, baseline and double its scale. Effects are combined within studies by the declared correlation or first effect per study. tau is on the fitting scale. Intervals are 95% central credible intervals and depend on the prior."), tableOutput("bayesian_sensitivity"))),\' else ""}
+          {if (!is.null(opts$bayesian)) \'tabPanel("Bayesian sensitivity", results_panel(p(class = "metaui-note", "Study-level normal-normal model: flat prior on the mean; half-normal prior on heterogeneity at half, baseline and double its scale. Effects are combined within studies by the within-study correlation the authors set or by the first effect per study. tau is on the fitting scale. Intervals are 95% central credible intervals and depend on the prior."), tableOutput("bayesian_sensitivity"))),\' else ""}
           {if (length(metaUI_computation_specs(data))) \'tabPanel("Effect computations", results_panel(p(class = "metaui-note", "The selected effects under each author-defined computation; multilevel and RVE models only. The z-score filter uses the primary computation."), div(class = "metaui-scroll", tableOutput("computation_comparison")))),\' else ""}
           {generate_mod_tab(data, any_filters)}
           tabPanel("Forest plot", results_panel(div(class = "metaui-forest-tab", tags$h3("Effects by study"), uiOutput("forest_panel"),
@@ -795,7 +795,7 @@ glue_string <- ('
       few_studies(any(table$status == "ok"))))
     index <- primary_index(table)
     if (!length(index)) return(div(class = "metaui-primary metaui-primary-missing", role = "alert",
-      tags$p(tags$b("Declared primary model not found: "), primary_model, ". Check the name in labels_and_options.R against models.R.")))
+      tags$p(tags$b("Primary model not found: "), primary_model, ". Check the name in labels_and_options.R against models.R.")))
     row <- table[index[1], ]
     digits <- metaUI_digits(table$LCL[table$status == "ok"], table$UCL[table$status == "ok"])
     fmt <- function(x) metaUI_minus(formatC(x, format = "f", digits = digits))
@@ -818,7 +818,7 @@ glue_string <- ('
       if (row$status == "ok" && isTRUE(is.finite(row$PI_LCL)) && isTRUE(is.finite(row$PI_UCL)) && length(unique(df_filtered()$metaUI__study_id)) >= 3L) tags$p(class = "metaui-primary-reading",
         paste0("In a comparable new study, the effect is expected to lie between ", fmt(row$PI_LCL), " and ", fmt(row$PI_UCL), " (95% prediction interval).")),
       # The tinted first row of the table below names the model and its k; the line here names it only when no estimate is shown.
-      { label <- trimws(paste0(if (row$status != "ok") paste0(row$Model, ". Primary analysis, declared by the authors.") else "",
+      { label <- trimws(paste0(if (row$status != "ok") paste0(row$Model, ". Primary analysis, chosen by the authors.") else "",
           if (grepl("hedges|cohen|standardi[sz]ed mean|^smd$", metaUI_eff_size_type_label, ignore.case = TRUE)) " Effects are standardized mean differences, in standard deviations." else
           # The headline names r alone; a qualified label (adjusted for attenuation, say) is given here.
           if (metaUI__df$metaUI__es_type[1] == "ZCOR" && !identical(metaUI_eff_size_type_label, "r")) paste0(" Effects are correlations: ", metaUI_eff_size_type_label, ".") else ""))
@@ -837,11 +837,11 @@ glue_string <- ('
     direction <- metaUI__df$metaUI__direction[1]
     scale_text <- if (metric == "ZCOR") paste("Correlations are fitted as Fisher z and shown as r.",
       "Slopes of numeric moderators, heterogeneity variances and the Egger test have no r equivalent and stay on the Fisher z scale.") else
-      paste0("Effects are fitted and shown on the scale declared by the authors: ", metaUI_label_html(metaUI_eff_size_type_label), ".")
-    direction_text <- if (direction == "unspecified") paste("No expected direction was declared. Methods that need one (by default p-uniform*,",
+      paste0("Effects are fitted and shown on the scale the authors chose: ", metaUI_label_html(metaUI_eff_size_type_label), ".")
+    direction_text <- if (direction == "unspecified") paste("The authors stated no expected direction. Methods that need one (by default p-uniform*,",
       "the Hedges-Vevea selection model and p-curve) are reported as unsupported rather than guessed.") else
-      paste0("Expected direction declared by the authors: ", direction, ". Direction-dependent methods (p-uniform*, the Hedges-Vevea selection model, p-curve) analyze effects in that direction",
-        if (direction == "negative") "; their inputs are sign-flipped for fitting and their estimates flipped back for display" else "", ". Other models are two-sided.")
+      paste0("Direction the authors expected: ", direction, ". Direction-dependent methods (p-uniform*, the Hedges-Vevea selection model, p-curve) analyze effects in that direction",
+        if (direction == "negative") "; their inputs are sign-flipped for fitting and their estimates flipped back for display" else "", ". PET-PEESE tests PET\'s intercept one-sided in that direction. Other models are two-sided.")
     dependence_text <- paste0("Effects from the same study are assumed to correlate at ", correlation_dependent, ". ",
       if (aggregation_method[1] == "first") "Study-level models use only the first selected effect from each study; RVE uses the correlation for its weights." else
       "Study-level models use it to combine the effects within each study (GLS average), and RVE for its weights.",
@@ -1586,7 +1586,7 @@ glue_string <- ('
         value = c(as.character(!is.null(upload_info)),
           if (is.null(upload_info)) "built dataset" else upload_info$file,
           if (is.null(upload_info)) "prepare_data descriptive standardisation" else upload_info$z_rule,
-          if (is.null(primary_model)) "none declared" else primary_model))
+          if (is.null(primary_model)) "none chosen" else primary_model))
     )
   })
 

@@ -284,7 +284,7 @@ test_that("authors can declare one primary model that is never substituted", {
       expect_match(table, paste0('<tbody><tr class="metaui-primary-row"><td>', primary), fixed = TRUE)
       if (primary == "P-uniform star") {
         expect_match(card, "Not estimated for this selection: ")
-        expect_match(card, "Primary analysis, declared by the authors")
+        expect_match(card, "Primary analysis, chosen by the authors")
         expect_match(card, primary, fixed = TRUE)
         expect_match(card, "does not substitute another model")
         expect_false(grepl("CI \\[", card))
