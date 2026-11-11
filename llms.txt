@@ -165,6 +165,15 @@ disable caching; keep it disabled for random models or code depending on
 external state. Uploads are validated, stored in session state, and
 clear prior cached results.
 
+After each Update, an app also prepares the other result tabs in the
+background, including the Moderation tab, which adds the moderator to
+the primary model and refits it. On large dependent data (thousands of
+effects) one Update can then take two full model fits, during which a
+single R process serves no other reader. For apps that several people
+use at once, run more than one R process (for example, several workers
+on Posit Connect or shinyapps.io), or publish a static version (below),
+where each reader computes in their own browser.
+
 [Performance
 measurements](https://github.com/LukasWallrich/metaUI/blob/main/validation/performance-optimisation.md)
 distinguish faster p-curve calculations/fit reuse from cache hits and
@@ -259,10 +268,8 @@ posterior is a normal mixture. This needs no extra package and takes
 well under a second, even for 646 studies in the browser (webR). Across
 412 simulated and two real datasets, its results were within 10⁻⁷
 posterior standard deviations of adaptive numerical integration for the
-mean and 2 × 10⁻⁴ for heterogeneity quantiles. It replaces `bayesmeta`,
-whose quantiles for the mean were up to 0.01 posterior SDs off (its
-heterogeneity quantiles are more precise still); see
-`validation/bayesian-grid.md`. There is no study limit by default;
+mean and 2 × 10⁻⁴ for heterogeneity quantiles (see
+`validation/bayesian-grid.md`). There is no study limit by default;
 authors can set one with `max_studies` (an integer of at least 2). See
 [Röver et al.](https://doi.org/10.1002/jrsm.1475) for the prior
 rationale.

@@ -31,7 +31,7 @@ prepare_data(
   alternatives = list(),
   primary_label = "As supplied",
   counts = NULL,
-  double_zero = c("keep", "exclude")
+  double_zero = c("exclude", "keep")
 )
 ```
 
@@ -180,14 +180,15 @@ prepare_data(
 
   For `counts` only: what to do with tables that have no events in
   either group, or only events (a "double-zero" table, `ai = ci = 0` or
-  `bi = di = 0`). `"keep"` (the default, as in
-  [`metafor::escalc()`](https://wviechtb.github.io/metafor/reference/escalc.html))
-  adds 0.5 to every cell of such a table. A table without events then
-  gives a ratio set mainly by the group sizes, with a large variance;
-  for risk ratios, a table with events in everyone gives a ratio near 1
-  whose variance can be small. `"exclude"` leaves both kinds out with a
-  reason, as `escalc(drop00 = TRUE)` does. The app's Methods state the
-  choice.
+  `bi = di = 0`). `"exclude"` (the default, following the Cochrane
+  Handbook for odds and risk ratios) leaves both kinds out with a
+  reason, as `escalc(drop00 = TRUE)` does: such tables carry essentially
+  no information about the ratio. `"keep"` (metafor's default) adds 0.5
+  to every cell of such a table instead. A table without events then
+  gives a ratio set mainly by the group sizes, and with unequal groups
+  this can pull the pooled estimate; for risk ratios, a table with
+  events in everyone gives a ratio near 1 whose variance can be small.
+  The app's Methods state the choice and the count.
 
 ## Value
 

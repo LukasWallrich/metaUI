@@ -14,23 +14,26 @@ unreleased 0.1.2 development versions.
   the new `counts` argument, converted with
   [`metafor::escalc()`](https://wviechtb.github.io/metafor/reference/escalc.html)
   and its defaults (0.5 added to every cell of a table with a zero
-  cell). Tables with no events (or only events) in both groups are kept
-  by default, as in metafor, or left out with `double_zero = "exclude"`;
-  Methods says which. Without `sample_size`, N is the count total; a
-  supplied N that differs from it is named in a warning. JSON
-  configurations (schema version 2) can map `counts` and `double_zero`.
-  Models are fitted to the log ratios, so estimates match `metafor` on
-  the log scale; estimates, confidence, prediction and 90% intervals are
-  exponentiated for display, with 1 as no effect, and the Summary,
-  Forest plot, Moderation, funnel, distribution and forest download use
-  log axes. Moderator slopes, heterogeneity variances and Egger’s test
-  stay on the log scale and are labelled so. The equivalence bound is
-  entered as a ratio *x* and assessed against 1/*x* and *x* (“Exceeds
-  upper/lower bound”). P-curve and z-curve tests use the Wald *z* of the
-  log ratios; p-curve effect estimation stays limited to standardized
-  mean differences. Count columns are editable in downloaded workbooks,
-  and uploads recompute the effects from them. The Bayesian
-  heterogeneity prior defaults to half-normal(0.5) on the log scale.
+  cell). Tables with no events (or only events) in both groups are left
+  out by default, following the Cochrane Handbook (with unequal group
+  sizes the 0.5 correction gives them a ratio set by the allocation
+  ratio, which can pull the pooled estimate), or kept with
+  `double_zero = "keep"`, as in metafor; the Summary says which and how
+  many. Without `sample_size`, N is the count total; a supplied N that
+  differs from it is named in a warning. JSON configurations (schema
+  version 2) can map `counts` and `double_zero`. Models are fitted to
+  the log ratios, so estimates match `metafor` on the log scale;
+  estimates, confidence, prediction and 90% intervals are exponentiated
+  for display, with 1 as no effect, and the Summary, Forest plot,
+  Moderation, funnel, distribution and forest download use log axes.
+  Moderator slopes, heterogeneity variances and Egger’s test stay on the
+  log scale and are labelled so. The equivalence bound is entered as a
+  ratio *x* and assessed against 1/*x* and *x* (“Exceeds upper/lower
+  bound”). P-curve and z-curve tests use the Wald *z* of the log ratios;
+  p-curve effect estimation stays limited to standardized mean
+  differences. Count columns are editable in downloaded workbooks, and
+  uploads recompute the effects from them. The Bayesian heterogeneity
+  prior defaults to half-normal(0.5) on the log scale.
 
 ### Bayesian model by grid quadrature
 
@@ -379,9 +382,9 @@ unreleased 0.1.2 development versions.
 - After each analysis, the other tabs are drawn in the background, one
   at a time, so they open at once. A tab opened before it is ready shows
   one message, never empty headings or the previous selection’s results.
-  Bayesian and effect-computation tabs still wait to be opened. A tab
-  counts as ready only once the server has answered for it, and screen
-  readers announce the message.
+  The effect-computation tab, which refits every model, still waits to
+  be opened. A tab counts as ready only once the server has answered for
+  it, and screen readers announce the message.
 
 - Saved opening results no longer blank for a moment when the app
   connects, and the opening page no longer repeats its strip of effects
@@ -575,6 +578,37 @@ unreleased 0.1.2 development versions.
   psych; base R replaces both. The R Markdown skeleton’s example recode
   now treats `-999` as missing (shown as `(Missing)`) instead of a level
   named “NA”.
+
+### Second pre-release review
+
+- Moderation: a category with a single study shows its estimate without
+  an interval (“too few studies”), since a cluster-robust interval needs
+  at least two studies; before, such levels could show `[NaN, NaN]`, a
+  zero-width interval or an implausibly wide one. These categories still
+  enter the overall test, and the note says how many there are. A
+  primary model with its own weights (`W`) now gets its overall test
+  from clubSandwich’s HTZ test where that stays small, instead of losing
+  it; otherwise the note gives the reason. Moderator models start from
+  the primary fit’s variance components, which saves about a quarter of
+  their fitting time on large data.
+- Equivalence help names the small-sample corrections the app’s models
+  actually use. With one effect per study, Heterogeneity shows a single
+  τ² row, the τ sentence names the log scale for ratios, and the
+  forest-plot and effect-computation notes no longer mention multilevel
+  models and RVE.
+- The Bayesian sensitivity tab is formatted like the Summary (estimate
+  \[95% credible interval\], τ on the fitting scale, the baseline prior
+  marked); downloads keep the raw columns.
+- The About note on effects left out at build gives one reason per
+  effect, the most basic one, so its counts add up.
+- Fixes: numeric study IDs with a source column no longer break the
+  Sample table; the ratio equivalence box wraps on phones; selection
+  links for earlier data report a filter that no longer exists instead
+  of dropping it silently; uploads keep an ordered filter ordered; the
+  refusal of uploads with several effects per study no longer suggests
+  giving dependent effects their own study IDs; Moderation’s *k* uses a
+  thousands separator. The README describes running several R processes
+  for apps with many readers.
 
 ### Breaking changes
 

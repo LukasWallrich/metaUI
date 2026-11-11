@@ -93,15 +93,16 @@ Counts are converted with
 [`metafor::escalc()`](https://wviechtb.github.io/metafor/reference/escalc.html)
 and its defaults, which add 0.5 to every cell of a table with a zero
 cell. Double-zero tables (no events, or only events, in both groups) are
-kept, as in metafor; `double_zero = "exclude"` leaves both kinds out
-instead. N is the total of the counts unless `sample_size` is given, in
-which case rows whose N differs from that total are named in a warning.
-Models are fitted to the log ratios; the app shows estimates and
-intervals as ratios, with 1 as no effect, on log axes. Moderator slopes,
-heterogeneity variances and Egger’s test stay on the log scale. The
-equivalence bound is a ratio *x*, assessed against 1/*x* and *x*.
-P-curve effect estimation remains limited to standardized mean
-differences.
+left out by default, following the Cochrane Handbook, because they carry
+almost no information about the ratio; `double_zero = "keep"` keeps them
+with the 0.5 correction, as metafor does. N is the total of the counts
+unless `sample_size` is given, in which case rows whose N differs from
+that total are named in a warning. Models are fitted to the log ratios;
+the app shows estimates and intervals as ratios, with 1 as no effect, on
+log axes. Moderator slopes, heterogeneity variances and Egger’s test
+stay on the log scale. The equivalence bound is a ratio *x*, assessed
+against 1/*x* and *x*. P-curve effect estimation remains limited to
+standardized mean differences.
 
 ## Run the app
 

@@ -66,7 +66,7 @@
 <span>  alternatives <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  primary_label <span class="op">=</span> <span class="st">"As supplied"</span>,</span>
 <span>  counts <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  double_zero <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"keep"</span>, <span class="st">"exclude"</span><span class="op">)</span></span>
+<span>  double_zero <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"exclude"</span>, <span class="st">"keep"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -174,11 +174,12 @@ rows that differ are named in a warning (N may legitimately count, say, everyone
 
 <dt id="arg-double-zero">double_zero<a class="anchor" aria-label="anchor" href="#arg-double-zero"></a></dt>
 <dd><p>For <code>counts</code> only: what to do with tables that have no events in either group, or only
-events (a "double-zero" table, <code>ai = ci = 0</code> or <code>bi = di = 0</code>). <code>"keep"</code> (the default, as in
-<code><a href="https://wviechtb.github.io/metafor/reference/escalc.html" class="external-link">metafor::escalc()</a></code>) adds 0.5 to every cell of such a table. A table without events then gives a ratio set
-mainly by the group sizes, with a large variance; for risk ratios, a table with events in everyone gives a
-ratio near 1 whose variance can be small. <code>"exclude"</code> leaves both kinds out with a reason, as
-<code>escalc(drop00 = TRUE)</code> does. The app's Methods state the choice.</p></dd>
+events (a "double-zero" table, <code>ai = ci = 0</code> or <code>bi = di = 0</code>). <code>"exclude"</code> (the default, following the Cochrane
+Handbook for odds and risk ratios) leaves both kinds out with a reason, as <code>escalc(drop00 = TRUE)</code>
+does: such tables carry essentially no information about the ratio. <code>"keep"</code> (metafor's default) adds 0.5
+to every cell of such a table instead. A table without events then gives a ratio set mainly by the group
+sizes, and with unequal groups this can pull the pooled estimate; for risk ratios, a table with events in
+everyone gives a ratio near 1 whose variance can be small. The app's Methods state the choice and the count.</p></dd>
 
 </dl></div>
     <div class="section level2">
