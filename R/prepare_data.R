@@ -37,11 +37,12 @@
 #'   Without `sample_size`, N is the total of the four cells; with it, N is checked against that total and
 #'   rows that differ are named in a warning (N may legitimately count, say, everyone randomised).
 #' @param double_zero For `counts` only: what to do with tables that have no events in either group, or only
-#'   events (a "double-zero" table, `ai = ci = 0` or `bi = di = 0`). `"keep"` (the default, as in
-#'   [metafor::escalc()]) adds 0.5 to every cell of such a table. A table without events then gives a ratio set
-#'   mainly by the group sizes, with a large variance; for risk ratios, a table with events in everyone gives a
-#'   ratio near 1 whose variance can be small. `"exclude"` leaves both kinds out with a reason, as
-#'   `escalc(drop00 = TRUE)` does. The app's Methods state the choice.
+#'   events (a "double-zero" table, `ai = ci = 0` or `bi = di = 0`). `"exclude"` (the default, following the Cochrane
+#'   Handbook for odds and risk ratios) leaves both kinds out with a reason, as `escalc(drop00 = TRUE)`
+#'   does: such tables carry essentially no information about the ratio. `"keep"` (metafor's default) adds 0.5
+#'   to every cell of such a table instead. A table without events then gives a ratio set mainly by the group
+#'   sizes, and with unequal groups this can pull the pooled estimate; for risk ratios, a table with events in
+#'   everyone gives a ratio near 1 whose variance can be small. The app's Methods state the choice and the count.
 #' @param direction Explicit direction for one-sided bias models: unspecified, positive, or negative.
 #' @param primary_label Label for the primary computation when alternatives are provided.
 #' @param alternatives Named list of up to five author-defined effect computations. Each entry supplies es_field, variance or se, es_type, variance_scale when required, and a nonempty justification. Every computation must retain the same effects and converge on the same fitting scale.
@@ -54,7 +55,7 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
                          url = NA, es_type = "SMD", article_label = NA, es_label = NA, na.rm = "es_related",
                          arrange_filters = c("given", "alphabetical", "leave"), keep_missing_level = FALSE, es_id = NULL,
                          variance_scale = NULL, direction = c("unspecified", "positive", "negative"),
-                         categorical_filters = character(), alternatives = list(), primary_label = "As supplied", counts = NULL, double_zero = c("keep", "exclude")) {
+                         categorical_filters = character(), alternatives = list(), primary_label = "As supplied", counts = NULL, double_zero = c("exclude", "keep")) {
   # The p-value and N columns the author gave; internal placeholders added later do not count for na.rm.
   supplied_pn <- c(pvalue, sample_size)
   source <- list(kind = if (is.character(data)) "CSV" else "data.frame",
@@ -243,13 +244,15 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
   add_reason <- function(bad, text) {
     reason[bad] <<- ifelse(reason[bad] == "", text, paste(reason[bad], text, sep = "; "))
   }
+  # The most basic reason comes first (About names only the first): counts before the effect, variance
+  # and SE derived from them. Reasons contain no "; ".
   add_reason(is.na(data$metaUI__study_id) | trimws(as.character(data$metaUI__study_id)) == "", "missing study ID")
+  if (!is.null(count_cells)) add_reason(count_cells$invalid, "missing, negative, fractional or impossible counts")
+  if (!is.null(count_cells) && double_zero == "exclude") add_reason(count_cells$double_zero, "no events (or only events) in both groups (double_zero = \"exclude\")")
   add_reason(!is.finite(data$metaUI__effect_size), "nonfinite effect")
   add_reason(!is.finite(data$metaUI__variance) | data$metaUI__variance <= 0, "invalid variance")
   add_reason(!is.finite(data$metaUI__se) | data$metaUI__se <= 0, "invalid SE")
   if (es_type == "COR") add_reason(is.finite(data$metaUI__effect_size) & abs(data$metaUI__effect_size) >= 1, "COR outside (-1, 1)")
-  if (!is.null(count_cells)) add_reason(count_cells$invalid, "missing, negative, fractional or impossible counts")
-  if (!is.null(count_cells) && double_zero == "exclude") add_reason(count_cells$double_zero, "no events (or only events) in both groups; excluded by double_zero = \"exclude\"")
   if (!(na.rm[1] %in% c("es_related", FALSE, TRUE))) stop('`na.rm` must be TRUE, FALSE or "es_related"')
   if (identical(na.rm, FALSE) && any(reason != "")) stop("Invalid required model inputs; use na.rm = 'es_related' to exclude with a report.")
   if (identical(na.rm, TRUE)) add_reason(missing_mapped, "missing filter, p-value or N")

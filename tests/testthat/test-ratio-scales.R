@@ -131,30 +131,31 @@ test_that("a ratio app is generated and parses", {
   expect_true(file.exists(file.path(path, "opening_results.rds")))
 })
 
-test_that("double-zero tables are kept by default or excluded on request, and N is checked against the counts", {
+test_that("double-zero tables are excluded by default or kept on request, and N is checked against the counts", {
   x <- data.frame(id = 1:4, e1 = c(0, 4, 10, 2), n1 = c(20, 30, 40, 50), e2 = c(0, 1, 12, 3), n2 = c(25, 30, 40, 50))
   counts <- c(ai = "e1", n1i = "n1", ci = "e2", n2i = "n2")
-  kept <- prepare_data(x, "id", counts = counts, es_type = "OR")
+  kept <- prepare_data(x, "id", counts = counts, es_type = "OR", double_zero = "keep")
   expect_equal(nrow(kept), 4L)
   expect_equal(kept$metaUI__effect_size, as.numeric(metafor::escalc("OR", ai = e1, n1i = n1, ci = e2, n2i = n2, data = x)$yi))
   expect_equal(kept$metaUI__N, x$n1 + x$n2)
-  expect_match(metaUI:::metaUI_double_zero_text(kept), "were kept, as metafor does by default \\(1 in these data\\)")
-  expect_warning(dropped <- prepare_data(x, "id", counts = counts, es_type = "OR", double_zero = "exclude"), "1 rows excluded")
+  expect_match(metaUI:::metaUI_double_zero_text(kept), "were kept, as the authors chose \\(metafor's default; 1 in these data\\)")
+  expect_warning(dropped <- prepare_data(x, "id", counts = counts, es_type = "OR"), "1 rows excluded")
+  expect_identical(attr(dropped, "metaUI_validation")$mapping$double_zero, "exclude")
   expect_equal(dropped$metaUI__study_id, 2:4)
   ref <- metafor::escalc("OR", ai = e1, n1i = n1, ci = e2, n2i = n2, data = x, drop00 = TRUE)
   expect_equal(dropped$metaUI__effect_size, as.numeric(ref$yi[-1]))
-  expect_match(metaUI:::metaUI_double_zero_text(dropped), "left out, as the authors chose \\(1 table\\)")
+  expect_match(metaUI:::metaUI_double_zero_text(dropped), "left out \\(1 in these data\\), following the Cochrane Handbook")
   expect_error(prepare_data(x, "id", "e1", variance = "n1", es_type = "OR", variance_scale = "log", double_zero = "exclude"), "only with counts")
   # Uploads keep the authors' rule and recompute N from the counts.
   upload <- as.data.frame(dropped); upload$metaUI__ai[1] <- 0; upload$metaUI__ci[1] <- 0
-  expect_error(metaUI:::metaUI_validate_upload(upload, dropped), "excluded tables with no events")
+  expect_error(metaUI:::metaUI_validate_upload(upload, dropped), "leaves out tables with no events")
   upload <- as.data.frame(kept); upload$metaUI__n1i[2] <- 60
   expect_equal(metaUI:::metaUI_validate_upload(upload, kept)$metaUI__N[2], 90)
   roles <- metaUI:::metaUI_upload_roles(kept)
   expect_equal(roles$role[roles$column == "metaUI__N"], "Derived")
   # A supplied N that differs from the count total is named, not silently used.
   x$N <- x$n1 + x$n2; x$N[3] <- 100
-  expect_warning(given <- prepare_data(x, "id", counts = counts, es_type = "OR", sample_size = "N"), "differs from the total of the 2x2 counts in 1 row \\(rows 3\\)")
+  expect_warning(given <- prepare_data(x, "id", counts = counts, es_type = "OR", sample_size = "N", double_zero = "keep"), "differs from the total of the 2x2 counts in 1 row \\(rows 3\\)")
   expect_equal(given$metaUI__N[3], 100)
   expect_equal(attr(given, "metaUI_validation")$optional_inputs$N_differs_from_counts, 1L)
   expect_equal(metaUI:::metaUI_upload_roles(given)$role[metaUI:::metaUI_upload_roles(given)$column == "metaUI__N"], "Edit")
@@ -166,15 +167,15 @@ test_that("generated apps hold every helper that ratio uploads and Methods need"
   for (file in c("helpers.R", "analysis.R", "computations.R", "selection_links.R", "code_export.R", "bayesian.R"))
     sys.source(system.file("template_code", file, package = "metaUI"), env)
   x <- data.frame(id = 1:3, a = c(0, 4, 100), b = c(20, 26, 0), c = c(0, 6, 100), d = c(25, 24, 0))
-  d <- prepare_data(x, "id", counts = c(ai = "a", bi = "b", ci = "c", di = "d"), es_type = "RR")
-  expect_match(env$metaUI_double_zero_text(d), "were kept, as metafor does by default \\(2 in these data\\)")
+  d <- prepare_data(x, "id", counts = c(ai = "a", bi = "b", ci = "c", di = "d"), es_type = "RR", double_zero = "keep")
+  expect_match(env$metaUI_double_zero_text(d), "were kept, as the authors chose \\(metafor's default; 2 in these data\\)")
   expect_match(env$metaUI_double_zero_text(d), "events in everyone gives a risk ratio near 1 that can have a narrow interval")
   upload <- as.data.frame(d); upload$metaUI__ai[2] <- 8
   out <- env$metaUI_validate_upload(upload, d)
   expect_equal(out$metaUI__effect_size[2], as.numeric(metafor::escalc("RR", ai = 8, bi = 26, ci = 6, di = 24)$yi))
   # An all-events RR table is precise; an all-events OR table is not.
   expect_lt(d$metaUI__variance[3], .001)
-  expect_gt(prepare_data(x, "id", counts = c(ai = "a", bi = "b", ci = "c", di = "d"), es_type = "OR")$metaUI__variance[3], 1)
+  expect_gt(prepare_data(x, "id", counts = c(ai = "a", bi = "b", ci = "c", di = "d"), es_type = "OR", double_zero = "keep")$metaUI__variance[3], 1)
 })
 
 test_that("diamonds peak at the estimate on a log axis", {

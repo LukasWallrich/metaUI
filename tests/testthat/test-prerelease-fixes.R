@@ -259,3 +259,70 @@ test_that("review fixes on #54: counts, nested data, empty counts, non-ASCII IDs
   d <- suppressWarnings(prepared(x, pvalue = "metaUI_input_p", na.rm = TRUE))
   expect_equal(nrow(d), 15)
 })
+
+test_that("second review: moderator levels with one study, custom weights and start values", {
+  skip_if_not_installed("clubSandwich")
+  # A level without an interval shows its estimate as a point and says why.
+  html <- metaUI:::metaUI_moderator_html(c("a", "b"), c(.2, .4), c(.1, NA), c(.3, NaN), c(1200L, 1L), c("a", "b"), c(.2, .4), c("1", "2"), "SMD")
+  expect_match(html, "too few studies", fixed = TRUE)
+  expect_match(html, "metaui-track-bare", fixed = TRUE)
+  expect_match(html, "1,200", fixed = TRUE)
+  expect_false(grepl("NaN", html, fixed = TRUE))
+  expect_equal(lengths(regmatches(html, gregexpr("metaui-track-diamond", html))), 1L)
+  # Custom weights keep the overall test, from clubSandwich's own HTZ test.
+  x <- fixture(); x$g <- factor(rep(c("a", "b"), each = 8))
+  d <- prepared(x, filters = c(g = "g"))
+  weighted <- 'metafor::rma.mv(metaUI__effect_size, metaUI__variance, W = diag(1 / df$metaUI__variance), random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df)'
+  fitted <- metaUI:::metaUI_moderator_fit(d, "metaUI__filter_g", list(name = "Weighted", code = weighted))
+  expect_identical(fitted$working, "primary")
+  expect_true(fitted$omnibus)
+  env <- new.env(); env$df <- d
+  plain <- eval(metaUI:::metaUI_moderator_code(weighted, ~ `metaUI__filter_g`), env)
+  ref <- clubSandwich::Wald_test(plain, clubSandwich::constrain_zero(2), vcov = "CR2", cluster = d$metaUI__study_id, test = "HTZ")
+  expect_equal(fitted$model$QMp, ref$p_val, tolerance = 1e-8)
+  # Starting values from the model without the moderator reach the same fit.
+  base <- metaUI:::metaUI_multilevel_fit(d)
+  a <- metaUI:::metaUI_moderator_fit(d, "metaUI__filter_g")
+  b <- metaUI:::metaUI_moderator_fit(d, "metaUI__filter_g", start = base$sigma2)
+  expect_equal(as.numeric(b$model$b), as.numeric(a$model$b), tolerance = 1e-6)
+  expect_equal(b$model$QMp, a$model$QMp, tolerance = 1e-6)
+})
+
+test_that("second review: exclusion note, stale links and help text", {
+  # One reason per effect, the most basic, so the counts add up.
+  x <- data.frame(id = 1:4, a = c(0, NA, 3, 4), b = 20, c = c(0, 2, 3, 5), d = 20)
+  d <- suppressWarnings(prepare_data(x, "id", counts = c(ai = "a", bi = "b", ci = "c", di = "d"), es_type = "OR"))
+  note <- metaUI:::metaUI_exclusions_html(attr(d, "metaUI_validation"))
+  expect_match(note, "2 were left out")
+  expect_match(note, "1 with no events, or only events, in both groups", fixed = TRUE)
+  expect_match(note, "1 with missing, negative, fractional or impossible counts", fixed = TRUE)
+  expect_false(grepl("no valid", note))
+  # A link for earlier data names a filter that no longer exists, but not a tracking tag.
+  x <- fixture(); x$group <- factor(rep(c("a", "b"), 8))
+  d <- prepared(x, filters = c("group"))
+  filters <- list(list(id = "metaUI__filter_group", col = "metaUI__filter_group", type = "categorical"))
+  r <- metaUI:::metaUI_parse_selection("?metaui=old&group=a&region=europe&utm_source=x", "new", d, filters)
+  expect_match(r$adjusted, "(region) no longer exists", fixed = TRUE, all = FALSE)
+  expect_false(any(grepl("utm_source", r$adjusted, fixed = TRUE)))
+  expect_length(metaUI:::metaUI_parse_selection("?metaui=new&group=a&utm_source=x", "new", d, filters)$adjusted, 0L)
+})
+
+test_that("second review: numeric study IDs with sources show the Sample table; help names the right corrections", {
+  skip_without_app_packages()
+  root <- tempfile(); on.exit(unlink(root, recursive = TRUE))
+  x <- data.frame(s = 1:6, y = c(.1, .3, .2, .5, .2, .6), v = .04, src = rep(c("Smith 2020", "Jones 2021"), 3))
+  d <- prepare_data(x, "s", "y", variance = "v", article_label = "src")
+  suppressMessages(generate_shiny(d, "Numeric IDs", save_to_folder = root, launch_app = FALSE))
+  server <- paste(readLines(file.path(root, "server.R")), collapse = "\n")
+  expect_false(grepl("residual degrees of freedom", server, fixed = TRUE))
+  expect_match(server, "Hartung-Knapp adjustment", fixed = TRUE)
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), go = 1, sample_view = "effects")
+    for (view in c("effects", "studies", "sources")) {
+      session$setInputs(sample_view = view)
+      expect_match(output$sample_table, "<th>Source", fixed = TRUE)
+    }
+  })
+})
