@@ -1841,8 +1841,19 @@ metaUI_loo_refit <- function(df, spec, correlation = .6, aggregation = "aggregat
 # moves across the reader's bound (display scale), compared with all studies. `full` holds es, LCL
 # and UCL, and where known se, PI_LCL, PI_UCL and tau, on the fitting scale. Refits also give each
 # prediction interval (display scale) and tau (fitting scale).
+# The reader's bound on the display scale (metaUI_bounds: -b to b, or 1/b to b for ratios), whether an
+# estimate lies beyond it (on the bound counts as beyond), and how the text names it.
+metaUI_loo_bound <- function(bound, ratio = FALSE) {
+  band <- metaUI_bounds(bound, ratio)
+  list(band = band, outside = function(x) x <= band[1] | x >= band[2],
+    label = if (ratio) paste0(format(signif(band[1], 3)), "\u2013", format(signif(band[2], 3))) else paste0("\u00b1", format(bound)),
+    beyond = if (ratio) "outside" else "beyond")
+}
+
 metaUI_leave_one_out <- function(estimates, full, df, bound = NULL) {
   show <- function(x) metaUI_show(x, df)
+  ratio <- isTRUE(metaUI_scale(df$metaUI__es_type[1])$ratio)
+  # Intervals are compared with the null on the fitting scale, where it is 0 for every effect size.
   excludes_zero <- function(lcl, ucl) is.finite(lcl) & is.finite(ucl) & (lcl > 0 | ucl < 0)
   full_se <- if ("se" %in% names(full)) unname(full[["se"]]) else NA_real_
   out <- data.frame(study = estimates$study, studies = if (is.null(estimates$studies)) 1L else estimates$studies, effects = estimates$effects,
@@ -1854,7 +1865,7 @@ metaUI_leave_one_out <- function(estimates, full, df, bound = NULL) {
   estimated <- is.finite(out$es)
   out$significance_changes <- ifelse(estimated & is.finite(estimates$LCL) & is.finite(full[["LCL"]]),
     excludes_zero(estimates$LCL, estimates$UCL) != excludes_zero(full[["LCL"]], full[["UCL"]]), NA)
-  out$crosses_bound <- if (is.null(bound)) NA else ifelse(estimated, (abs(out$es) >= bound) != (abs(show(full[["es"]])) >= bound), NA)
+  out$crosses_bound <- if (is.null(bound)) NA else { b <- metaUI_loo_bound(bound, ratio); ifelse(estimated, b$outside(out$es) != b$outside(show(full[["es"]])), NA) }
   out$status <- if (is.null(estimates$status)) ifelse(estimated, "ok", "not estimated") else estimates$status
   out$reason <- if (is.null(estimates$reason)) NA_character_ else estimates$reason
   out <- out[order(-abs(out$change), out$study), , drop = FALSE]
@@ -1863,8 +1874,9 @@ metaUI_leave_one_out <- function(estimates, full, df, bound = NULL) {
 }
 
 # The reader's view of metaUI_leave_one_out(): the estimate with all studies, then the first `show`
-# rows (largest change first), drawn on the axis of the model table. `full` is on the display scale.
-metaUI_loo_html <- function(table, full, axis_title = "Effect size", bound = NULL, show = 10L, unit = "study", interval = "95% CI") {
+# rows (largest change first), drawn on the axis of the model table. `full` is on the display scale;
+# ratios (odds and risk ratios) are drawn on a log axis around 1.
+metaUI_loo_html <- function(table, full, axis_title = "Effect size", bound = NULL, show = 10L, unit = "study", interval = "95% CI", ratio = FALSE) {
   rows <- utils::head(table, show)
   digits <- metaUI_digits(c(full[["LCL"]], table$LCL), c(full[["UCL"]], table$UCL))
   fmt <- function(x) if (!is.finite(x)) "" else metaUI_minus(formatC(x, format = "f", digits = digits))
@@ -1873,17 +1885,19 @@ metaUI_loo_html <- function(table, full, axis_title = "Effect size", bound = NUL
   # The change in standard errors of the full estimate, beneath the change itself.
   change <- function(x, se) paste0(signed(x), if (isTRUE(is.finite(se))) paste0('<span class="metaui-row-note metaui-loo-se">(', signed(se, 2L), " SE)</span>") else "")
   label <- if (unit == "source") "Source left out" else "Study left out"
-  scale <- metaUI_track_scale(c(full[["es"]], full[["LCL"]], full[["UCL"]], rows$es, rows$LCL, rows$UCL, if (!is.null(bound)) c(-bound, bound)))
+  b <- if (!is.null(bound)) metaUI_loo_bound(bound, ratio)
+  null <- if (ratio) 1 else 0
+  scale <- metaUI_track_scale(c(full[["es"]], full[["LCL"]], full[["UCL"]], rows$es, rows$LCL, rows$UCL, b$band), ratio)
   bracket <- function(lcl, ucl) if (is.finite(lcl) && is.finite(ucl)) paste0("[", fmt(lcl), ", ", fmt(ucl), "]") else ""
-  excludes <- is.finite(full[["LCL"]]) && (full[["LCL"]] > 0 || full[["UCL"]] < 0)
+  excludes <- is.finite(full[["LCL"]]) && (full[["LCL"]] > null || full[["UCL"]] < null)
   line <- function(label, es, lcl, ucl, change, class = "") paste0("<tr", class, "><td>", label,
     '</td><td class="num">', fmt(es), '</td><td class="num">', bracket(lcl, ucl), '</td><td class="num metaui-k">', change,
-    '</td><td class="metaui-unit"></td><td class="metaui-track-cell">', metaUI_track_row(scale, es, lcl, ucl, bound, ref = full[["es"]]), "</td></tr>")
+    '</td><td class="metaui-unit"></td><td class="metaui-track-cell">', metaUI_track_row(scale, es, lcl, ucl, b$band, ref = full[["es"]]), "</td></tr>")
   body <- vapply(seq_len(nrow(rows)), function(i) {
     row <- rows[i, ]
     flags <- c(if (!is.finite(row$es)) paste("not estimated without this", unit),
-      if (isTRUE(row$significance_changes)) paste(interval, if (excludes) "now includes 0" else "now excludes 0"),
-      if (isTRUE(row$crosses_bound)) paste0("estimate now ", if (abs(row$es) >= bound) "beyond" else "within", " \u00b1", format(bound)))
+      if (isTRUE(row$significance_changes)) paste(interval, if (excludes) "now includes" else "now excludes", null),
+      if (isTRUE(row$crosses_bound)) paste("estimate now", if (b$outside(row$es)) b$beyond else "within", b$label))
     line(paste0(htmltools::htmlEscape(row$study), '<span class="metaui-row-note metaui-loo-count">', if (isTRUE(row$studies > 1L)) paste0(row$studies, " studies, ") else "",
       format(row$effects, big.mark = ","), if (row$effects == 1L) " effect" else " effects", "</span>",
       if (length(flags)) paste0('<span class="metaui-row-note">', paste(flags, collapse = "; "), "</span>")),

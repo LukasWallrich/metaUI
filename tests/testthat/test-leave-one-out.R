@@ -258,3 +258,21 @@ test_that("source omissions report what cannot be estimated, keep unlabelled stu
   expect_match(html, "95% interval now includes 0", fixed = TRUE)
   expect_false(grepl("95% CI", html, fixed = TRUE))
 })
+
+test_that("the bound is drawn as a band, and odds ratios are judged against 1 and 1/b to b", {
+  estimates <- data.frame(study = c("a", "b"), effects = 1:2, es = log(c(1.30, 1.10)), LCL = log(c(1.05, .95)), UCL = log(c(1.60, 1.30)))
+  full <- c(es = log(1.2), LCL = log(1.02), UCL = log(1.4))
+  df <- data.frame(metaUI__es_type = "OR")
+  table <- metaUI:::metaUI_leave_one_out(estimates, full, df, bound = 1.25)
+  # Interval b now includes 1; a moves beyond 1.25 (from 1.2), b stays within 0.8-1.25.
+  expect_equal(table$significance_changes[table$study == "b"], TRUE)
+  expect_equal(table$crosses_bound[table$study == "a"], TRUE)
+  expect_equal(table$crosses_bound[table$study == "b"], FALSE)
+  html <- metaUI:::metaUI_loo_html(table, metaUI:::metaUI_show(full, df), bound = 1.25, ratio = TRUE)
+  expect_match(html, "95% CI now includes 1", fixed = TRUE)
+  expect_match(html, "estimate now outside 0.8–1.25", fixed = TRUE)
+  # The band spans the bounds on the axis, with positions and a width.
+  expect_match(html, 'metaui-track-band" style="left:[0-9.]+%;width:[0-9.]+%"')
+  smd <- metaUI:::metaUI_loo_html(metaUI:::metaUI_leave_one_out(estimates, full, data.frame(metaUI__es_type = "SMD"), bound = .25), full, bound = .25)
+  expect_match(smd, 'metaui-track-band" style="left:[0-9.]+%;width:[0-9.]+%"')
+})

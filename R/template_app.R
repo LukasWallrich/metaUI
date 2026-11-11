@@ -1766,7 +1766,9 @@ glue_string <- ('
     flagged <- which(table$significance_changes %in% TRUE | table$crosses_bound %in% TRUE)
     # The largest changes, the largest flagged ones wherever they rank, and every omission that could not be estimated.
     shown <- if (loo_show_all()) seq_len(count) else sort(union(union(seq_len(min(10L, count)), utils::head(flagged, 10L)), failed))
-    excludes <- is.finite(full[["LCL"]]) && (full[["LCL"]] > 0 || full[["UCL"]] < 0)
+    ratio <- isTRUE(metaUI_scale(df$metaUI__es_type[1])$ratio)
+    null <- if (ratio) 1 else 0 # odds and risk ratios: no effect is 1
+    excludes <- is.finite(full[["LCL"]]) && (full[["LCL"]] > null || full[["UCL"]] < null)
     top <- table[1, ]
     all_label <- if (unit == "source") paste0("all ", format(count, big.mark = ","), " sources (", format(studies, big.mark = ","), " studies)") else paste("all", format(studies, big.mark = ","), "studies")
     reading <- if (!any(estimated)) paste("The model could not be estimated without any single", unit, "so this check is not available for this selection.") else paste0(
@@ -1775,14 +1777,15 @@ glue_string <- ('
       "</b>; with ", all_label, " it is ", fmt(full[["es"]]), ". Leaving out ", htmltools::htmlEscape(top$study), " changes it most, by ", signed(top$change),
       if (is.finite(top$change_se)) paste0(" (", signed(top$change_se, 2L), " standard errors of the estimate with all ", units, ")") else "", ".")
     significance <- sum(table$significance_changes, na.rm = TRUE)
-    reading <- paste(reading, if (!is.finite(full[["LCL"]]) || !any(estimated)) "" else if (!significance) paste0("No single ", unit, " changes whether the ", ci, " ", if (excludes) "excludes" else "includes", " 0.") else
-      paste0("Leaving out ", if (significance == 1L) paste("<b>one</b>", unit) else paste0("<b>", significance, "</b> ", units), " (each on its own) makes the ", ci, " ", if (excludes) "include" else "exclude", " 0: marked below."),
+    reading <- paste(reading, if (!is.finite(full[["LCL"]]) || !any(estimated)) "" else if (!significance) paste0("No single ", unit, " changes whether the ", ci, " ", if (excludes) "excludes" else "includes", " ", null, ".") else
+      paste0("Leaving out ", if (significance == 1L) paste("<b>one</b>", unit) else paste0("<b>", significance, "</b> ", units), " (each on its own) makes the ", ci, " ", if (excludes) "include" else "exclude", " ", null, ": marked below."),
       # Benchmarks: with variances held fixed, intervals ending near 0 are sometimes marked differently than after refits, in both directions.
-      if (is.finite(full[["LCL"]]) && any(estimated) && !result$refit) "Intervals that end close to 0 can be marked differently when the model is refitted." else "")
+      if (is.finite(full[["LCL"]]) && any(estimated) && !result$refit) paste0("Intervals that end close to ", null, " can be marked differently when the model is refitted.") else "")
     if (!is.null(bound) && any(estimated)) {
       crossing <- sum(table$crosses_bound, na.rm = TRUE)
-      reading <- paste(reading, if (!crossing) paste0("No single ", unit, " moves the estimate across &plusmn;", format(bound), ".") else
-        paste0("Leaving out ", if (crossing == 1L) paste("one", unit) else paste(crossing, units), " moves the estimate ", if (abs(full[["es"]]) >= bound) "within" else "beyond", " &plusmn;", format(bound),
+      b <- metaUI_loo_bound(bound, ratio)
+      reading <- paste(reading, if (!crossing) paste0("No single ", unit, " moves the estimate across ", b$label, ".") else
+        paste0("Leaving out ", if (crossing == 1L) paste("one", unit) else paste(crossing, units), " moves the estimate ", if (b$outside(full[["es"]])) "within" else b$beyond, " ", b$label,
           if (crossing > 10L) " (the 10 that move it most are marked below; show all to see every one)." else "."))
     }
     # How the spread of true effects changes: only refits re-estimate it. The prediction interval where
@@ -1818,7 +1821,7 @@ glue_string <- ('
       p(class = "metaui-reading", HTML(reading)),
       if (nzchar(spread)) p(class = "metaui-reading", HTML(spread)),
       p(class = "metaui-note", HTML(model_note)),
-      div(class = "metaui-scroll", HTML(metaUI_loo_html(table[shown, , drop = FALSE], full, metaUI_eff_size_type_label, bound, show = length(shown), unit = unit, interval = ci))),
+      div(class = "metaui-scroll", HTML(metaUI_loo_html(table[shown, , drop = FALSE], full, metaUI_eff_size_type_label, bound, show = length(shown), unit = unit, interval = ci, ratio = ratio))),
       div(class = "metaui-export-actions metaui-loo-actions",
         if (count > length(shown) || loo_show_all()) actionButton("loo_all", if (loo_show_all()) "Show the largest changes" else paste("Show all", format(count, big.mark = ","), units)),
         downloadButton("loo_csv", "Download table (.csv)")),
@@ -1829,7 +1832,7 @@ glue_string <- ('
           if (!is.null(bound)) "The shaded band is your smallest effect size of interest." else ""),
         tags$p(HTML(paste0("Without a refit, the variances between and within studies are held at their estimates from all studies, and the average and its interval are recomputed exactly for the remaining studies (weighted least squares with those variances). ",
           "A full refit also re-estimates these variances, and with them the prediction interval. With many studies the two usually agree closely on the average; with few, a refit can move the estimate and its interval further, so quick refits run automatically."))),
-        tags$p(paste0("Marks: the ", ci, " now includes (or excludes) 0, when that interval for the full selection excludes (or includes) it; and, with a smallest effect size of interest, the estimate itself moves across that bound. These are descriptive checks of single ", units, ", not tests. Without a refit, a mark for an interval that ends close to 0 can differ from what a refit would show."))))
+        tags$p(paste0("Marks: the ", ci, " now includes (or excludes) ", null, ", when that interval for the full selection excludes (or includes) it; and, with a smallest effect size of interest, the estimate itself moves across that bound. These are descriptive checks of single ", units, ", not tests. Without a refit, a mark for an interval that ends close to 0 can differ from what a refit would show."))))
   })
   output$loo_csv <- downloadHandler(filename = function() download_name("leave-one-study-out.csv"), content = function(file) {
     result <- loo_result()
