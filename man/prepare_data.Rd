@@ -26,7 +26,8 @@ prepare_data(
   categorical_filters = character(),
   alternatives = list(),
   primary_label = "As supplied",
-  counts = NULL
+  counts = NULL,
+  double_zero = c("keep", "exclude")
 )
 }
 \arguments{
@@ -80,7 +81,15 @@ or change the models and analyses to be included in the app. Invalid required in
 \code{ai} and \code{ci} (events in the first and second group) with either \code{n1i} and \code{n2i} (group totals) or \code{bi} and \code{di}
 (non-events). The log ratio and its variance are computed with \code{metafor::escalc()} and its defaults: 0.5 is added
 to every cell of a table that has a zero cell, and tables without events (or without non-events) in both groups are kept.
-Leave \code{es_field}, \code{variance} and \code{se} empty. The count columns become editable in downloaded workbooks.}
+Leave \code{es_field}, \code{variance} and \code{se} empty. The count columns become editable in downloaded workbooks.
+Without \code{sample_size}, N is the total of the four cells; with it, N is checked against that total and
+rows that differ are named in a warning (N may legitimately count, say, everyone randomised).}
+
+\item{double_zero}{For \code{counts} only: what to do with tables that have no events in either group, or only
+events (a "double-zero" table, \code{ai = ci = 0} or \code{bi = di = 0}). \code{"keep"} (the default, as in
+\code{\link[metafor:escalc]{metafor::escalc()}}) adds 0.5 to every cell, so such a table contributes a ratio near 1 with a large variance.
+\code{"exclude"} leaves them out with a reason, as \code{escalc(drop00 = TRUE)} does; many analysts prefer this for
+odds and risk ratios, which such tables cannot inform. The app's Methods state the choice.}
 }
 \value{
 tibble with the data from the file/input reformatted for metaUI

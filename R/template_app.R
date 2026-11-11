@@ -848,7 +848,7 @@ glue_string <- ('
     scale_text <- if (metric == "ZCOR") paste("Correlations are fitted as Fisher z and shown as r.",
       "Slopes of numeric moderators, heterogeneity variances and the Egger test have no r equivalent and stay on the Fisher z scale.") else
       if (ratio_scale) { name <- metaUI_scale(metric)$name
-        paste0(if (length(metaUI_count_columns(metaUI__df))) paste0("Each ", name, " was computed from the study&rsquo;s 2&times;2 table of counts (metafor::escalc), adding 0.5 to every cell of a table with a zero cell. ") else "",
+        paste0(if (length(metaUI_count_columns(metaUI__df))) paste0("Each ", name, " was computed from the study&rsquo;s 2&times;2 table of counts (metafor::escalc), adding 0.5 to every cell of a table with a zero cell. ", metaUI_double_zero_text(metaUI__df)) else "",
           "Models are fitted to log ", name, "s, on which sampling errors are roughly normal; estimates, confidence and prediction intervals are shown as ", name, "s by exponentiating. ",
           if (metric == "OR") "An " else "A ", name, " of 1 means no difference; plots use a log axis, so that ratios such as 0.5 and 2 lie equally far from 1. ",
           "Slopes of numeric moderators (change in the log ", name, " per unit), heterogeneity variances and the Egger test have no ratio equivalent and stay on the log scale. ",

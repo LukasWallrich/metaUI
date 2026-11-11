@@ -83,7 +83,10 @@ bcg <- prepare_data(metadat::dat.bcg, "author", es_type = "RR",
 ```
 
 Counts are converted with `metafor::escalc()` and its defaults, which add 0.5 to
-every cell of a table with a zero cell. Models are fitted to the log ratios; the
+every cell of a table with a zero cell. Tables with no events in either group
+are kept, as in metafor; `double_zero = "exclude"` leaves them out instead. N is
+the total of the counts unless `sample_size` is given, in which case rows whose N
+differs from that total are named in a warning. Models are fitted to the log ratios; the
 app shows estimates and intervals as ratios, with 1 as no effect, on log axes.
 Moderator slopes, heterogeneity variances and Egger's test stay on the log scale.
 The equivalence bound is a ratio *x*, assessed against 1/*x* and *x*. P-curve

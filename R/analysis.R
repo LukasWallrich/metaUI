@@ -1214,6 +1214,10 @@ metaUI_upload_roles <- function(built) {
     derived <- c(stats::setNames(c(paste0("Effect size (", scale, ") computed from the counts by metafor::escalc, adding 0.5 to every cell of a table with a zero cell."),
       "Its sampling variance, computed from the counts."), c("metaUI__input_effect", "metaUI__input_variance")), derived)
     edit <- edit[!names(edit) %in% c("metaUI__input_effect", "metaUI__input_variance")]
+    if (metaUI_count_N(built)) {
+      derived <- c(metaUI__N = "Sample size: the total of the four counts.", derived)
+      edit <- edit[names(edit) != "metaUI__N"]
+    }
   }
   notes <- c(edit[names(edit) %in% names(built)], count_notes, filter_notes, alt_edit)
   roles <- data.frame(column = c(names(notes), names(derived), names(alt_derived), names(fixed)),
@@ -1230,6 +1234,27 @@ metaUI_count_columns <- function(built) {
   counts <- attr(built, "metaUI_validation")$mapping$counts
   if (is.null(counts)) return(character())
   stats::setNames(paste0("metaUI__", names(counts)), names(counts))
+}
+
+# Whether N was the total of the counts (no sample size given), and so is recomputed with them.
+metaUI_count_N <- function(built) {
+  mapping <- attr(built, "metaUI_validation")$mapping
+  length(metaUI_count_columns(built)) > 0L && is.null(mapping$N)
+}
+
+# Methods sentence on tables with no events (or only events) in both groups, for apps built from counts.
+metaUI_double_zero_text <- function(built) {
+  counts <- metaUI_count_columns(built)
+  if (!length(counts)) return("")
+  validation <- attr(built, "metaUI_validation")
+  if (identical(validation$mapping$double_zero, "exclude")) {
+    n <- sum(grepl("double_zero", validation$exclusions$reason, fixed = TRUE))
+    return(paste0("Tables with no events in either group (or only events) cannot show a difference and were left out, as the authors chose",
+      if (n) paste0(" (", n, if (n == 1L) " table" else " tables", ")") else "", ". "))
+  }
+  n <- sum(metaUI_count_effects(built, lapply(counts, function(col) built[[col]]), built$metaUI__es_type[1])$double_zero)
+  paste0("Tables with no events in either group (or only events) were kept, as metafor does by default; with 0.5 added to each cell, their ratio reflects only the group sizes (near 1 when the groups are equal) and has a wide interval",
+    if (n) paste0(" (", n, if (n == 1L) " table in these data" else " tables in these data", ")") else " (none in these data)", ". ")
 }
 
 # The dataset sheet in the order of the roles above, so that the columns to edit come first.
@@ -1313,7 +1338,11 @@ metaUI_validate_upload <- function(df, built) {
   if (length(counts)) {
     cells <- metaUI_count_effects(df, lapply(counts, function(col) number(col, "a count")), built$metaUI__es_type[1])
     if (any(cells$invalid)) stop("Counts must not be negative, and events must not exceed the group total (not in ", metaUI_upload_rows(cells$invalid), ").", call. = FALSE)
+    if (identical(attr(built, "metaUI_validation")$mapping$double_zero, "exclude") && any(cells$double_zero))
+      stop("The authors excluded tables with no events (or only events) in both groups; ", metaUI_upload_rows(cells$double_zero),
+        " ", if (sum(cells$double_zero) > 1L) "are such tables" else "is such a table", ". Remove ", if (sum(cells$double_zero) > 1L) "them" else "it", " or change the counts.", call. = FALSE)
     df$metaUI__input_effect <- cells$yi; df$metaUI__input_variance <- cells$vi
+    if (metaUI_count_N(built)) df$metaUI__N <- cells$total
   }
   # Source to fitting scale, as prepare_data() did: atanh(r), with delta-method variance.
   to_fit <- function(y, v, scale, what) {

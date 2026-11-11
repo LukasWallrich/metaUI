@@ -34,6 +34,13 @@
 #'   (non-events). The log ratio and its variance are computed with `metafor::escalc()` and its defaults: 0.5 is added
 #'   to every cell of a table that has a zero cell, and tables without events (or without non-events) in both groups are kept.
 #'   Leave `es_field`, `variance` and `se` empty. The count columns become editable in downloaded workbooks.
+#'   Without `sample_size`, N is the total of the four cells; with it, N is checked against that total and
+#'   rows that differ are named in a warning (N may legitimately count, say, everyone randomised).
+#' @param double_zero For `counts` only: what to do with tables that have no events in either group, or only
+#'   events (a "double-zero" table, `ai = ci = 0` or `bi = di = 0`). `"keep"` (the default, as in
+#'   [metafor::escalc()]) adds 0.5 to every cell, so such a table contributes a ratio near 1 with a large variance.
+#'   `"exclude"` leaves them out with a reason, as `escalc(drop00 = TRUE)` does; many analysts prefer this for
+#'   odds and risk ratios, which such tables cannot inform. The app's Methods state the choice.
 #' @param direction Explicit direction for one-sided bias models: unspecified, positive, or negative.
 #' @param primary_label Label for the primary computation when alternatives are provided.
 #' @param alternatives Named list of up to five author-defined effect computations. Each entry supplies es_field, variance or se, es_type, variance_scale when required, and a nonempty justification. Every computation must retain the same effects and converge on the same fitting scale.
@@ -46,7 +53,7 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
                          url = NA, es_type = "SMD", article_label = NA, es_label = NA, na.rm = "es_related",
                          arrange_filters = c("given", "alphabetical", "leave"), keep_missing_level = FALSE, es_id = NULL,
                          variance_scale = NULL, direction = c("unspecified", "positive", "negative"),
-                         categorical_filters = character(), alternatives = list(), primary_label = "As supplied", counts = NULL) {
+                         categorical_filters = character(), alternatives = list(), primary_label = "As supplied", counts = NULL, double_zero = c("keep", "exclude")) {
   source <- list(kind = if (is.character(data)) "CSV" else "data.frame",
                  file = if (is.character(data)) basename(data) else NULL,
                  md5 = if (is.character(data)) unname(tools::md5sum(data)) else NULL)
@@ -59,7 +66,7 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
   data <- decode_text_entities(data)
   alternative_base <- list(study_label = study_label, es_field = es_field, se = se,
     pvalue = pvalue, sample_size = sample_size, variance = variance, filters = filters,
-    url = url, es_type = es_type, article_label = article_label, es_label = es_label, counts = counts,
+    url = url, es_type = es_type, article_label = article_label, es_label = es_label,
     na.rm = na.rm, arrange_filters = arrange_filters, keep_missing_level = keep_missing_level,
     es_id = es_id, variance_scale = variance_scale, direction = direction,
     categorical_filters = categorical_filters)
@@ -74,18 +81,31 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
     stop("Supported metrics are SMD, COR, ZCOR, OR and RR; other metrics require custom analysis.")
   derived <- character()
   count_cells <- NULL
+  count_N_mismatches <- NA_integer_
   if (!is.null(counts)) {
     if (!es_type %in% c("OR", "RR")) stop("counts are used only for es_type OR or RR.")
     if (!is.null(es_field) || !is.null(variance) || !is.null(se) || !is.null(variance_scale))
       stop("With counts, leave es_field, variance, se and variance_scale empty: the effects are computed from the counts.")
+    double_zero <- match.arg(double_zero)
     counts <- metaUI_check_counts(counts, data)
     count_cells <- metaUI_count_effects(data, counts, es_type)
     data$metaUI_input_yi <- count_cells$yi
     data$metaUI_input_vi <- count_cells$vi
     es_field <- "metaUI_input_yi"; variance <- "metaUI_input_vi"; variance_scale <- "log"
     derived <- c(derived, paste0("log ", if (es_type == "OR") "odds" else "risk", " ratio and variance from 2x2 counts with metafor::escalc(measure = \"", es_type,
-      "\"): 0.5 added to every cell of tables with a zero cell; tables with no events (or only events) in both groups kept"))
-  }
+      "\"): 0.5 added to every cell of tables with a zero cell; tables with no events (or only events) in both groups ", if (double_zero == "keep") "kept" else "excluded"))
+    if (is.null(sample_size)) {
+      data$metaUI_input_N <- count_cells$total
+      sample_size <- "metaUI_input_N"
+      derived <- c(derived, "N = total of the 2x2 counts")
+    } else if (is.numeric(data[[sample_size]])) {
+      differs <- which(is.finite(data[[sample_size]]) & is.finite(count_cells$total) & abs(data[[sample_size]] - count_cells$total) > 1e-8)
+      if (length(differs)) warning("Sample size (", sample_size, ") differs from the total of the 2x2 counts in ", length(differs),
+        if (length(differs) == 1L) " row" else " rows", " (rows ", paste(utils::head(differs, 10), collapse = ", "), if (length(differs) > 10L) ", ..." else "",
+        "). Check whether N counts the same people; leave sample_size empty to use the count total.", call. = FALSE)
+      count_N_mismatches <- length(differs)
+    }
+  } else if (!missing(double_zero)) stop("double_zero applies only with counts.")
   if (is.null(es_field)) stop("Supply es_field, or counts for OR and RR.")
   if (es_type %in% c("OR", "RR") && !identical(variance_scale, "log"))
     stop(es_type, " takes log ratios: set variance_scale = 'log' for effects and variances on the log scale (as metafor::escalc returns them), or supply 2x2 counts.")
@@ -226,6 +246,7 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
   add_reason(!is.finite(data$metaUI__se) | data$metaUI__se <= 0, "invalid SE")
   if (es_type == "COR") add_reason(is.finite(data$metaUI__effect_size) & abs(data$metaUI__effect_size) >= 1, "COR outside (-1, 1)")
   if (!is.null(count_cells)) add_reason(count_cells$invalid, "missing, negative or impossible counts")
+  if (!is.null(count_cells) && double_zero == "exclude") add_reason(count_cells$double_zero, "no events (or only events) in both groups; excluded by double_zero = \"exclude\"")
   if (!(na.rm[1] %in% c("es_related", FALSE, TRUE))) stop('`na.rm` must be TRUE, FALSE or "es_related"')
   if (identical(na.rm, FALSE) && any(reason != "")) stop("Invalid required model inputs; use na.rm = 'es_related' to exclude with a report.")
   if (identical(na.rm, TRUE)) add_reason(missing_mapped, "missing filter, p-value or N")
@@ -259,12 +280,13 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
       variance = if (variance == "metaUI_input_variance") NULL else variance,
       SE = if (se == "metaUI_input_se") NULL else se,
       effect_id = es_id, label = es_label, p = if (pvalue == "metaUI_input_p") NULL else pvalue,
-      N = if (sample_size == "metaUI_input_N") NULL else sample_size, filters = filters, counts = counts),
+      N = if (sample_size == "metaUI_input_N") NULL else sample_size, filters = filters, counts = counts,
+      double_zero = if (!is.null(counts)) double_zero),
     input_rows = length(original_rows), retained_rows = nrow(data), exclusions = exclusions,
     input_scale = es_type, fitting_scale = data$metaUI__es_type[1],
     display_scale = data$metaUI__display_scale[1], direction = direction, derivations = derived,
     optional_inputs = list(missing_p = sum(is.na(data$metaUI__pvalue)), missing_N = sum(is.na(data$metaUI__N)),
-                           invalid_p = sum(invalid_p), invalid_N = sum(invalid_n)))
+                           invalid_p = sum(invalid_p), invalid_N = sum(invalid_n), N_differs_from_counts = count_N_mismatches))
   specs <- lapply(seq_along(alternatives), function(i) {
     spec <- alternatives[[i]]
     required <- c("es_field", "es_type", "justification")
@@ -275,7 +297,7 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
         !is.character(spec$justification) || length(spec$justification) != 1L || is.na(spec$justification) || !nzchar(trimws(spec$justification)))
       stop("Alternative must declare effect, variance/SE, scale and justification: ", names(alternatives)[i])
     args <- alternative_base
-    args$se <- NULL; args$variance <- NULL; args$variance_scale <- NULL; args$counts <- NULL
+    args$se <- NULL; args$variance <- NULL; args$variance_scale <- NULL; args$counts <- NULL; args$double_zero <- NULL
     for (key in setdiff(names(spec), "justification")) args[[key]] <- spec[[key]]
     kept <- raw_data[original_rows[reason == ""], , drop = FALSE]
     args$na.rm <- FALSE
@@ -391,7 +413,8 @@ metaUI_check_counts <- function(counts, data) {
 }
 
 # Log odds or risk ratios from 2x2 counts with metafor::escalc and its defaults (add = 1/2, to = "only0",
-# drop00 = FALSE). `invalid` marks rows with missing, negative or impossible counts (more events than total).
+# drop00 = FALSE). `invalid` marks rows with missing, negative or impossible counts (more events than total);
+# `double_zero` marks tables with no events, or only events, in both groups (escalc's drop00 rule).
 # counts: named vector of column names in data, or named list of the count vectors themselves.
 metaUI_count_effects <- function(data, counts, measure) {
   x <- lapply(counts, function(col) if (is.character(col)) as.numeric(data[[col]]) else as.numeric(col))
@@ -399,5 +422,6 @@ metaUI_count_effects <- function(data, counts, measure) {
   invalid <- !Reduce(`&`, lapply(cells, function(v) is.finite(v) & v >= 0))
   cells <- lapply(cells, function(v) { v[invalid] <- NA_real_; v })
   out <- suppressWarnings(metafor::escalc(measure, ai = cells$ai, bi = cells$bi, ci = cells$ci, di = cells$di))
-  list(yi = as.numeric(out$yi), vi = as.numeric(out$vi), invalid = invalid)
+  list(yi = as.numeric(out$yi), vi = as.numeric(out$vi), invalid = invalid, total = Reduce(`+`, cells),
+    double_zero = !invalid & ((cells$ai == 0 & cells$ci == 0) | (cells$bi == 0 & cells$di == 0)))
 }

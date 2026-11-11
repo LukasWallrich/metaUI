@@ -126,3 +126,32 @@ test_that("a ratio app is generated and parses", {
   expect_match(paste(readLines(file.path(path, "global.R")), collapse = "\n"), "Odds ratio", fixed = TRUE)
   expect_true(file.exists(file.path(path, "opening_results.rds")))
 })
+
+test_that("double-zero tables are kept by default or excluded on request, and N is checked against the counts", {
+  x <- data.frame(id = 1:4, e1 = c(0, 4, 10, 2), n1 = c(20, 30, 40, 50), e2 = c(0, 1, 12, 3), n2 = c(25, 30, 40, 50))
+  counts <- c(ai = "e1", n1i = "n1", ci = "e2", n2i = "n2")
+  kept <- prepare_data(x, "id", counts = counts, es_type = "OR")
+  expect_equal(nrow(kept), 4L)
+  expect_equal(kept$metaUI__effect_size, as.numeric(metafor::escalc("OR", ai = e1, n1i = n1, ci = e2, n2i = n2, data = x)$yi))
+  expect_equal(kept$metaUI__N, x$n1 + x$n2)
+  expect_match(metaUI:::metaUI_double_zero_text(kept), "were kept.*1 table in these data")
+  expect_warning(dropped <- prepare_data(x, "id", counts = counts, es_type = "OR", double_zero = "exclude"), "1 rows excluded")
+  expect_equal(dropped$metaUI__study_id, 2:4)
+  ref <- metafor::escalc("OR", ai = e1, n1i = n1, ci = e2, n2i = n2, data = x, drop00 = TRUE)
+  expect_equal(dropped$metaUI__effect_size, as.numeric(ref$yi[-1]))
+  expect_match(metaUI:::metaUI_double_zero_text(dropped), "left out, as the authors chose \\(1 table\\)")
+  expect_error(prepare_data(x, "id", "e1", variance = "n1", es_type = "OR", variance_scale = "log", double_zero = "exclude"), "only with counts")
+  # Uploads keep the authors' rule and recompute N from the counts.
+  upload <- as.data.frame(dropped); upload$metaUI__ai[1] <- 0; upload$metaUI__ci[1] <- 0
+  expect_error(metaUI:::metaUI_validate_upload(upload, dropped), "excluded tables with no events")
+  upload <- as.data.frame(kept); upload$metaUI__n1i[2] <- 60
+  expect_equal(metaUI:::metaUI_validate_upload(upload, kept)$metaUI__N[2], 90)
+  roles <- metaUI:::metaUI_upload_roles(kept)
+  expect_equal(roles$role[roles$column == "metaUI__N"], "Derived")
+  # A supplied N that differs from the count total is named, not silently used.
+  x$N <- x$n1 + x$n2; x$N[3] <- 100
+  expect_warning(given <- prepare_data(x, "id", counts = counts, es_type = "OR", sample_size = "N"), "differs from the total of the 2x2 counts in 1 row \\(rows 3\\)")
+  expect_equal(given$metaUI__N[3], 100)
+  expect_equal(attr(given, "metaUI_validation")$optional_inputs$N_differs_from_counts, 1L)
+  expect_equal(metaUI:::metaUI_upload_roles(given)$role[metaUI:::metaUI_upload_roles(given)$column == "metaUI__N"], "Edit")
+})
