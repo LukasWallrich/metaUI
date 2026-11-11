@@ -9,7 +9,7 @@
     }, 500);
   });
   var query = new URLSearchParams(location.search);
-  if (query.get('metaui')) return;
+  if (query.has('metaui')) return;
   window.metauiPrecomputed = true;
   var style = document.createElement('style');
   style.textContent = '#root{position:fixed!important;inset:0;opacity:0;pointer-events:none}#metaui-preview{position:fixed;inset:0;width:100%;height:100%;border:0;background:white}';

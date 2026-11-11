@@ -55,6 +55,8 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
                          arrange_filters = c("given", "alphabetical", "leave"), keep_missing_level = FALSE, es_id = NULL,
                          variance_scale = NULL, direction = c("unspecified", "positive", "negative"),
                          categorical_filters = character(), alternatives = list(), primary_label = "As supplied", counts = NULL, double_zero = c("keep", "exclude")) {
+  # The p-value and N columns the author gave; internal placeholders added later do not count for na.rm.
+  supplied_pn <- c(pvalue, sample_size)
   source <- list(kind = if (is.character(data)) "CSV" else "data.frame",
                  file = if (is.character(data)) basename(data) else NULL,
                  md5 = if (is.character(data)) unname(tools::md5sum(data)) else NULL)
@@ -171,8 +173,7 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
 
   # Under na.rm = TRUE, a row missing any filter, p-value or N it was given counts as incomplete;
   # this is recorded before categorical NAs become "(Missing)". Unmapped columns do not count.
-  missing_mapped <- if (length(c(filters, setdiff(c(pvalue, sample_size), c("metaUI_input_p", "metaUI_input_N")))))
-    !stats::complete.cases(data[c(filters, setdiff(c(pvalue, sample_size), c("metaUI_input_p", "metaUI_input_N")))]) else rep(FALSE, nrow(data))
+  missing_mapped <- if (length(c(filters, supplied_pn))) !stats::complete.cases(data[c(filters, supplied_pn)]) else rep(FALSE, nrow(data))
 
   # Set NA level for categorical filters ...
   for (i in seq_along(filters)) {
@@ -247,7 +248,7 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
   add_reason(!is.finite(data$metaUI__variance) | data$metaUI__variance <= 0, "invalid variance")
   add_reason(!is.finite(data$metaUI__se) | data$metaUI__se <= 0, "invalid SE")
   if (es_type == "COR") add_reason(is.finite(data$metaUI__effect_size) & abs(data$metaUI__effect_size) >= 1, "COR outside (-1, 1)")
-  if (!is.null(count_cells)) add_reason(count_cells$invalid, "missing, negative or impossible counts")
+  if (!is.null(count_cells)) add_reason(count_cells$invalid, "missing, negative, fractional or impossible counts")
   if (!is.null(count_cells) && double_zero == "exclude") add_reason(count_cells$double_zero, "no events (or only events) in both groups; excluded by double_zero = \"exclude\"")
   if (!(na.rm[1] %in% c("es_related", FALSE, TRUE))) stop('`na.rm` must be TRUE, FALSE or "es_related"')
   if (identical(na.rm, FALSE) && any(reason != "")) stop("Invalid required model inputs; use na.rm = 'es_related' to exclude with a report.")

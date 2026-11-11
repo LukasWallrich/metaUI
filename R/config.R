@@ -69,6 +69,7 @@ build_app <- function(config, overwrite = FALSE) {
   if (!is.null(mapping$counts)) {
     if (!(is.list(mapping$counts) || is.character(mapping$counts)) || is.null(names(mapping$counts)) || !all(vapply(mapping$counts, function(x) is.character(x) && length(x) == 1L, logical(1))))
       stop("counts must be an object mapping ai, ci and n1i, n2i (or bi, di) to column names")
+    if (!length(mapping$counts)) stop("counts must not be empty: map ai, ci and n1i, n2i (or bi, di) to column names")
     mapping$counts <- unlist(mapping$counts)
   }
   if (!is.null(mapping$filters)) mapping$filters <- unlist(mapping$filters)

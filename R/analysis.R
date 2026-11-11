@@ -1273,13 +1273,13 @@ metaUI_upload_roles <- function(built) {
 }
 
 # Log odds or risk ratios from 2x2 counts with metafor::escalc and its defaults (add = 1/2, to = "only0",
-# drop00 = FALSE). `invalid` marks rows with missing, negative or impossible counts (more events than total);
+# drop00 = FALSE). `invalid` marks rows with missing, negative, fractional or impossible counts (more events than total);
 # `double_zero` marks tables with no events, or only events, in both groups (escalc's drop00 rule).
 # counts: named vector of column names in data, or named list of the count vectors themselves.
 metaUI_count_effects <- function(data, counts, measure) {
   x <- lapply(counts, function(col) if (is.character(col)) as.numeric(data[[col]]) else as.numeric(col))
   cells <- list(ai = x$ai, bi = if (is.null(x$bi)) x$n1i - x$ai else x$bi, ci = x$ci, di = if (is.null(x$di)) x$n2i - x$ci else x$di)
-  invalid <- !Reduce(`&`, lapply(cells, function(v) is.finite(v) & v >= 0))
+  invalid <- !Reduce(`&`, lapply(cells, function(v) is.finite(v) & v >= 0 & v == round(v)))
   cells <- lapply(cells, function(v) { v[invalid] <- NA_real_; v })
   out <- suppressWarnings(metafor::escalc(measure, ai = cells$ai, bi = cells$bi, ci = cells$ci, di = cells$di))
   list(yi = as.numeric(out$yi), vi = as.numeric(out$vi), invalid = invalid, total = Reduce(`+`, cells),
@@ -1396,7 +1396,7 @@ metaUI_validate_upload <- function(df, built) {
   counts <- metaUI_count_columns(built)
   if (length(counts)) {
     cells <- metaUI_count_effects(df, lapply(counts, function(col) number(col, "a count")), built$metaUI__es_type[1])
-    if (any(cells$invalid)) stop("Counts must not be negative, and events must not exceed the group total (not in ", metaUI_upload_rows(cells$invalid), ").", call. = FALSE)
+    if (any(cells$invalid)) stop("Counts must be whole numbers, not negative, and events must not exceed the group total (not in ", metaUI_upload_rows(cells$invalid), ").", call. = FALSE)
     if (identical(attr(built, "metaUI_validation")$mapping$double_zero, "exclude") && any(cells$double_zero))
       stop("The authors excluded tables with no events (or only events) in both groups; ", metaUI_upload_rows(cells$double_zero),
         " ", if (sum(cells$double_zero) > 1L) "are such tables" else "is such a table", ". Remove ", if (sum(cells$double_zero) > 1L) "them" else "it", " or change the counts.", call. = FALSE)

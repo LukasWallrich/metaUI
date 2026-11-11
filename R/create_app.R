@@ -259,6 +259,10 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   about <- do.call(create_about, c(list(dataset_name = dataset_name,
     meta = uses_meta), about_args))
   bayesian <- metaUI_bayesian_options(bayesian, dataset$metaUI__es_type[1])
+  # The plain random-effects model treats effects as independent; it cannot take nested data.
+  if (any(models_to_run$code == metaUI_code_random & !models_to_run$aggregated) && anyDuplicated(dataset$metaUI__study_id))
+    stop("The Random-Effects Model treats effects as independent, but study \"", dataset$metaUI__study_id[anyDuplicated(dataset$metaUI__study_id)],
+      "\" has several effects. Use get_model_tibble() for its models for dependent effects.", call. = FALSE)
   random_default <- identical(models_to_run, get_model_tibble(one_effect_per_study = TRUE))
   package_models <- random_default || identical(models_to_run, get_model_tibble())
   if (!is.null(bayesian)) {

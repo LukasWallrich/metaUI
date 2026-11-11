@@ -7,7 +7,8 @@
 #'
 #' @param one_effect_per_study If `TRUE`, the multilevel model and robust variance estimation
 #'   are replaced by one standard random-effects model (`metafor::rma.uni`, REML, Hartung-Knapp
-#'   interval). [generate_shiny()] uses this when every study in the data has one effect.
+#'   interval). [generate_shiny()] uses this when every study in the data has one effect, and refuses it
+#'   for data in which a study has several effects.
 #' @return A tibble with the models to be included in the app - including details on how to estimate them
 #'   and how to extract the relevant information from the model output.
 #' @export

@@ -150,7 +150,7 @@ design_preview <- function(d) {
             shiny::p(class = "metaui-primary-reading", "Positive values are in the direction the authors expected."),
             shiny::p(class = "metaui-primary-label", "Effects are standardized mean differences, in standard deviations.")),
           shiny::HTML(metaUI_estimates_html(data.frame(Model = c("Random-effects multilevel model", "Robust variance estimation"),
-            es = c(.24, .23), LCL = c(.11, .03), UCL = c(.38, .43), k = c(16L, 8L), status = "ok", reason = "", warnings = "",
+            es = c(.24, .23), LCL = c(.11, .03), UCL = c(.38, .43), k = c(16L, 8L), input_rows = c(16L, 16L), status = "ok", reason = "", warnings = "",
             aggregated = c(FALSE, FALSE), interval_type = "Confidence interval (coverage model-dependent)"), 1L, axis_title = "SMD")))))))
   paste0('<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="shinythemes/css/yeti.min.css"><link rel="stylesheet" href="metaui-design/metaui.css"><style>', design_css(d), '</style></head><body>', as.character(html), '</body></html>')
 }

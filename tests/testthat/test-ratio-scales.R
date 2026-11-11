@@ -117,7 +117,7 @@ test_that("an uploaded workbook recomputes ratio effects from edited counts", {
   out <- metaUI:::metaUI_validate_upload(upload, d)
   expect_equal(out$metaUI__effect_size[1], as.numeric(metafor::escalc("RR", ai = 8, bi = 119, ci = 11, di = 128)$yi))
   upload$metaUI__ai[1] <- -1
-  expect_error(metaUI:::metaUI_validate_upload(upload, d), "Counts must not be negative")
+  expect_error(metaUI:::metaUI_validate_upload(upload, d), "Counts must be whole numbers, not negative")
 })
 
 test_that("a ratio app is generated and parses", {
@@ -205,6 +205,8 @@ test_that("a JSON configuration can map 2x2 counts", {
   expect_error(build_app(path, overwrite = TRUE), "schema_version 2")
   config$schema_version <- 2; config$mapping$counts <- NULL; jsonlite::write_json(config, path, auto_unbox = TRUE)
   expect_error(build_app(path, overwrite = TRUE), "es_field or counts")
+  empty <- listed; empty$mapping$counts <- stats::setNames(list(), character()); empty$mapping$es_field <- NULL
+  expect_error(build_app(empty, overwrite = TRUE), "counts must not be empty|counts must be an object")
 })
 
 test_that("very wide ratio intervals are clipped by their width on the log scale", {

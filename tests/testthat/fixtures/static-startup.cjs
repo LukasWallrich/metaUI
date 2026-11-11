@@ -36,7 +36,7 @@ function page() {
   assert.equal(context.document.documentElement.dataset.metauiLive, 'true');
   assert.equal(timers.size, 0);
 }
-function bridge(mode) {
+function bridge(mode, search = '') {
   let interval, deadline, clicked = 0, intervalCleared = false, deadlineCleared = false;
   const messages = [];
   const connected = mode !== 'disconnected';
@@ -48,13 +48,15 @@ function bridge(mode) {
     document: {documentElement: {dataset: {}, classList: {contains: () => mode === 'busy'}},
       getElementById(id) {return id === 'go' ? {click() {clicked++;}} : {textContent: mode === 'success' ? 'result' : ''};},
       querySelector() {return mode === 'error' ? {} : null;}, addEventListener() {}},
-    location: {pathname: '/app_test/', search: '', origin: 'https://example.org'},
+    location: {pathname: '/app_test/', search, origin: 'https://example.org'},
     history: {replaceState() {}, pushState() {}}, URLSearchParams,
     setTimeout(fn, ms) {deadline = fn; assert.equal(ms, 25); return 1;},
     clearTimeout() {deadlineCleared = true;},
     setInterval(fn) {interval = fn; return 2;}, clearInterval() {intervalCleared = true;}};
   vm.runInNewContext(fs.readFileSync(path.join(templates, 'metaui-static.js'), 'utf8'), context);
   interval();
+  // A selection link hands over at once: the reader's selection, not the full data, is analyzed.
+  if (search) {assert.deepEqual(messages, ['metaui-live-ready']); assert.equal(clicked, 0); return;}
   if (['busy', 'disconnected'].includes(mode)) {assert.deepEqual(messages, []); deadline();}
   assert.deepEqual(messages, [mode === 'disconnected' ? 'metaui-startup-failed' : 'metaui-live-ready']);
   assert.equal(clicked, connected ? 1 : 0);
@@ -63,7 +65,7 @@ function bridge(mode) {
 }
 page();
 // A selection link (?metaui=<data key>&...) never shows the full-data preview.
-for (const search of ['?metaui=871c89eb&design=between', '?metaui=1&selection=x']) {
+for (const search of ['?metaui=871c89eb&design=between', '?metaui=1&selection=x', '?metaui=&design=between']) {
   const appended = [];
   const context = {document: {head: {appendChild(e) {appended.push(e);}}, body: {appendChild(e) {appended.push(e);}},
     createElement: tag => ({tag, style: {}, setAttribute() {}}), documentElement: {dataset: {}}, getElementById: () => null, addEventListener() {}},
@@ -74,4 +76,5 @@ for (const search of ['?metaui=871c89eb&design=between', '?metaui=1&selection=x'
   assert.equal(appended.length, 0, search);
 }
 for (const mode of ['success', 'error', 'busy', 'disconnected']) bridge(mode);
+bridge('success', '?metaui=871c89eb&design=between');
 console.log('Startup timeout, recovery, analysis failure and successful handover passed.');

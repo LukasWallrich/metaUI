@@ -242,3 +242,20 @@ test_that("an app built for one effect per study refuses uploads with several ef
     expect_null(state_values$uploaded_data)
   })
 })
+
+test_that("review fixes on #54: counts, nested data, empty counts, non-ASCII IDs, na.rm placeholders", {
+  # Fractional counts describe no contingency table.
+  cells <- metaUI:::metaUI_count_effects(data.frame(a = c(4, 4.5), b = 10, c = 3, d = 10), c(ai = "a", bi = "b", ci = "c", di = "d"), "OR")
+  expect_identical(cells$invalid, c(FALSE, TRUE))
+  # The plain random-effects model cannot take nested data.
+  expect_error(generate_shiny(prepared(), "nested", models = get_model_tibble(one_effect_per_study = TRUE), launch_app = FALSE), "treats effects as independent")
+  # Accented or non-Latin labels keep distinct input IDs; ASCII IDs are unchanged.
+  ids <- metaUI:::metaUI_filter_id(c("metaUI__filter_Größe", "metaUI__filter_Grüße", "metaUI__filter_国家", "metaUI__filter_Dose (mg)"))
+  expect_false(anyDuplicated(ids) > 0)
+  expect_identical(ids[4], "metaUI__filter_Dose__mg_")
+  expect_true(all(grepl("^[A-Za-z0-9_-]+$", ids)))
+  # A p-value column that happens to share the internal placeholder's name still counts for na.rm.
+  x <- fixture(); x$metaUI_input_p <- c(NA, rep(.04, 15))
+  d <- suppressWarnings(prepared(x, pvalue = "metaUI_input_p", na.rm = TRUE))
+  expect_equal(nrow(d), 15)
+})

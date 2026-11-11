@@ -81,7 +81,7 @@
     if (!started) {
       started = true;
       if (touched || app.$inputValues.uploadData ||
-          selection.get('metaui')) {
+          selection.has('metaui')) {
         handover(); return;
       }
       // Apps that analyze on load have usually started already; the wait below covers both.
