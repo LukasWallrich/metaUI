@@ -1765,15 +1765,20 @@ metaUI_loo_blocks <- function(fit, x, reported) {
 }
 
 # The units left out: studies, or sources when `groups` maps study ids to source labels (a study
-# without a label is a source of its own).
+# without a label is a source of its own, marked when its id is also the label of a source).
 metaUI_loo_unit_of <- function(studies, groups = NULL) {
   studies <- as.character(studies)
   if (is.null(groups)) return(studies)
   unit <- unname(as.character(groups[studies]))
   missing <- is.na(unit) | !nzchar(unit)
-  unit[missing] <- studies[missing]
+  named <- unique(stats::na.omit(unname(as.character(groups))))
+  unit[missing] <- ifelse(studies[missing] %in% named, paste0(studies[missing], " (study without a source)"), studies[missing])
   unit
 }
+
+# The interval label of a model, as in the Summary: "95% CI" for confidence intervals, otherwise
+# (credible or author-defined intervals) "95% interval".
+metaUI_loo_interval_label <- function(type) if (length(type) && !is.na(type[1]) && !grepl("^Confidence", type[1])) "95% interval" else "95% CI"
 
 # Estimates without each study, or each source with `groups` (leave = TRUE), or for all studies,
 # on the fitting scale. Leaving out a source drops all its studies at once.
@@ -1813,16 +1818,19 @@ metaUI_loo_refit <- function(df, spec, correlation = .6, aggregation = "aggregat
   rows <- list()
   for (i in seq_along(studies)) {
     out <- units == studies[i]
-    row <- metaUI_fit_models(df[!out, , drop = FALSE], spec, correlation, aggregation)$table
+    # Leaving out a whole source can leave too few studies to fit; that omission is reported as not estimated.
+    row <- if (length(unique(ids[!out])) < 2L) data.frame(status = "failed", reason = "fewer than two studies remain", interval_type = NA_character_) else
+      tryCatch(metaUI_fit_models(df[!out, , drop = FALSE], spec, correlation, aggregation)$table,
+        error = function(e) data.frame(status = "failed", reason = conditionMessage(e), interval_type = NA_character_))
     value <- function(column) if (row$status == "ok") row[[column]] else NA_real_
     rows[[i]] <- data.frame(study = studies[i], studies = length(unique(ids[out])), effects = sum(out), es = value("fit_es"),
       LCL = value("fit_LCL"), UCL = value("fit_UCL"), se = value("fit_se"), PI_LCL = value("fit_PI_LCL"), PI_UCL = value("fit_PI_UCL"), tau = value("tau"),
-      status = row$status, reason = row$reason, row.names = NULL)
+      status = row$status, reason = row$reason, interval_type = row$interval_type, row.names = NULL)
     if (!is.null(progress)) progress(i, length(studies))
     if (proc.time()[["elapsed"]] - started > budget) break
   }
   out <- if (length(rows)) do.call(rbind, rows) else data.frame(study = character(), studies = integer(), effects = integer(), es = numeric(), LCL = numeric(), UCL = numeric(),
-    se = numeric(), PI_LCL = numeric(), PI_UCL = numeric(), tau = numeric(), status = character(), reason = character())
+    se = numeric(), PI_LCL = numeric(), PI_UCL = numeric(), tau = numeric(), status = character(), reason = character(), interval_type = character())
   attr(out, "seconds") <- proc.time()[["elapsed"]] - started
   out
 }
@@ -1856,7 +1864,7 @@ metaUI_leave_one_out <- function(estimates, full, df, bound = NULL) {
 
 # The reader's view of metaUI_leave_one_out(): the estimate with all studies, then the first `show`
 # rows (largest change first), drawn on the axis of the model table. `full` is on the display scale.
-metaUI_loo_html <- function(table, full, axis_title = "Effect size", bound = NULL, show = 10L, unit = "study") {
+metaUI_loo_html <- function(table, full, axis_title = "Effect size", bound = NULL, show = 10L, unit = "study", interval = "95% CI") {
   rows <- utils::head(table, show)
   digits <- metaUI_digits(c(full[["LCL"]], table$LCL), c(full[["UCL"]], table$UCL))
   fmt <- function(x) if (!is.finite(x)) "" else metaUI_minus(formatC(x, format = "f", digits = digits))
@@ -1866,22 +1874,22 @@ metaUI_loo_html <- function(table, full, axis_title = "Effect size", bound = NUL
   change <- function(x, se) paste0(signed(x), if (isTRUE(is.finite(se))) paste0('<span class="metaui-row-note metaui-loo-se">(', signed(se, 2L), " SE)</span>") else "")
   label <- if (unit == "source") "Source left out" else "Study left out"
   scale <- metaUI_track_scale(c(full[["es"]], full[["LCL"]], full[["UCL"]], rows$es, rows$LCL, rows$UCL, if (!is.null(bound)) c(-bound, bound)))
-  interval <- function(lcl, ucl) if (is.finite(lcl) && is.finite(ucl)) paste0("[", fmt(lcl), ", ", fmt(ucl), "]") else ""
+  bracket <- function(lcl, ucl) if (is.finite(lcl) && is.finite(ucl)) paste0("[", fmt(lcl), ", ", fmt(ucl), "]") else ""
   excludes <- is.finite(full[["LCL"]]) && (full[["LCL"]] > 0 || full[["UCL"]] < 0)
   line <- function(label, es, lcl, ucl, change, class = "") paste0("<tr", class, "><td>", label,
-    '</td><td class="num">', fmt(es), '</td><td class="num">', interval(lcl, ucl), '</td><td class="num metaui-k">', change,
+    '</td><td class="num">', fmt(es), '</td><td class="num">', bracket(lcl, ucl), '</td><td class="num metaui-k">', change,
     '</td><td class="metaui-unit"></td><td class="metaui-track-cell">', metaUI_track_row(scale, es, lcl, ucl, bound, ref = full[["es"]]), "</td></tr>")
   body <- vapply(seq_len(nrow(rows)), function(i) {
     row <- rows[i, ]
     flags <- c(if (!is.finite(row$es)) paste("not estimated without this", unit),
-      if (isTRUE(row$significance_changes)) if (excludes) "95% CI now includes 0" else "95% CI now excludes 0",
+      if (isTRUE(row$significance_changes)) paste(interval, if (excludes) "now includes 0" else "now excludes 0"),
       if (isTRUE(row$crosses_bound)) paste0("estimate now ", if (abs(row$es) >= bound) "beyond" else "within", " \u00b1", format(bound)))
     line(paste0(htmltools::htmlEscape(row$study), '<span class="metaui-row-note metaui-loo-count">', if (isTRUE(row$studies > 1L)) paste0(row$studies, " studies, ") else "",
       format(row$effects, big.mark = ","), if (row$effects == 1L) " effect" else " effects", "</span>",
       if (length(flags)) paste0('<span class="metaui-row-note">', paste(flags, collapse = "; "), "</span>")),
       row$es, row$LCL, row$UCL, change(row$change, row$change_se))
   }, character(1))
-  paste0('<table class="table metaui-estimates metaui-models metaui-custom metaui-loo"><thead><tr data-head="', label, ', estimate [95% CI], change"><th>', label, '</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k">Change</th><th></th><th class="metaui-track-cell">',
+  paste0('<table class="table metaui-estimates metaui-models metaui-custom metaui-loo"><thead><tr data-head="', label, ', estimate [', interval, '], change"><th>', label, '</th><th class="num">Estimate</th><th class="num">', interval, '</th><th class="num metaui-k">Change</th><th></th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
     line("None (all studies)", full[["es"]], full[["LCL"]], full[["UCL"]], "", ' class="metaui-primary-row"'),
     paste(body, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="5"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>")

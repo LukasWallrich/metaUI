@@ -237,3 +237,24 @@ test_that("with one effect per study, the standard random-effects model is left 
   row <- metaUI:::metaUI_loo_estimates(fits$loo[[i]])[1, ]
   expect_equal(c(row$es, row$LCL, row$UCL), c(as.numeric(fixed$b), fixed$ci.lb, fixed$ci.ub), tolerance = 1e-8)
 })
+
+test_that("source omissions report what cannot be estimated, keep unlabelled studies apart, and label intervals by type", {
+  # An unlabelled study whose id is also a source label stays a unit of its own.
+  expect_equal(metaUI:::metaUI_loo_unit_of(c("S1", "A", "S3"), c(S1 = "A", A = NA, S3 = "B")), c("A", "A (study without a source)", "B"))
+  # Leaving out a source that holds every study but one: reported as not estimated, not an error.
+  x <- loo_fixture(); x$source <- ifelse(x$study == "S9", "Other", "Big")
+  d <- prepare_data(x, "study", "yi", variance = "vi", es_id = "id", article_label = "source")
+  groups <- unique(data.frame(study = as.character(d$metaUI__study_id), source = d$metaUI__article_label))
+  slow <- metaUI:::metaUI_loo_refit(d, get_model_tibble()[1, ], studies = "Big", groups = stats::setNames(groups$source, groups$study))
+  expect_equal(slow$status, "failed")
+  expect_match(slow$reason, "fewer than two studies")
+  expect_true(is.na(slow$es))
+  # Credible and author-defined intervals are not called confidence intervals.
+  expect_equal(metaUI:::metaUI_loo_interval_label("95% central credible interval (prior-dependent)"), "95% interval")
+  expect_equal(metaUI:::metaUI_loo_interval_label("Author-defined interval (type and coverage unknown)"), "95% interval")
+  expect_equal(metaUI:::metaUI_loo_interval_label("Confidence interval (coverage model-dependent)"), "95% CI")
+  table <- metaUI:::metaUI_leave_one_out(data.frame(study = "a", effects = 1L, es = .1, LCL = -.1, UCL = .3), c(es = .2, LCL = .05, UCL = .35), data.frame(metaUI__es_type = "SMD"))
+  html <- metaUI:::metaUI_loo_html(table, c(es = .2, LCL = .05, UCL = .35), interval = "95% interval")
+  expect_match(html, "95% interval now includes 0", fixed = TRUE)
+  expect_false(grepl("95% CI", html, fixed = TRUE))
+})

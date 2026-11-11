@@ -1657,7 +1657,8 @@ glue_string <- ('
     column <- function(name, i) if (is.null(table[[name]])) NA_real_ else table[[name]][i]
     from_row <- function(i) list(loo = results$loo[[i]], full = c(es = table$fit_es[i], LCL = table$fit_LCL[i], UCL = table$fit_UCL[i],
         se = column("fit_se", i), PI_LCL = column("fit_PI_LCL", i), PI_UCL = column("fit_PI_UCL", i), tau = column("tau", i)),
-      spec = models_to_run[i, , drop = FALSE], seconds = table$fit_seconds[i] * slower, model = table$Model[i])
+      spec = models_to_run[i, , drop = FALSE], seconds = table$fit_seconds[i] * slower, model = table$Model[i],
+      interval = metaUI_loo_interval_label(if (is.null(table$interval_type)) NA_character_ else table$interval_type[i]))
     primary <- primary_index(table)
     # The model whose refits the reader can ask for: the primary model, or without one the multilevel model
     # (the standard random-effects model when every study has one effect).
@@ -1683,7 +1684,9 @@ glue_string <- ('
     if (!identical(input$loo_unit, "source") || !"metaUI__article_label" %in% names(df)) return(list(unit = "study", groups = NULL, problem = NULL))
     pairs <- unique(data.frame(study = as.character(df$metaUI__study_id), source = as.character(df$metaUI__article_label)))
     if (anyDuplicated(pairs$study)) return(list(unit = "study", groups = NULL, problem = "Some studies are reported in more than one source, so sources cannot be left out one at a time; studies are left out instead."))
-    list(unit = "source", groups = stats::setNames(pairs$source, pairs$study), problem = NULL)
+    groups <- stats::setNames(pairs$source, pairs$study)
+    if (length(unique(metaUI_loo_unit_of(pairs$study, groups))) < 3L) return(list(unit = "study", groups = NULL, problem = "This selection has fewer than three sources, so studies are left out instead."))
+    list(unit = "source", groups = groups, problem = NULL)
   })
   loo_unit_count <- function(df, units) length(unique(metaUI_loo_unit_of(df$metaUI__study_id, units$groups)))
   # Refits run without asking when they finish within a few seconds; slower ones wait for the reader,
@@ -1702,7 +1705,7 @@ glue_string <- ('
     more <- metaUI_loo_refit(df, src$refit$spec, correlation_dependent, aggregation_method[1], todo, budget, progress, groups = units$groups)
     estimates <- rbind(if (!is.null(previous)) previous$estimates, more)
     seconds <- (if (is.null(previous)) 0 else previous$seconds) + attr(more, "seconds")
-    list(df = df, unit = units$unit, model = src$refit$model, full = src$refit$full, estimates = estimates, seconds = seconds,
+    list(df = df, unit = units$unit, model = src$refit$model, full = src$refit$full, interval = src$refit$interval, estimates = estimates, seconds = seconds,
       complete = nrow(estimates) == loo_unit_count(df, units))
   }
   # Tried only when the fit time of the model leaves a chance of finishing within the budget.
@@ -1731,13 +1734,15 @@ glue_string <- ('
     stored <- loo_refits()
     if (is.null(stored) || !identical(stored$df, df) || !identical(stored$unit, units$unit)) stored <- loo_auto()
     if (!is.null(stored) && stored$complete) return(list(table = metaUI_leave_one_out(stored$estimates, stored$full, df, bound), full = stored$full,
-      model = stored$model, primary = identical(stored$model, primary_model), refit = TRUE, why = NULL, unit = units$unit, problem = units$problem))
+      model = stored$model, primary = identical(stored$model, primary_model), refit = TRUE, why = NULL, unit = units$unit, problem = units$problem,
+      interval = if (is.null(stored$interval)) "95% CI" else stored$interval))
     validate(need(is.null(src$loo$reason), paste("Leaving out one study is not available for this selection:", src$loo$reason)))
     count <- loo_unit_count(df, units)
     # The time for the remaining refits, from those already timed, or else from the fit of the model itself.
     estimate <- if (is.null(src$refit)) Inf else if (!is.null(stored) && nrow(stored$estimates)) stored$seconds / nrow(stored$estimates) * (count - nrow(stored$estimates)) else src$refit$seconds * count
     list(table = metaUI_leave_one_out(metaUI_loo_estimates(src$loo, groups = units$groups), src$full, df, bound), full = src$full, model = src$model,
-      primary = src$primary, refit = FALSE, why = src$why, estimate = estimate, refit_model = src$refit$model, unit = units$unit, problem = units$problem)
+      primary = src$primary, refit = FALSE, why = src$why, estimate = estimate, refit_model = src$refit$model, unit = units$unit, problem = units$problem,
+      interval = "95% CI") # the fast route only takes metafor models with model-based confidence intervals
   })
   loo_show_all <- reactiveVal(FALSE)
   observeEvent(df_filtered(), loo_show_all(FALSE))
@@ -1747,6 +1752,7 @@ glue_string <- ('
     df <- df_filtered()
     table <- result$table
     unit <- result$unit
+    ci <- result$interval
     units <- if (unit == "source") "sources" else "studies"
     full <- metaUI_show(result$full[c("es", "LCL", "UCL")], df)
     bound <- tryCatch(chosen_bound(), error = function(e) NULL)
@@ -1769,8 +1775,8 @@ glue_string <- ('
       "</b>; with ", all_label, " it is ", fmt(full[["es"]]), ". Leaving out ", htmltools::htmlEscape(top$study), " changes it most, by ", signed(top$change),
       if (is.finite(top$change_se)) paste0(" (", signed(top$change_se, 2L), " standard errors of the estimate with all ", units, ")") else "", ".")
     significance <- sum(table$significance_changes, na.rm = TRUE)
-    reading <- paste(reading, if (!is.finite(full[["LCL"]]) || !any(estimated)) "" else if (!significance) paste0("No single ", unit, " changes whether the 95% CI ", if (excludes) "excludes" else "includes", " 0.") else
-      paste0("Leaving out ", if (significance == 1L) paste("<b>one</b>", unit) else paste0("<b>", significance, "</b> ", units), " (each on its own) makes the 95% CI ", if (excludes) "include" else "exclude", " 0: marked below."),
+    reading <- paste(reading, if (!is.finite(full[["LCL"]]) || !any(estimated)) "" else if (!significance) paste0("No single ", unit, " changes whether the ", ci, " ", if (excludes) "excludes" else "includes", " 0.") else
+      paste0("Leaving out ", if (significance == 1L) paste("<b>one</b>", unit) else paste0("<b>", significance, "</b> ", units), " (each on its own) makes the ", ci, " ", if (excludes) "include" else "exclude", " 0: marked below."),
       # Benchmarks: with variances held fixed, intervals ending near 0 are sometimes marked differently than after refits, in both directions.
       if (is.finite(full[["LCL"]]) && any(estimated) && !result$refit) "Intervals that end close to 0 can be marked differently when the model is refitted." else "")
     if (!is.null(bound) && any(estimated)) {
@@ -1812,7 +1818,7 @@ glue_string <- ('
       p(class = "metaui-reading", HTML(reading)),
       if (nzchar(spread)) p(class = "metaui-reading", HTML(spread)),
       p(class = "metaui-note", HTML(model_note)),
-      div(class = "metaui-scroll", HTML(metaUI_loo_html(table[shown, , drop = FALSE], full, metaUI_eff_size_type_label, bound, show = length(shown), unit = unit))),
+      div(class = "metaui-scroll", HTML(metaUI_loo_html(table[shown, , drop = FALSE], full, metaUI_eff_size_type_label, bound, show = length(shown), unit = unit, interval = ci))),
       div(class = "metaui-export-actions metaui-loo-actions",
         if (count > length(shown) || loo_show_all()) actionButton("loo_all", if (loo_show_all()) "Show the largest changes" else paste("Show all", format(count, big.mark = ","), units)),
         downloadButton("loo_csv", "Download table (.csv)")),
@@ -1823,13 +1829,14 @@ glue_string <- ('
           if (!is.null(bound)) "The shaded band is your smallest effect size of interest." else ""),
         tags$p(HTML(paste0("Without a refit, the variances between and within studies are held at their estimates from all studies, and the average and its interval are recomputed exactly for the remaining studies (weighted least squares with those variances). ",
           "A full refit also re-estimates these variances, and with them the prediction interval. With many studies the two usually agree closely on the average; with few, a refit can move the estimate and its interval further, so quick refits run automatically."))),
-        tags$p(paste0("Marks: the 95% CI now includes (or excludes) 0, when the CI of the full selection excludes (or includes) it; and, with a smallest effect size of interest, the estimate itself moves across that bound. These are descriptive checks of single ", units, ", not tests. Without a refit, a mark for an interval that ends close to 0 can differ from what a refit would show."))))
+        tags$p(paste0("Marks: the ", ci, " now includes (or excludes) 0, when that interval for the full selection excludes (or includes) it; and, with a smallest effect size of interest, the estimate itself moves across that bound. These are descriptive checks of single ", units, ", not tests. Without a refit, a mark for an interval that ends close to 0 can differ from what a refit would show."))))
   })
   output$loo_csv <- downloadHandler(filename = function() download_name("leave-one-study-out.csv"), content = function(file) {
     result <- loo_result()
     out <- result$table
     out$left_out <- result$unit
     out$model <- result$model
+    out$interval <- result$interval
     out$method <- if (result$refit) "full refit" else "variance components held at full-selection values"
     utils::write.csv(out, file, row.names = FALSE)
   })
