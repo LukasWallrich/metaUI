@@ -800,10 +800,12 @@ metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6
     error = function(e) NULL)
   # CR2 needs more studies than coefficients; with fewer its covariance is singular, and some intervals
   # come out NaN or meaninglessly narrow. The model-based covariance is then used, and the tab says so.
-  # Conditioning is judged on the correlation scale, so that coefficients on large scales (years) do not count.
+  # For a numeric moderator the CR2 covariance must also be nonsingular, judged on the correlation scale so
+  # that coefficients on large scales (years) do not count. Categorical moderators are left to the handling
+  # of single-study categories below, whose zero robust variances make the full covariance singular.
   valid <- function(v) all(is.finite(v)) && all(diag(v) > 0) &&
     { e <- eigen(stats::cov2cor(v), symmetric = TRUE, only.values = TRUE)$values; min(e) > max(e) * 1e-10 }
-  if (!is.null(robust) && (length(unique(df$metaUI__study_id[model$not.na])) <= NCOL(model$X) || !valid(robust$vb))) robust <- NULL
+  if (!is.null(robust) && (length(unique(df$metaUI__study_id[model$not.na])) <= NCOL(model$X) || (!categorical && !valid(robust$vb)))) robust <- NULL
   if (is.null(robust)) {
     levels <- if (categorical) cbind(metaUI_moderator_levels(model, levels(df[[moderator]])), df = NA_real_, studies = unname(studies))
     return(list(model = model, working = working, method = "model", robust = FALSE, omnibus = TRUE, reason = NULL, levels = levels))

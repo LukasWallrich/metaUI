@@ -160,4 +160,8 @@ test_that("moderator fits use model-based standard errors when there are too few
     expect_true(all(is.finite(fitted$model$se)))
   }
   expect_true(metaUI:::metaUI_moderator_fit(d, "metaUI__filter_Year")$robust)
+  # Single-study categories keep robust inference for the other categories (3/3/1/1 studies).
+  x$group <- factor(rep(c("G1", "G1", "G1", "G2", "G2", "G2", "G3", "G4"), each = 2))
+  d <- prepared(x, filters = c(Group = "group"))
+  expect_true(metaUI:::metaUI_moderator_fit(d, "metaUI__filter_Group")$robust)
 })
