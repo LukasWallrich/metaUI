@@ -7,6 +7,8 @@ loo_fixture <- function() {
   x$yi <- round(stats::rnorm(nrow(x), .3, .25), 3)
   x$vi <- round(stats::runif(nrow(x), .01, .06), 4)
   x$yi[x$study == "S6"] <- x$yi[x$study == "S6"] + .8
+  # Sources: A reports S1 and S6, B reports S2 and S3; every other study is its own source.
+  x$source <- ifelse(x$study %in% c("S1", "S6"), "A", ifelse(x$study %in% c("S2", "S3"), "B", paste("Source", x$study)))
   x
 }
 
@@ -77,6 +79,40 @@ test_that("the fast route covers correlated sampling errors and study-level mode
   expect_false(is.null(fits$loo[[3]]$reason))
 })
 
+test_that("leaving out a source drops all its studies, in the fast route and in refits", {
+  d <- prepare_data(loo_fixture(), "study", "yi", variance = "vi", es_id = "id", article_label = "source")
+  groups <- unique(data.frame(study = as.character(d$metaUI__study_id), source = d$metaUI__article_label))
+  groups <- stats::setNames(groups$source, groups$study)
+  fit <- metaUI:::metaUI_multilevel_fit(d)
+  loo <- metaUI:::metaUI_loo_blocks(fit, d, c(fit$b, fit$ci.lb, fit$ci.ub))
+  fast <- metaUI:::metaUI_loo_estimates(loo, groups = groups)
+  expect_equal(nrow(fast), 7L)
+  row <- fast[fast$study == "A", ]
+  expect_equal(c(row$studies, row$effects), c(2L, 5L))
+  rest <- d[!d$metaUI__study_id %in% c("S1", "S6"), ]
+  fixed <- metafor::rma.mv(rest$metaUI__effect_size, V = rest$metaUI__variance, random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = rest,
+    test = "t", dfs = "contain", sigma2 = fit$sigma2)
+  expect_equal(c(row$es, row$se, row$LCL, row$UCL), c(as.numeric(fixed$b), fixed$se, fixed$ci.lb, fixed$ci.ub), tolerance = 1e-8)
+  # Studies without a source are sources of their own.
+  expect_equal(metaUI:::metaUI_loo_unit_of(c("S1", "S9"), c(S1 = "A", S9 = NA)), c("A", "S9"))
+
+  slow <- metaUI:::metaUI_loo_refit(d, get_model_tibble()[1, ], studies = "A", groups = groups)
+  refit <- metaUI:::metaUI_multilevel_fit(rest)
+  pred <- stats::predict(refit)
+  expect_equal(unlist(slow[1, c("es", "LCL", "UCL", "se", "PI_LCL", "PI_UCL", "tau")], use.names = FALSE),
+    c(as.numeric(refit$b), refit$ci.lb, refit$ci.ub, refit$se, pred$pi.lb, pred$pi.ub, sqrt(sum(refit$sigma2))), tolerance = 1e-8)
+  expect_equal(c(slow$studies, slow$effects), c(2L, 5L))
+
+  # The change in standard errors of the full estimate, on the fitting scale.
+  table <- metaUI:::metaUI_leave_one_out(slow, c(es = as.numeric(fit$b), LCL = fit$ci.lb, UCL = fit$ci.ub, se = fit$se), d)
+  expect_equal(table$change_se, (as.numeric(refit$b) - as.numeric(fit$b)) / fit$se)
+  expect_equal(table$PI_LCL, as.numeric(pred$pi.lb))
+  html <- metaUI:::metaUI_loo_html(table, c(es = as.numeric(fit$b), LCL = fit$ci.lb, UCL = fit$ci.ub), unit = "source")
+  expect_match(html, "Source left out", fixed = TRUE)
+  expect_match(html, "2 studies, 5 effects", fixed = TRUE)
+  expect_match(html, " SE)</span>", fixed = TRUE)
+})
+
 test_that("the refit route equals refitting the model without each study", {
   d <- prepare_data(loo_fixture(), "study", "yi", variance = "vi", es_id = "id")
   slow <- metaUI:::metaUI_loo_refit(d, get_model_tibble()[1, ], studies = c("S6", "S2"))
@@ -120,7 +156,7 @@ test_that("flags mark a change in whether the interval excludes zero and moves a
 
 test_that("a generated app shows the leave-one-out table for the primary model, or names the fallback", {
   path <- tempfile(); on.exit(unlink(path, recursive = TRUE))
-  d <- prepare_data(loo_fixture(), "study", "yi", variance = "vi", es_id = "id")
+  d <- prepare_data(loo_fixture(), "study", "yi", variance = "vi", es_id = "id", article_label = "source")
   models <- get_model_tibble()
   generate_shiny(d, "Leave one out", save_to_folder = path, launch_app = FALSE, models = models,
     primary_model = "Robust Variance Estimation")
@@ -129,6 +165,7 @@ test_that("a generated app shows the leave-one-out table for the primary model, 
   env <- new.env(parent = globalenv()); sys.source("global.R", env)
   html <- as.character(env$ui)
   expect_match(html, 'id="loo_panel"', fixed = TRUE)
+  expect_match(html, "metaui-loo-unit", fixed = TRUE)
   shiny::testServer(env$server, {
     # Quick refits would replace the fast route; timing-dependent, so they are switched off here.
     assign("loo_quick_seconds", -1, envir = environment(loo_run_refits))
@@ -165,6 +202,25 @@ test_that("a generated app shows the leave-one-out table for the primary model, 
     panel <- output$loo_panel$html
     expect_match(panel, "Without one study the model could not be estimated (listed below); what follows covers the other 8.", fixed = TRUE)
     expect_match(panel, "S2<span", fixed = TRUE)
-    expect_match(panel, "does not show how the variation between studies changes", fixed = TRUE)
+    expect_match(panel, "does not show whether several related studies together drive the result; leave out one source", fixed = TRUE)
+    # Refits re-estimate the spread of true effects; RVE gives tau rather than a prediction interval.
+    expect_match(panel, "The SD of true effects", fixed = TRUE)
+    expect_match(panel, " SE)</span>", fixed = TRUE)
+
+    # Sources: the fast route from the multilevel model, then refits of the primary model.
+    session$setInputs(loo_unit = "source")
+    result <- loo_result()
+    expect_false(result$refit)
+    expect_equal(nrow(result$table), 7L)
+    panel <- output$loo_panel$html
+    expect_match(panel, "Leaving out one source at a time", fixed = TRUE)
+    expect_match(panel, "all 7 sources (9 studies)", fixed = TRUE)
+    expect_match(panel, "Source left out", fixed = TRUE)
+    expect_match(panel, "does not show how the spread of true effects changes", fixed = TRUE)
+    loo_refits(loo_run_refits(loo_source()))
+    expect_true(loo_result()$refit)
+    expect_equal(loo_result()$table$studies[loo_result()$table$study == "A"], 2L)
+    csv <- utils::read.csv(output$loo_csv)
+    expect_equal(csv$left_out[1], "source")
   })
 })

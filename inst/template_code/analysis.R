@@ -1010,6 +1010,8 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
     reflected <- FALSE
     prediction <- c(NA_real_, NA_real_)
     interval90 <- c(NA_real_, NA_real_)
+    se <- NA_real_ # of the estimate, on the fitting scale, where the fit reports one
+    tau <- NA_real_ # SD of true effects (all random-effect variances), intercept-only models
     role <- metaUI_model_role(spec, NA_character_)
     pet_p <- NA_real_
     trimfill_away <- NA
@@ -1061,7 +1063,10 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
         if (inherits(env$mod, "rma") && is.null(env$mod$formula.mods) && NCOL(env$mod$X) == 1L) {
           pred <- tryCatch(suppressWarnings(stats::predict(env$mod)), error = function(e) NULL)
           if (!is.null(pred$pi.lb) && all(is.finite(c(pred$pi.lb, pred$pi.ub)))) prediction <- if (reflected) -c(pred$pi.ub, pred$pi.lb) else c(pred$pi.lb, pred$pi.ub)
+          tau <- sqrt(sum(if (inherits(env$mod, "rma.mv")) env$mod$sigma2 else env$mod$tau2))
         }
+        se <- tryCatch(as.numeric(if (inherits(env$mod, "rma")) env$mod$se else if (inherits(env$mod, "robu")) env$mod$reg_table$SE else NA)[1], error = function(e) NA_real_)
+        if (inherits(env$mod, "robu") && NROW(env$mod$reg_table) == 1L) tau <- tryCatch(sqrt(as.numeric(env$mod$mod_info$tau.sq)[1]), error = function(e) NA_real_)
         if (bayesian || (!spec$aggregated && !reflected && spec$code %in% c(metaUI_code_multilevel, metaUI_code_rve))) fits[[i]] <<- env$mod
         if (!spec$aggregated && !reflected && inherits(env$mod, "rma.mv") && identical(unname(env$mod$s.names), c("metaUI__study_id", "metaUI__study_id/metaUI__effect_id")))
           components[[i]] <<- list(sigma2 = env$mod$sigma2, QE = env$mod$QE, QEp = env$mod$QEp)
@@ -1088,6 +1093,9 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
     row$PI_LCL <- prediction[1]; row$PI_UCL <- prediction[2]
     row$LCL90 <- interval90[1]; row$UCL90 <- interval90[2]
     row$fit_es <- row$es; row$fit_LCL <- row$LCL; row$fit_UCL <- row$UCL
+    row$fit_se <- if (status == "ok") se else NA_real_
+    row$fit_PI_LCL <- row$PI_LCL; row$fit_PI_UCL <- row$PI_UCL
+    row$tau <- if (status == "ok") tau else NA_real_
     shown <- c("es", "LCL", "UCL", "PI_LCL", "PI_UCL", "LCL90", "UCL90")
     if (df$metaUI__es_type[1] == "ZCOR") row[shown] <- lapply(row[shown], tanh)
     row
@@ -1516,56 +1524,84 @@ metaUI_loo_blocks <- function(fit, x, reported) {
   loo
 }
 
-# Estimates without each study (leave = TRUE), or for all studies, on the fitting scale.
-metaUI_loo_estimates <- function(loo, leave = TRUE) {
+# The units left out: studies, or sources when `groups` maps study ids to source labels (a study
+# without a label is a source of its own).
+metaUI_loo_unit_of <- function(studies, groups = NULL) {
+  studies <- as.character(studies)
+  if (is.null(groups)) return(studies)
+  unit <- unname(as.character(groups[studies]))
+  missing <- is.na(unit) | !nzchar(unit)
+  unit[missing] <- studies[missing]
+  unit
+}
+
+# Estimates without each study, or each source with `groups` (leave = TRUE), or for all studies,
+# on the fitting scale. Leaving out a source drops all its studies at once.
+metaUI_loo_estimates <- function(loo, leave = TRUE, groups = NULL) {
   b <- loo$blocks
+  unit <- metaUI_loo_unit_of(b$study, groups)
+  unit <- factor(unit, levels = unique(unit))
+  u <- rowsum(as.matrix(b[c("n", "a", "c", "d")]), unit, reorder = FALSE)
+  m <- as.vector(table(unit))
   drop <- function(column) sum(column) - if (leave) column else 0
-  A <- drop(b$a); C <- drop(b$c); D <- drop(b$d)
-  effects <- drop(b$n); studies <- nrow(b) - leave
+  A <- drop(u[, "a"]); C <- drop(u[, "c"]); D <- drop(u[, "d"])
+  effects <- drop(u[, "n"]); studies <- nrow(b) - if (leave) m else 0
   es <- C / A
   variance <- 1 / A
-  ddf <- switch(loo$df, none = Inf, effects = effects - 1, studies = rep(studies - 1, length(es)))
+  ddf <- switch(loo$df, none = rep(Inf, length(es)), effects = effects - 1, studies = studies - 1)
   if (loo$test %in% c("knha", "adhoc")) {
     s2 <- pmax(D - C^2 / A, 0) / ddf
     variance <- variance * if (loo$test == "adhoc") pmax(1, s2) else s2
   }
   crit <- if (loo$test == "z") stats::qnorm(1 - loo$level / 2) else suppressWarnings(stats::qt(1 - loo$level / 2, ddf))
   crit[!is.finite(crit) | ddf < 1] <- NA_real_
-  data.frame(study = if (leave) b$study else "All", effects = if (leave) b$n else sum(b$n), es = es, se = sqrt(variance),
-    LCL = es - crit * sqrt(variance), UCL = es + crit * sqrt(variance), row.names = NULL)
+  data.frame(study = if (leave) rownames(u) else "All", studies = if (leave) m else nrow(b), effects = if (leave) u[, "n"] else sum(b$n),
+    es = es, se = sqrt(variance), LCL = es - crit * sqrt(variance), UCL = es + crit * sqrt(variance), row.names = NULL)
 }
 
 # The full-refit route: the model's own code run again without each study, so that variance
-# components are re-estimated. Works for any model. `studies` limits the refits (all by default);
-# they stop once `budget` seconds have passed, so the result may cover only the first studies.
-# `progress` is called after each refit with the number done and the number asked for.
-metaUI_loo_refit <- function(df, spec, correlation = .6, aggregation = "aggregate", studies = NULL, budget = Inf, progress = NULL) {
+# components are re-estimated, and with them the prediction interval and tau (fitting scale). Works
+# for any model. Units are studies, or sources with `groups` (see metaUI_loo_unit_of). `studies`
+# limits the refits to these units (all by default); they stop once `budget` seconds have passed, so
+# the result may cover only the first units. `progress` is called after each refit with the number
+# done and the number asked for.
+metaUI_loo_refit <- function(df, spec, correlation = .6, aggregation = "aggregate", studies = NULL, budget = Inf, progress = NULL, groups = NULL) {
   ids <- as.character(df$metaUI__study_id)
-  if (is.null(studies)) studies <- unique(ids)
+  units <- metaUI_loo_unit_of(ids, groups)
+  if (is.null(studies)) studies <- unique(units)
   started <- proc.time()[["elapsed"]]
   rows <- list()
   for (i in seq_along(studies)) {
-    row <- metaUI_fit_models(df[ids != studies[i], , drop = FALSE], spec, correlation, aggregation)$table
-    ok <- row$status == "ok"
-    rows[[i]] <- data.frame(study = studies[i], effects = sum(ids == studies[i]), es = if (ok) row$fit_es else NA_real_,
-      LCL = if (ok) row$fit_LCL else NA_real_, UCL = if (ok) row$fit_UCL else NA_real_, status = row$status, reason = row$reason, row.names = NULL)
+    out <- units == studies[i]
+    row <- metaUI_fit_models(df[!out, , drop = FALSE], spec, correlation, aggregation)$table
+    value <- function(column) if (row$status == "ok") row[[column]] else NA_real_
+    rows[[i]] <- data.frame(study = studies[i], studies = length(unique(ids[out])), effects = sum(out), es = value("fit_es"),
+      LCL = value("fit_LCL"), UCL = value("fit_UCL"), se = value("fit_se"), PI_LCL = value("fit_PI_LCL"), PI_UCL = value("fit_PI_UCL"), tau = value("tau"),
+      status = row$status, reason = row$reason, row.names = NULL)
     if (!is.null(progress)) progress(i, length(studies))
     if (proc.time()[["elapsed"]] - started > budget) break
   }
-  out <- if (length(rows)) do.call(rbind, rows) else data.frame(study = character(), effects = integer(), es = numeric(), LCL = numeric(), UCL = numeric(), status = character(), reason = character())
+  out <- if (length(rows)) do.call(rbind, rows) else data.frame(study = character(), studies = integer(), effects = integer(), es = numeric(), LCL = numeric(), UCL = numeric(),
+    se = numeric(), PI_LCL = numeric(), PI_UCL = numeric(), tau = numeric(), status = character(), reason = character())
   attr(out, "seconds") <- proc.time()[["elapsed"]] - started
   out
 }
 
-# The reader's table: each study's estimate when it is left out, on the display scale, sorted by how
-# far it moves the estimate. Flags mark whether the interval stops (or starts) excluding zero, and
-# whether the estimate moves across the reader's bound (display scale), compared with all studies.
+# The reader's table: the estimate with each study (or source) left out, on the display scale, sorted
+# by how far it moves. `change_se` is that move in standard errors of the full estimate (fitting
+# scale). Flags mark whether the interval stops (or starts) excluding zero, and whether the estimate
+# moves across the reader's bound (display scale), compared with all studies. `full` holds es, LCL
+# and UCL, and where known se, PI_LCL, PI_UCL and tau, on the fitting scale. Refits also give each
+# prediction interval (display scale) and tau (fitting scale).
 metaUI_leave_one_out <- function(estimates, full, df, bound = NULL) {
   show <- function(x) metaUI_show(x, df)
   excludes_zero <- function(lcl, ucl) is.finite(lcl) & is.finite(ucl) & (lcl > 0 | ucl < 0)
-  out <- data.frame(study = estimates$study, effects = estimates$effects,
+  full_se <- if ("se" %in% names(full)) unname(full[["se"]]) else NA_real_
+  out <- data.frame(study = estimates$study, studies = if (is.null(estimates$studies)) 1L else estimates$studies, effects = estimates$effects,
     es = show(estimates$es), LCL = show(estimates$LCL), UCL = show(estimates$UCL), row.names = NULL)
   out$change <- out$es - show(full[["es"]])
+  out$change_se <- if (isTRUE(is.finite(full_se) && full_se > 0)) (estimates$es - full[["es"]]) / full_se else NA_real_
+  if (!is.null(estimates$PI_LCL)) { out$PI_LCL <- show(estimates$PI_LCL); out$PI_UCL <- show(estimates$PI_UCL); out$tau <- estimates$tau }
   # A study whose omission could not be estimated has no flags (NA), rather than "no change".
   estimated <- is.finite(out$es)
   out$significance_changes <- ifelse(estimated & is.finite(estimates$LCL) & is.finite(full[["LCL"]]),
@@ -1580,12 +1616,15 @@ metaUI_leave_one_out <- function(estimates, full, df, bound = NULL) {
 
 # The reader's view of metaUI_leave_one_out(): the estimate with all studies, then the first `show`
 # rows (largest change first), drawn on the axis of the model table. `full` is on the display scale.
-metaUI_loo_html <- function(table, full, axis_title = "Effect size", bound = NULL, show = 10L) {
+metaUI_loo_html <- function(table, full, axis_title = "Effect size", bound = NULL, show = 10L, unit = "study") {
   rows <- utils::head(table, show)
   digits <- metaUI_digits(c(full[["LCL"]], table$LCL), c(full[["UCL"]], table$UCL))
   fmt <- function(x) if (!is.finite(x)) "" else metaUI_minus(formatC(x, format = "f", digits = digits))
   # Changes are small beside the estimates, so they get one more decimal.
-  signed <- function(x) if (!is.finite(x)) "" else paste0(if (round(x, digits + 1L) > 0) "+" else "", metaUI_minus(formatC(x, format = "f", digits = digits + 1L)))
+  signed <- function(x, d = digits + 1L) if (!is.finite(x)) "" else paste0(if (round(x, d) > 0) "+" else "", metaUI_minus(formatC(x, format = "f", digits = d)))
+  # The change in standard errors of the full estimate, beneath the change itself.
+  change <- function(x, se) paste0(signed(x), if (isTRUE(is.finite(se))) paste0('<span class="metaui-row-note metaui-loo-se">(', signed(se, 2L), " SE)</span>") else "")
+  label <- if (unit == "source") "Source left out" else "Study left out"
   scale <- metaUI_track_scale(c(full[["es"]], full[["LCL"]], full[["UCL"]], rows$es, rows$LCL, rows$UCL, if (!is.null(bound)) c(-bound, bound)))
   interval <- function(lcl, ucl) if (is.finite(lcl) && is.finite(ucl)) paste0("[", fmt(lcl), ", ", fmt(ucl), "]") else ""
   excludes <- is.finite(full[["LCL"]]) && (full[["LCL"]] > 0 || full[["UCL"]] < 0)
@@ -1594,14 +1633,15 @@ metaUI_loo_html <- function(table, full, axis_title = "Effect size", bound = NUL
     '</td><td class="metaui-unit"></td><td class="metaui-track-cell">', metaUI_track_row(scale, es, lcl, ucl, bound, ref = full[["es"]]), "</td></tr>")
   body <- vapply(seq_len(nrow(rows)), function(i) {
     row <- rows[i, ]
-    flags <- c(if (!is.finite(row$es)) "not estimated without this study",
+    flags <- c(if (!is.finite(row$es)) paste("not estimated without this", unit),
       if (isTRUE(row$significance_changes)) if (excludes) "95% CI now includes 0" else "95% CI now excludes 0",
       if (isTRUE(row$crosses_bound)) paste0("estimate now ", if (abs(row$es) >= bound) "beyond" else "within", " \u00b1", format(bound)))
-    line(paste0(htmltools::htmlEscape(row$study), '<span class="metaui-row-note metaui-loo-count">', format(row$effects, big.mark = ","), if (row$effects == 1L) " effect" else " effects", "</span>",
+    line(paste0(htmltools::htmlEscape(row$study), '<span class="metaui-row-note metaui-loo-count">', if (isTRUE(row$studies > 1L)) paste0(row$studies, " studies, ") else "",
+      format(row$effects, big.mark = ","), if (row$effects == 1L) " effect" else " effects", "</span>",
       if (length(flags)) paste0('<span class="metaui-row-note">', paste(flags, collapse = "; "), "</span>")),
-      row$es, row$LCL, row$UCL, signed(row$change))
+      row$es, row$LCL, row$UCL, change(row$change, row$change_se))
   }, character(1))
-  paste0('<table class="table metaui-estimates metaui-models metaui-custom metaui-loo"><thead><tr data-head="Study left out, estimate [95% CI], change"><th>Study left out</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k">Change</th><th></th><th class="metaui-track-cell">',
+  paste0('<table class="table metaui-estimates metaui-models metaui-custom metaui-loo"><thead><tr data-head="', label, ', estimate [95% CI], change"><th>', label, '</th><th class="num">Estimate</th><th class="num">95% CI</th><th class="num metaui-k">Change</th><th></th><th class="metaui-track-cell">',
     metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
     line("None (all studies)", full[["es"]], full[["LCL"]], full[["UCL"]], "", ' class="metaui-primary-row"'),
     paste(body, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="5"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>")
