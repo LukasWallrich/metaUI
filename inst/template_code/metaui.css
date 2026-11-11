@@ -489,6 +489,8 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 
 /* Notes and disclosures */
 .metaui-note { font-size: .875rem; color: var(--metaui-slate); line-height: 1.45; max-width: 80ch; }
+/* At least 24px tall (WCAG 2.2 target size). */
+.metaui-jump { display: inline-block; min-height: 24px; line-height: 24px; }
 .metaui-no-ci { color: var(--metaui-slate); font-size: .875rem; white-space: nowrap; }
 .metaui-reason { font-size: .9375rem; color: var(--metaui-slate); }
 .metaui-help { margin: 10px 0; max-width: 80ch; font-size: .9375rem; }

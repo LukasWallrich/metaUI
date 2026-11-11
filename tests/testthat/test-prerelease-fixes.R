@@ -326,3 +326,83 @@ test_that("second review: numeric study IDs with sources show the Sample table; 
     }
   })
 })
+
+test_that("third review: moderation uses Hartung-Knapp for independent data and robust tests only where defined", {
+  skip_if_not_installed("clubSandwich")
+  # One effect per study: the random-effects meta-regression with the Hartung-Knapp adjustment, as on the Summary.
+  set.seed(4)
+  x <- data.frame(study = paste0("S", 1:10), yi = rnorm(10, .3, .2), vi = runif(10, .01, .05), g = factor(rep(c("a", "b", "c"), c(2, 4, 4))))
+  d <- prepare_data(x, "study", "yi", variance = "vi", filters = c(g = "g"))
+  fitted <- metaUI:::metaUI_moderator_fit(d, "metaUI__filter_g")
+  expect_identical(fitted$method, "knha")
+  ref <- metafor::rma(yi, vi, mods = ~ g, data = x, test = "knha")
+  expect_equal(fitted$model$QMp, ref$QMp, tolerance = 1e-8)
+  expect_equal(fitted$levels$ci.lb[1], as.numeric(predict(ref, newmods = c(0, 0))$ci.lb), tolerance = 1e-8)
+  # Dependent data: single-study categories are left out of the robust overall test.
+  x <- fixture(); x$g <- factor(c(rep("a", 6), rep("b", 6), rep("c", 2), rep("d", 2)))
+  d <- prepared(x, filters = c(g = "g"))
+  fitted <- metaUI:::metaUI_moderator_fit(d, "metaUI__filter_g")
+  expect_identical(fitted$method, "robust")
+  expect_equal(fitted$levels$studies, c(3L, 3L, 1L, 1L))
+  env <- new.env(); env$df <- d
+  call <- metaUI:::metaUI_default_moderator_call; call$mods <- ~ `metaUI__filter_g`
+  plain <- eval(call, env)
+  ref <- clubSandwich::Wald_test(plain, matrix(c(0, 1, 0, 0), 1), vcov = "CR2", cluster = d$metaUI__study_id, test = "HTZ")
+  expect_equal(fitted$model$QMp, ref$p_val, tolerance = 1e-8)
+  # Level intervals and their own small-sample df match clubSandwich's linear contrasts.
+  lc <- clubSandwich::linear_contrast(plain, vcov = "CR2", cluster = d$metaUI__study_id, contrasts = cbind(1, rbind(0, diag(3))))
+  expect_equal(fitted$levels$df, lc$df, tolerance = 1e-8)
+  # With fewer than two categories of two or more studies there is no robust overall test.
+  x$g <- factor(c(rep("a", 12), rep("b", 2), rep("c", 2)))
+  fitted <- metaUI:::metaUI_moderator_fit(prepared(x, filters = c(g = "g")), "metaUI__filter_g")
+  expect_false(fitted$omnibus)
+  expect_match(fitted$reason, "fewer than two categories")
+})
+
+test_that("third review: I2, uploads with text IDs, plain messages for one effect", {
+  # I^2 of the random-effects model equals metafor's.
+  x <- data.frame(study = paste0("S", 1:8), yi = c(.1, .5, .3, .9, .2, .4, .7, 0), vi = seq(.01, .08, .01))
+  d <- prepare_data(x, "study", "yi", variance = "vi")
+  fit <- metafor::rma(yi, vi, data = x)
+  expect_equal(metaUI:::metaUI_heterogeneity(fit, d)$I2, fit$I2, tolerance = 1e-8)
+  # Multilevel: the levels add up to the total.
+  het <- metaUI:::metaUI_heterogeneity(metaUI:::metaUI_multilevel_fit(prepared()), prepared())
+  expect_equal(het$I2_study + het$I2_effect, het$I2, tolerance = 1e-10)
+  # Empty effect IDs are numbered whether the authors' IDs are numbers or text.
+  x$id <- paste0("e", 1:8)
+  d <- prepare_data(x, "study", "yi", variance = "vi", es_id = "id")
+  upload <- as.data.frame(d); upload$metaUI__effect_id <- NA
+  out <- metaUI:::metaUI_validate_upload(upload, d)
+  expect_false(anyNA(out$metaUI__effect_id))
+  expect_false(anyDuplicated(out$metaUI__effect_id) > 0)
+  upload$metaUI__effect_id <- NULL
+  expect_no_error(metaUI:::metaUI_validate_upload(upload, d))
+  # Package messages for a one-effect selection read plainly.
+  expect_identical(metaUI:::metaUI_reader_message("Processing terminated since k <= 1."), "Needs at least two effects.")
+  one <- data.frame(Model = "RE", status = "ok", es = .3, LCL = .1, UCL = .5, k = 1, aggregated = TRUE, interval_type = "Confidence interval", warnings = "", reason = "")
+  expect_match(metaUI:::metaUI_estimates_html(one, studies = 1), 'metaui-unit">study<', fixed = TRUE)
+})
+
+test_that("third review: uploads keep spaces in IDs and categories; one-study Bayesian sensitivity; numeric moderators need three studies", {
+  skip_without_app_packages()
+  root <- tempfile(); on.exit(unlink(root, recursive = TRUE))
+  x <- data.frame(s = c("A", " A", "B", "C", "D", "E"), y = c(.1, .2, .3, .4, .5, .2), v = .04, g = c("G", "G ", "H", "H", "H", "G"), yr = c(2001, 2002, 2003, 2004, 2005, 2006))
+  d <- prepare_data(x, "s", "y", variance = "v", filters = c(g = "g", yr = "yr"), categorical_filters = "g")
+  suppressMessages(generate_shiny(d, "Spaces", save_to_folder = root, launch_app = FALSE, bayesian = list(enabled = TRUE)))
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_g = c("G", "G ", "H"), metaUI__filter_yr = c(2001, 2006), metaUI__filter_yr_include_NA = TRUE, go = 1)
+    file <- tempfile(fileext = ".xlsx"); on.exit(unlink(file), add = TRUE)
+    writexl::write_xlsx(data_list(), file)
+    session$setInputs(uploadData = list(datapath = file, name = "same.xlsx"), executeUpload = 1)
+    expect_setequal(unique(state_values$uploaded_data$metaUI__study_id), x$s)
+    expect_setequal(levels(state_values$uploaded_data$metaUI__filter_g), c("G", "G ", "H"))
+    # One study selected: the sensitivity table says why, instead of failing.
+    session$setInputs(metaUI__filter_yr = c(2001, 2001), go = 2)
+    expect_match(output$bayesian_sensitivity, "Not estimated", fixed = TRUE)
+    # Two studies with values: no line is fitted through them.
+    session$setInputs(metaUI__filter_yr = c(2001, 2002), moderator = "metaUI__filter_yr", go = 3)
+    expect_match(output$moderation_text, "a linear relationship needs at least three", fixed = TRUE)
+  })
+})

@@ -155,6 +155,26 @@ This release consolidates all changes since 0.1.1, including the unreleased
 - The About note on effects left out at build gives one reason per effect, the most basic one, so its counts add up.
 - Fixes: numeric study IDs with a source column no longer break the Sample table; the ratio equivalence box wraps on phones; selection links for earlier data report a filter that no longer exists instead of dropping it silently; uploads keep an ordered filter ordered; the refusal of uploads with several effects per study no longer suggests giving dependent effects their own study IDs; Moderation's *k* uses a thousands separator. The README describes running several R processes for apps with many readers.
 
+## Final pre-release review
+
+- Moderation, small categories and selections:
+  - With one effect per study, the moderator is added to the random-effects model with the Hartung-Knapp adjustment, as on the Summary, instead of using cluster-robust inference, which adds nothing there and is unstable in small categories.
+  - With dependent effects, a category shows no interval below 4 small-sample degrees of freedom (before, only with a single study), and the overall test compares the categories with at least two studies: a single-study category has a cluster-robust variance of zero by construction and could make the test spuriously significant. Where cluster-robust standard errors cannot be computed, levels and the test fall back to the model-based ones, as the note says.
+  - A numeric moderator needs at least three studies with values; otherwise the tab says so instead of showing an error or an implausible *F*.
+- Heterogeneity reports *I*² (for multilevel models also split between and within studies), with a sentence on why τ and the prediction interval show better how much effects differ.
+- Uploads:
+  - Spaces at the start or end of study IDs and categories are kept, as they were in the built data, so an unchanged workbook no longer changes the clustering.
+  - Empty effect IDs are numbered also when the authors' IDs are text.
+- Fixes:
+  - The Bayesian sensitivity table no longer fails when one of its fits does (such as with one study).
+  - A one-effect selection gives plain reasons, and k reads "1 study".
+  - Numeric moderators are no longer described in terms of categories.
+  - The R reproduction script compares failed rows by status only, and large ratios with a relative tolerance.
+  - Apps no longer print dataset and p-curve messages to the console (shown as "preload error" on static sites), and load clubSandwich quietly.
+  - Saved moderator results are cleared on upload and not kept when caching is off.
+  - Accessibility: the jump link to the Sample table is 24 px tall; the technical record in About can take keyboard focus; filter names no longer include their help button.
+- Documentation: `?prepare_data` no longer says double-zero tables are kept; `citation`, `osf_link` and `contact` are documented as HTML; README and the Bayesian note describe one-effect-per-study apps.
+
 ## Breaking changes
 
 * Packages used only by generated apps (DT, ggplot2, meta, plotly, psych,

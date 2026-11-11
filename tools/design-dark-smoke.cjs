@@ -24,6 +24,13 @@ async function readable(locator,label,pseudo=null) {
   for(const style of styles){assert(ratio(style.foreground,style.background)>=4.5,label+' contrast: '+JSON.stringify(style));assert.equal(style.opacity,1,label+" must be fully opaque");if(pseudo)assert.match(style.content,/\u2191|\u2193|\u2195/u,label+" must render a sort arrow");}
   return styles;
 }
+// The Update button dims while the server works on the reader's own request (not on background tabs).
+// Its resting state is what must be readable, so wait until the app has stayed at rest for a moment.
+async function resting() {
+  const dimmed=()=>page.evaluate(()=>{const c=document.documentElement.classList;return c.contains('shiny-busy')&&!c.contains('metaui-background');});
+  for(let i=0;i<60;i++){if(!await dimmed()){await page.waitForTimeout(400);if(!await dimmed())return;}else await page.waitForTimeout(200);}
+  throw Error('The app did not come to rest');
+}
 (async()=>{
   browser=await chromium.launch({headless:true,...(process.env.METAUI_CHROMIUM?{executablePath:process.env.METAUI_CHROMIUM}:{})});
   page=await browser.newPage({viewport:{width:1440,height:1000}});
@@ -38,6 +45,7 @@ async function readable(locator,label,pseudo=null) {
   await page.screenshot({path:path.join(evidence,'dark-dialog.png')});
   await page.getByRole('button',{name:'Dismiss',exact:true}).click();
   await page.locator('#effectestimate table').waitFor();
+  await resting();
   await readable(page.locator('#go'),'Primary action');
   await page.getByRole('tab',{name:'Sample',exact:true}).click();
   await page.locator('#sample_table .dataTables_paginate .paginate_button').first().waitFor();
@@ -75,6 +83,7 @@ async function readable(locator,label,pseudo=null) {
   await readable(page.locator('#metaui_basis'),'Stale results banner');
   // The button dims while the server works; its resting state must be readable.
   await page.waitForFunction(()=>document.querySelector('#go').classList.contains('metaui-needs-run')&&!document.documentElement.classList.contains('shiny-busy'));
+  await resting();
   await readable(page.locator('#go'),'Update action');
   await page.screenshot({path:path.join(evidence,'dark-stale.png')});
   assert.deepEqual(pageErrors,[],'Dark app raised page-level JavaScript errors');
