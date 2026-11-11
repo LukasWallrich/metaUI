@@ -81,9 +81,11 @@ metaUI_exclusions_html <- function(report) {
 #'
 #' @param dataset_name Name of the dataset
 #' @param date Date of the last update. Defaults to the current date.
-#' @param citation Citation requested by the author. Defaults to an empty string.
+#' @param citation Citation requested by the author. Defaults to an empty string. Inserted into About as HTML, so it
+#'   can contain markup such as `<i>`; write `&amp;` and `&lt;` for a literal `&` or `<`.
 #' @param osf_link Link to the OSF (or similar) project where data and materials are available. Defaults to an empty string.
-#' @param contact Contact information, typically email. Defaults to an empty string.
+#'   Inserted into About as a link (HTML).
+#' @param contact Contact information, typically email. Defaults to an empty string. Inserted into About as HTML.
 #' @param list_packages Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 #' used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 #' a character vector with all packages to display.
@@ -317,7 +319,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   report$study_info <- study_info_report(study_info, dataset)
   report$zcurve <- "First effect per study; normal Wald |effect/SE|, not supplied source p-values. Independence across study IDs is an author assumption."
   about <- paste0(about, metaUI_exclusions_html(report),
-                  "<details class='metaui-help'><summary>Technical record: data mapping and analysis settings</summary><pre>",
+                  "<details class='metaui-help'><summary>Technical record: data mapping and analysis settings</summary><pre tabindex='0' role='region' aria-label='Technical record'>",
                   htmltools::htmlEscape(jsonlite::toJSON(report, auto_unbox = TRUE, pretty = TRUE, na = "null"), attribute = TRUE), "</pre></details>")
   defaults_models <- dplyr::bind_rows(get_model_tibble(), get_model_tibble(one_effect_per_study = TRUE)[1, ])
   opts$known_interval_models <- models_to_run$name[vapply(seq_len(nrow(models_to_run)), function(i) {
@@ -430,7 +432,7 @@ generate_global.R <- function(metaUI_eff_size_type_label, uses_meta = FALSE) {
 
   # Ensure required packages are installed
   {purrr::map_chr(req_packages, ~ glue::glue('
-      if (!requireNamespace(\"{.x}\", quietly = TRUE)) {{
+      if (!suppressMessages(requireNamespace(\"{.x}\", quietly = TRUE))) {{
         stop(\"Missing dependency: {.x}. Install dependencies before launching; see dependencies.csv.\")
         }}'))  %>% glue::glue_collapse(sep = '\n')}
   {meta_check}
