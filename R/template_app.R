@@ -1,6 +1,6 @@
 # Wrap in function so that it can be saved more easily
 
-labels_and_options <- function(dataset_name, correlation = .6, primary_model = NULL, bayesian = FALSE, correlations = FALSE, custom_models = FALSE, model_descriptions = character(), effects = NA, studies = NA, strip = "", citation = "", intro = "", random_default = FALSE) {
+labels_and_options <- function(dataset_name, correlation = .6, primary_model = NULL, bayesian = FALSE, scale = "SMD", custom_models = FALSE, model_descriptions = character(), effects = NA, studies = NA, strip = "", citation = "", intro = "", random_default = FALSE) {
   glue::glue('
 
       # TK - defaults? Advanced options?
@@ -38,7 +38,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       sample_moderation_main <- HTML("<h3>Simple tests of moderation</h3>")
       sample_moderation_notes <- HTML("<p class=\'metaui-note\'>One moderator at a time; correlations between moderators are ignored. Each moderator is added to the primary model where that is a multilevel metafor model, and otherwise to the random-effects {if (random_default) "" else "multilevel "}model; tests and intervals are cluster-robust by study (CR2, with small-sample degrees of freedom), so they allow for dependent effects. The overall test uses the matching small-sample correction (HTZ); with many categories that hold few studies it has little power. These are exploratory tests without adjustment for multiple testing: trying many moderators or selections makes some false positives likely. <i>k</i> = number of effects.</p>")
 
-      pcurve_selection <- HTML("<p class=\'metaui-note\'>P-curve uses the first effect per study, an exploratory selection rule applied before direction screening. It excludes and counts effects that are zero or opposite to the expected direction, and uses normal Wald statistics, not the source p-values.{if (correlations) " For correlations these are computed on Fisher&rsquo;s z." else ""}</p>")
+      pcurve_selection <- HTML("<p class=\'metaui-note\'>P-curve uses the first effect per study, an exploratory selection rule applied before direction screening. It excludes and counts effects that are zero or opposite to the expected direction, and uses normal Wald statistics, not the source p-values.{if (scale == "ZCOR") " For correlations these are computed on Fisher&rsquo;s z." else if (scale %in% c("OR", "RR")) " For ratios these are computed on the log scale, and effects at no difference (a ratio of 1) count as zero." else ""}</p>")
       zcurve_selection <- HTML("<p class=\'metaui-note\'>Z-curve uses the first effect per study, an exploratory selection rule, and normal Wald statistics, not the source p-values.</p>")
 
       qrppb_main <- HTML("<h3>Publication bias and selective reporting</h3><p class=\'metaui-note\'>Exploratory small-study and selection diagnostics. A non-significant result does not show that there is no bias: these tests often have little power.</p>")
@@ -53,7 +53,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       diagnostics_main <- HTML("<h3>Distribution of effect sizes</h3><p class=\'metaui-note\'>Dots mark effects more than 1.5 interquartile ranges (IQR) beyond the middle 50%. Hover over or tap a dot for its study and <i>z</i>-score; the list below the plot gives them all.</p>")
       diagnostics_het <- HTML("<h3>Heterogeneity (REML {if (random_default) "random-effects" else "multilevel"} model)</h3>")
 
-      forest_note <- HTML("<p class=\'metaui-note\'>Effects: observed, with normal 95% sampling intervals and no shrinkage. Combined rows: the study-level effects used by the study-level models (see Methods); with correlated effects of unequal precision they can lie away from the simple average. Summaries: the primary model, where the authors chose one, with multilevel and robust variance estimation (RVE).<span class=\'metaui-forest-numbering\'> Effects keep their numbers from the full dataset, so a selection can leave gaps.</span>{if (correlations) " Correlations are shown as r; the plot data also include fitting-scale values." else ""}</p>")
+      forest_note <- HTML("<p class=\'metaui-note\'>Effects: observed, with normal 95% sampling intervals and no shrinkage. Combined rows: the study-level effects used by the study-level models (see Methods); with correlated effects of unequal precision they can lie away from the simple average. Summaries: the primary model, where the authors chose one, with multilevel and robust variance estimation (RVE).<span class=\'metaui-forest-numbering\'> Effects keep their numbers from the full dataset, so a selection can leave gaps.</span>{if (scale == "ZCOR") " Correlations are shown as r; the plot data also include fitting-scale values." else if (scale %in% c("OR", "RR")) " Ratios are drawn on a log scale, around 1, so that each interval is symmetric around its estimate; the plot data also include the log values the models use." else ""}</p>")
       zscore_help <- HTML("<p class=\'metaui-help-text\'>z = (effect \\u2212 mean of all effects in the full dataset) / their SD, on the fitting scale. This is a simple standardization, not a model-based outlier test; Outlier diagnostics gives the values used.</p>")
       # Result tabs show not_analysed until the first analysis has finished. A tab with
       # precomputed content (opening = TRUE) shows it from the first paint instead.
@@ -236,6 +236,10 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
   # Check whether data contains any filters
   filter_cols <- colnames(data) %>% stringr::str_subset("metaUI__filter_")
   if (length(filter_cols) == 0) any_filters <- FALSE else any_filters <- TRUE
+  # The equivalence bound: symmetric around 0, or for ratios around 1 on the log scale (as R code).
+  sesoi_text <- if (metaUI_scale(data$metaUI__es_type[1])$ratio) c('"Smallest ratio of interest, x (bounds 1/x and x):"',
+    '"Bounds of 1/x and x, symmetric around 1 on the log scale: 1.25 and 0.8 give the same pair (0.8 to 1.25)."') else
+    c('"Smallest effect size of interest: \\u00b1"', '"A symmetric bound, on the scale of the estimates."')
 
   out <- glue::glue('
 
@@ -320,9 +324,9 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
               tags$p("The downloaded summary also holds fitting-scale values and fit times."),
               model_help),
             tags$details(class = "metaui-help metaui-equivalence", tags$summary("Assess practical equivalence"),
-            htmltools::tagAppendAttributes(numericInput("sesoi", "Smallest effect size of interest: \\u00b1",
+            htmltools::tagAppendAttributes(numericInput("sesoi", {sesoi_text[1]},
               value = NULL, min = 0), class = "metaui-sesoi"),
-            p(class = "metaui-note", "A symmetric bound, on the scale of the estimates. There is no universal default; justify it substantively. The assessment uses each model\\u2019s 90% interval, not the 95% interval shown elsewhere: a 90% interval inside the bounds is the usual equivalence test, two one-sided tests at .05 (TOST). The last column gives the narrowest bound that each 90% interval lies within."),
+            p(class = "metaui-note", {sesoi_text[2]}, " There is no universal default; justify it substantively. The assessment uses each model\\u2019s 90% interval, not the 95% interval shown elsewhere: a 90% interval inside the bounds is the usual equivalence test, two one-sided tests at .05 (TOST). The last column gives the narrowest bound that each 90% interval lies within."),
             uiOutput("equivalence_verdict"),
             div(class = "metaui-scroll", tableOutput("equivalence")),
             uiOutput("equivalence_note")))
@@ -407,6 +411,8 @@ glue_string <- ('
   # Readers whose browser asks for dark colours (metaui.js sends metaui_dark) see plots drawn dark.
   plot_colours_dark <- <<if (is.null(opts$design)) \'metaUI_plot_colours(accent = "#6cc4a1", ink = "#e3e7ea", grid = "#2c333a", background = "#191c20", slate = "#a1acb6", shade = "#23292f", bars = "#5f6a75", attention = "#f0a765")\' else "plot_colours">>
   plot_palette <- reactive(if (isTRUE(input$metaui_dark)) plot_colours_dark else plot_colours)
+  # Odds and risk ratios are fitted as logs and shown as ratios, on log axes around 1.
+  ratio_scale <- metaUI_scale(metaUI__df$metaUI__es_type[1])$ratio
 
   # Set app states
     state_values <- reactiveValues(
@@ -737,7 +743,8 @@ glue_string <- ('
     # Validate the bound alone; empty selections have no estimates table.
     metaUI_interval_assessment(data.frame(Model = character(), status = character(), LCL = numeric(), UCL = numeric()),
       value, metaUI__df$metaUI__display_scale[1])
-    value
+    # For ratios, 0.8 and 1.25 name the same bounds; the larger is kept.
+    if (ratio_scale) max(value, 1 / value) else value
   })
   interval_assessment <- reactive({
     if (is.null(estimatesfiltered())) return(data.frame(assessment = "Not assessed", reason = "No eligible rows selected"))
@@ -753,8 +760,9 @@ glue_string <- ('
     bound <- tryCatch(chosen_bound(), error = function(e) NULL)
     # Rounded up, so that the shown bound still contains the interval; downloads keep every digit.
     threshold <- ifelse(is.na(table$threshold), "", formatC(ceiling(table$threshold * 1000 + 1e-9) / 1000, format = "f", digits = 3))
-    if (is.null(bound)) return(stats::setNames(data.frame(table$Model, threshold), c("Model", "90% interval lies within \\u00b1")))
-    stats::setNames(data.frame(table$Model, table$assessment, threshold), c("Model", "Assessment", "90% interval lies within \\u00b1"))
+    within <- if (ratio_scale) "90% interval lies within 1/x to x, x =" else "90% interval lies within \\u00b1"
+    if (is.null(bound)) return(stats::setNames(data.frame(table$Model, threshold), c("Model", within)))
+    stats::setNames(data.frame(table$Model, table$assessment, threshold), c("Model", "Assessment", within))
   }, align = "?")
   # The answer leads, directly under the bound it answers.
   output$equivalence_verdict <- renderUI({
@@ -763,7 +771,7 @@ glue_string <- ('
     req(!is.null(bound), "assessment" %in% names(table))
     # Only models with an interval are assessed; the others are counted separately.
     assessed <- table$assessment != "Not assessed"
-    p(class = "metaui-reading", HTML(paste0("<b>", sum(grepl("within bounds", table$assessment, fixed = TRUE)), " of ", sum(assessed), "</b> 90% ", if (sum(assessed) == 1L) "interval lies" else "intervals lie", " within \\u00b1", format(bound), ".",
+    p(class = "metaui-reading", HTML(paste0("<b>", sum(grepl("within bounds", table$assessment, fixed = TRUE)), " of ", sum(assessed), "</b> 90% ", if (sum(assessed) == 1L) "interval lies" else "intervals lie", " within ", if (ratio_scale) paste0(format(signif(min(bound, 1 / bound), 3)), " to ", format(signif(max(bound, 1 / bound), 3))) else paste0("\\u00b1", format(bound)), ".",
       if (any(!assessed)) paste0(" ", sum(!assessed), if (sum(!assessed) == 1L) " model was" else " models were", " not estimated or gave no 90% interval, so ", if (sum(!assessed) == 1L) "it is" else "they are", " not assessed.") else "")))
   })
   output$equivalence_note <- renderUI({
@@ -771,9 +779,10 @@ glue_string <- ('
     tagList(
       if ("reason" %in% names(table)) p(class = "metaui-reason", table$reason),
       # Defines the labels in the table, which the downloads keep word for word.
-      if (!"reason" %in% names(table) && any(table$assessment %in% c("Interval within bounds", "Exceeds positive bound", "Exceeds negative bound", "Inconclusive")))
-        p(class = "metaui-note", "Interval within bounds: the whole 90% interval lies between the negative and the positive bound. Exceeds positive (negative) bound: the whole interval lies above the positive bound (below the negative one). Inconclusive: the interval crosses a bound."),
-      tags$details(class = "metaui-help", tags$summary("How to read this assessment"), tags$p("An interval that lies strictly inside the bounds rejects, at .05 each, both an effect at or below the negative bound and one at or above the positive bound. This pair of one-sided tests (TOST) is the usual equivalence test, and its 90% interval matches it; requiring the 95% interval would make the test stricter than its stated level. For default models, the intervals rest on the model assumptions. Custom intervals have unknown coverage. For Bayesian rows, a 90% credible interval inside the bounds means at least 90% posterior probability within them; it depends on the prior and is not a TOST. The multilevel model uses residual degrees of freedom; RVE has no small-sample correction, so its intervals can be too narrow. Bias-adjusted models rest on their own assumptions. This assesses the average effect; individual true effects can still exceed the bound.")))
+      if (!"reason" %in% names(table) && any(table$assessment %in% c("Interval within bounds", "Exceeds positive bound", "Exceeds negative bound", "Exceeds upper bound", "Exceeds lower bound", "Inconclusive")))
+        p(class = "metaui-note", if (ratio_scale) "Interval within bounds: the whole 90% interval lies between the lower and the upper bound. Exceeds upper (lower) bound: the whole interval lies above the upper bound (below the lower one). Inconclusive: the interval crosses a bound."
+          else "Interval within bounds: the whole 90% interval lies between the negative and the positive bound. Exceeds positive (negative) bound: the whole interval lies above the positive bound (below the negative one). Inconclusive: the interval crosses a bound."),
+      tags$details(class = "metaui-help", tags$summary("How to read this assessment"), tags$p(if (ratio_scale) "An interval that lies strictly inside the bounds rejects, at .05 each, both an effect at or below the lower bound and one at or above the upper bound." else "An interval that lies strictly inside the bounds rejects, at .05 each, both an effect at or below the negative bound and one at or above the positive bound.", " This pair of one-sided tests (TOST) is the usual equivalence test, and its 90% interval matches it; requiring the 95% interval would make the test stricter than its stated level. For default models, the intervals rest on the model assumptions. Custom intervals have unknown coverage. For Bayesian rows, a 90% credible interval inside the bounds means at least 90% posterior probability within them; it depends on the prior and is not a TOST. The multilevel model uses residual degrees of freedom; RVE has no small-sample correction, so its intervals can be too narrow. Bias-adjusted models rest on their own assumptions. This assesses the average effect; individual true effects can still exceed the bound.")))
   })
 
   # MODEL COMPARISON -----------------------------------------------------
@@ -823,8 +832,8 @@ glue_string <- ('
           { others <- table[-index[1], , drop = FALSE]; others <- others[others$status == "ok", , drop = FALSE]
             if (nrow(others) > 1L) paste0("Across the ", nrow(others), " other estimators, estimates range from ", fmt(min(others$es)), " to ", fmt(max(others$es)), ".") else "" },
           # An introduction from the authors states the direction in their own words.
-          if (nzchar(welcome_text)) "" else switch(metaUI__df$metaUI__direction[1], positive = " Positive values are in the direction the authors expected.",
-            negative = " Negative values are in the direction the authors expected.", ""))) else ""
+          if (nzchar(welcome_text)) "" else switch(metaUI__df$metaUI__direction[1], positive = if (ratio_scale) " Ratios above 1 are in the direction the authors expected." else " Positive values are in the direction the authors expected.",
+            negative = if (ratio_scale) " Ratios below 1 are in the direction the authors expected." else " Negative values are in the direction the authors expected.", ""))) else ""
         if (nzchar(reading)) tags$p(class = "metaui-primary-reading", reading) },
       # How far true effects spread around the average, where the model gives a prediction interval.
       # With fewer than three studies the spread between studies is barely estimable, so no interval is given.
@@ -834,7 +843,8 @@ glue_string <- ('
       { label <- trimws(paste0(if (row$status != "ok") paste0(row$Model, ". Primary analysis, chosen by the authors.") else "",
           if (grepl("hedges|cohen|standardi[sz]ed mean|^smd$", metaUI_eff_size_type_label, ignore.case = TRUE)) " Effects are standardized mean differences, in standard deviations." else
           # The headline names r alone; a qualified label (adjusted for attenuation, say) is given here.
-          if (metaUI__df$metaUI__es_type[1] == "ZCOR" && !tolower(metaUI_eff_size_type_label) %in% c("r", "correlation r", "correlation")) paste0(" Effects are correlations: ", metaUI_eff_size_type_label, ".") else ""))
+          if (metaUI__df$metaUI__es_type[1] == "ZCOR" && !tolower(metaUI_eff_size_type_label) %in% c("r", "correlation r", "correlation")) paste0(" Effects are correlations: ", metaUI_eff_size_type_label, ".") else
+          if (ratio_scale) paste0(" Effects are ", metaUI_scale(metaUI__df$metaUI__es_type[1])$name, "s: 1 means no difference between the groups.") else ""))
         if (nzchar(label)) tags$p(class = "metaui-primary-label", label) },
       if (row$status == "ok" && nzchar(row$warnings)) tags$p(class = "metaui-primary-warning", paste("Warnings:", metaUI_reader_warnings(row$warnings))),
       few_studies(row$status == "ok"))
@@ -850,10 +860,16 @@ glue_string <- ('
     direction <- metaUI__df$metaUI__direction[1]
     scale_text <- if (metric == "ZCOR") paste("Correlations are fitted as Fisher z and shown as r.",
       "Slopes of numeric moderators, heterogeneity variances and the Egger test have no r equivalent and stay on the Fisher z scale.") else
+      if (ratio_scale) { name <- metaUI_scale(metric)$name
+        paste0(if (length(metaUI_count_columns(metaUI__df))) paste0("Each ", name, " was computed from the study&rsquo;s 2&times;2 table of counts (metafor::escalc), adding 0.5 to every cell of a table with a zero cell. ", metaUI_double_zero_text(metaUI__df)) else "",
+          "Models are fitted to log ", name, "s, on which sampling errors are roughly normal; estimates, confidence and prediction intervals are shown as ", name, "s by exponentiating. ",
+          if (metric == "OR") "An " else "A ", name, " of 1 means no difference; plots use a log axis, so that ratios such as 0.5 and 2 lie equally far from 1. ",
+          "Slopes of numeric moderators (change in the log ", name, " per unit), heterogeneity variances and the Egger test have no ratio equivalent and stay on the log scale. ",
+          "Downloads give es, LCL, UCL and the prediction and 90% intervals as ", name, "s; fit_es, fit_LCL and fit_UCL, and the effect sizes and variances in the dataset, are log ", name, "s.") } else
       paste0("Effects are fitted and shown on the scale the authors chose: ", metaUI_label_html(metaUI_eff_size_type_label), ".")
     direction_text <- if (direction == "unspecified") paste("The authors stated no expected direction. Methods that need one (by default p-uniform*,",
       "the Hedges-Vevea selection model and p-curve) are reported as unsupported rather than guessed.") else
-      paste0("Direction the authors expected: ", direction, ". Direction-dependent methods (p-uniform*, the Hedges-Vevea selection model, p-curve) analyze effects in that direction",
+      paste0("Direction the authors expected: ", direction, if (ratio_scale) (if (direction == "positive") " (ratios above 1)" else " (ratios below 1)") else "", ". Direction-dependent methods (p-uniform*, the Hedges-Vevea selection model, p-curve) analyze effects in that direction",
         if (direction == "negative") "; their inputs are sign-flipped for fitting and their estimates flipped back for display" else "", ". PET-PEESE tests PET\'s intercept one-sided in that direction. Other models are two-sided.")
     # With one effect per study there is no within-study dependence to describe.
     dependence_text <- if (!anyDuplicated(df_filtered()$metaUI__study_id)) paste("In this selection every study contributes one effect, and studies are assumed independent.",
@@ -876,7 +892,7 @@ glue_string <- ('
     metaUI_estimates_html(table, primary_index(table),
       axis_title = metaUI_eff_size_type_label,
       bound = tryCatch(chosen_bound(), error = function(e) NULL),
-      studies = length(unique(df_filtered()$metaUI__study_id)), independent = !anyDuplicated(df_filtered()$metaUI__study_id))
+      studies = length(unique(df_filtered()$metaUI__study_id)), independent = !anyDuplicated(df_filtered()$metaUI__study_id), ratio = ratio_scale)
   })
 
 
@@ -1039,9 +1055,10 @@ glue_string <- ('
     # The line and band are the moderator model tested above; dots follow precision.
     model <- moderator_model()
     fitted <- model$grid
-    fitted[c("pred", "ci.lb", "ci.ub")] <- lapply(fitted[c("pred", "ci.lb", "ci.ub")], metaUI_show, df)
-    df$shown <- metaUI_show(df$metaUI__effect_size, df)
-    df$hover <- paste0(df$metaUI__study_id, ": ", round(df$shown, 2))
+    # Ratios stay on the log scale they are fitted on, with the axis labelled in ratios.
+    if (!ratio_scale) fitted[c("pred", "ci.lb", "ci.ub")] <- lapply(fitted[c("pred", "ci.lb", "ci.ub")], metaUI_show, df)
+    df$shown <- if (ratio_scale) df$metaUI__effect_size else metaUI_show(df$metaUI__effect_size, df)
+    df$hover <- paste0(df$metaUI__study_id, ": ", round(metaUI_show(df$metaUI__effect_size, df), 2))
     p <- ggplot2::ggplot(data = df, ggplot2::aes(y = shown, x = mod)) +
       ggplot2::geom_hline(yintercept = 0, colour = plot_colours$slate, linewidth = .3) +
       ggplot2::geom_ribbon(data = fitted, ggplot2::aes(x = mod, ymin = ci.lb, ymax = ci.ub), inherit.aes = FALSE, fill = plot_colours$accent, alpha = .14) +
@@ -1051,7 +1068,9 @@ glue_string <- ('
       ggplot2::geom_line(data = fitted, ggplot2::aes(x = mod, y = pred), inherit.aes = FALSE, colour = plot_colours$accent, linewidth = .7) +
       ggplot2::scale_size(range = c(1.8, 3.6), guide = "none") +
       ggplot2::scale_x_continuous(breaks = { span <- range(df$mod, na.rm = TRUE); ticks <- pretty(span, 8); ticks[ticks >= span[1] & ticks <= span[2]] }) +
-      ggplot2::scale_y_continuous(breaks = { span <- range(df$shown, fitted$ci.lb, fitted$ci.ub); ticks <- pretty(span, 8); ticks[ticks >= span[1] & ticks <= span[2]] }) +
+      { span <- range(df$shown, fitted$ci.lb, fitted$ci.ub)
+        if (ratio_scale) { ticks <- metaUI_ratio_ticks(span, 7); ggplot2::scale_y_continuous(breaks = log(ticks), labels = metaUI_tick_labels(ticks)) }
+        else { ticks <- pretty(span, 8); ggplot2::scale_y_continuous(breaks = ticks[ticks >= span[1] & ticks <= span[2]]) } } +
       ggplot2::xlab(input$moderator %>% stringr::str_remove("metaUI__filter_")) +
       ggplot2::ylab(metaUI_eff_size_type_label) +
       metaUI_plot_theme(plot_colours, family = "") +
@@ -1169,7 +1188,7 @@ glue_string <- ('
       end <- function(value) { v <- stat(value); if (grepl("[.]", v)) sub("[.]?0+$", "", v) else v }
       range_text <- paste0(end(min(x, na.rm = TRUE)), " to ", end(max(x, na.rm = TRUE)))
       # These coefficients have no r equivalent.
-      fisher <- if (df$metaUI__es_type[1] == "ZCOR") " (Fisher <i>z</i>)" else ""
+      fisher <- metaUI_fit_suffix(df)
       row <- function(label, value) paste0("<tr><td>", label, \'</td><td class="num">\', value, "</td></tr>")
       return(paste0(\'<table class="table metaui-custom metaui-stats"><tbody>\',
         # The intercept would be the effect at a moderator value of 0, often far outside the data; the mean is inside it.
@@ -1191,7 +1210,7 @@ glue_string <- ('
     metaUI_moderator_html(levels, metaUI_show(as.numeric(model$b), df), metaUI_show(model$ci.lb, df), metaUI_show(model$ci.ub, df),
       as.integer(counts[levels]), x, shown,
       paste0(df$metaUI__study_id, ": ", round(shown, 2)), metaUI_eff_size_type_label,
-      ref = if (length(overall)) overall[1] else NULL, ref_label = if (length(overall)) summary$Model[reference[1]], se = df$metaUI__se, show_effects = isTRUE(input$moderator_effects), keep_order = metaUI_author_order(x))
+      ref = if (length(overall)) overall[1] else NULL, ref_label = if (length(overall)) summary$Model[reference[1]], se = df$metaUI__se, show_effects = isTRUE(input$moderator_effects), keep_order = metaUI_author_order(x), ratio = ratio_scale)
   })
 
   output$moderation_text <- shiny::renderText({
@@ -1256,7 +1275,7 @@ glue_string <- ('
 
     # rma.mv variance components are sigma^2 , not tau^2
     het$Q <- formatC(het$Q, format = "f", digits = 2)
-    scale <- if (df$metaUI__es_type[1] == "ZCOR") " (Fisher <i>z</i>)" else ""
+    scale <- metaUI_fit_suffix(df)
     names(het) <- c(paste0("&sigma;<sup>2</sup> between studies", scale), paste0("&sigma;<sup>2</sup> within studies", scale), paste0("Total &sigma;<sup>2</sup>", scale), "<i>Q</i>", "<i>p</i> (<i>Q</i>)", "Variance components")
     metaUI_statistics_rows(het)
   }, colnames = FALSE, sanitize.text.function = function(x) x, align = "lr")
@@ -1313,15 +1332,24 @@ glue_string <- ('
   forest_studies <- reactive(metaUI_forest_studies(df_agg()))
   forest_details <- reactive(metaUI_effect_details(df_filtered()))
   output$foreststudies <- renderText({
-    metaUI_forest_html(forest_rows(), metaUI_eff_size_type_label, studies = forest_studies(), details = forest_details(), page = forest_view$page, sort = forest_view$sort, found = forest_view$found)
+    metaUI_forest_html(forest_rows(), metaUI_eff_size_type_label, studies = forest_studies(), details = forest_details(), page = forest_view$page, sort = forest_view$sort, found = forest_view$found, ratio = ratio_scale)
   })
   output$forest_pdf <- downloadHandler(filename = function() download_name("forest-plot.pdf"), content = function(file) {
     pages <- metaUI_forest_chunks(forest_rows(), forest_screen_order(), <<opts$max_forest_plot_rows>>)
     capacity <- max(vapply(pages, nrow, integer(1)))
     # Cairo embeds the letters of any study name; the plain PDF device lacks some (\\u0131, say).
-    cairo <- isTRUE(capabilities("cairo"))
-    if (cairo) grDevices::cairo_pdf(file, width = 10, height = forest_height(capacity) / 96, onefile = TRUE)
-    else grDevices::pdf(file, width = 10, height = forest_height(capacity) / 96)
+    # A Mac without XQuartz reports cairo but cannot load it (a warning, and no device opens);
+    # the plain device then stands in, and the log says that some letters may be missing.
+    before <- grDevices::dev.cur()
+    cairo <- isTRUE(capabilities("cairo")) && isTRUE(tryCatch({
+      grDevices::cairo_pdf(file, width = 10, height = forest_height(capacity) / 96, onefile = TRUE)
+      grDevices::dev.cur() != before
+    }, warning = function(w) FALSE, error = function(e) FALSE))
+    if (!cairo) {
+      if (grDevices::dev.cur() != before) grDevices::dev.off()
+      message("Forest plot PDF: cairo could not be loaded, so the plain PDF device is used; some letters in study names may be missing.")
+      grDevices::pdf(file, width = 10, height = forest_height(capacity) / 96)
+    }
     on.exit(grDevices::dev.off())
     for (rows in pages) print(forest_plot_for(rows, family = "", capacity = capacity))
   })
@@ -1352,17 +1380,18 @@ glue_string <- ('
   })
 
   output$funnel_key <- renderUI({
-    p(class = "metaui-note metaui-key", HTML(paste0("Shaded regions: <i>p</i> &lt; .05 against zero. Vertical dashed line: the random-effects estimate from the study-level effects shown here (",
+    p(class = "metaui-note metaui-key", HTML(paste0("Shaded regions: <i>p</i> &lt; .05 against ", if (ratio_scale) "a ratio of 1" else "zero", ". Vertical dashed line: the random-effects estimate from the study-level effects shown here (",
       metaUI_minus(round_(metaUI_show(as.numeric(meta_agg()$b), metaUI__df), metaUI_digits(meta_agg()$ci.lb, meta_agg()$ci.ub))), ")",
       if (!is.null(primary_model)) paste0(", which can differ from the primary estimate on the Summary, from the ", htmltools::htmlEscape(primary_model)) else "", ". Sloping dashed lines: where 95% of studies with that standard error would fall if they all estimated this effect; they widen as studies get smaller.",
-      if (metaUI__df$metaUI__es_type[1] == "ZCOR") " Positions follow the Fisher <i>z</i> scale, on which standard errors do not depend on the effect, so the <i>r</i> ticks are unevenly spaced." else "")))
+      if (metaUI__df$metaUI__es_type[1] == "ZCOR") " Positions follow the Fisher <i>z</i> scale, on which standard errors do not depend on the effect, so the <i>r</i> ticks are unevenly spaced." else
+      if (ratio_scale) " Positions follow the log scale, on which the standard errors are measured, so the ratio ticks are unevenly spaced." else "")))
   })
 
   output$funnel <- renderPlot({
     plot_colours <- plot_palette() # light or dark, as the browser asks; downloads stay light
     meta_agg <- meta_agg()
 
-    metaUI_funnel(meta_agg, xlab = metaUI_eff_size_type_label, colours = plot_colours, width = session$clientData$output_funnel_width, back = metaUI__df$metaUI__es_type[1] == "ZCOR")
+    metaUI_funnel(meta_agg, xlab = metaUI_eff_size_type_label, colours = plot_colours, width = session$clientData$output_funnel_width, back = metaUI__df$metaUI__es_type[1])
   }, height = 400, alt = "Funnel plot: each study\\u2019s effect against its standard error, with the pooled estimate and the lines within which 95% of studies would fall without small-study effects. The text below gives Egger\\u2019s test.") # fixed: after an error the collapsed container would otherwise set the next plot height
 
   output$bias_power_note <- renderUI({
@@ -1512,7 +1541,7 @@ glue_string <- ('
     # The mean stays in the formula even when it rounds to zero, so that readers see it is subtracted.
     numerator <- paste0("(effect ", if (centre < 0) "+" else metaUI_minus("-"), " ", formatC(abs(centre), format = "f", digits = 2), ")")
     p(class = "metaui-note", HTML(paste0("The Exclude extreme effects filter uses <i>z</i> = (effect ", metaUI_minus("-"), " mean of all effects in the full dataset) / their SD = ", numerator, " / ",
-      round_(sd(metaUI__df$metaUI__effect_size), 2), if (metaUI__df$metaUI__es_type[1] == "ZCOR") ", on the Fisher <i>z</i> scale" else "", ".")))
+      round_(sd(metaUI__df$metaUI__effect_size), 2), if (nzchar(metaUI_scale(metaUI__df$metaUI__es_type[1])$fit)) paste0(", on the ", metaUI_scale(metaUI__df$metaUI__es_type[1])$fit, " scale") else "", ".")))
   })
 
   # The dots on the plot, as a list that needs no pointer.
@@ -1553,15 +1582,20 @@ glue_string <- ('
     outliers <- df[effects < bounds[1] | effects > bounds[2], , drop = FALSE]
     # Which effects stand out is settled on the fitting scale; the plot shows them as readers read them.
     z <- outliers$metaUI__es_z # the z the filter uses
-    effects <- metaUI_show(effects, df); qs[] <- metaUI_show(qs, df)
-    outliers$metaUI__effect_size <- metaUI_show(outliers$metaUI__effect_size, df)
+    # Ratios are binned and drawn on the log scale, with the axis and values given as ratios.
+    if (!ratio_scale) {
+      effects <- metaUI_show(effects, df); qs[] <- metaUI_show(qs, df)
+      outliers$metaUI__effect_size <- metaUI_show(outliers$metaUI__effect_size, df)
+    }
+    as_read <- function(x) if (ratio_scale) exp(x) else x
 
     breaks <- pretty(effects, n = 24)
     counts <- graphics::hist(effects, breaks = breaks, plot = FALSE)$counts
     span <- range(breaks) + c(-1, 1) * diff(range(breaks)) * .02
     # Ticks carry the decimals their spacing needs, so small ranges keep distinct labels.
-    ticks <- pretty(span, 6); ticks <- ticks[ticks >= span[1] & ticks <= span[2]]
+    ticks <- if (ratio_scale) log(metaUI_ratio_ticks(span, 6)) else pretty(span, 6); ticks <- ticks[ticks >= span[1] & ticks <= span[2]]
     tick_digits <- max(0L, ceiling(-log10(diff(ticks)[1] * (1 + 1e-9))))
+    tick_text <- if (ratio_scale) metaUI_tick_labels(exp(ticks)) else metaUI_minus(formatC(ticks, format = "f", digits = tick_digits))
     # The axis ends on a labelled tick above the tallest bar.
     top <- max(pretty(c(0, max(counts)), 5))
     ink <- plot_colours$ink
@@ -1570,9 +1604,9 @@ glue_string <- ('
 
     p <- plotly::plot_ly(x = (breaks[-1] + breaks[-length(breaks)]) / 2, y = counts, width = diff(breaks), type = "bar",
         marker = list(color = plot_colours$bars, line = list(color = plot_colours$background, width = 1)),
-        hovertemplate = "%{y} effects around %{x:.2f}<extra></extra>", showlegend = FALSE) %>%
+        customdata = as_read((breaks[-1] + breaks[-length(breaks)]) / 2), hovertemplate = "%{y} effects around %{customdata:.2f}<extra></extra>", showlegend = FALSE) %>%
       plotly::add_trace(x = outliers$metaUI__effect_size, y = rep(strip, nrow(outliers)), type = "scatter", mode = "markers", inherit = FALSE, showlegend = FALSE,
-        marker = list(color = plot_colours$slate, size = 6), text = paste0(outliers$metaUI__study_id, ": ", round(outliers$metaUI__effect_size, 2), " (z = ", round(z, 2), ")"),
+        marker = list(color = plot_colours$slate, size = 6), text = paste0(outliers$metaUI__study_id, ": ", round(as_read(outliers$metaUI__effect_size), 2), " (z = ", round(z, 2), ")"),
         hovertemplate = "%{text}<extra></extra>") %>%
       plotly::config(displayModeBar = FALSE) %>%
       plotly::layout(bargap = 0, font = list(family = metaui_plotly_font, color = ink),
@@ -1582,10 +1616,10 @@ glue_string <- ('
           list(type = "line", x0 = qs[[1]], x1 = qs[[3]], y0 = strip, y1 = strip, line = list(color = plot_colours$slate, width = 5)),
           list(type = "line", x0 = qs[[2]], x1 = qs[[2]], y0 = strip - top * .03, y1 = strip + top * .03, line = list(color = ink, width = 2))),
         annotations = list(
-          list(x = qs[[2]], y = strip, yshift = 9, text = paste0("middle 50%, median ", metaUI_minus(round_(qs[[2]], 2))), showarrow = FALSE, xanchor = "center", yanchor = "bottom", font = list(size = 13, color = plot_colours$slate)),
+          list(x = qs[[2]], y = strip, yshift = 9, text = paste0("middle 50%, median ", metaUI_minus(round_(as_read(qs[[2]]), 2))), showarrow = FALSE, xanchor = "center", yanchor = "bottom", font = list(size = 13, color = plot_colours$slate)),
           if (any(outliers$metaUI__effect_size < qs[[1]])) list(x = min(outliers$metaUI__effect_size), y = strip, yshift = -9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "left", yanchor = "top", font = list(size = 13, color = plot_colours$slate)),
           if (any(outliers$metaUI__effect_size > qs[[3]])) list(x = max(outliers$metaUI__effect_size), y = strip, yshift = -9, text = "beyond 1.5 IQR", showarrow = FALSE, xanchor = "right", yanchor = "top", font = list(size = 13, color = plot_colours$slate))),
-        xaxis = list(title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 13.5)), range = span, tickmode = "array", tickvals = ticks, ticktext = metaUI_minus(formatC(ticks, format = "f", digits = tick_digits)), tickfont = axis_font, zeroline = FALSE, showgrid = FALSE, fixedrange = TRUE, showline = TRUE, linecolor = plot_colours$slate, linewidth = 1, ticks = "outside", ticklen = 3, tickcolor = plot_colours$slate),
+        xaxis = list(title = list(text = metaUI_label_html(metaUI_eff_size_type_label), font = list(size = 13.5)), range = span, tickmode = "array", tickvals = ticks, ticktext = tick_text, tickfont = axis_font, zeroline = FALSE, showgrid = FALSE, fixedrange = TRUE, showline = TRUE, linecolor = plot_colours$slate, linewidth = 1, ticks = "outside", ticklen = 3, tickcolor = plot_colours$slate),
         yaxis = list(title = list(text = "Effects", font = list(size = 13.5)), tickfont = axis_font, gridcolor = plot_colours$grid, zeroline = FALSE, fixedrange = TRUE, range = c(0, top * 1.3), rangemode = "normal", tick0 = 0, tickvals = pretty(c(0, top), 5)[pretty(c(0, top), 5) <= top]))
     p
   })

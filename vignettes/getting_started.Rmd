@@ -73,6 +73,26 @@ retain the fitting scale. If a normal Wald approximation is scientifically
 appropriate, its two-sided p-value is `2 * pnorm(-abs(effect / se))`; this is an
 approximation with declared assumptions, not a recovered source study p-value.
 
+Binary outcomes can be analysed as odds ratios (`es_type = "OR"`) or risk ratios
+(`es_type = "RR"`). Supply log ratios and their variances with
+`variance_scale = "log"`, as `metafor::escalc()` returns them, or the 2x2 counts:
+
+```{r, eval = FALSE}
+bcg <- prepare_data(metadat::dat.bcg, "author", es_type = "RR",
+  counts = c(ai = "tpos", bi = "tneg", ci = "cpos", di = "cneg"))
+```
+
+Counts are converted with `metafor::escalc()` and its defaults, which add 0.5 to
+every cell of a table with a zero cell. Double-zero tables (no events, or only
+events, in both groups) are kept, as in metafor; `double_zero = "exclude"` leaves
+both kinds out instead. N is
+the total of the counts unless `sample_size` is given, in which case rows whose N
+differs from that total are named in a warning. Models are fitted to the log ratios; the
+app shows estimates and intervals as ratios, with 1 as no effect, on log axes.
+Moderator slopes, heterogeneity variances and Egger's test stay on the log scale.
+The equivalence bound is a ratio *x*, assessed against 1/*x* and *x*. P-curve
+effect estimation remains limited to standardized mean differences.
+
 ## Run the app
 
 Now you are ready to launch a first version of the app. This is useful to see whether the data is read correctly, and to identify what customization you want to make ... or if you just want to explore your dataset locally. After you run the line below, the app should open your web browser.

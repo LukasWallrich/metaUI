@@ -238,6 +238,7 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
   fit_section <- section("Fit the models",
     c(paste(aggregation_text, "Effect-level models use every selected effect.",
       if (scale == "r") "Correlations are fitted as Fisher z; `es`, `LCL` and `UCL` are back-transformed to r, and `fit_*` columns keep the fitting scale." else
+      if (scale %in% c("OR", "RR")) paste0("Models are fitted to log ", if (scale == "OR") "odds" else "risk", " ratios; `es`, `LCL`, `UCL` and the prediction and 90% intervals are exponentiated to ratios, and `fit_*` columns keep the log scale.") else
         "Estimates are on the fitting scale (SMD)."),
       primary_text),
     c(paste0("correlation_dependent <- ", metaUI_code_number(settings$correlation)),
@@ -259,8 +260,9 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
   bound <- settings$bound
   equivalence_section <- section("Practical equivalence",
     if (is.null(bound)) "No smallest effect size of interest was chosen in the app; set `bound` to assess one." else
-      paste0("The reader chose a symmetric bound of ", format(bound, digits = 15), " on the displayed (", scale,
-        ") scale. The assessment checks whether each model's 90% interval lies strictly within the bounds (two one-sided tests at .05); it does not refit models."),
+      paste0(if (scale %in% c("OR", "RR")) paste0("The reader chose bounds of 1/", format(bound, digits = 15), " and ", format(bound, digits = 15), " on the displayed (", scale, ") scale, symmetric around 1 on the log scale.")
+        else paste0("The reader chose a symmetric bound of ", format(bound, digits = 15), " on the displayed (", scale, ") scale."),
+        " The assessment checks whether each model's 90% interval lies strictly within the bounds (two one-sided tests at .05); it does not refit models."),
     c(paste0("bound <- ", if (is.null(bound)) "NULL" else metaUI_code_number(bound)),
       paste0("known_interval_models <- ", metaUI_code_string(settings$known_models)),
       "if (!is.null(estimates))",

@@ -9,7 +9,8 @@ metaUI_bayesian_options <- function(options, scale) {
   if (is.null(options$enabled)) options$enabled <- TRUE
   if (!is.logical(options$enabled) || length(options$enabled) != 1L || is.na(options$enabled)) stop("Bayesian enabled must be TRUE or FALSE.")
   if (!options$enabled) return(NULL)
-  if (is.null(options$tau_scale)) options$tau_scale <- if (scale == "SMD") .5 else .25
+  # Unit-information SD / 4: 0.5 for SMD and for log odds and risk ratios (Roever et al., 2021), 0.25 for Fisher z.
+  if (is.null(options$tau_scale)) options$tau_scale <- if (scale == "ZCOR") .25 else .5
   if (length(options$tau_scale) != 1L || !is.numeric(options$tau_scale) || !is.finite(options$tau_scale) || options$tau_scale <= 0)
     stop("Bayesian tau_scale must be positive and finite.")
   if (is.null(options$max_studies)) options$max_studies <- 20L
@@ -43,7 +44,7 @@ metaUI_bayesian_sensitivity <- function(df, options, primary = NULL) {
     tryCatch({
       fit <- if (multiplier == 1 && !is.null(primary)) primary else metaUI_bayesian_fit(df, s, options$max_studies)
       mu <- fit$qposterior(mu.p = c(.025, .5, .975))
-      if (df$metaUI__es_type[1] == "ZCOR") mu <- tanh(mu)
+      mu <- metaUI_show(mu, df)
       data.frame(tau_prior_scale = s, median = mu[2], LCL = mu[1], UCL = mu[3],
         tau_median = fit$qposterior(tau.p = .5), status = "ok", reason = "")
     }, error = function(e) data.frame(tau_prior_scale = s, median = NA_real_, LCL = NA_real_, UCL = NA_real_,
