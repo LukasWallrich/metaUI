@@ -7,7 +7,8 @@ documentation](https://dmetar.protectlab.org/) for examples.
 ## Usage
 
 ``` r
-pcurve(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact = FALSE)
+pcurve(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact = FALSE,
+  accent = "#1d5c48")
 ```
 
 ## Arguments
@@ -49,6 +50,10 @@ pcurve(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact = FALSE)
   Logical. For narrow (phone-width) plots: if `TRUE`, the test results
   and notes are left out of the plot and returned as HTML lines in
   `notes`. `FALSE` by default.
+
+- accent:
+
+  Colour of the observed curve and its labels.
 
 ## Value
 

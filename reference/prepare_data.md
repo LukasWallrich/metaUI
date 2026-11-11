@@ -11,7 +11,7 @@ variances in preparation for this function.
 prepare_data(
   data,
   study_label,
-  es_field,
+  es_field = NULL,
   se = NULL,
   pvalue = NULL,
   sample_size = NULL,
@@ -29,7 +29,9 @@ prepare_data(
   direction = c("unspecified", "positive", "negative"),
   categorical_filters = character(),
   alternatives = list(),
-  primary_label = "As supplied"
+  primary_label = "As supplied",
+  counts = NULL,
+  double_zero = c("keep", "exclude")
 )
 ```
 
@@ -68,7 +70,10 @@ prepare_data(
 - filters:
 
   Character. List of fields to use as filters - can be named if
-  different labels should be displayed
+  different labels should be displayed. Labels must be distinct, contain
+  no backticks, and stay distinct when spaces and symbols are replaced
+  by underscores (as in Shiny input IDs); a numeric filter needs at
+  least one value.
 
 - url:
 
@@ -77,9 +82,14 @@ prepare_data(
 
 - es_type:
 
-  Character. Input scale: SMD, COR (raw r), or ZCOR (Fisher z). COR
-  needs r-scale variance and uses delta-method variance conversion; ZCOR
-  needs z-scale variance.
+  Character. Input scale: SMD, COR (raw r), ZCOR (Fisher z), OR (log
+  odds ratio) or RR (log risk ratio). COR needs r-scale variance and
+  uses delta-method variance conversion; ZCOR needs z-scale variance. OR
+  and RR take effects and variances on the log scale
+  (`variance_scale = "log"`), as
+  [`metafor::escalc()`](https://wviechtb.github.io/metafor/reference/escalc.html)
+  returns them, or 2x2 counts (`counts`); models are fitted on the log
+  scale and results shown as ratios.
 
 - article_label:
 
@@ -99,17 +109,19 @@ prepare_data(
   values for any of the variables used in the standard meta-analysis
   models, namely `study_label`, `es_field`, `variance`, and `se`.
   Optional p/N never remove rows under this default. Setting this to
-  TRUE also drops rows with missing values on any of the filters etc,
-  which might often be unnecessary. Conversely, setting this to FALSE
-  might lead to issues in the model - unless you post-process the data
-  or change the models and analyses to be included in the app. Invalid
+  TRUE also drops rows with a missing value in any filter (categorical
+  filters then get no `(Missing)` level) or in the p-value or sample
+  size when these are given; other columns of `data` are ignored. This
+  might often be unnecessary. Conversely, setting this to FALSE might
+  lead to issues in the model - unless you post-process the data or
+  change the models and analyses to be included in the app. Invalid
   required inputs with FALSE cause an error.
 
 - arrange_filters:
 
   Character. How should the filters be arranged in the app? Options are
-  "given" by the `filters` argument, "alphabetical" or "leave" (as they
-  are in the dataset). Defaults to "given".
+  "given" by the `filters` argument, "alphabetical" (by label) or
+  "leave" (as they are in the dataset). Defaults to "given".
 
 - keep_missing_level:
 
@@ -124,7 +136,8 @@ prepare_data(
 
 - variance_scale:
 
-  Required for COR (r) and ZCOR (z); optional SMD for SMD.
+  Required for COR (r), ZCOR (z), and OR or RR given as log ratios
+  (log); optional SMD for SMD.
 
 - direction:
 
@@ -146,6 +159,35 @@ prepare_data(
 - primary_label:
 
   Label for the primary computation when alternatives are provided.
+
+- counts:
+
+  For OR and RR: named character vector mapping 2x2 count columns, as in
+  [`metafor::escalc()`](https://wviechtb.github.io/metafor/reference/escalc.html):
+  `ai` and `ci` (events in the first and second group) with either `n1i`
+  and `n2i` (group totals) or `bi` and `di` (non-events). The log ratio
+  and its variance are computed with
+  [`metafor::escalc()`](https://wviechtb.github.io/metafor/reference/escalc.html)
+  and its defaults: 0.5 is added to every cell of a table that has a
+  zero cell, and tables without events (or without non-events) in both
+  groups are kept. Leave `es_field`, `variance` and `se` empty. The
+  count columns become editable in downloaded workbooks. Without
+  `sample_size`, N is the total of the four cells; with it, N is checked
+  against that total and rows that differ are named in a warning (N may
+  legitimately count, say, everyone randomised).
+
+- double_zero:
+
+  For `counts` only: what to do with tables that have no events in
+  either group, or only events (a "double-zero" table, `ai = ci = 0` or
+  `bi = di = 0`). `"keep"` (the default, as in
+  [`metafor::escalc()`](https://wviechtb.github.io/metafor/reference/escalc.html))
+  adds 0.5 to every cell of such a table. A table without events then
+  gives a ratio set mainly by the group sizes, with a large variance;
+  for risk ratios, a table with events in everyone gives a ratio near 1
+  whose variance can be small. `"exclude"` leaves both kinds out with a
+  reason, as `escalc(drop00 = TRUE)` does. The app's Methods state the
+  choice.
 
 ## Value
 

@@ -3,7 +3,6 @@
 ``` r
 
 library(metaUI)
-#> Note re metaUI: This package is still under active development - so please report any issues and desired features on https://github.com/LukasWallrich/metaUI.
 ```
 
 ## Adding, editing and removing models
@@ -22,7 +21,7 @@ below - or alternatively to delete that line.
 
 ``` r
    "Robust Variance Estimation",                      FALSE,       "as.numeric(mod$reg_table$b.r)",      ... 
-#   "Trim-and-fill",                                   TRUE,        "mod$TE.random",                     ...
+#   "Trim-and-fill",                                   TRUE,        "mod$b",                              ...
    "P-uniform star",                                  TRUE,        "mod$est",                            ...  
 ```
 
@@ -49,6 +48,15 @@ model object, called `mod`:
   intervals for the effect size
 - `k`: the model-specific count (state whether effects, studies, or
   imputed effects)
+- `LCL90` & `UCL90` (optional): the bounds of the 90% interval, used
+  only by the equivalence assessment, where a 90% interval inside the
+  bounds corresponds to two one-sided tests at .05. A model without them
+  is not assessed there.
+- `interval_type` (optional): what the interval is, such as
+  `"Confidence interval"`. Without it, the app labels a custom model’s
+  interval “Author-defined interval (type and coverage unknown)”.
+- `description` (optional): a sentence that the app’s Methods section
+  shows for the model.
 
 For `models_code`, you need to provide code, again in ““, that estimates
 the model based on fields available in the dataset produced by
@@ -75,11 +83,43 @@ app. `generate_shiny(overwrite=TRUE)` replaces all generated files,
 including `analysis.R`; build into a fresh folder and compare changes to
 preserve hand edits. It never clears unrelated files from the folder.
 
+## A worked example: a correlated and hierarchical effects model
+
+The meta-analysis of team diversity and performance (Wallrich et al.,
+2024) used a correlated and hierarchical effects (CHE) model. This adds
+it as the primary analysis, next to the default models:
+
+``` r
+
+models <- get_model_tibble()
+che <- models[models$name == "Random-Effects Multilevel Model", ]
+che$name <- "Correlated and Hierarchical Effects Model (as in paper)"
+che$code <- 'metafor::rma.mv(
+  yi = metaUI__effect_size,
+  V = metafor::vcalc(vi = metaUI__variance, cluster = metaUI__study_id,
+                     obs = metaUI__effect_id, rho = 0.6, data = df),
+  random = ~ 1 | metaUI__study_id/metaUI__effect_id,
+  test = "t", dfs = "contain", data = df, method = "REML", sparse = TRUE)'
+che$interval_type <- "Confidence interval"
+che$description <- "The paper's main analysis: random effects for studies and for effects within studies, with sampling errors of effects from the same study assumed to correlate at 0.6."
+models <- dplyr::bind_rows(che, models)
+
+generate_shiny(my_data, dataset_name = "Diversity and team performance",
+               models = models, primary_model = che$name, save_to_folder = "app")
+```
+
+Copying the multilevel row keeps its extraction code (`mod$b`,
+`mod$ci.lb`, …) and its 90% interval, so only the name, the model code,
+`interval_type` and `description` change. Moderator tests extend this
+model too, because it is an effect-level
+[`metafor::rma.mv`](https://wviechtb.github.io/metafor/reference/rma.mv.html)
+model.
+
 If you add an author model that is your primary analysis (such as the
 Dannheim example’s source-reference row), pass its name as
 `generate_shiny(primary_model = ...)`. Renaming that model later
 requires the same change in `labels_and_options.R`; the app reports a
-declared primary model it cannot find instead of picking another.
+primary model it cannot find instead of picking another.
 
 Custom models default to `options=list(fit_cache_entries=0)`. Only
 explicitly opt deterministic code into a 1–3-entry session cache. Random

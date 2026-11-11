@@ -65,8 +65,7 @@
     
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://lukaswallrich.github.io/metaUI/">metaUI</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; Note re metaUI: This package is still under active development - so please report any issues and desired features on https://github.com/LukasWallrich/metaUI.</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://lukaswallrich.github.io/metaUI/">metaUI</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="adding-editing-and-removing-models">Adding, editing and removing models<a class="anchor" aria-label="anchor" href="#adding-editing-and-removing-models"></a>
 </h2>
@@ -84,7 +83,7 @@ part in the <code>models_code</code> below. So to remove the
 Trim-and-fill model, you simply need to add the <code>#</code> shown
 below - or alternatively to delete that line.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>   <span class="st">"Robust Variance Estimation"</span>,                      <span class="cn">FALSE</span>,       <span class="st">"as.numeric(mod$reg_table$b.r)"</span>,      ... </span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#   "Trim-and-fill",                                   TRUE,        "mod$TE.random",                     ...</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#   "Trim-and-fill",                                   TRUE,        "mod$b",                              ...</span></span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>   <span class="st">"P-uniform star"</span>,                                  <span class="cn">TRUE</span>,        <span class="st">"mod$est"</span>,                            ...  </span></code></pre></div>
 </div>
 <div class="section level2">
@@ -116,6 +115,19 @@ of the 95% confidence intervals for the effect size</li>
 <li>
 <code>k</code>: the model-specific count (state whether effects,
 studies, or imputed effects)</li>
+<li>
+<code>LCL90</code> &amp; <code>UCL90</code> (optional): the bounds
+of the 90% interval, used only by the equivalence assessment, where a
+90% interval inside the bounds corresponds to two one-sided tests at
+.05. A model without them is not assessed there.</li>
+<li>
+<code>interval_type</code> (optional): what the interval is, such as
+<code>"Confidence interval"</code>. Without it, the app labels a custom
+model’s interval “Author-defined interval (type and coverage
+unknown)”.</li>
+<li>
+<code>description</code> (optional): a sentence that the app’s
+Methods section shows for the model.</li>
 </ul>
 <p>For <code>models_code</code>, you need to provide code, again in ““,
 that estimates the model based on fields available in the dataset
@@ -143,11 +155,39 @@ helpers requires restarting the app.
 files, including <code>analysis.R</code>; build into a fresh folder and
 compare changes to preserve hand edits. It never clears unrelated files
 from the folder.</p>
+</div>
+<div class="section level2">
+<h2 id="a-worked-example-a-correlated-and-hierarchical-effects-model">A worked example: a correlated and hierarchical effects model<a class="anchor" aria-label="anchor" href="#a-worked-example-a-correlated-and-hierarchical-effects-model"></a>
+</h2>
+<p>The meta-analysis of team diversity and performance (Wallrich et al.,
+2024) used a correlated and hierarchical effects (CHE) model. This adds
+it as the primary analysis, next to the default models:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">models</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_model_tibble.html">get_model_tibble</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">che</span> <span class="op">&lt;-</span> <span class="va">models</span><span class="op">[</span><span class="va">models</span><span class="op">$</span><span class="va">name</span> <span class="op">==</span> <span class="st">"Random-Effects Multilevel Model"</span>, <span class="op">]</span></span>
+<span><span class="va">che</span><span class="op">$</span><span class="va">name</span> <span class="op">&lt;-</span> <span class="st">"Correlated and Hierarchical Effects Model (as in paper)"</span></span>
+<span><span class="va">che</span><span class="op">$</span><span class="va">code</span> <span class="op">&lt;-</span> <span class="st">'metafor::rma.mv(</span></span>
+<span><span class="st">  yi = metaUI__effect_size,</span></span>
+<span><span class="st">  V = metafor::vcalc(vi = metaUI__variance, cluster = metaUI__study_id,</span></span>
+<span><span class="st">                     obs = metaUI__effect_id, rho = 0.6, data = df),</span></span>
+<span><span class="st">  random = ~ 1 | metaUI__study_id/metaUI__effect_id,</span></span>
+<span><span class="st">  test = "t", dfs = "contain", data = df, method = "REML", sparse = TRUE)'</span></span>
+<span><span class="va">che</span><span class="op">$</span><span class="va">interval_type</span> <span class="op">&lt;-</span> <span class="st">"Confidence interval"</span></span>
+<span><span class="va">che</span><span class="op">$</span><span class="va">description</span> <span class="op">&lt;-</span> <span class="st">"The paper's main analysis: random effects for studies and for effects within studies, with sampling errors of effects from the same study assumed to correlate at 0.6."</span></span>
+<span><span class="va">models</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">che</span>, <span class="va">models</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/generate_shiny.html">generate_shiny</a></span><span class="op">(</span><span class="va">my_data</span>, dataset_name <span class="op">=</span> <span class="st">"Diversity and team performance"</span>,</span>
+<span>               models <span class="op">=</span> <span class="va">models</span>, primary_model <span class="op">=</span> <span class="va">che</span><span class="op">$</span><span class="va">name</span>, save_to_folder <span class="op">=</span> <span class="st">"app"</span><span class="op">)</span></span></code></pre></div>
+<p>Copying the multilevel row keeps its extraction code
+(<code>mod$b</code>, <code>mod$ci.lb</code>, …) and its 90% interval, so
+only the name, the model code, <code>interval_type</code> and
+<code>description</code> change. Moderator tests extend this model too,
+because it is an effect-level <code><a href="https://wviechtb.github.io/metafor/reference/rma.mv.html" class="external-link">metafor::rma.mv</a></code> model.</p>
 <p>If you add an author model that is your primary analysis (such as the
 Dannheim example’s source-reference row), pass its name as
 <code>generate_shiny(primary_model = ...)</code>. Renaming that model
 later requires the same change in <code>labels_and_options.R</code>; the
-app reports a declared primary model it cannot find instead of picking
+app reports a primary model it cannot find instead of picking
 another.</p>
 <p>Custom models default to
 <code>options=list(fit_cache_entries=0)</code>. Only explicitly opt

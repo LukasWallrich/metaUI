@@ -131,6 +131,26 @@ scale. If a normal Wald approximation is scientifically appropriate, its
 two-sided p-value is <code>2 * pnorm(-abs(effect / se))</code>; this is
 an approximation with declared assumptions, not a recovered source study
 p-value.</p>
+<p>Binary outcomes can be analysed as odds ratios
+(<code>es_type = "OR"</code>) or risk ratios
+(<code>es_type = "RR"</code>). Supply log ratios and their variances
+with <code>variance_scale = "log"</code>, as
+<code><a href="https://wviechtb.github.io/metafor/reference/escalc.html" class="external-link">metafor::escalc()</a></code> returns them, or the 2x2 counts:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">bcg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/prepare_data.html">prepare_data</a></span><span class="op">(</span><span class="fu">metadat</span><span class="fu">::</span><span class="va"><a href="https://wviechtb.github.io/metadat/reference/dat.bcg.html" class="external-link">dat.bcg</a></span>, <span class="st">"author"</span>, es_type <span class="op">=</span> <span class="st">"RR"</span>,</span>
+<span>  counts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>ai <span class="op">=</span> <span class="st">"tpos"</span>, bi <span class="op">=</span> <span class="st">"tneg"</span>, ci <span class="op">=</span> <span class="st">"cpos"</span>, di <span class="op">=</span> <span class="st">"cneg"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Counts are converted with <code><a href="https://wviechtb.github.io/metafor/reference/escalc.html" class="external-link">metafor::escalc()</a></code> and its
+defaults, which add 0.5 to every cell of a table with a zero cell.
+Double-zero tables (no events, or only events, in both groups) are kept,
+as in metafor; <code>double_zero = "exclude"</code> leaves both kinds
+out instead. N is the total of the counts unless
+<code>sample_size</code> is given, in which case rows whose N differs
+from that total are named in a warning. Models are fitted to the log
+ratios; the app shows estimates and intervals as ratios, with 1 as no
+effect, on log axes. Moderator slopes, heterogeneity variances and
+Egger’s test stay on the log scale. The equivalence bound is a ratio
+<em>x</em>, assessed against 1/<em>x</em> and <em>x</em>. P-curve effect
+estimation remains limited to standardized mean differences.</p>
 </div>
 <div class="section level2">
 <h2 id="run-the-app">Run the app<a class="anchor" aria-label="anchor" href="#run-the-app"></a>
@@ -140,7 +160,7 @@ useful to see whether the data is read correctly, and to identify what
 customization you want to make … or if you just want to explore your
 dataset locally. After you run the line below, the app should open your
 web browser.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/generate_shiny.html">generate_shiny</a></span><span class="op">(</span><span class="va">app_data</span>,</span>
 <span>               dataset_name <span class="op">=</span> <span class="st">"Dannheim et al. (2025) - Mental health"</span>,</span>
 <span>               eff_size_type_label <span class="op">=</span> <span class="st">"Hedges g (negative = improvement)"</span>,</span>
@@ -153,7 +173,7 @@ web browser.</p>
 deployed to shinyapps.io, you need to provide some more details
 regarding the information that should be displayed and <strong>the path
 that the app should be saved to</strong>.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/generate_shiny.html">generate_shiny</a></span><span class="op">(</span><span class="va">app_data</span>,</span>
 <span>               dataset_name <span class="op">=</span> <span class="st">"Dannheim et al. (2025) - Mental health"</span>,</span>
 <span>               eff_size_type_label <span class="op">=</span> <span class="st">"Hedges g (negative = improvement)"</span>,</span>
@@ -183,8 +203,8 @@ instructions on how to do that.</p></li>
 About section) or to drop certain parts of the output apart from the
 main models (e.g., to display only a <em>z</em>-curve or only a
 <em>p</em>-curve),</p></li>
-<li><p><code>server.R</code> to modify other other parts of the output
-(for instance, to use a different theme for the graphs),</p></li>
+<li><p><code>server.R</code> to modify other parts of the output (for
+instance, to use a different theme for the graphs),</p></li>
 <li><p><code>labels_and_options.R</code> to change the dynamically
 displayed text (e.g., the welcome message) and some fundamental options
 (e.g., for aggregating dependent effect sizes).</p></li>
@@ -200,7 +220,7 @@ Posit/RStudio to get started <a href="https://shiny.rstudio.com/articles/shinyap
 essence, you need to create an account, install the
 <code>rsconnect</code> package and authenticate within that package.
 Then you can run the following to deploy your app:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">rsconnect</span><span class="fu">::</span><span class="fu">deployApp</span><span class="op">(</span>appDir <span class="op">=</span> <span class="st">"my_app_folder"</span><span class="op">)</span></span></code></pre></div>
 <p>Once that is done, the app should open in your browser, and you can
 copy the link from the address bar. That’s it - you now have your own

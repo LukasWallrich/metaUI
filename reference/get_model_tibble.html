@@ -52,9 +52,20 @@ If you want to change the default models, have a look at the vignette and/or the
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">get_model_tibble</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">get_model_tibble</span><span class="op">(</span>one_effect_per_study <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
+    <div class="section level2">
+    <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
+
+
+<dl><dt id="arg-one-effect-per-study">one_effect_per_study<a class="anchor" aria-label="anchor" href="#arg-one-effect-per-study"></a></dt>
+<dd><p>If <code>TRUE</code>, the multilevel model and robust variance estimation
+are replaced by one standard random-effects model (<code><a href="https://wviechtb.github.io/metafor/reference/rma.uni.html" class="external-link">metafor::rma.uni</a></code>, REML, Hartung-Knapp
+interval). <code><a href="generate_shiny.html">generate_shiny()</a></code> uses this when every study in the data has one effect, and refuses it
+for data in which a study has several effects.</p></dd>
+
+</dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A tibble with the models to be included in the app - including details on how to estimate them

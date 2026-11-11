@@ -77,6 +77,32 @@ approximation is scientifically appropriate, its two-sided p-value is
 `2 * pnorm(-abs(effect / se))`; this is an approximation with declared
 assumptions, not a recovered source study p-value.
 
+Binary outcomes can be analysed as odds ratios (`es_type = "OR"`) or
+risk ratios (`es_type = "RR"`). Supply log ratios and their variances
+with `variance_scale = "log"`, as
+[`metafor::escalc()`](https://wviechtb.github.io/metafor/reference/escalc.html)
+returns them, or the 2x2 counts:
+
+``` r
+
+bcg <- prepare_data(metadat::dat.bcg, "author", es_type = "RR",
+  counts = c(ai = "tpos", bi = "tneg", ci = "cpos", di = "cneg"))
+```
+
+Counts are converted with
+[`metafor::escalc()`](https://wviechtb.github.io/metafor/reference/escalc.html)
+and its defaults, which add 0.5 to every cell of a table with a zero
+cell. Double-zero tables (no events, or only events, in both groups) are
+kept, as in metafor; `double_zero = "exclude"` leaves both kinds out
+instead. N is the total of the counts unless `sample_size` is given, in
+which case rows whose N differs from that total are named in a warning.
+Models are fitted to the log ratios; the app shows estimates and
+intervals as ratios, with 1 as no effect, on log axes. Moderator slopes,
+heterogeneity variances and Egger’s test stay on the log scale. The
+equivalence bound is a ratio *x*, assessed against 1/*x* and *x*.
+P-curve effect estimation remains limited to standardized mean
+differences.
+
 ## Run the app
 
 Now you are ready to launch a first version of the app. This is useful
@@ -134,8 +160,8 @@ To further customize the app, consider editing:
   or to drop certain parts of the output apart from the main models
   (e.g., to display only a *z*-curve or only a *p*-curve),
 
-- `server.R` to modify other other parts of the output (for instance, to
-  use a different theme for the graphs),
+- `server.R` to modify other parts of the output (for instance, to use a
+  different theme for the graphs),
 
 - `labels_and_options.R` to change the dynamically displayed text (e.g.,
   the welcome message) and some fundamental options (e.g., for

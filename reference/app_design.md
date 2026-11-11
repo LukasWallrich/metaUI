@@ -6,22 +6,23 @@ or
 [`design_app()`](https://lukaswallrich.github.io/metaUI/reference/design_app.md).
 Colours must be opaque six-digit hex values. Text and accent colours
 must have at least 4.5:1 contrast against the page, panels and derived
-tints. Fonts come from each reader's device and use fallbacks; no
-author-machine font files are needed. Named fonts may be substituted on
-other platforms.
+tints. The default font is the open-licensed Source Sans and Source
+Serif pair, which ships inside each app. The other fonts come from each
+reader's device, use fallbacks and may be substituted on other
+platforms.
 
 ## Usage
 
 ``` r
 app_design(
-  accent = "#096B74",
-  background = "#EDF3F7",
+  accent = "#1D5C48",
+  background = "#FFFFFF",
   surface = "#FFFFFF",
-  text = "#182F46",
-  font = "system",
-  text_size = 15,
+  text = "#1A2530",
+  font = "source",
+  text_size = 16,
   spacing = "comfortable",
-  radius = 10
+  radius = 3
 )
 ```
 
@@ -45,7 +46,7 @@ app_design(
 
 - font:
 
-  One of `system`, `arial`, `verdana` or `georgia`.
+  One of `source`, `system`, `arial`, `verdana` or `georgia`.
 
 - text_size:
 
@@ -57,7 +58,7 @@ app_design(
 
 - radius:
 
-  Panel corner radius in pixels, from 0 to 16.
+  Corner radius of buttons and fields in pixels, from 0 to 16.
 
 ## Value
 

@@ -8,10 +8,13 @@
 - **Lukas Röseler**. Author, copyright holder.
   [](https://orcid.org/0000-0002-6446-1901)
 
-- **Mathias Harrer**. Copyright holder.
+- **Mathias Harrer**. Contributor, copyright holder.
   [](https://orcid.org/0000-0001-7016-2687)  
   Author of included p-curve code and related helper functions (from
   dmetar package)
+
+- **Guido Schwarzer**. Contributor, copyright holder.  
+  Author of the trim-and-fill code adapted from the meta package
 
 ## Citation
 

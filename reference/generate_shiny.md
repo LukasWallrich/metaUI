@@ -49,8 +49,14 @@ generate_shiny(
 - models:
 
   The models to be included in the app. Can either be a function to
-  call, a tibble, or the path to a file. If you want to change the
-  default models, have a look at the vignette and/or the
+  call, a tibble, or the path to a file. Custom models can add an
+  `interval_type` column naming their interval, such as "Confidence
+  interval"; otherwise the app says that its type is unknown. `LCL90`
+  and `UCL90` columns give the 90% interval used by the equivalence
+  assessment; a model without them is not assessed there. A
+  `description` column gives a sentence that the app's Methods section
+  shows for that model. If you want to change the default models, have a
+  look at the vignette and/or the
   [`get_model_tibble()`](https://lukaswallrich.github.io/metaUI/reference/get_model_tibble.md)
   documentation. Passing a file (e.g. "my_models.R") is particularly
   helpful if you include helper functions and save the app. If so, this
@@ -127,15 +133,20 @@ generate_shiny(
   List of more detailed options to customise your app. They all have
   sensible defaults and are thus rarely needed.
 
-  - `max_forest_plot_rows` Numeric. What is the maximum number of
-    effects for which a forest plot should be displayed? Defaults
-    to 200. If more effect sizes are selected, a message is shown
-    instead.
+  - `max_forest_plot_rows` Numeric. How many effects fit on one page of
+    the forest plot's PDF download, which holds every selected study?
+    Defaults to 60; a study with more effects gets a page of its own.
+    The plot on screen shows 50 studies to a page, and its PNG download
+    the page shown.
 
   - `shiny_theme` Character. One of the shinythemes that style the app.
     Defaults to "yeti", see
     [`?shinythemes::shinythemes`](https://rdrr.io/pkg/shinythemes/man/shinythemes.html)
     for all options.
+
+  - `intro` Optional HTML shown under the title: one or two sentences
+    stating the question and, for readers new to the scale, what
+    positive values mean.
 
   - `fit_cache_entries` Integer 0 to 3. Recent exact selections per
     reader session; 0 disables caching. Defaults to 3 for default models
@@ -152,11 +163,14 @@ generate_shiny(
 
 - bayesian:
 
-  NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies =
-  20). Adds a deterministic study-level normal-normal model with a flat
-  prior on the mean and a half-normal heterogeneity prior. Correlation
-  default tau_scale is .25 on Fisher z. Requires optional bayesmeta.
-  Sensitivity analyses use half and double the scale.
+  NULL (default), or list(enabled = TRUE, tau_scale = .5). Adds a
+  deterministic study-level normal-normal model with a flat prior on the
+  mean and a half-normal heterogeneity prior, computed by grid
+  quadrature over the heterogeneity (no extra package needed).
+  Correlation default tau_scale is .25 on Fisher z. An optional
+  `max_studies` (integer, at least 2) caps the number of studies; by
+  default there is no cap. Sensitivity analyses use half and double the
+  scale.
 
 - design:
 
@@ -174,12 +188,14 @@ generate_shiny(
   [`fetch_study_metadata()`](https://lukaswallrich.github.io/metaUI/reference/fetch_study_metadata.md)
   or written by the authors. Recognised columns: `doi`, `url`, `title`,
   `authors` (separated by "; "), `year`, `journal`, `volume`, `issue`,
-  `pages`, `abstract` (paragraphs separated by blank lines),
+  `pages`, `reference` (the full reference as text), `bibtex` (a BibTeX
+  entry), `abstract` (paragraphs separated by blank lines),
   `abstract_licence` (licence URL), `abstract_note`, `metadata_source`,
   `retrieved`, plus `status` and `abstract_policy` from the lookup.
-  Studies in the effect-size list then open a details row. It is stored
-  in the app; the app never fetches metadata. Include only abstracts you
-  may republish.
+  Studies in the effect-size list then open a details row, and readers
+  can download the references for their selection. It is stored in the
+  app; the app never fetches metadata. Include only abstracts you may
+  republish.
 
 - static_folder:
 
@@ -216,5 +232,6 @@ app_data <- prepare_data(raw, "study", "d", variance = "vi")
 folder <- tempfile("metaui-example-")
 generate_shiny(app_data, dataset_name = "Example", save_to_folder = folder,
                launch_app = FALSE)
+#> Every study has one effect, so the default models use one random-effects model (metafor::rma.uni, REML, Hartung-Knapp interval) instead of the multilevel model and robust variance estimation. To keep those, pass models = get_model_tibble().
 unlink(folder, recursive = TRUE)
 ```

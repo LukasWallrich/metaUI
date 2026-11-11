@@ -85,7 +85,7 @@ on that folder, or modified by editing server.R, ui.R, global.R and models.R in 
 
 
 <dt id="arg-models">models<a class="anchor" aria-label="anchor" href="#arg-models"></a></dt>
-<dd><p>The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. If you want to change the default models, have a look at the vignette and/or the <code><a href="get_model_tibble.html">get_model_tibble()</a></code> documentation.
+<dd><p>The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. Custom models can add an <code>interval_type</code> column naming their interval, such as "Confidence interval"; otherwise the app says that its type is unknown. <code>LCL90</code> and <code>UCL90</code> columns give the 90% interval used by the equivalence assessment; a model without them is not assessed there. A <code>description</code> column gives a sentence that the app's Methods section shows for that model. If you want to change the default models, have a look at the vignette and/or the <code><a href="get_model_tibble.html">get_model_tibble()</a></code> documentation.
 Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 this must assign the tibble to a variable called models_to_run (i.e. using &lt;-).</p></dd>
 
@@ -135,8 +135,9 @@ a character vector with all packages to display.</p></dd>
 
 
 <dt id="arg-options">options<a class="anchor" aria-label="anchor" href="#arg-options"></a></dt>
-<dd><p>List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.</p><ul><li><p><code>max_forest_plot_rows</code> Numeric. What is the maximum number of effects for which a forest plot should be displayed? Defaults to 200. If more effect sizes are selected, a message is shown instead.</p></li>
+<dd><p>List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.</p><ul><li><p><code>max_forest_plot_rows</code> Numeric. How many effects fit on one page of the forest plot's PDF download, which holds every selected study? Defaults to 60; a study with more effects gets a page of its own. The plot on screen shows 50 studies to a page, and its PNG download the page shown.</p></li>
 <li><p><code>shiny_theme</code> Character. One of the shinythemes that style the app. Defaults to "yeti", see <code><a href="https://rdrr.io/pkg/shinythemes/man/shinythemes.html" class="external-link">?shinythemes::shinythemes</a></code> for all options.</p></li>
+<li><p><code>intro</code> Optional HTML shown under the title: one or two sentences stating the question and, for readers new to the scale, what positive values mean.</p></li>
 <li><p><code>fit_cache_entries</code> Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.</p></li>
 <li><p><code>selection_list_threshold</code> Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.</p></li>
 </ul></dd>
@@ -147,7 +148,7 @@ a character vector with all packages to display.</p></dd>
 
 
 <dt id="arg-bayesian">bayesian<a class="anchor" aria-label="anchor" href="#arg-bayesian"></a></dt>
-<dd><p>NULL (default), or list(enabled = TRUE, tau_scale = .5, max_studies = 20). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior. Correlation default tau_scale is .25 on Fisher z. Requires optional bayesmeta. Sensitivity analyses use half and double the scale.</p></dd>
+<dd><p>NULL (default), or list(enabled = TRUE, tau_scale = .5). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior, computed by grid quadrature over the heterogeneity (no extra package needed). Correlation default tau_scale is .25 on Fisher z. An optional <code>max_studies</code> (integer, at least 2) caps the number of studies; by default there is no cap. Sensitivity analyses use half and double the scale.</p></dd>
 
 
 <dt id="arg-design">design<a class="anchor" aria-label="anchor" href="#arg-design"></a></dt>
@@ -158,9 +159,9 @@ a character vector with all packages to display.</p></dd>
 <dd><p>Optional study information shown to readers: a data frame (or CSV path) with one row per
 study and a <code>study</code> column matching the study IDs, as returned by <code><a href="fetch_study_metadata.html">fetch_study_metadata()</a></code> or written by the
 authors. Recognised columns: <code>doi</code>, <code>url</code>, <code>title</code>, <code>authors</code> (separated by "; "), <code>year</code>, <code>journal</code>, <code>volume</code>,
-<code>issue</code>, <code>pages</code>, <code>abstract</code> (paragraphs separated by blank lines), <code>abstract_licence</code> (licence URL),
+<code>issue</code>, <code>pages</code>, <code>reference</code> (the full reference as text), <code>bibtex</code> (a BibTeX entry), <code>abstract</code> (paragraphs separated by blank lines), <code>abstract_licence</code> (licence URL),
 <code>abstract_note</code>, <code>metadata_source</code>, <code>retrieved</code>, plus <code>status</code> and <code>abstract_policy</code> from the lookup. Studies in
-the effect-size list then open a details row. It is stored in the app; the app never fetches metadata. Include
+the effect-size list then open a details row, and readers can download the references for their selection. It is stored in the app; the app never fetches metadata. Include
 only abstracts you may republish.</p></dd>
 
 
@@ -194,6 +195,7 @@ folder and re-export it with <code><a href="export_static.html">export_static()<
 <span class="r-in"><span><span class="va">folder</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"metaui-example-"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">generate_shiny</span><span class="op">(</span><span class="va">app_data</span>, dataset_name <span class="op">=</span> <span class="st">"Example"</span>, save_to_folder <span class="op">=</span> <span class="va">folder</span>,</span></span>
 <span class="r-in"><span>               launch_app <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Every study has one effect, so the default models use one random-effects model (metafor::rma.uni, REML, Hartung-Knapp interval) instead of the multilevel model and robust variance estimation. To keep those, pass models = get_model_tibble().</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">folder</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
