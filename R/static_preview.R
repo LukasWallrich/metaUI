@@ -1,5 +1,16 @@
+# The app's global.R sets BLAS to one thread (RhpcBLASctl, where installed). When it runs in the
+# author's session to precompute results, the author's own setting is restored afterwards.
+metaUI_blas_restorer <- function() {
+  blas <- "RhpcBLASctl" # named through a variable, as in global.R
+  if (!requireNamespace(blas, quietly = TRUE)) return(function() invisible(NULL))
+  threads <- tryCatch(getExportedValue(blas, "blas_get_num_procs")(), error = function(e) NULL)
+  function() if (!is.null(threads)) try(getExportedValue(blas, "blas_set_num_threads")(threads), silent = TRUE)
+}
+
 # Work only on the export copy: author edits to ui.R/server.R are evaluated here.
 static_precompute <- function(app_dir, dest) {
+  restore_blas <- metaUI_blas_restorer() # the setting before global.R runs
+  on.exit(restore_blas(), add = TRUE)
   old <- setwd(app_dir)
   on.exit(setwd(old), add = TRUE)
   env <- new.env(parent = globalenv())
@@ -159,6 +170,8 @@ opening_precompute <- function(app_dir, enabled = TRUE) {
   unlink(path)
   # An app that opts out of caching fits afresh for every reader, including at opening.
   if (!enabled) return(invisible(FALSE))
+  restore_blas <- metaUI_blas_restorer() # the setting before global.R runs
+  on.exit(restore_blas(), add = TRUE)
   old <- setwd(app_dir)
   on.exit(setwd(old), add = TRUE)
   saved <- tryCatch(suppressMessages({

@@ -136,6 +136,9 @@ test_that("the multilevel model uses dense matrices for small data and sparse on
   large <- prepare_data(large, "study", "yi", variance = "vi", es_id = "id")
   fit <- metaUI:::metaUI_multilevel_fit(large)
   expect_true(fit$sparse)
+  # The switch sits at 250 effects: dense at 250, sparse at 251.
+  expect_false(metaUI:::metaUI_multilevel_fit(large[1:250, ])$sparse)
+  expect_true(metaUI:::metaUI_multilevel_fit(large[1:251, ])$sparse)
   # Same estimates either way.
   dense <- metafor::rma.mv(large$metaUI__effect_size, V = large$metaUI__variance, random = ~ 1 | metaUI__study_id/metaUI__effect_id,
     data = large, test = "t", dfs = "contain", method = "REML", sparse = FALSE)
@@ -150,6 +153,7 @@ test_that("generated apps run BLAS on one thread where they can, without naming 
 })
 
 test_that("moderator fits use model-based standard errors when there are too few studies for cluster-robust ones", {
+  skip_if_not_installed("clubSandwich")
   x <- fixture(); x$year <- 2001:2016; x$group <- factor(rep(paste0("G", 1:8), each = 2))
   d <- prepared(x, filters = c(Year = "year", Group = "group"))
   # Two studies and two coefficients: the CR2 covariance is singular.
@@ -164,4 +168,13 @@ test_that("moderator fits use model-based standard errors when there are too few
   x$group <- factor(rep(c("G1", "G1", "G1", "G2", "G2", "G2", "G3", "G4"), each = 2))
   d <- prepared(x, filters = c(Group = "group"))
   expect_true(metaUI:::metaUI_moderator_fit(d, "metaUI__filter_Group")$robust)
+})
+
+test_that("precomputing restores the author's BLAS threads after the app's global.R sets one", {
+  skip_if_not_installed("RhpcBLASctl")
+  before <- RhpcBLASctl::blas_get_num_procs()
+  restore <- metaUI:::metaUI_blas_restorer()
+  RhpcBLASctl::blas_set_num_threads(1)
+  restore()
+  expect_equal(RhpcBLASctl::blas_get_num_procs(), before)
 })

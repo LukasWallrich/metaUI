@@ -433,9 +433,10 @@ generate_global.R <- function(metaUI_eff_size_type_label, uses_meta = FALSE) {
   # Model fits use small matrices, which a multithreaded BLAS (such as OpenBLAS) slows down badly
   # when other processes share the cores. One BLAS thread where RhpcBLASctl is installed; not in
   # the browser. The package is named through a variable so that static exports do not bundle it.
+  # A controller that fails leaves BLAS as it is; the app still starts.
   blas_control <- \"RhpcBLASctl\"
   if (!grepl(\"emscripten\", R.version$os) && requireNamespace(blas_control, quietly = TRUE))
-    getExportedValue(blas_control, \"blas_set_num_threads\")(1)
+    try(getExportedValue(blas_control, \"blas_set_num_threads\")(1), silent = TRUE)
 
   # Ensure required packages are installed
   {purrr::map_chr(req_packages, ~ glue::glue('
