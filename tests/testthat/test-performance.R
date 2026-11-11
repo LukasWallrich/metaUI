@@ -173,6 +173,7 @@ test_that("moderator fits use model-based standard errors when there are too few
 test_that("precomputing restores the author's BLAS threads after the app's global.R sets one", {
   skip_if_not_installed("RhpcBLASctl")
   before <- RhpcBLASctl::blas_get_num_procs()
+  on.exit(RhpcBLASctl::blas_set_num_threads(before), add = TRUE)
   restore <- metaUI:::metaUI_blas_restorer()
   RhpcBLASctl::blas_set_num_threads(1)
   restore()
