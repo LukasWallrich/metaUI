@@ -29,6 +29,7 @@ Imports:
     htmltools,
     jsonlite,
     metafor,
+    methods,
     poibin,
     purrr,
     rlang,

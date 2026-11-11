@@ -437,6 +437,8 @@
       Shiny.setInputValue('moderator_effects', value === 'show', { priority: 'event' });
     } else if (this.classList.contains('metaui-sample-view')) {
       Shiny.setInputValue('sample_view', value, { priority: 'event' });
+    } else if (this.classList.contains('metaui-loo-unit')) {
+      Shiny.setInputValue('loo_unit', value, { priority: 'event' });
     }
   });
   // The server sends one page at a time, so a new page takes on the reader's current view.

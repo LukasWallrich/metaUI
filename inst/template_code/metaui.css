@@ -845,3 +845,9 @@ table.metaui-forest tr.metaui-found > td:first-child { box-shadow: inset 3px 0 0
 .metaui-track-arrow { position: absolute; top: var(--metaui-mark-y); width: 0; height: 0; margin-top: -5px; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
 .metaui-track-arrow-left { left: 0; border-right: 7px solid var(--metaui-slate); }
 .metaui-track-arrow-right { right: 0; border-left: 7px solid var(--metaui-slate); }
+/* Leave one study out: the effect count is context; only the marks call for attention. */
+.metaui-loo .metaui-loo-count { color: var(--metaui-slate); }
+.metaui-loo .metaui-loo-se { color: var(--metaui-slate); }
+@media (max-width: 767px) { .metaui-loo .metaui-loo-se { display: inline; margin-left: .35em; } }
+/* Below the table, not beside it as for the forest plot. */
+@media (min-width: 1000px) { .metaui-export-actions.metaui-loo-actions { justify-content: flex-start; margin-top: 10px; margin-bottom: 12px; } }
