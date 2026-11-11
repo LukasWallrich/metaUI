@@ -114,7 +114,7 @@ To further customize the app, consider editing:
 
 -   `ui.R` to edit the user interface (e.g., labels or the About section) or to drop certain parts of the output apart from the main models (e.g., to display only a *z*-curve or only a *p*-curve),
 
--   `server.R` to modify other other parts of the output (for instance, to use a different theme for the graphs),
+-   `server.R` to modify other parts of the output (for instance, to use a different theme for the graphs),
 
 -   `labels_and_options.R` to change the dynamically displayed text (e.g., the welcome message) and some fundamental options (e.g., for aggregating dependent effect sizes).
 

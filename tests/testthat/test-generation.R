@@ -26,8 +26,9 @@ test_that("headless app loads and runs the generated server", {
   # need() evaluates its message eagerly, so condition messages must be built only on failure
   expect_false(any(grepl("need(!inherits(", server_code, fixed = TRUE) & grepl("attr(", server_code, fixed = TRUE)))
   expect_true(any(grepl("shiny::validate(shiny::need(FALSE, paste(", server_code, fixed = TRUE)))
-  # The violin z-axis must use the same full-dataset reference as the z-score filter
-  expect_true(any(grepl("efsd <- sd(metaUI__df$metaUI__effect_size)", server_code, fixed = TRUE)))
+  # The violin hover and the outlier list show the z the z-score filter uses
+  expect_true(any(grepl("z <- outliers$metaUI__es_z", server_code, fixed = TRUE)))
+  expect_true(any(grepl("z <- flagged$metaUI__es_z", server_code, fixed = TRUE)))
   expect_true(file.exists(file.path(path, "www", "metaui.css")))
   shiny::testServer(env$server, {
     expect_error(capture_filters(), class = "shiny.silent.error")

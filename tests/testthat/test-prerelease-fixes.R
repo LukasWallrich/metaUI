@@ -143,3 +143,11 @@ test_that("the table marks the conditional PET-PEESE estimate and notes trim-and
   expect_false(isTRUE(null$trimfill_away_from_zero[null$Model == "Trim-and-fill"]))
   expect_no_match(html, "moved the estimate further from zero")
 })
+
+test_that("character filters point to categorical_filters; the JSON config accepts an intro", {
+  x <- fixture(); x$grp <- rep(c("a", "b"), 8)
+  expect_error(prepared(x, filters = c(Group = "grp")), 'categorical_filters = "grp"', fixed = TRUE)
+  schema <- jsonlite::fromJSON(system.file("examples", "config.schema.json", package = "metaUI"), simplifyVector = FALSE)
+  expect_true("intro" %in% names(schema$properties$options$properties))
+  expect_true("source" %in% unlist(schema$properties$design$properties$font$enum))
+})

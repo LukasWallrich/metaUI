@@ -462,7 +462,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
     # as a different sample beside the multilevel rows. Downloads keep each model's own k.
     effect_level <- ok && !isTRUE(row$aggregated) && "input_rows" %in% names(row) && !is.na(row$k)
     unit <- if (!ok) "" else if (effect_level) "effects" else metaUI_count_unit(row, studies)
-    k_shown <- if (!ok || is.na(row$k)) "" else if (effect_level) row$input_rows else row$k
+    k_shown <- if (!ok || is.na(row$k)) "" else format(if (effect_level) row$input_rows else row$k, big.mark = ",")
     track <- if (ok) paste0('<td class="metaui-track-cell">', metaUI_track_row(scale, row$es, row$LCL, row$UCL, bound, ref = ref, diamond = TRUE), "</td>")
       else paste0('<td class="metaui-reason-cell"><b>', "Not estimated:</b> ", esc(metaUI_reader_reason(row$reason, row$warnings)), "</td>")
     position <- match(i, order)
@@ -597,14 +597,14 @@ metaUI_bars_html <- function(counts, name) {
   counts <- counts[order(as.character(counts[[name]]) == "(Missing)"), , drop = FALSE]
   levels <- as.character(counts[[name]])
   bucket <- levels == ".metaUI_other"
-  levels[bucket] <- paste(length(other), "other categories")
+  levels[bucket] <- paste(length(other), "further categories")
   largest <- max(counts$Count, 1)
   rows <- sprintf('<tr%s><td>%s</td><td class="num">%s</td><td class="num">%s</td><td class="metaui-bar-cell" aria-hidden="true"><span class="metaui-bar" style="width:%s%%"></span></td></tr>',
-    ifelse(counts$Count == 0, ' class="metaui-zero"', ifelse(levels == "(Missing)", ' class="metaui-missing"', "")), htmltools::htmlEscape(levels), counts$Count,
+    ifelse(counts$Count == 0, ' class="metaui-zero"', ifelse(levels == "(Missing)", ' class="metaui-missing"', "")), htmltools::htmlEscape(levels), format(counts$Count, big.mark = ","),
     sprintf("%.1f%%", 100 * counts$Count / max(sum(counts$Count), 1)), round(100 * counts$Count / largest, 1))
   paste0('<table class="table metaui-bars metaui-custom"><thead><tr><th><span class="sr-only">', htmltools::htmlEscape(name),
     '</span></th><th class="num">Effects</th><th class="num">Share</th><th class="metaui-bar-cell"></th></tr></thead><tbody>', paste(rows, collapse = ""), "</tbody></table>",
-    if (any(bucket)) paste0('<details class="metaui-help metaui-other-levels"><summary>The ', length(other), " other categories</summary><p>", htmltools::htmlEscape(paste(other, collapse = ", ")), "</p></details>"),
+    if (any(bucket)) paste0('<details class="metaui-help metaui-other-levels"><summary>The ', length(other), " further categories</summary><p>", htmltools::htmlEscape(paste(other, collapse = ", ")), "</p></details>"),
     if (empty) paste0('<p class="metaui-note">', empty, if (empty == 1L) " category has" else " categories have", " no selected effects.</p>"))
 }
 

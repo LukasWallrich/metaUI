@@ -2,11 +2,10 @@
 ^\.Rproj\.user$
 ^LICENSE\.md$
 ^\.github$
-^\code-bodyposition
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
-.lintr
+^\.lintr$
 ^cran-comments\.md$
 
 ^metaUI_.*\.tar\.gz$

@@ -353,7 +353,7 @@ test_that("study rows round decimals like effect rows, and breakdowns say what O
   expect_equal(metaUI:::metaUI_study_rows(effects)$Women, c("0.53–0.57", "0.57"))
   x <- factor(c(rep(LETTERS[1:11], each = 2), "L"), levels = c(LETTERS[1:12], "Z"))
   html <- metaUI:::metaUI_bars_html(metaUI:::summarise_categorical(x, "Group"), "Group")
-  expect_match(html, "3 other categories", fixed = TRUE)
+  expect_match(html, "3 further categories", fixed = TRUE)
   html <- metaUI:::metaUI_bars_html(metaUI:::summarise_categorical(factor(c("a", "b"), levels = c("a", "b", "c")), "Group"), "Group")
   expect_match(html, "1 category has no selected effects", fixed = TRUE)
   expect_false(grepl(">c<", html, fixed = TRUE))

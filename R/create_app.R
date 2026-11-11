@@ -277,7 +277,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     assumptions = "Distinct studies are independent; multilevel V is diagonal (sampling covariance not supplied). Multilevel t tests use containment df. RVE uses correlated-effects weights with the same within-study correlation and the Tipton small-sample correction (small=TRUE). Neither N nor p is inferred by aggregation.")
   if (!is.null(bayesian)) report$bayesian <- c(bayesian, list(
     model = "Two-level normal-normal on aggregated studies", mean_prior = "Improper uniform on fitting scale",
-    latency = "Default cap 20 studies. Approximate benchmark: 20 seconds at 20 studies, 97 at 50. Each Analyze blocks the server process while fitting; sensitivity/downloads can need two extra fits. Hard author override limit 50.",
+    latency = "Default cap 20 studies. Approximate benchmark: 20 seconds at 20 studies, 97 at 50. Each Update results blocks the server process while fitting; sensitivity/downloads can need two extra fits. Hard author override limit 50.",
     tau_prior = "Half-normal on fitting scale", interval = "95% central credible interval; posterior median",
     sensitivity = "Half and double tau_scale", aggregation = paste("GLS study-level average, within-study correlation", correlation),
     rationale = "Default scale is unit-information SD / 4: 0.5 for SMD, 0.25 for Fisher z. An author choice, examined with sensitivity analysis.",
@@ -412,7 +412,7 @@ generate_global.R <- function(metaUI_eff_size_type_label, bayesian = NULL, uses_
 
   # To launch the app manually, use shiny::shinyAppDir(YOURPATH) or the Run App button in RStudio
 
-  library(dplyr)
+  suppressPackageStartupMessages(library(dplyr))
 
   # Ensure required packages are installed
   {purrr::map_chr(req_packages, ~ glue::glue('

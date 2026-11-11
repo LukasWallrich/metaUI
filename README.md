@@ -140,9 +140,9 @@ Downloads record the bound and classification in an `equivalence` sheet, and
 uploading the workbook restores the bound, as selection links do.
 
 Forest plots compare observed-effect intervals and available multilevel/RVE
-summary intervals. PDF, PNG and CSV downloads use the same selected rows; the
-CSV retains both fitting and displayed scales. The configured row limit also
-applies to exports.
+summary intervals. The PNG download is the page on screen. The PDF holds every selected study over
+several pages (`max_forest_plot_rows` effects to a page), and the CSV every selected
+row, with both fitting and displayed scales.
 
 ### Alternative effect-size computations
 
@@ -168,7 +168,8 @@ to the first-effect rule; the build records the priors and the default aggregati
 The default cap of 20 studies protects interactive use: first-fit benchmarks took
 about 20 seconds at 20 studies and 97 seconds at 50 on the review machine.
 Authors can set `max_studies` from 2 to 50, with a build warning above 20. Each
-Analyze blocks the Shiny server process while fitting. Prior sensitivity runs
+Update results blocks the Shiny server process while fitting, and with it every other
+reader served by that process; serve busy apps with several workers or instances. Prior sensitivity runs
 when its tab or download is requested and can require two extra fits.
 See [Röver et al.](https://doi.org/10.1002/jrsm.1475) for the prior rationale.
 
@@ -276,7 +277,21 @@ Host the site over HTTPS (for example, on GitHub Pages), or serve it from
 localhost to preview it. Opening `index.html` as a file does not work.
 The full dataset and code are sent to every visitor, so publish only material
 that may be shared. Precomputed results appear at once; controls work after
-roughly 20 seconds on a typical laptop, depending on the connection and device.
+about a minute on a typical laptop, depending on the connection and device.
+
+## Not included, and why
+
+Some analyses are left out on purpose. Suggestions and arguments are welcome as
+[issues](https://github.com/LukasWallrich/metaUI/issues).
+
+- **Meta-regression with several moderators.** Moderation takes one moderator at a
+  time. With sparse categories and correlated moderators, a reader-built model with
+  several of them invites searching for a significant combination, and fair use
+  would need model-building controls and warnings beyond the scope of an
+  exploration app.
+- **Cumulative meta-analysis.** Showing how the estimate changed as studies
+  accumulated mainly serves the history of a literature rather than readers'
+  questions about subsets of it.
 
 ## Sources
 

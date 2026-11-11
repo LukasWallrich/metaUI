@@ -160,7 +160,7 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
     paste0("workbook <- ", metaUI_code_string(settings$workbook)),
     if (format == "R") c("arguments <- commandArgs(trailingOnly = TRUE)", "if (length(arguments)) workbook <- arguments[1]"),
     "if (!file.exists(workbook)) {",
-    "  candidates <- list.files(pattern = \"metaUIdata\\\\.xlsx$\")",
+    "  candidates <- list.files(pattern = \"metaUI-?data\\\\.xlsx$\")",
     "  if (length(candidates) != 1L) stop(\"Workbook not found. Put \", workbook, \" next to this file or set `workbook` to its path.\")",
     "  message(\"Using workbook \", candidates)",
     "  workbook <- candidates",

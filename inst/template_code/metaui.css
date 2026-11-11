@@ -489,7 +489,7 @@ div[id^="summary_metaUI__filter_"] img { max-width: 100%; height: auto; }
 .metaui-note { font-size: .875rem; color: var(--metaui-slate); line-height: 1.45; max-width: 80ch; }
 .metaui-reason { font-size: .9375rem; color: var(--metaui-slate); }
 .metaui-help { margin: 10px 0; max-width: 80ch; font-size: .9375rem; }
-.metaui-help > summary, .metaui-selection-details > summary { display: block; cursor: pointer; color: var(--metaui-accent); }
+.metaui-help > summary, .metaui-selection-details > summary { display: block; min-height: 24px; cursor: pointer; color: var(--metaui-accent); }
 .metaui-help > summary::before, .metaui-selection-details > summary::before { content: ''; display: inline-block; width: 0; height: 0; margin-right: 7px; vertical-align: 1px; border-left: 5px solid currentColor; border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform .12s; }
 .metaui-help[open] > summary::before, .metaui-selection-details[open] > summary::before { transform: rotate(90deg); }
 .metaui-help > summary:hover, .metaui-selection-details > summary:hover { color: var(--metaui-hover); text-decoration: underline; }
