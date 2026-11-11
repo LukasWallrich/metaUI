@@ -400,9 +400,9 @@ metaUI_track_row <- function(scale, es, lcl, ucl, band = NULL, dots = NULL, dot_
       if (length(dot_sizes)) sprintf(";width:%1$.1fpx;height:%1$.1fpx;margin:%2$.2fpx 0 0 %2$.2fpx", dot_sizes, -dot_sizes / 2) else "",
       if (length(dot_labels)) sprintf(' title="%s"', htmltools::htmlEscape(dot_labels, attribute = TRUE)) else ""), collapse = ""),
     if (spans && hollow) sprintf('<svg class="metaui-track-diamond metaui-track-hollow" style="%1$s" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true"><polygon points="0.8,5 %2$.1f,0.8 99.2,5 %2$.1f,9.2" vector-effect="non-scaling-stroke"/></svg>',
-      metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl)), 100 * (es - lcl) / (ucl - lcl))
+      metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl)), 100 * (scale$at(es) - scale$at(lcl)) / (scale$at(ucl) - scale$at(lcl)))
     else if (spans) sprintf('<i class="metaui-track-diamond" style="%1$s;clip-path:polygon(0 50%%,%2$.1f%% 0,100%% 50%%,%2$.1f%% 100%%)"></i>',
-      metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl)), 100 * (es - lcl) / (ucl - lcl))
+      metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl)), 100 * (scale$at(es) - scale$at(lcl)) / (scale$at(ucl) - scale$at(lcl)))
     else paste0(
       if (has_interval) sprintf('<i class="metaui-track-ci" style="%s"></i>', metaUI_track_style(scale$at(lcl), scale$at(ucl) - scale$at(lcl))),
       if (is.finite(es)) sprintf('<i class="metaui-track-point%s" style="%s%s"></i>', if (combined) " metaui-track-combined" else "", metaUI_track_style(scale$at(es)),
@@ -442,7 +442,7 @@ metaUI_reader_messages <- c(
   "Model extraction must return one value per field" = "The model gave no usable estimate.",
   "Regression requires variable precision" = "Needs at least three studies with different standard errors.",
   "No eligible rows" = "No effects selected.",
-  "Requires explicit positive or negative effect direction" = "Needs an expected direction, which the authors did not declare.",
+  "Requires explicit positive or negative effect direction" = "Needs an expected direction, which the authors did not state.",
   "P-curve effect estimation only supported for SMD" = "Available only for standardized mean differences.",
   "Bayesian analysis requires at least two studies" = "Needs at least two studies.",
   "p-value intervals contains no effect sizes" = "No studies fall in one of the p-value ranges the model compares, so its estimate is unstable.",
@@ -1229,6 +1229,20 @@ metaUI_upload_roles <- function(built) {
     notes = rep("Kept with the data. The app's default models do not use it; the authors' own models may.", length(other)), stringsAsFactors = FALSE))
 }
 
+# Log odds or risk ratios from 2x2 counts with metafor::escalc and its defaults (add = 1/2, to = "only0",
+# drop00 = FALSE). `invalid` marks rows with missing, negative or impossible counts (more events than total);
+# `double_zero` marks tables with no events, or only events, in both groups (escalc's drop00 rule).
+# counts: named vector of column names in data, or named list of the count vectors themselves.
+metaUI_count_effects <- function(data, counts, measure) {
+  x <- lapply(counts, function(col) if (is.character(col)) as.numeric(data[[col]]) else as.numeric(col))
+  cells <- list(ai = x$ai, bi = if (is.null(x$bi)) x$n1i - x$ai else x$bi, ci = x$ci, di = if (is.null(x$di)) x$n2i - x$ci else x$di)
+  invalid <- !Reduce(`&`, lapply(cells, function(v) is.finite(v) & v >= 0))
+  cells <- lapply(cells, function(v) { v[invalid] <- NA_real_; v })
+  out <- suppressWarnings(metafor::escalc(measure, ai = cells$ai, bi = cells$bi, ci = cells$ci, di = cells$di))
+  list(yi = as.numeric(out$yi), vi = as.numeric(out$vi), invalid = invalid, total = Reduce(`+`, cells),
+    double_zero = !invalid & ((cells$ai == 0 & cells$ci == 0) | (cells$bi == 0 & cells$di == 0)))
+}
+
 # Columns of 2x2 counts behind the effects, named by their metafor::escalc argument (ai, n1i, ...).
 metaUI_count_columns <- function(built) {
   counts <- attr(built, "metaUI_validation")$mapping$counts
@@ -1242,19 +1256,21 @@ metaUI_count_N <- function(built) {
   length(metaUI_count_columns(built)) > 0L && is.null(mapping$N)
 }
 
-# Methods sentence on tables with no events (or only events) in both groups, for apps built from counts.
+# Methods sentence on tables with no events in either group, or with events in everyone in both groups
+# (escalc's drop00 rule), for apps built from counts.
 metaUI_double_zero_text <- function(built) {
   counts <- metaUI_count_columns(built)
   if (!length(counts)) return("")
   validation <- attr(built, "metaUI_validation")
+  what <- "Tables with no events in either group, or with events in everyone in both groups,"
   if (identical(validation$mapping$double_zero, "exclude")) {
     n <- sum(grepl("double_zero", validation$exclusions$reason, fixed = TRUE))
-    return(paste0("Tables with no events in either group (or only events) cannot show a difference and were left out, as the authors chose",
-      if (n) paste0(" (", n, if (n == 1L) " table" else " tables", ")") else "", ". "))
+    return(paste0(what, " were left out, as the authors chose", if (n) paste0(" (", n, if (n == 1L) " table" else " tables", ")") else "", ". "))
   }
   n <- sum(metaUI_count_effects(built, lapply(counts, function(col) built[[col]]), built$metaUI__es_type[1])$double_zero)
-  paste0("Tables with no events in either group (or only events) were kept, as metafor does by default; with 0.5 added to each cell, their ratio reflects only the group sizes (near 1 when the groups are equal) and has a wide interval",
-    if (n) paste0(" (", n, if (n == 1L) " table in these data" else " tables in these data", ")") else " (none in these data)", ". ")
+  paste0(what, " were kept, as metafor does by default (", if (n) n else "none", " in these data). ",
+    if (n) paste0("With 0.5 added to each cell, a table without events gives a ratio set mainly by the group sizes, with a wide interval",
+      if (built$metaUI__es_type[1] == "RR") "; a table with events in everyone gives a risk ratio near 1 that can have a narrow interval" else "", ". ") else "")
 }
 
 # The dataset sheet in the order of the roles above, so that the columns to edit come first.

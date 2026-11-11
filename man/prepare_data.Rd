@@ -87,9 +87,10 @@ rows that differ are named in a warning (N may legitimately count, say, everyone
 
 \item{double_zero}{For \code{counts} only: what to do with tables that have no events in either group, or only
 events (a "double-zero" table, \code{ai = ci = 0} or \code{bi = di = 0}). \code{"keep"} (the default, as in
-\code{\link[metafor:escalc]{metafor::escalc()}}) adds 0.5 to every cell, so such a table contributes a ratio near 1 with a large variance.
-\code{"exclude"} leaves them out with a reason, as \code{escalc(drop00 = TRUE)} does; many analysts prefer this for
-odds and risk ratios, which such tables cannot inform. The app's Methods state the choice.}
+\code{\link[metafor:escalc]{metafor::escalc()}}) adds 0.5 to every cell of such a table. A table without events then gives a ratio set
+mainly by the group sizes, with a large variance; for risk ratios, a table with events in everyone gives a
+ratio near 1 whose variance can be small. \code{"exclude"} leaves both kinds out with a reason, as
+\code{escalc(drop00 = TRUE)} does. The app's Methods state the choice.}
 }
 \value{
 tibble with the data from the file/input reformatted for metaUI

@@ -38,9 +38,10 @@
 #'   rows that differ are named in a warning (N may legitimately count, say, everyone randomised).
 #' @param double_zero For `counts` only: what to do with tables that have no events in either group, or only
 #'   events (a "double-zero" table, `ai = ci = 0` or `bi = di = 0`). `"keep"` (the default, as in
-#'   [metafor::escalc()]) adds 0.5 to every cell, so such a table contributes a ratio near 1 with a large variance.
-#'   `"exclude"` leaves them out with a reason, as `escalc(drop00 = TRUE)` does; many analysts prefer this for
-#'   odds and risk ratios, which such tables cannot inform. The app's Methods state the choice.
+#'   [metafor::escalc()]) adds 0.5 to every cell of such a table. A table without events then gives a ratio set
+#'   mainly by the group sizes, with a large variance; for risk ratios, a table with events in everyone gives a
+#'   ratio near 1 whose variance can be small. `"exclude"` leaves both kinds out with a reason, as
+#'   `escalc(drop00 = TRUE)` does. The app's Methods state the choice.
 #' @param direction Explicit direction for one-sided bias models: unspecified, positive, or negative.
 #' @param primary_label Label for the primary computation when alternatives are provided.
 #' @param alternatives Named list of up to five author-defined effect computations. Each entry supplies es_field, variance or se, es_type, variance_scale when required, and a nonempty justification. Every computation must retain the same effects and converge on the same fitting scale.
@@ -410,18 +411,4 @@ metaUI_check_counts <- function(counts, data) {
   if (any(!counts %in% names(data))) stop("Count column not found: ", paste(setdiff(counts, names(data)), collapse = ", "))
   for (col in counts) if (!is.numeric(data[[col]])) stop("Numeric input required: ", col)
   counts[intersect(c("ai", "bi", "n1i", "ci", "di", "n2i"), names(counts))]
-}
-
-# Log odds or risk ratios from 2x2 counts with metafor::escalc and its defaults (add = 1/2, to = "only0",
-# drop00 = FALSE). `invalid` marks rows with missing, negative or impossible counts (more events than total);
-# `double_zero` marks tables with no events, or only events, in both groups (escalc's drop00 rule).
-# counts: named vector of column names in data, or named list of the count vectors themselves.
-metaUI_count_effects <- function(data, counts, measure) {
-  x <- lapply(counts, function(col) if (is.character(col)) as.numeric(data[[col]]) else as.numeric(col))
-  cells <- list(ai = x$ai, bi = if (is.null(x$bi)) x$n1i - x$ai else x$bi, ci = x$ci, di = if (is.null(x$di)) x$n2i - x$ci else x$di)
-  invalid <- !Reduce(`&`, lapply(cells, function(v) is.finite(v) & v >= 0))
-  cells <- lapply(cells, function(v) { v[invalid] <- NA_real_; v })
-  out <- suppressWarnings(metafor::escalc(measure, ai = cells$ai, bi = cells$bi, ci = cells$ci, di = cells$di))
-  list(yi = as.numeric(out$yi), vi = as.numeric(out$vi), invalid = invalid, total = Reduce(`+`, cells),
-    double_zero = !invalid & ((cells$ai == 0 & cells$ci == 0) | (cells$bi == 0 & cells$di == 0)))
 }
