@@ -467,6 +467,7 @@ metaUI_reader_messages <- c(
   "Nonfinite estimate, interval, or count" = "The model gave no finite estimate.",
   "Model extraction must return one value per field" = "The model gave no usable estimate.",
   "Regression requires variable precision" = "Needs at least three studies with different standard errors.",
+  "all studies have the same precision" = "Needs studies with different standard errors.",
   "No eligible rows" = "No effects selected.",
   "Requires explicit positive or negative effect direction" = "Needs an expected direction, which the authors did not state.",
   "P-curve effect estimation only supported for SMD" = "Available only for standardized mean differences.",
@@ -533,6 +534,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
       # Confidence intervals need no note; only the rows that differ from them do.
       if (ok && length(types) > 1L && !startsWith(row$interval_type, "Confidence")) paste0('<span class="metaui-row-note">', esc(row$interval_type), "</span>"),
       if (ok && i %in% pet_peese) '<span class="metaui-row-note">PET-PEESE estimate</span>',
+      if (ok && isTRUE(row$trimfill_imputed > 0)) paste0('<span class="metaui-row-note">', format(row$trimfill_imputed, big.mark = ","), if (row$trimfill_imputed == 1) " study" else " studies", " imputed</span>"),
       if (ok && independent && row$Model == "Random-Effects Multilevel Model") '<span class="metaui-row-note">the standard random-effects model, as each study has one effect</span>',
       if (ok && independent && row$Model == "Robust Variance Estimation") '<span class="metaui-row-note">close to the random-effects model here; it differs mainly in using a robust standard error</span>')
     # A row that is not estimated shows no numbers, even where an unreliable fit left some.
@@ -559,8 +561,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   }, character(1))
   interval_head <- if (length(types) && all(grepl("^Confidence", types))) "95% CI" else "95% interval"
   others <- if (length(first) && nrow(table) > 1L) paste0('<p class="metaui-note metaui-other-estimators">Other estimators answer different questions and are not interchangeable with the primary analysis.',
-    if (!is.null(ref)) paste0(" Each diamond spans a model\u2019s ", interval_head, "; the dashed line marks the primary estimate."),
-    if (any(grepl("trim", table$Model, ignore.case = TRUE))) " The trim-and-fill count includes imputed studies.", "</p>")
+    if (!is.null(ref)) paste0(" Each diamond spans a model\u2019s ", interval_head, "; the dashed line marks the primary estimate."), "</p>")
   if (length(clipped)) others <- paste0(others, '<p class="metaui-note metaui-clipped-note" role="note">', if (length(clipped) == 1L) paste0("The interval of ", esc(table$Model[clipped]), " is far wider than the others and runs beyond the axis, which an arrow at the edge marks; its numbers are in the table.")
     else paste0("The intervals of ", paste(esc(table$Model[clipped]), collapse = " and "), " are far wider than the others and run beyond the axis, which arrows at the edge mark; their numbers are in the table."), "</p>")
   pet_p <- if (length(pet_peese)) stats::na.omit(table$pet_intercept_p)[1] else NA_real_
@@ -571,7 +572,7 @@ metaUI_estimates_html <- function(table, first = integer(), axis_title = "Effect
   bias <- if (length(bias)) paste0('<p class="metaui-note metaui-bias-notes">', paste(bias, collapse = " "), "</p>")
   notes <- if (length(warned)) paste0('<ol class="metaui-warnings">', paste0("<li>", esc(table$Model[warned]), ": ", esc(note_text[warned]), "</li>", collapse = ""), "</ol>")
   paste0('<table class="table metaui-estimates metaui-models metaui-custom"><thead><tr data-head="Model, estimate [', interval_head, ']"><th>Model</th><th class="num">Estimate</th><th class="num">',
-    interval_head, '</th><th class="num metaui-k" title="Number of effects or studies the model reports; trim-and-fill includes imputed studies."><i>k</i></th><th></th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
+    interval_head, '</th><th class="num metaui-k" title="Number of effects or studies the model uses; trim-and-fill counts observed studies, not imputed ones."><i>k</i></th><th></th><th class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</th></tr></thead><tbody>",
     paste(rows, collapse = ""), '</tbody><tfoot class="metaui-phone-axis"><tr><td colspan="5"></td><td class="metaui-track-cell">', metaUI_track_axis(scale, axis_title), "</td></tr></tfoot></table>", others, bias, notes)
 }
 
@@ -1185,6 +1186,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
     role <- metaUI_model_role(spec, NA_character_)
     pet_p <- NA_real_
     trimfill_away <- NA
+    trimfill_imputed <- NA_integer_
     if (is.null(reason)) {
       started <- proc.time()[["elapsed"]]
       reason <- tryCatch({
@@ -1223,6 +1225,7 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
         # Filling can move the estimate away from zero, when smaller studies show weaker effects.
         if (identical(role, "Trim-and-fill") && !is.null(env$mod$unfilled))
           trimfill_away <- env$mod$k0 > 0L && abs(as.numeric(env$mod$b)) > abs(env$mod$unfilled)
+        if (identical(role, "Trim-and-fill") && is.numeric(env$mod$k0)) trimfill_imputed <- env$mod$k0
         # NaN standard errors mean the fit sits where its curvature is invalid (a variance at its
         # boundary, say): its estimate and interval are not trustworthy. Downloads keep them, marked.
         if (any(grepl("NaNs produced", warnings, fixed = TRUE))) {
@@ -1261,6 +1264,8 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
       "Confidence interval (coverage model-dependent)"
     row$pet_intercept_p <- pet_p
     row$trimfill_away_from_zero <- trimfill_away
+    row$trimfill_imputed <- trimfill_imputed
+    row$k_unit <- metaUI_count_unit(row)
     row$role <- role
     row$PI_LCL <- prediction[1]; row$PI_UCL <- prediction[2]
     row$LCL90 <- interval90[1]; row$UCL90 <- interval90[2]

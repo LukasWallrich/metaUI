@@ -131,6 +131,11 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
     if (!es_label %in% names(data)) stop("Mapped label column not found: ", es_label)
     labels_input <- data[[es_label]]
   }
+  article_input <- NULL
+  if (!is.na(article_label)) {
+    if (!article_label %in% names(data)) stop("Mapped article label column not found: ", article_label)
+    article_input <- data[[article_label]]
+  }
   if (is.null(se)) {
     data$metaUI_input_se <- sqrt(data[[variance]])
     se <- "metaUI_input_se"
@@ -216,8 +221,9 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
       dplyr::mutate(metaUI__url = ifelse(grepl("^10\\.", .data$metaUI__url), paste0("https://doi.org/", .data$metaUI__url), .data$metaUI__url))
   }
   if (!is.na(article_label)) {
-    data <- data %>%
-      dplyr::rename("metaUI__article_label" = !!rlang::sym(article_label))
+    # The article label may share a column already renamed above, such as the study label.
+    if (article_label %in% names(data) && !startsWith(article_label, "metaUI__")) data[[article_label]] <- NULL
+    data$metaUI__article_label <- article_input
   }
 
   if (!is.na(es_label)) {

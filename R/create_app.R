@@ -172,6 +172,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'   - `intro` Optional HTML shown under the title: one or two sentences stating the question and, for readers new to the scale, what positive values mean.
 #'   - `fit_cache_entries` Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.
 #'   - `selection_list_threshold` Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
+#'   - `correlation_dependent` Numeric, at least 0 and below 1. The assumed correlation between the sampling errors of effects from the same study, used to average them into study-level effects and for the RVE weights. Defaults to .6.
 #' @inheritParams create_about
 #' @inheritDotParams create_about
 #'
@@ -518,6 +519,7 @@ generate_global.R <- function(metaUI_eff_size_type_label, uses_meta = FALSE) {
 to_tribble <- function(x, show = FALSE, digits = 5) {
 
   escape_quotes <- function(x) {
+    x <- stringr::str_replace_all(x, stringr::fixed("\\"), "\\\\")
     x <- stringr::str_replace_all(x, "'", "\\\\'")
     x <- stringr::str_replace_all(x, '"', '\\\\"')
     x

@@ -27,7 +27,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       summary_table_notes <- HTML(glue::glue("<p>CI = <<ci_width>> confidence interval; its actual coverage depends on each model\\\'s assumptions. <i>k</i> is the number of effects or studies the model reports.{if (bayesian) " Bayesian rows show central credible intervals." else ""}</p>", .open = "<<", .close = ">>"))
       model_help <- HTML("<h4>Default models</h4>
         {metaUI_default_model_help(random_default, bayesian)}
-        <dt>Trim-and-fill</dt><dd>What would the average be if the funnel plot were symmetric? Studies are added as mirror images on the sparse side and the average is estimated again. The side to fill is chosen from the funnel plot&rsquo;s asymmetry (the sign of Egger&rsquo;s test), not from the direction the authors expected. Asymmetry can have causes other than publication bias. <span class=\'metaui-spec\'>Duval-Tweedie L0 estimator with common-effect trimming; random-effects model (ML) with Hartung-Knapp intervals. <i>k</i> includes the added studies.</span></dd>
+        <dt>Trim-and-fill</dt><dd>What would the average be if the funnel plot were symmetric? Studies are added as mirror images on the sparse side and the average is estimated again. The side to fill is chosen from the funnel plot&rsquo;s asymmetry (the sign of Egger&rsquo;s test), not from the direction the authors expected. Asymmetry can have causes other than publication bias. <span class=\'metaui-spec\'>Duval-Tweedie L0 estimator with common-effect trimming; random-effects model (ML) with Hartung-Knapp intervals. <i>k</i> counts the observed studies; the number added is shown beside the model.</span></dd>
         <dt>P-uniform* and the Hedges-Vevea selection model</dt><dd>What would the average be if significant results in the expected direction were more likely to be published? Both model this selection directly, so they need the direction the authors expected and are reported as unsupported without one. <span class=\'metaui-spec\'>puniform::puni_star (ML); weightr::weightfunct with one step at one-sided <i>p</i> = .025 and random effects.</span></dd>
         <dt>Precision Effect Test (PET); PEESE</dt><dd>What average effect would a study with no sampling error show, extending the link between effect size and its standard error (PET) or variance (PEESE)? <span class=\'metaui-spec\'>Weighted regressions of study-level effects on their standard error or variance; the intercept is reported.</span> Both rows are shown. The table also marks the conditional PET-PEESE estimate (<a href=\'https://doi.org/10.1002/jrsm.1095\'>Stanley &amp; Doucouliagos, 2014</a>): PEESE when PET&rsquo;s intercept differs from zero, PET otherwise. Following <a href=\'https://doi.org/10.1177/1948550617693062\'>Stanley (2017)</a>, the test is one-sided at the 10% level in the direction the authors expected, or two-sided at the 10% level when they stated none. The rule performs poorly when there are few studies, when all studies are small, or when effects vary a lot between studies (Stanley, 2017).</dd>{if (bayesian) "
         <dt>Bayesian normal-normal model</dt><dd>What is the average effect, given the studies and a stated prior belief about how much true effects differ between studies? <span class=\'metaui-spec\'>One combined effect per study; flat prior on the average and half-normal prior on the between-study SD (its scale is on the Bayesian sensitivity tab). The posterior is computed by numerical integration over the between-study SD (2,000-point grid; the average given that SD is exactly normal). The estimate is the posterior median; the interval is the central 95% credible interval, which depends on the prior.</span></dd>" else ""}
@@ -465,6 +465,19 @@ glue_string <- ('
           f <- Filter(function(i) i$id == id, filters)[[1]]
           if (length(levels(metaUI__df[[f$col]])) >= <<opts$selection_list_threshold>>) shinyWidgets::updatePickerInput(session, inputId = id, selected = levels(shiny::isolate(state_values$uploaded_data)[[f$col]]))
           else updateCheckboxGroupInput(inputId = id, selected = levels(shiny::isolate(state_values$uploaded_data)[[f$col]]))
+        })
+        # Ranges that uploaded data extends widen again, as on upload, so that Reset keeps every uploaded row.
+        uploaded <- shiny::isolate(state_values$uploaded_data)
+        if (!is.null(uploaded)) shinyjs::delay(600, {
+          full <- metaUI_full_selection(metaUI__df, filters)
+          columns <- c(outliers_z_scores = "metaUI__es_z", stats::setNames(vapply(filters, function(i) i$col, character(1)), vapply(filters, function(i) i$id, character(1))))
+          for (id in intersect(names(columns), names(full))) if (length(full[[id]]) == 2L && is.numeric(uploaded[[columns[[id]]]])) {
+            range <- metaUI_widen_range(full[[id]], uploaded[[columns[[id]]]], if (id == "outliers_z_scores") FALSE)
+            if (!identical(range, full[[id]])) {
+              step <- diff(range) / 1000
+              updateSliderInput(inputId = id, min = range[1], max = range[2], step = step, value = range)
+            }
+          }
         })
         if (length(metaUI_computation_specs(metaUI__df))) updateSelectInput(session, "computation", selected = "primary")
       })
@@ -2054,7 +2067,7 @@ glue_string <- ('
         if (length(values) != 2L || any(!is.finite(values)) || values[1] > values[2]) stop("The filters sheet has an invalid range for ", id, ".", call. = FALSE)
         observed <- df[[columns[[id]]]][is.finite(df[[columns[[id]]]])]
         if (length(full[[id]]) == 2L && all(abs(values - full[[id]]) <= 1e-8 * pmax(1, abs(full[[id]]))) && length(observed))
-          filter_values[[id]] <- data.frame(selection = as.character(c(min(values[1], observed), max(values[2], observed))))
+          filter_values[[id]] <- data.frame(selection = as.character(metaUI_widen_range(values, observed, if (id == "outliers_z_scores") FALSE)))
       }
       if (length(metaUI_computation_specs(metaUI__df))) {
         value <- filter_values$computation$selection

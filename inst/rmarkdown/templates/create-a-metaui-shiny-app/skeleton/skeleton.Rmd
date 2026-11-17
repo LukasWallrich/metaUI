@@ -79,9 +79,10 @@ my_data <- prepare_data(my_data,
   # Filters/moderators can be named, with the "Display name" = "var_name" format
   # Add as many as you want to use
   filters = c("____" = "____", "___" = "____"), 
-  # Supported input scales: SMD, COR (raw r), or ZCOR (already Fisher z).
+  # Supported input scales: SMD, COR (raw r), ZCOR (already Fisher z),
+  # OR or RR (log odds or log risk ratios, or 2x2 counts via `counts`).
   es_type = "____",
-  variance_scale = NULL, # use "r" for COR or "z" for ZCOR; do not guess
+  variance_scale = NULL, # "r" for COR, "z" for ZCOR, "log" for OR/RR; do not guess
   es_id = NULL, # optionally map genuine unique-within-study effect IDs
   direction = "unspecified" # explicitly choose positive/negative for directional models
 )

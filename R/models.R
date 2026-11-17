@@ -29,8 +29,8 @@ get_model_tibble <- function(one_effect_per_study = FALSE) {
         models_to_run <- tibble::tribble(
         ~name, ~aggregated, ~es, ~LCL, ~UCL, ~k,
             "Random-Effects Multilevel Model", FALSE, "mod$b", "mod$ci.lb", "mod$ci.ub", "mod$k",
-            "Robust Variance Estimation", FALSE, "as.numeric(mod$reg_table$b.r)", "mod$reg_table$CI.L", "mod$reg_table$CI.U", "length(mod$k)",
-            "Trim-and-fill", TRUE, "mod$b", "mod$ci.lb", "mod$ci.ub", "mod$k",
+            "Robust Variance Estimation", FALSE, "as.numeric(mod$reg_table$b.r)", "mod$reg_table$CI.L", "mod$reg_table$CI.U", "sum(mod$k)",
+            "Trim-and-fill", TRUE, "mod$b", "mod$ci.lb", "mod$ci.ub", "mod$k - mod$k0",
             "P-uniform star", TRUE, "mod$est", "mod$ci.lb", "mod$ci.ub", "mod$k",
             "Hedges-Vevea Selection Model", TRUE, "as.numeric(mod$output_adj$par[2])", "mod$ci.lb_adj[2]", "mod$ci.ub_adj[2]", "mod$k",
             # P-curve estimates are off by default. They are Cohen's d (SMD data only), signed by
