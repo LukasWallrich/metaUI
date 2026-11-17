@@ -1089,6 +1089,20 @@ metaUI_reuse_fit <- function(results, models, code, df, fallback) {
   fallback()
 }
 
+# Typical sampling variance (k - 1) / tr(P) of an intercept-only model whose sampling covariance V
+# is block-diagonal by study (metafor's I^2 for multilevel models); with independent sampling errors
+# this is Higgins & Thompson's (2002) value. Solved study by study, so it stays fast for large data.
+metaUI_typical_variance <- function(V, study) {
+  k <- NROW(V)
+  if (k < 2L || length(study) != k) return(NA_real_)
+  trace <- 0; s <- numeric(k)
+  for (idx in split(seq_len(k), as.character(study))) {
+    W <- solve(as.matrix(V[idx, idx, drop = FALSE]))
+    trace <- trace + sum(diag(W)); s[idx] <- rowSums(W)
+  }
+  (k - 1) / (trace - sum(s^2) / sum(s))
+}
+
 metaUI_heterogeneity <- function(mod, df) {
   # Needs replication both between and within studies.
   identified <- length(unique(df$metaUI__study_id)) > 1L && anyDuplicated(df$metaUI__study_id) > 0L
@@ -1099,8 +1113,10 @@ metaUI_heterogeneity <- function(mod, df) {
   # I^2: the share of the variance of observed effects that is between true effects, against the "typical"
   # sampling variance of Higgins & Thompson (2002, doi:10.1002/sim.1186); for multilevel models, per level
   # as in Cheung (2014, doi:10.1037/a0032968). For rma.uni this equals metafor's I2.
+  # A CHE model's sampling errors correlate within studies, which the typical variance takes into account.
   w <- 1 / df$metaUI__variance[is.finite(df$metaUI__variance) & df$metaUI__variance > 0]
-  typical <- if (length(w) > 1L) (length(w) - 1) * sum(w) / (sum(w)^2 - sum(w^2)) else NA_real_
+  typical <- if (!is.null(mod$typical)) mod$typical else if (!is.null(mod$V) && NROW(mod$V) == nrow(df))
+    metaUI_typical_variance(mod$V, df$metaUI__study_id) else if (length(w) > 1L) (length(w) - 1) * sum(w) / (sum(w)^2 - sum(w^2)) else NA_real_
   share <- function(x) if (is.finite(x) && is.finite(typical)) 100 * x / (sum(sigma2) + typical) else NA_real_
   data.frame(study_variance = if (single) sigma2 else if (identified) sigma2[1] else NA_real_,
     effect_variance = if (identified && !single) sigma2[2] else NA_real_,
@@ -1252,7 +1268,8 @@ metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggre
         if (inherits(env$mod, "robu") && NROW(env$mod$reg_table) == 1L) tau <- tryCatch(sqrt(as.numeric(env$mod$mod_info$tau.sq)[1]), error = function(e) NA_real_)
         if (bayesian || (!spec$aggregated && !reflected && spec$code %in% metaUI_summary_codes)) fits[[i]] <<- env$mod
         if (!spec$aggregated && !reflected && inherits(env$mod, "rma.mv") && identical(unname(env$mod$s.names), c("metaUI__study_id", "metaUI__study_id/metaUI__effect_id")))
-          components[[i]] <<- list(sigma2 = env$mod$sigma2, QE = env$mod$QE, QEp = env$mod$QEp)
+          components[[i]] <<- list(sigma2 = env$mod$sigma2, QE = env$mod$QE, QEp = env$mod$QEp,
+            typical = if (NROW(env$mod$V) == nrow(x)) metaUI_typical_variance(env$mod$V, x$metaUI__study_id))
         if (!spec$aggregated && identical(spec$code, metaUI_code_random) && inherits(env$mod, "rma.uni"))
           components[[i]] <<- list(sigma2 = env$mod$tau2, QE = env$mod$QE, QEp = env$mod$QEp)
         if (!reflected && inherits(env$mod, c("rma.uni", "rma.mv"))) loo[[i]] <<- tryCatch(metaUI_loo_blocks(env$mod, x, result[c("es", "LCL", "UCL")]),

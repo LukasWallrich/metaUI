@@ -35,3 +35,17 @@ test_that("trim-and-fill reports observed studies, RVE effects, with units", {
   expect_equal(rve$k, 24)
   expect_identical(rve$k_unit, "effects")
 })
+
+test_that("I-squared of the CHE model uses the full sampling covariance, as metafor's recipe", {
+  set.seed(3)
+  x <- data.frame(study = rep(1:12, each = 3), id = rep(1:3, 12), vi = runif(36, .01, .06))
+  x$yi <- rnorm(12, .3, .2)[x$study] + rnorm(36, 0, .1) + rnorm(36, 0, sqrt(x$vi))
+  d <- prepare_data(x, "study", "yi", variance = "vi", es_id = "id")
+  fit <- metaUI:::metaUI_multilevel_fit(d)
+  W <- solve(as.matrix(fit$V)); X <- model.matrix(fit)
+  P <- W - W %*% X %*% solve(t(X) %*% W %*% X) %*% t(X) %*% W
+  reference <- 100 * sum(fit$sigma2) / (sum(fit$sigma2) + (fit$k - fit$p) / sum(diag(P)))
+  expect_equal(metaUI:::metaUI_heterogeneity(fit, d)$I2, reference, tolerance = 1e-10)
+  cached <- metaUI:::metaUI_fit_models(d, get_model_tibble()[1, ])$components[[1]]
+  expect_equal(metaUI:::metaUI_heterogeneity(cached, d)$I2, reference, tolerance = 1e-8)
+})
