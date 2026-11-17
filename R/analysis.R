@@ -715,7 +715,7 @@ metaUI_call_name <- function(e) {
   if (is.name(f)) as.character(f) else if (is.call(f) && as.character(f[[1]]) %in% c("::", ":::")) as.character(f[[3]]) else ""
 }
 
-metaUI_default_moderator_call <- quote(metafor::rma.mv(metaUI__effect_size, V = metaUI__variance,
+metaUI_default_moderator_call <- quote(metafor::rma.mv(metaUI__effect_size, V = metaUI_che_vcov(df),
   random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df, test = "t", dfs = "contain", method = "REML", sparse = nrow(df) > 250))
 
 # Model code with the moderator added to its one rma.mv call (a final robust() is dropped, as
@@ -1008,10 +1008,17 @@ metaUI_puni_star_interval <- function(mod, df, level = .90, alpha = .05) {
 # from few studies do not narrow the interval. Sparse matrices pay off only for larger data: up to
 # about 250 effects, dense fits were 2 to 10 times faster (native R and webR); at 2,600 effects,
 # sparse fits were 20 times faster. Estimates agree to 1e-9.
-metaUI_multilevel_fit <- function(df) {
-  metafor::rma.mv(df$metaUI__effect_size, V = df$metaUI__variance,
+# Correlated and hierarchical effects (CHE; Pustejovsky & Tipton, 2022): sampling errors of effects
+# from the same study correlate at the app's within-study correlation (metaUI_fit_models attaches
+# it), .6 if none, as for RVE and the study-level averages.
+metaUI_multilevel_fit <- function(df, rho = attr(df, "metaUI_correlation")) {
+  metafor::rma.mv(df$metaUI__effect_size, V = metaUI_che_vcov(df, rho),
     random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = df,
     test = "t", dfs = "contain", method = "REML", sparse = nrow(df) > 250)
+}
+metaUI_che_vcov <- function(df, rho = attr(df, "metaUI_correlation")) {
+  metafor::vcalc(df$metaUI__variance, cluster = df$metaUI__study_id, obs = df$metaUI__effect_id,
+    rho = if (is.null(rho)) .6 else rho, sparse = nrow(df) > 250)
 }
 
 # The within-study correlation is the one declared for the app (metaUI_fit_models attaches it), .6 if none.
@@ -1057,11 +1064,14 @@ metaUI_fit_cache <- function(max_entries = 3L, limit = 3L, seed = NULL) {
 }
 
 # Precomputed default analysis (opening_precompute() in the package). It answers for this
-# app only while the files that determine it are unchanged; ui.R also sets the default
-# filters, but the fit's cache key already checks those, so only the shown HTML depends on it.
+# app only while the files that determine it are unchanged, and the R and model package
+# versions match the build machine; ui.R also sets the default filters, but the fit's cache
+# key already checks those, so only the shown HTML depends on it.
 metaUI_opening_files <- function(dir = ".") {
   files <- c(setdiff(list.files(dir, pattern = "[.]R$"), "ui.R"), "dataset.rds")
-  unname(tools::md5sum(file.path(dir, files)))
+  packages <- c("metafor", "clubSandwich", "robumeta", "puniform", "weightr", "poibin")
+  versions <- vapply(packages, function(p) tryCatch(as.character(utils::packageVersion(p)), error = function(e) NA_character_), character(1))
+  c(unname(tools::md5sum(file.path(dir, files))), paste(R.version$major, R.version$minor, sep = "."), paste(packages, versions))
 }
 metaUI_opening_load <- function(dir = ".") {
   path <- file.path(dir, "opening_results.rds")

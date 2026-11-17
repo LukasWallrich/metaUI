@@ -30,6 +30,9 @@ test_that("headless app loads and runs the generated server", {
   expect_true(any(grepl("z <- outliers$metaUI__es_z", server_code, fixed = TRUE)))
   expect_true(any(grepl("z <- flagged$metaUI__es_z", server_code, fixed = TRUE)))
   expect_true(file.exists(file.path(path, "www", "metaui.css")))
+  # The default multilevel model is CHE, with the app's within-study correlation of .6.
+  ref <- metafor::rma.mv(d$metaUI__effect_size, V = metafor::vcalc(d$metaUI__variance, cluster = d$metaUI__study_id, obs = d$metaUI__effect_id, rho = .6),
+    random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = d, method = "REML", test = "t", sparse = TRUE)
   shiny::testServer(env$server, {
     expect_error(capture_filters(), class = "shiny.silent.error")
     z_range <- unlist(metaUI:::metaUI_slider_spec(d$metaUI__es_z, integer = FALSE)[c("min", "max")])
@@ -42,8 +45,6 @@ test_that("headless app loads and runs the generated server", {
     expect_identical(output$apply_state, "")
     table <- estimatesfiltered()
     expect_equal(table$status[1:2], c("ok","ok"))
-    ref <- metafor::rma.mv(metaUI__effect_size, V=metaUI__variance, random=~1|metaUI__study_id/metaUI__effect_id,
-                          data=d, method="REML", test="t", sparse=TRUE)
     expect_equal(table$fit_es[1], as.numeric(ref$b), tolerance=1e-8)
     expect_true(nzchar(output$effectestimate))
     expect_true(nzchar(output$heterogeneity))

@@ -140,7 +140,7 @@ test_that("the multilevel model uses dense matrices for small data and sparse on
   expect_false(metaUI:::metaUI_multilevel_fit(large[1:250, ])$sparse)
   expect_true(metaUI:::metaUI_multilevel_fit(large[1:251, ])$sparse)
   # Same estimates either way.
-  dense <- metafor::rma.mv(large$metaUI__effect_size, V = large$metaUI__variance, random = ~ 1 | metaUI__study_id/metaUI__effect_id,
+  dense <- metafor::rma.mv(large$metaUI__effect_size, V = metafor::vcalc(large$metaUI__variance, cluster = large$metaUI__study_id, obs = large$metaUI__effect_id, rho = .6), random = ~ 1 | metaUI__study_id/metaUI__effect_id,
     data = large, test = "t", dfs = "contain", method = "REML", sparse = FALSE)
   expect_equal(c(fit$b, fit$sigma2), c(dense$b, dense$sigma2), tolerance = 1e-6)
 })

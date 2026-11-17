@@ -21,7 +21,8 @@ test_that("the fast route is the exact GLS update with variance components held 
   for (s in unique(as.character(d$metaUI__study_id))) {
     keep <- as.character(d$metaUI__study_id) != s
     study <- as.character(d$metaUI__study_id)[keep]
-    M <- diag(d$metaUI__variance[keep]) + fit$sigma2[1] * outer(study, study, "==") + fit$sigma2[2] * diag(sum(keep))
+    V <- metafor::vcalc(d$metaUI__variance, cluster = d$metaUI__study_id, obs = d$metaUI__effect_id, rho = .6)
+    M <- V[keep, keep] + fit$sigma2[1] * outer(study, study, "==") + fit$sigma2[2] * diag(sum(keep))
     w <- solve(M)
     b <- sum(w %*% d$metaUI__effect_size[keep]) / sum(w)
     se <- sqrt(1 / sum(w))
@@ -90,7 +91,7 @@ test_that("leaving out a source drops all its studies, in the fast route and in 
   row <- fast[fast$study == "A", ]
   expect_equal(c(row$studies, row$effects), c(2L, 5L))
   rest <- d[!d$metaUI__study_id %in% c("S1", "S6"), ]
-  fixed <- metafor::rma.mv(rest$metaUI__effect_size, V = rest$metaUI__variance, random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = rest,
+  fixed <- metafor::rma.mv(rest$metaUI__effect_size, V = metafor::vcalc(metaUI__variance, cluster = metaUI__study_id, obs = metaUI__effect_id, rho = .6, data = rest), random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = rest,
     test = "t", dfs = "contain", sigma2 = fit$sigma2)
   expect_equal(c(row$es, row$se, row$LCL, row$UCL), c(as.numeric(fixed$b), fixed$se, fixed$ci.lb, fixed$ci.ub), tolerance = 1e-8)
   # Studies without a source are sources of their own.

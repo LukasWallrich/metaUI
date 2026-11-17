@@ -175,6 +175,15 @@ This release consolidates all changes since 0.1.1, including the unreleased
   - Accessibility: the jump link to the Sample table is 24 px tall; the technical record in About can take keyboard focus; filter names no longer include their help button.
 - Documentation: `?prepare_data` no longer says double-zero tables are kept; `citation`, `osf_link` and `contact` are documented as HTML; README and the Bayesian note describe one-effect-per-study apps.
 
+## Codebase review
+
+- The default multilevel model is a correlated and hierarchical effects (CHE) model: sampling errors of effects from the same study correlate at `options$correlation_dependent` (.6 by default), the value already used for study-level averages and RVE, rather than being treated as independent. Default moderator tests extend the same model. Estimates and intervals of the multilevel row change where studies contribute several effects.
+- Trim-and-fill's k counts the observed studies, with the number imputed beside the row; RVE's k counts effects in downloads and the reproduction script, as on screen. Model tables carry a `k_unit` column ("effects" or "studies").
+- Uploads: a saved full range widens outward to the slider grid, so an added study more extreme than the built data is no longer dropped by rounding; Reset after an upload keeps the ranges the uploaded data need.
+- Precomputed opening results are reused only with the R and model package versions they were computed with.
+- Custom model code with backslashes survives the generated `models.R`. The reproduction script's comparison tolerance is 1e-4, as workbook round-trips and optimiser-based fits differ by up to about 1e-6.
+- `prepare_data()` accepts the study label column as `article_label`. Trim-and-fill with equal standard errors gives a plain reason. `options$correlation_dependent` is documented.
+
 ## Breaking changes
 
 * Packages used only by generated apps (DT, ggplot2, meta, plotly, psych,

@@ -85,7 +85,7 @@ metaUI_default_model_help <- function(random_default = FALSE, bayesian = FALSE) 
   paste0("<p>The models make different assumptions, so their estimates need not agree. The first two estimate the average effect from every selected effect. ",
     "The bias analyses use one combined effect per study to explore possible publication or reporting bias, each in its own way.", bayes, " Each entry gives the question first, then the specification.</p><dl>",
     "<dt>Random-Effects Multilevel Model</dt><dd>What is the average effect, if true effects differ both between studies and between effects within a study? ",
-    "<span class='metaui-spec'>metafor::rma.mv, REML; random effects for studies and for effects within studies; sampling errors treated as independent; <i>t</i>-based intervals with containment degrees of freedom (based on the number of studies).</span></dd>",
+    "<span class='metaui-spec'>metafor::rma.mv, REML; random effects for studies and for effects within studies; sampling errors of effects from the same study correlated at the within-study correlation given above (a correlated and hierarchical effects model); <i>t</i>-based intervals with containment degrees of freedom (based on the number of studies).</span></dd>",
     "<dt>Robust Variance Estimation</dt><dd>What is the average effect, allowing for unknown correlations between effects from the same study? ",
     "<span class='metaui-spec'>robumeta::robu with correlated-effects weights, which use the within-study correlation given above to estimate between-study variation, and the small-sample correction of Tipton (2015). Below 4 small-sample degrees of freedom its interval is flagged as unreliable.</span></dd>")
 }
@@ -914,8 +914,8 @@ glue_string <- ('
           "Its interval uses a t distribution with k \\u2212 1 degrees of freedom; trim-and-fill uses the Hartung-Knapp adjustment, so their intervals can differ slightly.") else
           "Effect-level and study-level models therefore use the same data.") else
       paste0("Effects from the same study are assumed to correlate at ", correlation_dependent, ". ",
-      if (aggregation_method[1] == "first") "Study-level models use only the first selected effect from each study; RVE uses the correlation for its weights." else
-      "Study-level models use it to combine the effects within each study (GLS average), and RVE for its weights.",
+      if (aggregation_method[1] == "first") "Study-level models use only the first selected effect from each study; the multilevel model uses the correlation for the sampling errors, and RVE for its weights." else
+      "Study-level models use it to combine the effects within each study (GLS average), the multilevel model for the sampling errors, and RVE for its weights.",
       " Effect-level models (by default multilevel and RVE) use every selected effect. Studies are assumed independent.")
     tagList(tags$h4("Scale, direction and dependence"), tags$p(HTML(scale_text)), tags$p(direction_text), tags$p(dependence_text))
   })
@@ -1309,7 +1309,7 @@ glue_string <- ('
       return(list(model = primary_model, primary = TRUE, fit = results$components[[primary[1]]]))
     list(model = name, primary = !is.na(summary_row) && identical(primary_model, name),
       fit = tryCatch(metaUI_reuse_fit(results, models_to_run, code, df, function() if (identical(code, metaUI_code_random))
-        metaUI_univariate(df$metaUI__effect_size, df$metaUI__se, method = "REML") else metaUI_multilevel_fit(df)), error = function(e) e))
+        metaUI_univariate(df$metaUI__effect_size, df$metaUI__se, method = "REML") else metaUI_multilevel_fit(df, correlation_dependent)), error = function(e) e))
   })
   # A selection too small for the multilevel model (one effect, say) gets a message, not an error.
   heterogeneity_fit <- reactive({
@@ -1683,7 +1683,7 @@ glue_string <- ('
       if (is.null(results$loo[[primary[1]]])) "only metafor models can be updated this way" else results$loo[[primary[1]]]$reason
     multilevel <- multilevel[vapply(multilevel, usable, logical(1))]
     if (length(multilevel)) return(c(from_row(multilevel[1]), list(primary = FALSE, why = why, refit = refit)))
-    fit <- tryCatch(metaUI_multilevel_fit(df), error = function(e) e)
+    fit <- tryCatch(metaUI_multilevel_fit(df, correlation_dependent), error = function(e) e)
     if (inherits(fit, "error")) return(list(error = paste("The multilevel model could not be fitted:", metaUI_reader_reason(conditionMessage(fit), ""))))
     pred <- tryCatch(suppressWarnings(stats::predict(fit)), error = function(e) NULL)
     full <- c(es = as.numeric(fit$b), LCL = fit$ci.lb, UCL = fit$ci.ub, se = fit$se,
