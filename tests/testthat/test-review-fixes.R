@@ -10,6 +10,10 @@ test_that("a widened range keeps every new value inside once stored as text", {
   widened <- as.numeric(as.character(metaUI:::metaUI_widen_range(range, z, FALSE)))
   expect_true(all(z >= widened[1] & z <= widened[2]))
   expect_identical(metaUI:::metaUI_widen_range(range, c(0, 1), FALSE), range)
+  # A bound that holds the value only until it is written as text still widens.
+  edge <- -2.0000000000000004
+  stored <- as.numeric(as.character(metaUI:::metaUI_widen_range(c(edge, 3), c(edge, 1), FALSE)))
+  expect_lte(stored[1], edge)
   expect_identical(metaUI:::metaUI_widen_range(c(2001, 2016), c(2005, 2030)), c(2001, 2030))
 })
 

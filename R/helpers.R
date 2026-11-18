@@ -47,7 +47,8 @@ metaUI_slider_spec <- function(x, integer = NULL) {
 # falls just outside it once the range is stored as text.
 metaUI_widen_range <- function(range, x, integer = NULL) {
   x <- x[is.finite(x)]
-  if (!length(x) || (min(x) >= range[1] && max(x) <= range[2])) return(range)
+  stored <- as.numeric(as.character(range))
+  if (!length(x) || (min(x) >= stored[1] && max(x) <= stored[2])) return(range)
   spec <- metaUI_slider_spec(c(range, x), integer)
   c(if (spec$min > min(x, range[1])) spec$min - spec$step else spec$min,
     if (spec$max < max(x, range[2])) spec$max + spec$step else spec$max)

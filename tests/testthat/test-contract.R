@@ -25,7 +25,8 @@ test_that("optional fields preserve membership and invalid required rows are rep
 test_that("true per-effect nesting and RVE agree with independent R fits", {
   x <- fixture(); d <- prepared(x); r <- fit(d)$table
   # The multilevel model is CHE: sampling errors within a study correlate at the declared .6.
-  ref <- metafor::rma.mv(yi, V = metafor::vcalc(vi, cluster = study, obs = id, rho = .6, data = x), random = ~ 1 | study/id, data = x, method = "REML", test = "t", dfs = "contain", sparse = TRUE)
+  V <- metafor::vcalc(vi, cluster = study, obs = id, rho = .6, data = x)
+  ref <- metafor::rma.mv(yi, V = V, random = ~ 1 | study/id, data = x, method = "REML", test = "t", dfs = "contain", sparse = TRUE)
   # RVE assumes the declared within-study correlation, .6 by default.
   rve <- robumeta::robu(yi ~ 1, data = x, studynum = study, var.eff.size = vi, rho = .6, small = TRUE)
   expect_equal(r$fit_es, c(as.numeric(ref$b), as.numeric(rve$reg_table$b.r)), tolerance = 1e-8)
@@ -34,7 +35,7 @@ test_that("true per-effect nesting and RVE agree with independent R fits", {
   expect_equal(r3$fit_LCL[2], rve3$reg_table$CI.L, tolerance = 1e-8)
   expect_equal(r$fit_LCL, c(ref$ci.lb, rve$reg_table$CI.L), tolerance = 1e-8)
   expect_equal(r$status, c("ok", "ok"))
-  wrong <- metafor::rma.mv(yi, V = vi, random = ~ 1 | study/yi, data = x, method = "REML", test = "t", dfs = "contain", sparse = TRUE)
+  wrong <- metafor::rma.mv(yi, V = V, random = ~ 1 | study/yi, data = x, method = "REML", test = "t", dfs = "contain", sparse = TRUE)
   expect_gt(abs(as.numeric(ref$b) - as.numeric(wrong$b)), 1e-6)
   d2 <- prepare_data(x, "study", "yi", variance = "vi", es_label = "label")
   expect_equal(length(unique(d2$metaUI__effect_id)), 16)
