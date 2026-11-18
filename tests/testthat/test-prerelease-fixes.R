@@ -48,7 +48,8 @@ test_that("the fast HTZ omnibus test matches clubSandwich, also with many catego
   x$g <- factor(rep(rep(letters[1:10], length.out = studies), each = 3))
   x$yi <- rnorm(studies, sd = .2)[x$study] + rnorm(nrow(x), sd = .1)
   x$vi <- runif(nrow(x), .01, .05)
-  fit <- metafor::rma.mv(yi, vi, mods = ~ g, random = ~ 1 | study/effect, data = x, test = "t", dfs = "contain")
+  # The default moderator model is CHE, with the default within-study correlation of .6.
+  fit <- metafor::rma.mv(yi, metafor::vcalc(vi, cluster = study, obs = effect, rho = .6, data = x), mods = ~ g, random = ~ 1 | study/effect, data = x, test = "t", dfs = "contain")
   stock <- clubSandwich::Wald_test(fit, constraints = clubSandwich::constrain_zero(2:10),
     vcov = clubSandwich::vcovCR(fit, cluster = x$study, type = "CR2"), test = "HTZ")
   fast <- metaUI:::metaUI_moderator_omnibus(fit, x$study)

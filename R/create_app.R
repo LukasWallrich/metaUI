@@ -172,6 +172,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'   - `intro` Optional HTML shown under the title: one or two sentences stating the question and, for readers new to the scale, what positive values mean.
 #'   - `fit_cache_entries` Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.
 #'   - `selection_list_threshold` Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
+#'   - `correlation_dependent` Numeric, at least 0 and below 1. The assumed correlation between the sampling errors of effects from the same study, used to average them into study-level effects, in the multilevel (CHE) model and for the RVE weights. Defaults to .6.
 #' @inheritParams create_about
 #' @inheritDotParams create_about
 #'
@@ -289,7 +290,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   correlation <- if (is.null(options$correlation_dependent)) .6 else options$correlation_dependent
   metaUI_aggregate(dataset, correlation) # check the aggregation contract before writing
   report$aggregation <- list(method = "GLS study-level average", correlation = correlation,
-    assumptions = "Distinct studies are independent; multilevel V is diagonal (sampling covariance not supplied). Multilevel t tests use containment df. RVE uses correlated-effects weights with the same within-study correlation and the Tipton small-sample correction (small=TRUE). Neither N nor p is inferred by aggregation.")
+    assumptions = "Distinct studies are independent; the multilevel model (CHE) sets the sampling covariance of effects within a study from their variances and the same within-study correlation (metafor::vcalc). Multilevel t tests use containment df. RVE uses correlated-effects weights with the same within-study correlation and the Tipton small-sample correction (small=TRUE). Neither N nor p is inferred by aggregation.")
   if (!is.null(bayesian)) report$bayesian <- c(bayesian, list(
     model = "Two-level normal-normal on aggregated studies", mean_prior = "Improper uniform on fitting scale",
     computation = "Grid quadrature over tau (2,000 points, uniform in log(tau + tau0)); mu as the exact normal mixture over the grid. Within 1e-7 posterior SDs of adaptive numerical integration for mu and 2e-4 for tau quantiles (validation/bayesian-grid.md in the metaUI source repository, https://github.com/LukasWallrich/metaUI).",
@@ -518,6 +519,7 @@ generate_global.R <- function(metaUI_eff_size_type_label, uses_meta = FALSE) {
 to_tribble <- function(x, show = FALSE, digits = 5) {
 
   escape_quotes <- function(x) {
+    x <- stringr::str_replace_all(x, stringr::fixed("\\"), "\\\\")
     x <- stringr::str_replace_all(x, "'", "\\\\'")
     x <- stringr::str_replace_all(x, '"', '\\\\"')
     x

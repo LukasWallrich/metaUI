@@ -27,7 +27,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       summary_table_notes <- HTML(glue::glue("<p>CI = <<ci_width>> confidence interval; its actual coverage depends on each model\\\'s assumptions. <i>k</i> is the number of effects or studies the model reports.{if (bayesian) " Bayesian rows show central credible intervals." else ""}</p>", .open = "<<", .close = ">>"))
       model_help <- HTML("<h4>Default models</h4>
         {metaUI_default_model_help(random_default, bayesian)}
-        <dt>Trim-and-fill</dt><dd>What would the average be if the funnel plot were symmetric? Studies are added as mirror images on the sparse side and the average is estimated again. The side to fill is chosen from the funnel plot&rsquo;s asymmetry (the sign of Egger&rsquo;s test), not from the direction the authors expected. Asymmetry can have causes other than publication bias. <span class=\'metaui-spec\'>Duval-Tweedie L0 estimator with common-effect trimming; random-effects model (ML) with Hartung-Knapp intervals. <i>k</i> includes the added studies.</span></dd>
+        <dt>Trim-and-fill</dt><dd>What would the average be if the funnel plot were symmetric? Studies are added as mirror images on the sparse side and the average is estimated again. The side to fill is chosen from the funnel plot&rsquo;s asymmetry (the sign of Egger&rsquo;s test), not from the direction the authors expected. Asymmetry can have causes other than publication bias. <span class=\'metaui-spec\'>Duval-Tweedie L0 estimator with common-effect trimming; random-effects model (ML) with Hartung-Knapp intervals. <i>k</i> counts the observed studies; the number added is shown beside the model.</span></dd>
         <dt>P-uniform* and the Hedges-Vevea selection model</dt><dd>What would the average be if significant results in the expected direction were more likely to be published? Both model this selection directly, so they need the direction the authors expected and are reported as unsupported without one. <span class=\'metaui-spec\'>puniform::puni_star (ML); weightr::weightfunct with one step at one-sided <i>p</i> = .025 and random effects.</span></dd>
         <dt>Precision Effect Test (PET); PEESE</dt><dd>What average effect would a study with no sampling error show, extending the link between effect size and its standard error (PET) or variance (PEESE)? <span class=\'metaui-spec\'>Weighted regressions of study-level effects on their standard error or variance; the intercept is reported.</span> Both rows are shown. The table also marks the conditional PET-PEESE estimate (<a href=\'https://doi.org/10.1002/jrsm.1095\'>Stanley &amp; Doucouliagos, 2014</a>): PEESE when PET&rsquo;s intercept differs from zero, PET otherwise. Following <a href=\'https://doi.org/10.1177/1948550617693062\'>Stanley (2017)</a>, the test is one-sided at the 10% level in the direction the authors expected, or two-sided at the 10% level when they stated none. The rule performs poorly when there are few studies, when all studies are small, or when effects vary a lot between studies (Stanley, 2017).</dd>{if (bayesian) "
         <dt>Bayesian normal-normal model</dt><dd>What is the average effect, given the studies and a stated prior belief about how much true effects differ between studies? <span class=\'metaui-spec\'>One combined effect per study; flat prior on the average and half-normal prior on the between-study SD (its scale is on the Bayesian sensitivity tab). The posterior is computed by numerical integration over the between-study SD (2,000-point grid; the average given that SD is exactly normal). The estimate is the posterior median; the interval is the central 95% credible interval, which depends on the prior.</span></dd>" else ""}
@@ -85,7 +85,7 @@ metaUI_default_model_help <- function(random_default = FALSE, bayesian = FALSE) 
   paste0("<p>The models make different assumptions, so their estimates need not agree. The first two estimate the average effect from every selected effect. ",
     "The bias analyses use one combined effect per study to explore possible publication or reporting bias, each in its own way.", bayes, " Each entry gives the question first, then the specification.</p><dl>",
     "<dt>Random-Effects Multilevel Model</dt><dd>What is the average effect, if true effects differ both between studies and between effects within a study? ",
-    "<span class='metaui-spec'>metafor::rma.mv, REML; random effects for studies and for effects within studies; sampling errors treated as independent; <i>t</i>-based intervals with containment degrees of freedom (based on the number of studies).</span></dd>",
+    "<span class='metaui-spec'>metafor::rma.mv, REML; random effects for studies and for effects within studies; sampling errors of effects from the same study correlated at the within-study correlation given above (a correlated and hierarchical effects model); <i>t</i>-based intervals with containment degrees of freedom (based on the number of studies).</span></dd>",
     "<dt>Robust Variance Estimation</dt><dd>What is the average effect, allowing for unknown correlations between effects from the same study? ",
     "<span class='metaui-spec'>robumeta::robu with correlated-effects weights, which use the within-study correlation given above to estimate between-study variation, and the small-sample correction of Tipton (2015). Below 4 small-sample degrees of freedom its interval is flagged as unreliable.</span></dd>")
 }
@@ -465,6 +465,19 @@ glue_string <- ('
           f <- Filter(function(i) i$id == id, filters)[[1]]
           if (length(levels(metaUI__df[[f$col]])) >= <<opts$selection_list_threshold>>) shinyWidgets::updatePickerInput(session, inputId = id, selected = levels(shiny::isolate(state_values$uploaded_data)[[f$col]]))
           else updateCheckboxGroupInput(inputId = id, selected = levels(shiny::isolate(state_values$uploaded_data)[[f$col]]))
+        })
+        # Ranges that uploaded data extends widen again, as on upload, so that Reset keeps every uploaded row.
+        uploaded <- shiny::isolate(state_values$uploaded_data)
+        if (!is.null(uploaded)) shinyjs::delay(600, {
+          full <- metaUI_full_selection(metaUI__df, filters)
+          columns <- c(outliers_z_scores = "metaUI__es_z", stats::setNames(vapply(filters, function(i) i$col, character(1)), vapply(filters, function(i) i$id, character(1))))
+          for (id in intersect(names(columns), names(full))) if (length(full[[id]]) == 2L && is.numeric(uploaded[[columns[[id]]]])) {
+            range <- metaUI_widen_range(full[[id]], uploaded[[columns[[id]]]], if (id == "outliers_z_scores") FALSE)
+            if (!identical(range, full[[id]])) {
+              step <- diff(range) / 1000
+              updateSliderInput(inputId = id, min = range[1], max = range[2], step = step, value = range)
+            }
+          }
         })
         if (length(metaUI_computation_specs(metaUI__df))) updateSelectInput(session, "computation", selected = "primary")
       })
@@ -901,8 +914,8 @@ glue_string <- ('
           "Its interval uses a t distribution with k \\u2212 1 degrees of freedom; trim-and-fill uses the Hartung-Knapp adjustment, so their intervals can differ slightly.") else
           "Effect-level and study-level models therefore use the same data.") else
       paste0("Effects from the same study are assumed to correlate at ", correlation_dependent, ". ",
-      if (aggregation_method[1] == "first") "Study-level models use only the first selected effect from each study; RVE uses the correlation for its weights." else
-      "Study-level models use it to combine the effects within each study (GLS average), and RVE for its weights.",
+      if (aggregation_method[1] == "first") "Study-level models use only the first selected effect from each study; the multilevel model uses the correlation for the sampling errors, and RVE for its weights." else
+      "Study-level models use it to combine the effects within each study (GLS average), the multilevel model for the sampling errors, and RVE for its weights.",
       " Effect-level models (by default multilevel and RVE) use every selected effect. Studies are assumed independent.")
     tagList(tags$h4("Scale, direction and dependence"), tags$p(HTML(scale_text)), tags$p(direction_text), tags$p(dependence_text))
   })
@@ -1296,7 +1309,7 @@ glue_string <- ('
       return(list(model = primary_model, primary = TRUE, fit = results$components[[primary[1]]]))
     list(model = name, primary = !is.na(summary_row) && identical(primary_model, name),
       fit = tryCatch(metaUI_reuse_fit(results, models_to_run, code, df, function() if (identical(code, metaUI_code_random))
-        metaUI_univariate(df$metaUI__effect_size, df$metaUI__se, method = "REML") else metaUI_multilevel_fit(df)), error = function(e) e))
+        metaUI_univariate(df$metaUI__effect_size, df$metaUI__se, method = "REML") else metaUI_multilevel_fit(df, correlation_dependent)), error = function(e) e))
   })
   # A selection too small for the multilevel model (one effect, say) gets a message, not an error.
   heterogeneity_fit <- reactive({
@@ -1670,7 +1683,7 @@ glue_string <- ('
       if (is.null(results$loo[[primary[1]]])) "only metafor models can be updated this way" else results$loo[[primary[1]]]$reason
     multilevel <- multilevel[vapply(multilevel, usable, logical(1))]
     if (length(multilevel)) return(c(from_row(multilevel[1]), list(primary = FALSE, why = why, refit = refit)))
-    fit <- tryCatch(metaUI_multilevel_fit(df), error = function(e) e)
+    fit <- tryCatch(metaUI_multilevel_fit(df, correlation_dependent), error = function(e) e)
     if (inherits(fit, "error")) return(list(error = paste("The multilevel model could not be fitted:", metaUI_reader_reason(conditionMessage(fit), ""))))
     pred <- tryCatch(suppressWarnings(stats::predict(fit)), error = function(e) NULL)
     full <- c(es = as.numeric(fit$b), LCL = fit$ci.lb, UCL = fit$ci.ub, se = fit$se,
@@ -2054,7 +2067,7 @@ glue_string <- ('
         if (length(values) != 2L || any(!is.finite(values)) || values[1] > values[2]) stop("The filters sheet has an invalid range for ", id, ".", call. = FALSE)
         observed <- df[[columns[[id]]]][is.finite(df[[columns[[id]]]])]
         if (length(full[[id]]) == 2L && all(abs(values - full[[id]]) <= 1e-8 * pmax(1, abs(full[[id]]))) && length(observed))
-          filter_values[[id]] <- data.frame(selection = as.character(c(min(values[1], observed), max(values[2], observed))))
+          filter_values[[id]] <- data.frame(selection = as.character(metaUI_widen_range(values, observed, if (id == "outliers_z_scores") FALSE)))
       }
       if (length(metaUI_computation_specs(metaUI__df))) {
         value <- filter_values$computation$selection

@@ -66,6 +66,7 @@ a character vector with all packages to display.}
 \item \code{intro} Optional HTML shown under the title: one or two sentences stating the question and, for readers new to the scale, what positive values mean.
 \item \code{fit_cache_entries} Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.
 \item \code{selection_list_threshold} Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
+\item \code{correlation_dependent} Numeric, at least 0 and below 1. The assumed correlation between the sampling errors of effects from the same study, used to average them into study-level effects, in the multilevel (CHE) model and for the RVE weights. Defaults to .6.
 }}
 
 \item{overwrite}{Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.}
