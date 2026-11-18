@@ -183,8 +183,9 @@ first-time fitting costs.
 
 Downloads preserve the full current input dataset and saved filter
 selections; the summary sheet describes the selected rows. An empty
-selection stays empty on re-upload and reports no eligible rows, while
-the original inputs remain available.
+selection is restored on re-upload but cannot be analysed: the app says
+that no effects match the filters and labels the results still shown as
+those for the previous selection.
 
 Readers can update the data: the workbook’s first sheet, `instructions`,
 marks which dataset columns to edit (study, effect ID, the effect size

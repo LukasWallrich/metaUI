@@ -169,6 +169,16 @@
 <li>Documentation: <code><a href="../reference/prepare_data.html">?prepare_data</a></code> no longer says double-zero tables are kept; <code>citation</code>, <code>osf_link</code> and <code>contact</code> are documented as HTML; README and the Bayesian note describe one-effect-per-study apps.</li>
 </ul></div>
 <div class="section level3">
+<h3 id="codebase-review-0-2-0">Codebase review<a class="anchor" aria-label="anchor" href="#codebase-review-0-2-0"></a></h3>
+<ul><li>The default multilevel model is a correlated and hierarchical effects (CHE) model: sampling errors of effects from the same study correlate at <code>options$correlation_dependent</code> (.6 by default), the value already used for study-level averages and RVE, rather than being treated as independent. Default moderator tests extend the same model. Estimates and intervals of the multilevel row change where studies contribute several effects.</li>
+<li>Trim-and-fill’s k counts the observed studies, with the number imputed beside the row; RVE’s k counts effects in downloads and the reproduction script, as on screen. Model tables carry a <code>k_unit</code> column (“effects” or “studies”).</li>
+<li>Uploads: a saved full range widens outward to the slider grid, so an added study more extreme than the built data is no longer dropped by rounding; Reset after an upload keeps the ranges the uploaded data need.</li>
+<li>Precomputed opening results are reused only when the R major and minor version and the versions of metafor, clubSandwich, robumeta, puniform, weightr and poibin match those they were computed with.</li>
+<li>Custom model code with backslashes survives the generated <code>models.R</code>. The reproduction script’s comparison tolerance is 1e-4, as workbook round-trips and optimiser-based fits differ by up to about 1e-6.</li>
+<li>
+<code><a href="../reference/prepare_data.html">prepare_data()</a></code> accepts the study label column as <code>article_label</code>. Trim-and-fill with equal standard errors gives a plain reason. <code>options$correlation_dependent</code> is documented.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="breaking-changes-0-2-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-2-0"></a></h3>
 <ul><li>Packages used only by generated apps (DT, ggplot2, meta, plotly, psych, puniform, readxl, robumeta, shinycssloaders, shinyjs, weightr, writexl and zcurve) moved from Imports to Suggests. <code><a href="../reference/generate_shiny.html">generate_shiny()</a></code> names any that are missing, with the command to install them.</li>
 <li>
@@ -203,7 +213,8 @@
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-0-2-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-2-0"></a></h3>
-<ul><li>Corrected the random-intercept specification in <code>rma.mv()</code> (now with <code>sparse = TRUE</code>), REML heterogeneity output, and Egger residual variance. Meaningless multilevel tau² is no longer shown; singleton-study variance splits are reported as unidentified.</li>
+<ul><li>Moderator tests use model-based standard errors, and say so, when a selection has no more studies than the model has coefficients. Cluster-robust (CR2) standard errors are not defined there, and some intervals came out as NaN.</li>
+<li>Corrected the random-intercept specification in <code>rma.mv()</code> (now with <code>sparse = TRUE</code>), REML heterogeneity output, and Egger residual variance. Meaningless multilevel tau² is no longer shown; singleton-study variance splits are reported as unidentified.</li>
 <li>Optional p and N columns no longer drop rows under default preparation; required inputs are validated, and excluded rows and derivations are reported.</li>
 <li>Categorical filter levels containing a double quote no longer stop the app from starting.</li>
 <li>A non-converging random-effects model behind the funnel plot and Egger’s test now gives a clear message instead of a raw error.</li>
@@ -213,7 +224,9 @@
 </ul></div>
 <div class="section level3">
 <h3 id="performance-0-2-0">Performance<a class="anchor" aria-label="anchor" href="#performance-0-2-0"></a></h3>
-<ul><li>P-curve deduplicates identical noncentrality solves without changing results.</li>
+<ul><li>The default multilevel model (and the default moderator model) uses sparse matrices only above 250 effects. Smaller fits were 2–10 times faster with dense matrices, on the server and in the browser; large fits stay sparse (20 times faster at 2,600 effects). Estimates are unchanged.</li>
+<li>Generated apps set BLAS to one thread when <code>RhpcBLASctl</code> is installed on the server. A multithreaded BLAS such as OpenBLAS slowed a small model fit about 60-fold (8.3 s against 0.14 s) when other processes shared the cores. Static exports are unaffected.</li>
+<li>P-curve deduplicates identical noncentrality solves without changing results.</li>
 <li>Compatible multilevel/RVE fits are reused across diagnostics, and a session-local three-entry cache speeds repeated selections. Custom models default to no caching; <code>options$fit_cache_entries = 0</code> disables it. Measurements are in <a href="https://github.com/LukasWallrich/metaUI/blob/main/validation/performance-optimisation.md" class="external-link">validation/performance-optimisation.md</a> in the source repository.</li>
 </ul></div>
 <div class="section level3">

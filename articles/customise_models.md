@@ -86,8 +86,10 @@ preserve hand edits. It never clears unrelated files from the folder.
 ## A worked example: a correlated and hierarchical effects model
 
 The meta-analysis of team diversity and performance (Wallrich et al.,
-2024) used a correlated and hierarchical effects (CHE) model. This adds
-it as the primary analysis, next to the default models:
+2024) used a correlated and hierarchical effects (CHE) model. The
+default multilevel model is also a CHE model, with the app’s
+`options$correlation_dependent`; this adds the paper’s exact
+specification as a named primary analysis, next to the default models:
 
 ``` r
 

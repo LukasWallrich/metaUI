@@ -160,6 +160,11 @@ generate_shiny(
     should a selection box be shown instead of check boxes? Defaults to
     6.
 
+  - `correlation_dependent` Numeric, at least 0 and below 1. The assumed
+    correlation between the sampling errors of effects from the same
+    study, used to average them into study-level effects, in the
+    multilevel (CHE) model and for the RVE weights. Defaults to .6.
+
 - overwrite:
 
   Explicit opt-in to replace generated files in a nonempty destination.

@@ -160,8 +160,11 @@ from the folder.</p>
 <h2 id="a-worked-example-a-correlated-and-hierarchical-effects-model">A worked example: a correlated and hierarchical effects model<a class="anchor" aria-label="anchor" href="#a-worked-example-a-correlated-and-hierarchical-effects-model"></a>
 </h2>
 <p>The meta-analysis of team diversity and performance (Wallrich et al.,
-2024) used a correlated and hierarchical effects (CHE) model. This adds
-it as the primary analysis, next to the default models:</p>
+2024) used a correlated and hierarchical effects (CHE) model. The
+default multilevel model is also a CHE model, with the app’s
+<code>options$correlation_dependent</code>; this adds the paper’s exact
+specification as a named primary analysis, next to the default
+models:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">models</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_model_tibble.html">get_model_tibble</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">che</span> <span class="op">&lt;-</span> <span class="va">models</span><span class="op">[</span><span class="va">models</span><span class="op">$</span><span class="va">name</span> <span class="op">==</span> <span class="st">"Random-Effects Multilevel Model"</span>, <span class="op">]</span></span>
