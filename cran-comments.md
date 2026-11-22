@@ -5,8 +5,9 @@ contracts (including odds and risk ratios from log ratios or 2x2 counts, CHE
 default multilevel models, small-sample corrections, and cluster-robust
 moderation), opt-in Bayesian analysis via grid quadrature, leave-one-out
 influence diagnostics, author-defined effect computations, build-time study
-metadata, reproducible R/Quarto code export, shareable selection links, static
-(`shinylive`) export, an author design helper, and a redesigned accessible UI.
+metadata, reproducible R/Quarto code export, shareable selection links,
+experimental static (`shinylive`) export, an author design helper, and a
+redesigned accessible UI.
 
 ## R CMD check results
 
