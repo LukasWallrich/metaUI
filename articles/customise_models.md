@@ -28,7 +28,7 @@ below - or alternatively to delete that line.
 ## Add or edit models
 
 To add or edit models, you need to understand a bit more about the
-structure of the file. If contains two parts - firstly, the
+structure of the file. It contains two parts - firstly, the
 `models_to_run` which has the names of the models and the details on how
 to extract summary data, and then the `models_code` that contains the
 code to estimate them.

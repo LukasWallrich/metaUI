@@ -99,8 +99,8 @@ prepare_data(
 - es_label:
 
   Character. Label for individual effect sizes - only needed when there
-  are multiple effect sizes per study/sample. Defaults to NA. Defaults
-  to NA, in that case, multiple effect sizes are simply numbered.
+  are multiple effect sizes per study/sample. Defaults to NA, in which
+  case multiple effect sizes are simply numbered.
 
 - na.rm:
 

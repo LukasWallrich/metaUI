@@ -50,3 +50,19 @@ and use
 [`export_static()`](https://lukaswallrich.github.io/metaUI/reference/export_static.md)
 after editing; regenerating the app replaces edits to its generated
 files.
+
+## Examples
+
+``` r
+root <- tempfile("metaui-build-")
+dir.create(root)
+file.copy(
+  system.file("examples", c("tiny.csv", "tiny.json"), package = "metaUI"),
+  root
+)
+#> [1] TRUE TRUE
+# \donttest{
+build_app(file.path(root, "tiny.json"))
+# }
+unlink(root, recursive = TRUE)
+```

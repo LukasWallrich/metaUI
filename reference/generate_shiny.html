@@ -81,7 +81,7 @@ on that folder, or modified by editing server.R, ui.R, global.R and models.R in 
 
 
 <dt id="arg-eff-size-type-label">eff_size_type_label<a class="anchor" aria-label="anchor" href="#arg-eff-size-type-label"></a></dt>
-<dd><p>The label to be used to describe the effect size. If NA, effect type code from dataset is used.</p></dd>
+<dd><p>The label to be used to describe the effect size. If NA, uses <code>"Correlation r"</code> for correlations, <code>"Odds ratio"</code> or <code>"Risk ratio"</code> for ratios, and otherwise the effect type code from the dataset.</p></dd>
 
 
 <dt id="arg-models">models<a class="anchor" aria-label="anchor" href="#arg-models"></a></dt>
@@ -129,9 +129,6 @@ Inserted into About as a link (HTML).</p></dd>
 used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 a character vector with all packages to display.</p></dd>
 
-    <dt><code>meta</code></dt>
-<dd><p>Does author model code use meta? If so, the default list includes it.</p></dd>
-
 
 </dl></dd>
 
@@ -151,7 +148,7 @@ a character vector with all packages to display.</p></dd>
 
 
 <dt id="arg-bayesian">bayesian<a class="anchor" aria-label="anchor" href="#arg-bayesian"></a></dt>
-<dd><p>NULL (default), or list(enabled = TRUE, tau_scale = .5). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior, computed by grid quadrature over the heterogeneity (no extra package needed). Correlation default tau_scale is .25 on Fisher z. An optional <code>max_studies</code> (integer, at least 2) caps the number of studies; by default there is no cap. Sensitivity analyses use half and double the scale.</p></dd>
+<dd><p>NULL (default), or list(enabled = TRUE, tau_scale = .5). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior, computed by grid quadrature over the heterogeneity (no extra package needed). Correlation default tau_scale is .25 on Fisher z. An optional <code>max_studies</code> (integer, at least 2) caps the number of studies; by default there is no cap. Sensitivity analyses use half and double the scale. Cannot be combined with a <code>models</code> file path; supply a tibble or <code>get_model_tibble</code> instead.</p></dd>
 
 
 <dt id="arg-design">design<a class="anchor" aria-label="anchor" href="#arg-design"></a></dt>

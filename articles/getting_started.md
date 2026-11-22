@@ -139,23 +139,26 @@ generate_shiny(app_data,
 
 If one model is your primary analysis, name it with `primary_model`,
 using the model’s `name` exactly as it appears in the models tibble or
-`models.R` (for example
-`primary_model = "Random-Effects Multilevel Model"`). The app shows that
-model first and labels the other rows as explorations. If it cannot be
-estimated for a reader’s selection, the app says why and does not
-substitute another model. Without `primary_model`, the app states that
-it does not choose between estimators. The declaration is stored in the
-generated `labels_and_options.R` and in `validation.json`.
+`models.R` (for example `primary_model = "Random-Effects Model"` for
+datasets with one effect per study like this one, or
+`primary_model = "Random-Effects Multilevel Model"` when studies
+contribute multiple effects). The app shows that model first and labels
+the other rows as explorations. If it cannot be estimated for a reader’s
+selection, the app says why and does not substitute another model.
+Without `primary_model`, the app states that it does not choose between
+estimators. The declaration is stored in the generated
+`labels_and_options.R` and in `validation.json`.
 
 When you run this, the app will be saved to a new folder, in this case
-`my_app_folder`. You can run `shiny::shinyAppDir(my_app_folder)`
+`my_app_folder`. You can run `shiny::shinyAppDir("my_app_folder")`
 (specifying your folder) to run the Shiny app.
 
 To further customize the app, consider editing:
 
 - `models.R` to adjust the meta-analytic models that are compared on the
-  main page. See vignette(“customise_models”) for instructions on how to
-  do that.
+  main page. See
+  [`vignette("customise_models")`](https://lukaswallrich.github.io/metaUI/articles/customise_models.md)
+  for instructions on how to do that.
 
 - `ui.R` to edit the user interface (e.g., labels or the About section)
   or to drop certain parts of the output apart from the main models
@@ -168,13 +171,49 @@ To further customize the app, consider editing:
   the welcome message) and some fundamental options (e.g., for
   aggregating dependent effect sizes).
 
-## Deploy to shinyapps.io
+## Further authoring options
 
-If you want to share the app with the wider world, shinyapps.io is a
-good platform, with a free plan that is sufficient to start with. If you
-have not used it before, follow the instructions provided by
-Posit/RStudio to get started
-[here](https://shiny.rstudio.com/articles/shinyapps.html). In essence,
+metaUI supports several optional features that can be passed to
+[`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
+or configured headlessly from JSON with
+[`build_app()`](https://lukaswallrich.github.io/metaUI/reference/build_app.md):
+
+- **Appearance
+  ([`design_app()`](https://lukaswallrich.github.io/metaUI/reference/design_app.md),
+  [`app_design()`](https://lukaswallrich.github.io/metaUI/reference/app_design.md)):**
+  Run
+  [`design_app()`](https://lukaswallrich.github.io/metaUI/reference/design_app.md)
+  locally to pick contrast-checked colours, fonts, spacing and corner
+  radii, then pass the resulting
+  [`app_design()`](https://lukaswallrich.github.io/metaUI/reference/app_design.md)
+  list via `generate_shiny(..., design = design)`.
+- **Study details
+  ([`fetch_study_metadata()`](https://lukaswallrich.github.io/metaUI/reference/fetch_study_metadata.md)):**
+  When `prepare_data(..., url = ...)` maps a DOI column, call
+  `fetch_study_metadata(app_data, cache = "study-metadata.csv")` while
+  authoring and pass `study_info = info` to
+  [`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md).
+  Readers can then expand study rows for APA references, DOI links and
+  openly licensed abstracts, and download references as text, BibTeX or
+  Excel.
+- **Bayesian analysis and alternative computations:** Pass
+  `bayesian = list(enabled = TRUE)` to
+  [`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
+  to add a study-level Bayesian normal-normal model (computed via grid
+  quadrature, with prior sensitivity), or supply up to five alternative
+  effect-size computations via `prepare_data(..., alternatives = ...)`.
+- **Reproducible exploration:** Every generated app lets readers copy a
+  shareable selection link, download the data and results as an `.xlsx`
+  workbook (which can be edited and uploaded back), download an R script
+  or Quarto file that reproduces the applied selection without `metaUI`,
+  and inspect leave-one-out influence diagnostics under **Outlier
+  diagnostics**.
+
+## Deploy to shinyapps.io or publish as a static website
+
+If you want to host the app on a Shiny server, shinyapps.io is a good
+platform with a free plan to start. Follow Posit’s setup instructions
+[here](https://shiny.posit.co/r/articles/share/shinyapps/). In essence,
 you need to create an account, install the `rsconnect` package and
 authenticate within that package. Then you can run the following to
 deploy your app:
@@ -184,6 +223,28 @@ deploy your app:
 rsconnect::deployApp(appDir = "my_app_folder")
 ```
 
-Once that is done, the app should open in your browser, and you can copy
-the link from the address bar. That’s it - you now have your own
-meta-analysis Shiny app online.
+Alternatively, you can publish the app as a **static website**
+(experimental; no Shiny server needed — runs R in the reader’s browser
+via `shinylive`/WebAssembly). Install the suggested `shinylive` package
+first (`install.packages("shinylive")`), then use `static_folder` or
+[`export_static()`](https://lukaswallrich.github.io/metaUI/reference/export_static.md):
+
+``` r
+
+# Generate editable app and static site in one step:
+generate_shiny(app_data,
+               dataset_name = "Dannheim et al. (2025) - Mental health",
+               save_to_folder = "my_app_folder",
+               static_folder = "my_static_site")
+
+# Or re-export after editing files in my_app_folder
+# (overwrite = TRUE deletes and rewrites the entire static destination, including
+# hand edits and unrelated files — keep hand edits in my_app_folder):
+export_static("my_app_folder", "my_static_site", overwrite = TRUE)
+```
+
+Host the static folder over HTTPS (for example, on GitHub Pages) or
+preview it from `localhost` (e.g.,
+`httpuv::runStaticServer("my_static_site")`). Because the full dataset
+and generated app code are sent to every visitor, publish only shareable
+material.

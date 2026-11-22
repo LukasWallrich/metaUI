@@ -67,7 +67,8 @@ The [`Getting started`
 vignette](https://lukaswallrich.github.io/metaUI/articles/getting_started.html)
 provides a step-by-step example … or you may want to watch this [video
 tutorial](https://www.youtube.com/watch?v=iaTMFzWfCe0&ab_channel=ESMARConf)
-for a step-by-step walk-through.
+for a walk-through of the workflow (recorded for an earlier version; the
+generated app interface has since been updated).
 
 ## Building and launching apps
 
@@ -76,13 +77,13 @@ Apps can be built in R with
 or headlessly from a versioned JSON configuration with
 [`build_app()`](https://lukaswallrich.github.io/metaUI/reference/build_app.md);
 either way, the generated R/Shiny files stay editable. Schema version 2
-adds computation and Bayesian authoring; version 1 continues to accept
-the original configuration fields. See [reproduction and scientific
-contract](https://github.com/LukasWallrich/metaUI/blob/main/validation/reproduction.md),
-[the tiny synthetic
-config](https://lukaswallrich.github.io/metaUI/inst/examples/tiny.json),
+adds computation, Bayesian, study-metadata and 2x2-count authoring;
+version 1 continues to accept the original configuration fields (plus
+`design`, `eff_size_type_label`, `filter_popups`, `primary_model` and
+`static_folder`). See [the tiny synthetic
+config](https://github.com/LukasWallrich/metaUI/blob/main/inst/examples/tiny.json)
 and its [JSON
-schema](https://lukaswallrich.github.io/metaUI/inst/examples/config.schema.json).
+schema](https://github.com/LukasWallrich/metaUI/blob/main/inst/examples/config.schema.json).
 Build and launch are separate:
 
 First copy `tiny.json` and `tiny.csv` from `inst/examples` into a fresh,
@@ -149,9 +150,18 @@ the example’s README/provenance before interpreting results. No
 benchmark corpus is deployed.
 
 The [synthetic correlation
-example](https://lukaswallrich.github.io/metaUI/inst/examples/correlations)
+example](https://github.com/LukasWallrich/metaUI/tree/main/inst/examples/correlations)
 demonstrates raw-r variance conversion and checks the fitted summary
 against an independent metafor reference.
+
+Use `options = list(intro = "...")` in
+[`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
+(or `"options": {"intro": "..."}` in JSON) to display a short
+introduction under the app title. Generated apps also include
+leave-one-study-out (and, where sources are mapped,
+leave-one-source-out) influence diagnostics under **Outlier
+diagnostics** alongside effect distributions, 1.5 IQR outlier lists, and
+heterogeneity (*I*² and τ).
 
 ### Fit reuse and performance
 
@@ -171,13 +181,8 @@ the primary model and refits it. On large dependent data (thousands of
 effects) one Update can then take two full model fits, during which a
 single R process serves no other reader. For apps that several people
 use at once, run more than one R process (for example, several workers
-on Posit Connect or shinyapps.io), or publish a static version (below),
-where each reader computes in their own browser.
-
-[Performance
-measurements](https://github.com/LukasWallrich/metaUI/blob/main/validation/performance-optimisation.md)
-distinguish faster p-curve calculations/fit reuse from cache hits and
-first-time fitting costs.
+on Posit Connect or shinyapps.io), or publish a static version
+(experimental; below), where each reader computes in their own browser.
 
 ### Downloads, uploads and reproduction code
 
@@ -271,10 +276,10 @@ well under a second, even for 646 studies in the browser (webR). Across
 412 simulated and two real datasets, its results were within 10⁻⁷
 posterior standard deviations of adaptive numerical integration for the
 mean and 2 × 10⁻⁴ for heterogeneity quantiles (see
-`validation/bayesian-grid.md`). There is no study limit by default;
-authors can set one with `max_studies` (an integer of at least 2). See
-[Röver et al.](https://doi.org/10.1002/jrsm.1475) for the prior
-rationale.
+[validation/bayesian-grid.md](https://github.com/LukasWallrich/metaUI/blob/main/validation/bayesian-grid.md)).
+There is no study limit by default; authors can set one with
+`max_studies` (an integer of at least 2). See [Röver et
+al.](https://doi.org/10.1002/jrsm.1475) for the prior rationale.
 
 ### Study details
 
@@ -376,9 +381,10 @@ text and accent against page, panel and derived tinted backgrounds, not
 an accessibility audit of author-supplied HTML or arbitrary Bootstrap
 themes.
 
-## Publishing without a server
+## Publishing without a server (experimental)
 
-Generate an editable app and a static website in one step:
+Generate an editable app and a static website in one step (experimental;
+relies on `shinylive`/webR):
 
 ``` r
 
@@ -391,9 +397,13 @@ Omit `save_to_folder` to use temporary source files. With JSON
 configurations, add `"static_folder": "my-site"` alongside the editable
 app’s `"output"` folder. After editing the generated app files,
 re-export with
-`metaUI::export_static("my-app", "my-site", overwrite = TRUE)`;
-regenerating would overwrite your edits. Static export requires the
-suggested `shinylive` package.
+`metaUI::export_static("my-app", "my-site", overwrite = TRUE)`. Note
+that `export_static(..., overwrite = TRUE)` deletes and rewrites the
+entire static destination (including hand edits and unrelated files),
+while regenerating with `generate_shiny(..., overwrite = TRUE)` replaces
+generated app files such as `www/metaui.css` and `www/metaui.js`—keep
+hand edits in the editable app folder and re-export from there. Static
+export requires the suggested `shinylive` package.
 
 Host the site over HTTPS (for example, on GitHub Pages), or serve it
 from localhost to preview it. Opening `index.html` as a file does not
@@ -486,11 +496,7 @@ Databank](https://cooperationdatabank.org/) (dataset exploration),
 [PsychOpen CAMA](https://cama.psychopen.eu/) (cumulative meta-analysis),
 and the [taVNS HRV app](https://vinzentwolf.shinyapps.io/taVNSHRVmeta/)
 (a Bayesian living meta-analysis). These are references, not
-endorsements or sources of bundled code. See the [issue follow-up
-decisions](https://lukaswallrich.github.io/metaUI/validation/issue-followup.md)
-for the assessed feature overlap and remaining work.
+endorsements or sources of bundled code.
 
 Compared with these projects, metaUI’s intended contribution is an
-author-owned app with editable R source. See the bounded
-[publication-readiness
-assessment](https://github.com/LukasWallrich/metaUI/blob/main/validation/publication-readiness.md).
+author-owned app with editable R source.

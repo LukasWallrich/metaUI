@@ -185,22 +185,25 @@ that the app should be saved to</strong>.</p>
 <p>If one model is your primary analysis, name it with
 <code>primary_model</code>, using the model’s <code>name</code> exactly
 as it appears in the models tibble or <code>models.R</code> (for example
-<code>primary_model = "Random-Effects Multilevel Model"</code>). The app
-shows that model first and labels the other rows as explorations. If it
-cannot be estimated for a reader’s selection, the app says why and does
-not substitute another model. Without <code>primary_model</code>, the
-app states that it does not choose between estimators. The declaration
-is stored in the generated <code>labels_and_options.R</code> and in
+<code>primary_model = "Random-Effects Model"</code> for datasets with
+one effect per study like this one, or
+<code>primary_model = "Random-Effects Multilevel Model"</code> when
+studies contribute multiple effects). The app shows that model first and
+labels the other rows as explorations. If it cannot be estimated for a
+reader’s selection, the app says why and does not substitute another
+model. Without <code>primary_model</code>, the app states that it does
+not choose between estimators. The declaration is stored in the
+generated <code>labels_and_options.R</code> and in
 <code>validation.json</code>.</p>
 <p>When you run this, the app will be saved to a new folder, in this
 case <code>my_app_folder</code>. You can run
-<code>shiny::shinyAppDir(my_app_folder)</code> (specifying your folder)
-to run the Shiny app.</p>
+<code>shiny::shinyAppDir("my_app_folder")</code> (specifying your
+folder) to run the Shiny app.</p>
 <p>To further customize the app, consider editing:</p>
 <ul>
 <li><p><code>models.R</code> to adjust the meta-analytic models that are
-compared on the main page. See vignette(“customise_models”) for
-instructions on how to do that.</p></li>
+compared on the main page. See <code><a href="../articles/customise_models.html">vignette("customise_models")</a></code>
+for instructions on how to do that.</p></li>
 <li><p><code>ui.R</code> to edit the user interface (e.g., labels or the
 About section) or to drop certain parts of the output apart from the
 main models (e.g., to display only a <em>z</em>-curve or only a
@@ -213,20 +216,75 @@ displayed text (e.g., the welcome message) and some fundamental options
 </ul>
 </div>
 <div class="section level2">
-<h2 id="deploy-to-shinyapps-io">Deploy to shinyapps.io<a class="anchor" aria-label="anchor" href="#deploy-to-shinyapps-io"></a>
+<h2 id="further-authoring-options">Further authoring options<a class="anchor" aria-label="anchor" href="#further-authoring-options"></a>
 </h2>
-<p>If you want to share the app with the wider world, shinyapps.io is a
-good platform, with a free plan that is sufficient to start with. If you
-have not used it before, follow the instructions provided by
-Posit/RStudio to get started <a href="https://shiny.rstudio.com/articles/shinyapps.html" class="external-link">here</a>. In
+<p>metaUI supports several optional features that can be passed to
+<code><a href="../reference/generate_shiny.html">generate_shiny()</a></code> or configured headlessly from JSON with
+<code><a href="../reference/build_app.html">build_app()</a></code>:</p>
+<ul>
+<li>
+<strong>Appearance (<code><a href="../reference/design_app.html">design_app()</a></code>,
+<code><a href="../reference/app_design.html">app_design()</a></code>):</strong> Run <code><a href="../reference/design_app.html">design_app()</a></code>
+locally to pick contrast-checked colours, fonts, spacing and corner
+radii, then pass the resulting <code><a href="../reference/app_design.html">app_design()</a></code> list via
+<code>generate_shiny(..., design = design)</code>.</li>
+<li>
+<strong>Study details
+(<code><a href="../reference/fetch_study_metadata.html">fetch_study_metadata()</a></code>):</strong> When
+<code>prepare_data(..., url = ...)</code> maps a DOI column, call
+<code>fetch_study_metadata(app_data, cache = "study-metadata.csv")</code>
+while authoring and pass <code>study_info = info</code> to
+<code><a href="../reference/generate_shiny.html">generate_shiny()</a></code>. Readers can then expand study rows for
+APA references, DOI links and openly licensed abstracts, and download
+references as text, BibTeX or Excel.</li>
+<li>
+<strong>Bayesian analysis and alternative computations:</strong>
+Pass <code>bayesian = list(enabled = TRUE)</code> to
+<code><a href="../reference/generate_shiny.html">generate_shiny()</a></code> to add a study-level Bayesian
+normal-normal model (computed via grid quadrature, with prior
+sensitivity), or supply up to five alternative effect-size computations
+via <code>prepare_data(..., alternatives = ...)</code>.</li>
+<li>
+<strong>Reproducible exploration:</strong> Every generated app lets
+readers copy a shareable selection link, download the data and results
+as an <code>.xlsx</code> workbook (which can be edited and uploaded
+back), download an R script or Quarto file that reproduces the applied
+selection without <code>metaUI</code>, and inspect leave-one-out
+influence diagnostics under <strong>Outlier diagnostics</strong>.</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="deploy-to-shinyapps-io-or-publish-as-a-static-website">Deploy to shinyapps.io or publish as a static website<a class="anchor" aria-label="anchor" href="#deploy-to-shinyapps-io-or-publish-as-a-static-website"></a>
+</h2>
+<p>If you want to host the app on a Shiny server, shinyapps.io is a good
+platform with a free plan to start. Follow Posit’s setup instructions <a href="https://shiny.posit.co/r/articles/share/shinyapps/" class="external-link">here</a>. In
 essence, you need to create an account, install the
 <code>rsconnect</code> package and authenticate within that package.
 Then you can run the following to deploy your app:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">rsconnect</span><span class="fu">::</span><span class="fu">deployApp</span><span class="op">(</span>appDir <span class="op">=</span> <span class="st">"my_app_folder"</span><span class="op">)</span></span></code></pre></div>
-<p>Once that is done, the app should open in your browser, and you can
-copy the link from the address bar. That’s it - you now have your own
-meta-analysis Shiny app online.</p>
+<p>Alternatively, you can publish the app as a <strong>static
+website</strong> (experimental; no Shiny server needed — runs R in the
+reader’s browser via <code>shinylive</code>/WebAssembly). Install the
+suggested <code>shinylive</code> package first
+(<code>install.packages("shinylive")</code>), then use
+<code>static_folder</code> or <code><a href="../reference/export_static.html">export_static()</a></code>:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Generate editable app and static site in one step:</span></span>
+<span><span class="fu"><a href="../reference/generate_shiny.html">generate_shiny</a></span><span class="op">(</span><span class="va">app_data</span>,</span>
+<span>               dataset_name <span class="op">=</span> <span class="st">"Dannheim et al. (2025) - Mental health"</span>,</span>
+<span>               save_to_folder <span class="op">=</span> <span class="st">"my_app_folder"</span>,</span>
+<span>               static_folder <span class="op">=</span> <span class="st">"my_static_site"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Or re-export after editing files in my_app_folder</span></span>
+<span><span class="co"># (overwrite = TRUE deletes and rewrites the entire static destination, including</span></span>
+<span><span class="co"># hand edits and unrelated files — keep hand edits in my_app_folder):</span></span>
+<span><span class="fu"><a href="../reference/export_static.html">export_static</a></span><span class="op">(</span><span class="st">"my_app_folder"</span>, <span class="st">"my_static_site"</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>Host the static folder over HTTPS (for example, on GitHub Pages) or
+preview it from <code>localhost</code> (e.g.,
+<code>httpuv::runStaticServer("my_static_site")</code>). Because the
+full dataset and generated app code are sent to every visitor, publish
+only shareable material.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

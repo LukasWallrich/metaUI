@@ -43,8 +43,9 @@ generate_shiny(
 
 - eff_size_type_label:
 
-  The label to be used to describe the effect size. If NA, effect type
-  code from dataset is used.
+  The label to be used to describe the effect size. If NA, uses
+  `"Correlation r"` for correlations, `"Odds ratio"` or `"Risk ratio"`
+  for ratios, and otherwise the effect type code from the dataset.
 
 - models:
 
@@ -127,11 +128,6 @@ generate_shiny(
       To display different packages (e.g., because you added/removed
       models), pass a character vector with all packages to display.
 
-  `meta`
-
-  :   Does author model code use meta? If so, the default list includes
-      it.
-
 - options:
 
   List of more detailed options to customise your app. They all have
@@ -179,7 +175,8 @@ generate_shiny(
   Correlation default tau_scale is .25 on Fisher z. An optional
   `max_studies` (integer, at least 2) caps the number of studies; by
   default there is no cap. Sensitivity analyses use half and double the
-  scale.
+  scale. Cannot be combined with a `models` file path; supply a tibble
+  or `get_model_tibble` instead.
 
 - design:
 
