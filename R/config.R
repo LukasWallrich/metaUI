@@ -22,6 +22,17 @@
 #' editing; regenerating the app replaces edits to its generated files.
 #' @return Invisibly, the static site directory when static_folder is supplied;
 #'   otherwise the generated app directory.
+#' @examplesIf metaUI:::metaUI_app_ready()
+#' root <- tempfile("metaui-build-")
+#' dir.create(root)
+#' file.copy(
+#'   system.file("examples", c("tiny.csv", "tiny.json"), package = "metaUI"),
+#'   root
+#' )
+#' \donttest{
+#' build_app(file.path(root, "tiny.json"))
+#' }
+#' unlink(root, recursive = TRUE)
 #' @export
 build_app <- function(config, overwrite = FALSE) {
   base <- getwd()
@@ -30,13 +41,23 @@ build_app <- function(config, overwrite = FALSE) {
     config <- jsonlite::fromJSON(config, simplifyVector = FALSE)
   }
   if (!is.list(config) || is.null(names(config))) stop("Configuration must be a named list or JSON file.")
-  allowed <- c("schema_version", "data", "mapping", "dataset_name", "output", "primary_model", "options", "about", "bayesian", "design", "study_info", "static_folder")
+  allowed <- c("schema_version", "data", "mapping", "dataset_name", "eff_size_type_label", "filter_popups", "output", "primary_model", "options", "about", "bayesian", "design", "study_info", "static_folder")
   unknown <- setdiff(names(config), allowed)
   if (length(unknown)) stop("Unknown configuration fields: ", paste(unknown, collapse = ", "))
   if (length(config$schema_version) != 1L || !is.numeric(config$schema_version) || !config$schema_version %in% c(1, 2)) stop("schema_version must be 1 or 2")
   if (config$schema_version == 1 && (any(c("bayesian", "study_info") %in% names(config)) || any(c("alternatives", "primary_label", "counts", "double_zero") %in% names(config$mapping)))) stop("New computation/Bayesian/study_info/count fields require schema_version 2")
   for (key in c("data", "dataset_name", "output"))
     if (!is.character(config[[key]]) || length(config[[key]]) != 1L || !nzchar(config[[key]])) stop("Required scalar string: ", key)
+  if (!is.null(config$eff_size_type_label) &&
+      (!is.character(config$eff_size_type_label) || length(config$eff_size_type_label) != 1L ||
+       is.na(config$eff_size_type_label) || !nzchar(config$eff_size_type_label)))
+    stop("eff_size_type_label must be a nonempty scalar string.")
+  if (!is.null(config$filter_popups) &&
+      (!is.list(config$filter_popups) ||
+       (length(config$filter_popups) && (is.null(names(config$filter_popups)) || anyNA(names(config$filter_popups)) ||
+         any(!nzchar(names(config$filter_popups))) || anyDuplicated(names(config$filter_popups)) ||
+         !all(vapply(config$filter_popups, function(x) is.character(x) && length(x) == 1L && !is.na(x), logical(1)))))))
+    stop("filter_popups must be an object mapping filter labels to help strings.")
   if ("static_folder" %in% names(config) &&
       (!is.character(config$static_folder) || length(config$static_folder) != 1L ||
        is.na(config$static_folder) || !nzchar(config$static_folder)))
@@ -83,6 +104,8 @@ build_app <- function(config, overwrite = FALSE) {
   about <- config$about
   if (!is.null(about) && (!is.list(about) || (length(about) && (is.null(names(about)) || any(!nzchar(names(about))))) || length(setdiff(names(about), c("date", "citation", "osf_link", "contact"))))) stop("Invalid about fields")
   do.call(generate_shiny, c(list(dataset = dataset, dataset_name = config$dataset_name,
+                                eff_size_type_label = if (is.null(config$eff_size_type_label)) NA else config$eff_size_type_label,
+                                filter_popups = if (is.null(config$filter_popups)) list() else config$filter_popups,
                                 save_to_folder = output, launch_app = FALSE, overwrite = overwrite,
                                 static_folder = if (is.null(config$static_folder)) NULL else resolve(config$static_folder),
                                 primary_model = config$primary_model,

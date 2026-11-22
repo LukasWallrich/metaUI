@@ -2,3 +2,23 @@ url: https://lukaswallrich.github.io/metaUI/
 template:
   bootstrap: 5
 
+reference:
+  - title: Prepare data and build apps
+    contents:
+      - prepare_data
+      - generate_shiny
+      - build_app
+  - title: Customise models and appearance
+    contents:
+      - get_model_tibble
+      - app_design
+      - design_app
+  - title: Publish and enrich study metadata
+    contents:
+      - export_static
+      - fetch_study_metadata
+  - title: Utilities
+    contents:
+      - se.from.p
+
+

@@ -5,11 +5,11 @@ x <- data.frame(study = LETTERS[1:8], r = c(.12, .28, -.08, .35, .18, .42, .05, 
 d <- prepare_data(x, "study", "r", variance = "var_r", es_type = "COR",
                   variance_scale = "r", direction = "unspecified")
 # Independent reference: conversion follows the declared r-variance contract.
+# With one effect per study, generate_shiny() defaults to a standard random-effects
+# model (REML with Hartung-Knapp intervals).
 y <- atanh(x$r)
 v <- x$var_r / (1 - x$r^2)^2
-reference <- metafor::rma.mv(yi = y, V = v,
-  random = ~ 1 | metaUI__study_id/metaUI__effect_id, data = d,
-  method = "REML", test = "t", sparse = TRUE)
+reference <- metafor::rma.uni(yi = y, vi = v, method = "REML", test = "knha")
 print(data.frame(fit_z = as.numeric(reference$b), r = tanh(as.numeric(reference$b)),
                  lower_r = tanh(reference$ci.lb), upper_r = tanh(reference$ci.ub)))
 generate_shiny(d, "Synthetic correlations (not research evidence)",

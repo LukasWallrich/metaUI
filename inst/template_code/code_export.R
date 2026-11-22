@@ -94,9 +94,12 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
   model_code <- c(model_code[!is.na(model_code) & model_code != "NA"], models_text)
   roots <- c("metaUI_fit_models", "metaUI_interval_assessment",
     unlist(lapply(model_code, function(x) tryCatch(all.names(parse(text = x)), error = function(e) character()))))
-  model_defs <- tryCatch(names(metaUI_code_definitions({
-    tmp <- tempfile(fileext = ".R"); writeLines(models_text, tmp); tmp
-  })), error = function(e) character())
+  model_defs <- tryCatch(local({
+    tmp <- tempfile(fileext = ".R")
+    on.exit(unlink(tmp), add = TRUE)
+    writeLines(models_text, tmp)
+    names(metaUI_code_definitions(tmp))
+  }), error = function(e) character())
   helpers <- metaUI_code_closure(roots, defs, exclude = model_defs)
   helper_files <- unique(vapply(helpers, function(x) x$file, character(1)))
   pcurve_note <- if ("pcurve" %in% names(helpers))

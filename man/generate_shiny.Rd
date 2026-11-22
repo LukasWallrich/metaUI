@@ -27,7 +27,7 @@ generate_shiny(
 
 \item{dataset_name}{Name of the dataset}
 
-\item{eff_size_type_label}{The label to be used to describe the effect size. If NA, effect type code from dataset is used.}
+\item{eff_size_type_label}{The label to be used to describe the effect size. If NA, uses \code{"Correlation r"} for correlations, \code{"Odds ratio"} or \code{"Risk ratio"} for ratios, and otherwise the effect type code from the dataset.}
 
 \item{models}{The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. Custom models can add an \code{interval_type} column naming their interval, such as "Confidence interval"; otherwise the app says that its type is unknown. \code{LCL90} and \code{UCL90} columns give the 90\% interval used by the equivalence assessment; a model without them is not assessed there. A \code{description} column gives a sentence that the app's Methods section shows for that model. If you want to change the default models, have a look at the vignette and/or the \code{\link[=get_model_tibble]{get_model_tibble()}} documentation.
 Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
@@ -71,7 +71,7 @@ a character vector with all packages to display.}
 
 \item{overwrite}{Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.}
 
-\item{bayesian}{NULL (default), or list(enabled = TRUE, tau_scale = .5). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior, computed by grid quadrature over the heterogeneity (no extra package needed). Correlation default tau_scale is .25 on Fisher z. An optional \code{max_studies} (integer, at least 2) caps the number of studies; by default there is no cap. Sensitivity analyses use half and double the scale.}
+\item{bayesian}{NULL (default), or list(enabled = TRUE, tau_scale = .5). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior, computed by grid quadrature over the heterogeneity (no extra package needed). Correlation default tau_scale is .25 on Fisher z. An optional \code{max_studies} (integer, at least 2) caps the number of studies; by default there is no cap. Sensitivity analyses use half and double the scale. Cannot be combined with a \code{models} file path; supply a tibble or \code{get_model_tibble} instead.}
 
 \item{design}{Optional settings from \code{\link[=app_design]{app_design()}}. Use \code{\link[=design_app]{design_app()}} to preview and export them.}
 

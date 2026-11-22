@@ -141,7 +141,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' on that folder, or modified by editing server.R, ui.R, global.R and models.R in the folder.
 #'
 #' @param dataset Dataframe as returned from [prepare_data()]
-#' @param eff_size_type_label The label to be used to describe the effect size. If NA, effect type code from dataset is used.
+#' @param eff_size_type_label The label to be used to describe the effect size. If NA, uses `"Correlation r"` for correlations, `"Odds ratio"` or `"Risk ratio"` for ratios, and otherwise the effect type code from the dataset.
 #' @param models The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. Custom models can add an `interval_type` column naming their interval, such as "Confidence interval"; otherwise the app says that its type is unknown. `LCL90` and `UCL90` columns give the 90% interval used by the equivalence assessment; a model without them is not assessed there. A `description` column gives a sentence that the app's Methods section shows for that model. If you want to change the default models, have a look at the vignette and/or the [get_model_tibble()] documentation.
 #' Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 #' this must assign the tibble to a variable called models_to_run (i.e. using <-).
@@ -156,7 +156,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'   (a temporary folder when NA), then exported with precomputed results. Must
 #'   be outside save_to_folder. Static generation never launches the app.
 #' @param design Optional settings from [app_design()]. Use [design_app()] to preview and export them.
-#' @param bayesian NULL (default), or list(enabled = TRUE, tau_scale = .5). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior, computed by grid quadrature over the heterogeneity (no extra package needed). Correlation default tau_scale is .25 on Fisher z. An optional `max_studies` (integer, at least 2) caps the number of studies; by default there is no cap. Sensitivity analyses use half and double the scale.
+#' @param bayesian NULL (default), or list(enabled = TRUE, tau_scale = .5). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior, computed by grid quadrature over the heterogeneity (no extra package needed). Correlation default tau_scale is .25 on Fisher z. An optional `max_studies` (integer, at least 2) caps the number of studies; by default there is no cap. Sensitivity analyses use half and double the scale. Cannot be combined with a `models` file path; supply a tibble or `get_model_tibble` instead.
 #' @param study_info Optional study information shown to readers: a data frame (or CSV path) with one row per
 #' study and a `study` column matching the study IDs, as returned by [fetch_study_metadata()] or written by the
 #' authors. Recognised columns: `doi`, `url`, `title`, `authors` (separated by "; "), `year`, `journal`, `volume`,
@@ -208,12 +208,31 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   }
 
   defaults <- list(max_forest_plot_rows = 60, shiny_theme = "yeti", selection_list_threshold = 6)
+  allowed_options <- c("max_forest_plot_rows", "shiny_theme", "selection_list_threshold",
+    "correlation_dependent", "fit_cache_entries", "intro")
+  if (!is.list(options) || (length(options) && (is.null(names(options)) || anyNA(names(options)) ||
+      any(!nzchar(names(options))) || anyDuplicated(names(options)))))
+    stop("options must be a uniquely named list.", call. = FALSE)
+  unknown_options <- setdiff(names(options), allowed_options)
+  if (length(unknown_options))
+    stop("Unknown option(s): ", paste(unknown_options, collapse = ", "),
+      ". Allowed: ", paste(allowed_options, collapse = ", "), ".", call. = FALSE)
   opts <- utils::modifyList(defaults, options)
   opts$design <- if (is.null(design)) NULL else validate_design(design)
   limit <- opts$max_forest_plot_rows
   if (!is.numeric(limit) || length(limit) != 1L || is.na(limit) ||
       !is.finite(limit) || limit < 1 || limit != floor(limit))
     stop("max_forest_plot_rows must be a positive finite whole number.")
+  threshold <- opts$selection_list_threshold
+  if (!is.numeric(threshold) || length(threshold) != 1L || is.na(threshold) ||
+      !is.finite(threshold) || threshold < 1 || threshold != floor(threshold))
+    stop("selection_list_threshold must be a positive finite whole number.")
+  if (!is.character(opts$shiny_theme) || length(opts$shiny_theme) != 1L || is.na(opts$shiny_theme))
+    stop("shiny_theme must be a single theme name, such as \"yeti\".")
+  tryCatch(shinythemes::shinytheme(opts$shiny_theme), error = function(e)
+    stop("Invalid options$shiny_theme: ", conditionMessage(e), call. = FALSE))
+  if (!is.null(opts$intro) && (!is.character(opts$intro) || length(opts$intro) != 1L || is.na(opts$intro)))
+    stop("options$intro must be a single string of HTML.")
 
    # Evaluate so that it is TRUE when save_to_folder is NA initially
    launch_app <- launch_app
@@ -265,7 +284,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     meta = uses_meta), about_args))
   bayesian <- metaUI_bayesian_options(bayesian, dataset$metaUI__es_type[1])
   # The plain random-effects model treats effects as independent; it cannot take nested data.
-  if (any(models_to_run$code == metaUI_code_random & !models_to_run$aggregated) && anyDuplicated(dataset$metaUI__study_id))
+  if (any(models_to_run$code %in% metaUI_code_random & (models_to_run$aggregated %in% FALSE)) && anyDuplicated(dataset$metaUI__study_id))
     stop("The Random-Effects Model treats effects as independent, but study \"", dataset$metaUI__study_id[anyDuplicated(dataset$metaUI__study_id)],
       "\" has several effects. Use get_model_tibble() for its models for dependent effects.", call. = FALSE)
   random_default <- identical(models_to_run, get_model_tibble(one_effect_per_study = TRUE))
@@ -401,8 +420,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   writeLines(c(generate_global.R(eff_size_type_label, uses_meta), "",
     "# Draw one small plot when the app starts, so that the first reader's plots do not wait for",
     "# the graphics packages to load and compile.",
-    "invisible(tryCatch(shiny::plotPNG(function() print(ggplot2::ggplot(data.frame(x = 1:3), ggplot2::aes(x)) + ggplot2::geom_histogram(bins = 3)),",
-    "  tempfile(fileext = \".png\"), width = 60, height = 40), error = function(e) NULL))"), file.path(save_to_folder, "global.R"))
+    "invisible(tryCatch(local({ p <- tempfile(fileext = \".png\"); on.exit(unlink(p), add = TRUE); shiny::plotPNG(function() print(ggplot2::ggplot(data.frame(x = 1:3), ggplot2::aes(x)) + ggplot2::geom_histogram(bins = 3)),",
+    "  p, width = 60, height = 40) }), error = function(e) NULL))"), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
   opening_precompute(save_to_folder, enabled = opts$fit_cache_entries > 0L)
 

@@ -17,7 +17,7 @@
 #' @param url Character. Field with URLs or DOIs to link to. DOIs can be in the format "10.1234/5678" or full links. Defaults to NA.
 #' @param article_label Character. Field with article labels. Only used to report number of references in addition to number of independent samples.
 #' @param es_type Character. Input scale: SMD, COR (raw r), ZCOR (Fisher z), OR (log odds ratio) or RR (log risk ratio). COR needs r-scale variance and uses delta-method variance conversion; ZCOR needs z-scale variance. OR and RR take effects and variances on the log scale (`variance_scale = "log"`), as [metafor::escalc()] returns them, or 2x2 counts (`counts`); models are fitted on the log scale and results shown as ratios.
-#' @param es_label Character. Label for individual effect sizes - only needed when there are multiple effect sizes per study/sample. Defaults to NA. Defaults to NA, in that case, multiple effect sizes are simply numbered.
+#' @param es_label Character. Label for individual effect sizes - only needed when there are multiple effect sizes per study/sample. Defaults to NA, in which case multiple effect sizes are simply numbered.
 #' @param na.rm Should rows with any missing values be removed? Can be TRUE, FALSE or "es_related" -
 #' the last is the default and drops rows with missing values for any of the variables used in the standard meta-analysis models, namely
 #' `study_label`, `es_field`, `variance`, and `se`. Optional p/N never remove rows under this default. Setting this to TRUE also drops rows with a missing value in any filter (categorical
@@ -57,6 +57,9 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
                          arrange_filters = c("given", "alphabetical", "leave"), keep_missing_level = FALSE, es_id = NULL,
                          variance_scale = NULL, direction = c("unspecified", "positive", "negative"),
                          categorical_filters = character(), alternatives = list(), primary_label = "As supplied", counts = NULL, double_zero = c("exclude", "keep")) {
+  if (is.null(url) || !length(url)) url <- NA
+  if (is.null(article_label) || !length(article_label)) article_label <- NA
+  if (is.null(es_label) || !length(es_label)) es_label <- NA
   # The p-value and N columns the author gave; internal placeholders added later do not count for na.rm.
   supplied_pn <- c(pvalue, sample_size)
   source <- list(kind = if (is.character(data)) "CSV" else "data.frame",
@@ -136,6 +139,7 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
     if (!article_label %in% names(data)) stop("Mapped article label column not found: ", article_label)
     article_input <- data[[article_label]]
   }
+  if (!is.na(url) && !url %in% names(data)) stop("Mapped URL column not found: ", url)
   if (is.null(se)) {
     data$metaUI_input_se <- sqrt(data[[variance]])
     se <- "metaUI_input_se"
@@ -218,7 +222,11 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
   if (!is.na(url)) {
     data <- data %>%
       dplyr::rename("metaUI__url" = !!rlang::sym(url)) %>%
-      dplyr::mutate(metaUI__url = ifelse(grepl("^10\\.", .data$metaUI__url), paste0("https://doi.org/", .data$metaUI__url), .data$metaUI__url))
+      dplyr::mutate(metaUI__url = {
+        raw <- as.character(.data$metaUI__url)
+        u <- sub("^doi:\\s*", "", trimws(raw), ignore.case = TRUE)
+        ifelse(!is.na(u) & grepl("^10\\.", u), paste0("https://doi.org/", u), raw)
+      })
   }
   if (!is.na(article_label)) {
     # The article label may share a column already renamed above, such as the study label.

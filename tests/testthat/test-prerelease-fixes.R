@@ -77,7 +77,7 @@ test_that("na.rm = TRUE drops rows missing a filter, p or N, and ignores unmappe
   x$grp <- factor(rep(c("a", "b"), 8)); x$grp[3] <- NA
   x$dose <- c(1:15, NA)
   x$unused <- c(NA, rep(1, 15))
-  d <- prepared(x, filters = c(Group = "grp", Dose = "dose"), na.rm = TRUE)
+  expect_warning(d <- prepared(x, filters = c(Group = "grp", Dose = "dose"), na.rm = TRUE), "2 rows excluded")
   expect_equal(nrow(d), 14)
   expect_false("(Missing)" %in% levels(d$metaUI__filter_Group))
   expect_true(1 %in% d$metaUI__effect_id[d$metaUI__study_id == "A"]) # row 1 is only missing `unused`

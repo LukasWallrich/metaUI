@@ -29,16 +29,16 @@ The best way to get started in RStudio is with the metaUI template - so in RStud
 
 Outside R Studio, you can run `file.edit(system.file("rmarkdown/templates/create-a-metaui-shiny-app/skeleton/skeleton.Rmd", package = "metaUI"))` to open the template file and then take it from there.
 
-The [`Getting started` vignette](https://lukaswallrich.github.io/metaUI/articles/getting_started.html) provides a step-by-step example ... or you may want to watch this [video tutorial](https://www.youtube.com/watch?v=iaTMFzWfCe0&ab_channel=ESMARConf) for a step-by-step walk-through.
+The [`Getting started` vignette](https://lukaswallrich.github.io/metaUI/articles/getting_started.html) provides a step-by-step example ... or you may want to watch this [video tutorial](https://www.youtube.com/watch?v=iaTMFzWfCe0&ab_channel=ESMARConf) for a walk-through of the workflow (recorded for an earlier version; the generated app interface has since been updated).
 
 ## Building and launching apps
 
 Apps can be built in R with `generate_shiny()` or headlessly from a versioned JSON
 configuration with `build_app()`; either way, the generated R/Shiny files stay
-editable. Schema version 2 adds computation and Bayesian authoring; version 1
-continues to accept the original configuration fields. See [reproduction and scientific contract](https://github.com/LukasWallrich/metaUI/blob/main/validation/reproduction.md),
-[the tiny synthetic config](inst/examples/tiny.json), and its
-[JSON schema](inst/examples/config.schema.json). Build and launch are separate:
+editable. Schema version 2 adds computation, Bayesian, study-metadata and 2x2-count authoring; version 1
+continues to accept the original configuration fields (plus `design`, `eff_size_type_label`, `filter_popups`, `primary_model` and `static_folder`). See [reproduction and scientific contract](https://github.com/LukasWallrich/metaUI/blob/main/validation/reproduction.md),
+[the tiny synthetic config](https://github.com/LukasWallrich/metaUI/blob/main/inst/examples/tiny.json), and its
+[JSON schema](https://github.com/LukasWallrich/metaUI/blob/main/inst/examples/config.schema.json). Build and launch are separate:
 
 First copy `tiny.json` and `tiny.csv` from `inst/examples` into a fresh, empty folder, then run:
 
@@ -87,9 +87,11 @@ native SE. The source-reference REML/Hartung–Knapp model is checked against
 metafor; other models/diagnostics are exploratory. Read the example's
 README/provenance before interpreting results. No benchmark corpus is deployed.
 
-The [synthetic correlation example](inst/examples/correlations) demonstrates raw-r
+The [synthetic correlation example](https://github.com/LukasWallrich/metaUI/tree/main/inst/examples/correlations) demonstrates raw-r
 variance conversion and checks the fitted summary against an independent metafor
 reference.
+
+Use `options = list(intro = "...")` in `generate_shiny()` (or `"options": {"intro": "..."}` in JSON) to display a short introduction under the app title. Generated apps also include leave-one-study-out (and, where sources are mapped, leave-one-source-out) influence diagnostics under **Outlier diagnostics** alongside effect distributions, 1.5 IQR outlier lists, and heterogeneity (*I*² and τ).
 
 ### Fit reuse and performance
 
@@ -194,7 +196,7 @@ normal mixture. This needs no extra package and takes well under a second, even
 for 646 studies in the browser (webR). Across 412 simulated and two real datasets,
 its results were within 10<sup>-7</sup> posterior standard deviations of adaptive
 numerical integration for the mean and 2 × 10<sup>-4</sup> for heterogeneity
-quantiles (see `validation/bayesian-grid.md`). There is no study limit by default; authors can set
+quantiles (see [validation/bayesian-grid.md](https://github.com/LukasWallrich/metaUI/blob/main/validation/bayesian-grid.md)). There is no study limit by default; authors can set
 one with `max_studies` (an integer of at least 2).
 See [Röver et al.](https://doi.org/10.1002/jrsm.1475) for the prior rationale.
 
@@ -356,7 +358,7 @@ inspiration), the [Cooperation Databank](https://cooperationdatabank.org/)
 (dataset exploration), [PsychOpen CAMA](https://cama.psychopen.eu/)
 (cumulative meta-analysis), and the [taVNS HRV app](https://vinzentwolf.shinyapps.io/taVNSHRVmeta/)
 (a Bayesian living meta-analysis). These are references, not endorsements or
-sources of bundled code. See the [issue follow-up decisions](validation/issue-followup.md)
+sources of bundled code. See the [issue follow-up decisions](https://github.com/LukasWallrich/metaUI/blob/main/validation/issue-followup.md)
 for the assessed feature overlap and remaining work.
 
 Compared with these projects, metaUI's intended contribution is an author-owned

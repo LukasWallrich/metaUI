@@ -3,7 +3,6 @@
 labels_and_options <- function(dataset_name, correlation = .6, primary_model = NULL, bayesian = FALSE, scale = "SMD", custom_models = FALSE, model_descriptions = character(), effects = NA, studies = NA, strip = "", citation = "", intro = "", random_default = FALSE) {
   glue::glue('
 
-      # TK - defaults? Advanced options?
       aggregation_method <- c("aggregate", "first")
       correlation_dependent <- {correlation}
 
@@ -474,7 +473,8 @@ glue_string <- ('
           for (id in intersect(names(columns), names(full))) if (length(full[[id]]) == 2L && is.numeric(uploaded[[columns[[id]]]])) {
             range <- metaUI_widen_range(full[[id]], uploaded[[columns[[id]]]], if (id == "outliers_z_scores") FALSE)
             if (!identical(range, full[[id]])) {
-              step <- diff(range) / 1000
+              whole <- id != "outliers_z_scores" && all(uploaded[[columns[[id]]]] == round(uploaded[[columns[[id]]]]), na.rm = TRUE) && all(range == round(range))
+              step <- if (whole) 1 else diff(range) / 1000
               updateSliderInput(inputId = id, min = range[1], max = range[2], step = step, value = range)
             }
           }
@@ -694,8 +694,8 @@ glue_string <- ('
   comparison_models <- models_to_run[models_to_run$code %in% metaUI_summary_codes, , drop = FALSE]
   computations_comparison <- eventReactive(input$go, {
     df <- df_filtered()
-    if (!nrow(df)) return(data.frame(computation = "All", Model = "Unavailable", es = NA_real_, LCL = NA_real_, UCL = NA_real_, status = "unsupported", reason = "No eligible rows selected"))
-    if (!nrow(comparison_models)) return(data.frame(computation = "All", Model = "Unavailable", es = NA_real_, LCL = NA_real_, UCL = NA_real_, status = "unsupported", reason = "No multilevel, RVE or random-effects specification is present."))
+    if (!nrow(df)) return(data.frame(status = "unsupported", reason = "No eligible rows selected"))
+    if (!nrow(comparison_models)) return(data.frame(status = "unsupported", reason = "No multilevel, RVE or random-effects specification is present."))
     choices <- metaUI_computations(metaUI__df)
     do.call(rbind, lapply(seq_along(choices), function(i) {
       result <- comparison_cache(metaUI_select_computation(df, unname(choices[i]), contract = attr(df, "metaUI_source_data")), comparison_models,
@@ -703,9 +703,48 @@ glue_string <- ('
       data.frame(computation = names(choices)[i], result, row.names = NULL)
     }))
   })
-  output$computation_comparison <- renderTable({
-    computations_comparison()[c("computation", "Model", "es", "LCL", "UCL", "status", "reason")]
-  }, digits = 4)
+  # Shown like the Summary table; downloads keep all raw columns.
+  output$computation_comparison <- renderText({
+    table <- computations_comparison()
+    esc <- function(x) htmltools::htmlEscape(as.character(x))
+    if (!"es" %in% names(table))
+      return(paste0(\'<table class="table"><thead><tr><th>Note</th></tr></thead><tbody>\',
+        paste0("<tr><td>", esc(vapply(table$reason, metaUI_reader_message, character(1))), "</td></tr>", collapse = ""),
+        "</tbody></table>"))
+    ok <- table$status == "ok"
+    digits <- metaUI_digits(table$LCL[ok], table$UCL[ok])
+    f <- function(x) metaUI_minus(formatC(x, format = "f", digits = digits))
+    types <- unique(stats::na.omit(table$interval_type[ok]))
+    default_ci <- length(types) == 1L && identical(types, "Confidence interval (coverage model-dependent)")
+    interval_head <- if (default_ci) ci_label else "Interval"
+    warn_raw <- if ("warnings" %in% names(table)) ifelse(is.na(table$warnings), "", as.character(table$warnings)) else rep("", nrow(table))
+    note_text <- vapply(seq_len(nrow(table)), function(i) if (nzchar(warn_raw[i])) metaUI_reader_warnings(warn_raw[i], !ok[i]) else "", character(1))
+    warned <- which(nzchar(note_text) & (ok | vapply(seq_len(nrow(table)), function(i) !startsWith(metaUI_reader_reason("", warn_raw[i]), "Needs"), logical(1))))
+    num <- \' style="text-align:right;white-space:nowrap;"\'
+    rows <- vapply(seq_len(nrow(table)), function(i) {
+      mark <- if (i %in% warned) paste0(\'<sup class="metaui-note-mark">\', match(i, warned), "</sup>") else ""
+      type_note <- if (ok[i] && !default_ci && !is.na(table$interval_type[i]) && !identical(table$interval_type[i], "Confidence interval (coverage model-dependent)"))
+        paste0(\'<span class="metaui-row-note">\', esc(table$interval_type[i]), "</span>") else ""
+      model_cell <- paste0(esc(table$Model[i]), mark, type_note)
+      if (ok[i]) {
+        est_cell <- paste0("<td", num, ">", f(table$es[i]), "</td>")
+        ci_cell <- if (is.finite(table$LCL[i]) && is.finite(table$UCL[i]))
+          paste0("<td", num, ">[", f(table$LCL[i]), ", ", f(table$UCL[i]), "]</td>") else "<td></td>"
+        k_cell <- if (is.finite(table$k[i]))
+          paste0("<td", num, ">", format(table$k[i], big.mark = ",", trim = TRUE), "</td>") else "<td></td>"
+      } else {
+        est_cell <- paste0("<td>Not estimated: ", esc(metaUI_reader_reason(table$reason[i], warn_raw[i])), "</td>")
+        ci_cell <- "<td></td>"
+        k_cell <- "<td></td>"
+      }
+      paste0("<tr><td>", esc(table$computation[i]), "</td><td>", model_cell, "</td>", est_cell, ci_cell, k_cell, "</tr>")
+    }, character(1))
+    notes <- if (length(warned)) paste0(\'<ol class="metaui-warnings">\',
+      paste0("<li>", esc(table$computation[warned]), " \\u2014 ", esc(table$Model[warned]), ": ", esc(note_text[warned]), "</li>", collapse = ""), "</ol>") else ""
+    paste0(\'<table class="table"><thead><tr><th>Computation</th><th>Model</th><th\', num, \'>Estimate</th><th\', num, \'>\',
+      esc(interval_head), \'</th><th\', num, \'><i>k</i></th></tr></thead><tbody>\',
+      paste(rows, collapse = ""), "</tbody></table>", notes)
+  })
   output$computation_note <- renderUI({
     id <- if (is.null(input$computation)) "primary" else input$computation
     specs <- metaUI_computation_specs(metaUI__df)
@@ -723,23 +762,34 @@ glue_string <- ('
     metaUI_bayesian_sensitivity(result$df_agg, bayesian_options, primary)
   })
   # Shown like the Summary; the downloads keep the raw columns.
-  output$bayesian_sensitivity <- renderTable({
+  output$bayesian_sensitivity <- renderText({
     table <- bayesian_sensitivity()
-    if (!"median" %in% names(table)) return(data.frame(Note = vapply(table$reason, metaUI_reader_message, character(1)), check.names = FALSE))
+    esc <- function(x) htmltools::htmlEscape(as.character(x))
+    if (!"median" %in% names(table))
+      return(paste0(\'<table class="table"><thead><tr><th>Note</th></tr></thead><tbody>\',
+        paste0("<tr><td>", esc(vapply(table$reason, metaUI_reader_message, character(1))), "</td></tr>", collapse = ""),
+        "</tbody></table>"))
     df <- df_filtered()
     digits <- metaUI_digits(table$LCL, table$UCL)
     f <- function(x) metaUI_minus(formatC(x, format = "f", digits = digits))
     ok <- table$status == "ok"
     fit <- metaUI_scale(df$metaUI__es_type[1])$fit
-    out <- data.frame(check.names = FALSE,
-      "Prior scale for \\u03c4" = paste0(format(signif(table$tau_prior_scale, 3)), ifelse(abs(table$tau_prior_scale - bayesian_options$tau_scale) < 1e-12, " (baseline)", "")),
-      # A failed fit gives its reason in place of the estimate, so the table keeps three columns.
-      "Estimate [95% credible interval]" = ifelse(ok, paste0(f(table$median), " [", f(table$LCL), ", ", f(table$UCL), "]"),
-        paste("Not estimated:", htmltools::htmlEscape(vapply(table$reason, metaUI_reader_message, character(1))))),
-      tau = ifelse(ok, metaUI_minus(formatC(table$tau_median, format = "f", digits = 3)), ""))
-    names(out)[3] <- paste0("\\u03c4, posterior median", if (nzchar(fit)) paste0(" (", fit, ")") else "")
-    out
-  }, sanitize.text.function = function(x) x, align = "lrr")
+    tau_head <- paste0("\\u03c4, posterior median", if (nzchar(fit)) paste0(" (", fit, ")") else "")
+    num <- \' style="text-align:right;white-space:nowrap;"\'
+    rows <- vapply(seq_len(nrow(table)), function(i) {
+      prior <- paste0(format(signif(table$tau_prior_scale[i], 3)), if (abs(table$tau_prior_scale[i] - bayesian_options$tau_scale) < 1e-12) " (baseline)" else "")
+      if (ok[i]) {
+        est <- paste0("<td", num, ">", f(table$median[i]), " [", f(table$LCL[i]), ", ", f(table$UCL[i]), "]</td>")
+        tau <- paste0("<td", num, ">", metaUI_minus(formatC(table$tau_median[i], format = "f", digits = 3)), "</td>")
+      } else {
+        est <- paste0("<td>Not estimated: ", esc(metaUI_reader_message(table$reason[i])), "</td>")
+        tau <- "<td></td>"
+      }
+      paste0("<tr><td>", esc(prior), "</td>", est, tau, "</tr>")
+    }, character(1))
+    paste0(\'<table class="table"><thead><tr><th>Prior scale for \\u03c4</th><th\', num, \'>Estimate [95% credible interval]</th><th\', num, \'>\',
+      tau_head, "</th></tr></thead><tbody>", paste(rows, collapse = ""), "</tbody></table>")
+  })
 
   df_agg <- reactive({
     estimatesreactive()$df_agg
@@ -1827,7 +1877,7 @@ glue_string <- ('
         paste0(" Leaving out one study at a time does not show whether several related studies together drive the result", if (sources) "; leave out one source to check studies reported together." else "."))
     minutes <- function(s) if (s < 90) paste(max(5, 5 * round(s / 5)), "seconds") else paste(round(s / 60), "minutes")
     refit_offer <- if (!result$refit && is.finite(result$estimate) && result$estimate <= loo_longest_seconds)
-      div(class = "metaui-export-actions metaui-loo-actions", actionButton("loo_refit", paste0("Refit ", if (identical(result$refit_model, result$model)) "the model" else htmltools::htmlEscape(result$refit_model), " without each ", unit, " (about ", minutes(result$estimate), ")")))
+      div(class = "metaui-export-actions metaui-loo-actions", actionButton("loo_refit", paste0("Refit ", if (identical(result$refit_model, result$model)) "the model" else result$refit_model, " without each ", unit, " (about ", minutes(result$estimate), ")")))
       else if (!result$refit && is.finite(result$estimate) && result$estimate > loo_longest_seconds)
       p(class = "metaui-note", paste0("Refitting the model without each ", unit, " would take about ", minutes(result$estimate), ", so it is not offered here."))
     tagList(
@@ -1845,7 +1895,7 @@ glue_string <- ('
           if (!is.null(bound)) "The shaded band is your smallest effect size of interest." else ""),
         tags$p(HTML(paste0("Without a refit, the variances between and within studies are held at their estimates from all studies, and the average and its interval are recomputed exactly for the remaining studies (weighted least squares with those variances). ",
           "A full refit also re-estimates these variances, and with them the prediction interval. With many studies the two usually agree closely on the average; with few, a refit can move the estimate and its interval further, so quick refits run automatically."))),
-        tags$p(paste0("Marks: the ", ci, " now includes (or excludes) ", null, ", when that interval for the full selection excludes (or includes) it; and, with a smallest effect size of interest, the estimate itself moves across that bound. These are descriptive checks of single ", units, ", not tests. Without a refit, a mark for an interval that ends close to 0 can differ from what a refit would show."))))
+        tags$p(paste0("Marks: the ", ci, " now includes (or excludes) ", null, ", when that interval for the full selection excludes (or includes) it; and, with a smallest effect size of interest, the estimate itself moves across that bound. These are descriptive checks of single ", units, ", not tests. Without a refit, a mark for an interval that ends close to ", null, " can differ from what a refit would show."))))
   })
   output$loo_csv <- downloadHandler(filename = function() download_name("leave-one-study-out.csv"), content = function(file) {
     result <- loo_result()
@@ -2015,7 +2065,7 @@ glue_string <- ('
       df <- readxl::read_xlsx(input$uploadData$datapath, "dataset", trim_ws = FALSE)
       df <- metaUI_validate_upload(df, metaUI__df)
       # An app built for one effect per study fits a model that treats effects as independent.
-      if (any(models_to_run$code == metaUI_code_random) && anyDuplicated(df$metaUI__study_id)) {
+      if (any(models_to_run$code %in% metaUI_code_random & (models_to_run$aggregated %in% FALSE)) && anyDuplicated(df$metaUI__study_id)) {
         study <- df$metaUI__study_id[anyDuplicated(df$metaUI__study_id)]
         stop("This app was built for one effect per study, and its random-effects model treats effects as independent, but study \\"", study,
           "\\" has several. Keep one effect per study (one selected or combined effect), or rebuild the app with generate_shiny() to use models for dependent effects. Change study IDs only where they were entered in error: effects from the same study are not independent.", call. = FALSE)
@@ -2113,7 +2163,8 @@ glue_string <- ('
         updateCheckboxInput(inputId = paste0(i$id, "_include_NA"), value = include)
         selection <- as.numeric(filter_values[[i$id]]$selection[1:2])
         limits <- range(c(restored_data[[i$col]], selection), na.rm = TRUE)
-        step <- if (diff(selection) > 0) diff(selection) / 1000 else 1e-8
+        whole <- all(restored_data[[i$col]] == round(restored_data[[i$col]]), na.rm = TRUE) && all(selection == round(selection))
+        step <- if (whole) 1 else if (diff(selection) > 0) diff(selection) / 1000 else 1e-8
         updateSliderInput(inputId = i$id,
           min = selection[1] - step * ceiling((selection[1] - min(limits)) / step),
           max = selection[2] + step * ceiling((max(limits) - selection[2]) / step),

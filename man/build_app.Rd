@@ -36,3 +36,17 @@ site folder is deleted entirely and rewritten, including unrelated files.
 Keep hand edits in the editable app folder and use \code{\link[=export_static]{export_static()}} after
 editing; regenerating the app replaces edits to its generated files.
 }
+\examples{
+\dontshow{if (metaUI:::metaUI_app_ready()) withAutoprint(\{ # examplesIf}
+root <- tempfile("metaui-build-")
+dir.create(root)
+file.copy(
+  system.file("examples", c("tiny.csv", "tiny.json"), package = "metaUI"),
+  root
+)
+\donttest{
+build_app(file.path(root, "tiny.json"))
+}
+unlink(root, recursive = TRUE)
+\dontshow{\}) # examplesIf}
+}

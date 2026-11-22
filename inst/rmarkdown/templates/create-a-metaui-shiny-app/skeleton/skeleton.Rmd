@@ -126,13 +126,13 @@ To further customize the app, consider editing:
 
 -   `ui.R` to edit the user interface (e.g., labels or the About section) or to drop certain parts of the output apart from the main models (e.g., to display only a *z*-curve or only a *p*-curve),
 
--   `server.R` to modify other other parts of the output (for instance, to use a different theme for the graphs),
+-   `server.R` to modify other parts of the output (for instance, to use a different theme for the graphs),
 
 -   `labels_and_options.R` to change the dynamically displayed text (e.g., the welcome message) and some fundamental options (e.g., for aggregating dependent effect sizes).
 
 ## Deploy to shinyapps.io
 
-Follow the instructions provided by Posit/RStudio [here](https://shiny.rstudio.com/articles/shinyapps.html). In essence, you need to create an account, install the `rsconnect` package and authenticate within that package. Then you can run the following to deploy your app:
+Follow the instructions provided by Posit [here](https://shiny.posit.co/r/articles/share/shinyapps/). In essence, you need to create an account, install the `rsconnect` package and authenticate within that package. Then you can run the following to deploy your app:
 
 ```{r eval=FALSE}
 # Public deployment is a separate, deliberate action after validation/review.
