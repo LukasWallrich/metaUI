@@ -22,7 +22,7 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
 
       summary_overview_main <- HTML("<h3>Selected sample</h3>")
       summary_table_main <- HTML("<h3>Effect size estimates</h3>")
-       # Confidence level needs to be changed in all entries in model.R if you want to adjust it
+       # Confidence level needs to be changed in all entries in models.R if you want to adjust it
       summary_table_notes <- HTML(glue::glue("<p>CI = <<ci_width>> confidence interval; its actual coverage depends on each model\\\'s assumptions. <i>k</i> is the number of effects or studies the model reports.{if (bayesian) " Bayesian rows show central credible intervals." else ""}</p>", .open = "<<", .close = ">>"))
       model_help <- HTML("<h4>Default models</h4>
         {metaUI_default_model_help(random_default, bayesian)}
@@ -238,6 +238,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
   # Check whether data contains any filters
   filter_cols <- colnames(data) %>% stringr::str_subset("metaUI__filter_")
   if (length(filter_cols) == 0) any_filters <- FALSE else any_filters <- TRUE
+  any_cat_filters <- any(vapply(data[filter_cols], is.factor, logical(1)))
   # The equivalence bound: symmetric around 0, or for ratios around 1 on the log scale (as R code).
   sesoi_text <- if (metaUI_scale(data$metaUI__es_type[1])$ratio) c('"Smallest ratio of interest, x (bounds 1/x and x):"',
     '"Bounds of 1/x and x, symmetric around 1 on the log scale: 1.25 and 0.8 give the same pair (0.8 to 1.25)."') else
@@ -342,7 +343,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             p(class = "metaui-note", {paste(deparse(paste0(if ("metaUI__article_label" %in% names(data)) "Sources are papers or reports. " else "",
               "Studies are the samples that the models treat as independent of each other. Effects are the individual effect sizes; one study can report several.")), collapse = "")}),
             tags$p(class = "metaui-note", tags$a(class = "metaui-jump", href = "#metaui_sample_table", "Go to the table of effects and studies")),
-            {if (any_filters) "sample_overview_main, p(class = \\"metaui-note\\", \\"Hollow bars: effects without a value.\\"),"  else ""}
+            {if (any_filters) paste0("sample_overview_main,", if (any_cat_filters) " p(class = \\"metaui-note\\", \\"Hollow bars: effects without a value.\\")," else "") else ""}
             {generate_sample_description_ui(data, any_filters)}
             div(id = "metaui_sample_table", sample_table),
             if (!is.null(metaUI_study_info)) div(class = "metaui-export-actions metaui-reference-actions",
@@ -1533,20 +1534,26 @@ glue_string <- ('
       " in this selection: these tests have very little power, and Egger\\u2019s test is usually not recommended below 10 studies."))
   })
 
-  output$eggers_reading <- renderUI({
+  eggers_fit <- reactive({
     fit <- meta_agg()
-    eggers <- metaUI_egger(as.numeric(fit$yi), sqrt(fit$vi))
-    req(!is.null(eggers$estimate))
+    tryCatch(metaUI_egger(as.numeric(fit$yi), sqrt(fit$vi)), error = function(e) e)
+  })
+
+  output$eggers_reading <- renderUI({
+    eggers <- eggers_fit()
+    req(!inherits(eggers, "error"), !is.null(eggers$estimate), is.finite(eggers$p.value))
     p(class = "metaui-reading", HTML(paste0("Funnel plot asymmetry is <b>", if (eggers$p.value < .05) "" else "not ",
       "significant</b> at the 5% level: <i>t</i>\\u00a0=\\u00a0", metaUI_minus(round_(eggers$statistic, 3)), ", <i>p</i>\\u00a0", sub(" ", "\\u00a0", fmt_p(eggers$p.value)), ".")))
   })
 
   output$eggers <- renderTable({
-    meta_agg <- meta_agg()
-
-    eggers <- metaUI_egger(as.numeric(meta_agg$yi), sqrt(meta_agg$vi))
+    eggers <- eggers_fit()
+    shiny::validate(shiny::need(!inherits(eggers, "error"),
+      if (inherits(eggers, "error")) paste("Egger\'s test could not be computed:", metaUI_reader_message(conditionMessage(eggers))) else ""))
     shiny::validate(shiny::need(!is.null(eggers$estimate),
       "Egger test requires at least three studies."))
+    shiny::validate(shiny::need(is.finite(eggers$estimate[1]),
+      "Egger\'s test could not be estimated for this selection."))
     # t and p are in the sentence above.
     metaUI_statistics_rows(data.frame(
       "Intercept" = metaUI_minus(round_(eggers$estimate[1], 3)),
@@ -1618,10 +1625,16 @@ glue_string <- ('
             character(1)), collapse = "; "), fixed = TRUE)) else "")
   })
 
-  output$zcurve_reading <- renderUI({
+  zcurve_summary <- reactive({
     value <- zcurve_fit()
     req(!inherits(value$result, "error"))
-    lines <- attr(metaUI_zcurve_plot(value$result, plot_colours), "statistics")
+    plot <- metaUI_zcurve_plot(value$result, plot_colours)
+    list(lines = attr(plot, "statistics"), top = max(ggplot2::layer_scales(plot)$x$get_limits()))
+  })
+
+  output$zcurve_reading <- renderUI({
+    value <- zcurve_fit()
+    lines <- zcurve_summary()$lines
     # The first number is the rate; a confidence interval may follow it.
     numbers <- function(i) as.numeric(regmatches(lines[i], gregexpr("[0-9]*[.][0-9]+", lines[i]))[[1]])
     percent <- function(x) paste0(round(100 * x), "%")
@@ -1640,8 +1653,8 @@ glue_string <- ('
 
   output$zcurve_statistics <- renderUI({
     value <- zcurve_fit()
-    req(!inherits(value$result, "error"))
-    lines <- attr(metaUI_zcurve_plot(value$result, plot_colours), "statistics")
+    summary <- zcurve_summary()
+    lines <- summary$lines
     # The package pairs each label with the value on the next line.
     labels <- c(sub(":$", "", lines[c(3, 5, 7)]))
     # Rates as percentages, as in the sentence above.
@@ -1653,7 +1666,7 @@ glue_string <- ('
     }, character(1), USE.NAMES = FALSE)
     tags$table(class = "table metaui-custom metaui-stats metaui-zstats", tags$tbody(
       tags$tr(tags$td(HTML("Range of <i>z</i>-scores")), tags$td(class = "num", sub("^Range: ", "", lines[1]),
-        { top <- max(ggplot2::layer_scales(metaUI_zcurve_plot(value$result, plot_colours))$x$get_limits()); if (max(value$result$data) > top) paste0(" (plot ends at ", format(top), ")") else "" })),
+        if (max(value$result$data) > summary$top) paste0(" (plot ends at ", format(summary$top), ")") else "")),
       tags$tr(tags$td("Tests"), tags$td(class = "num", lines[2])),
       lapply(seq_along(labels), function(i) tags$tr(tags$td(labels[i]), tags$td(class = "num", values[i])))))
   })

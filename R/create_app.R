@@ -98,6 +98,13 @@ metaUI_exclusions_html <- function(report) {
 
 create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE,
                          meta = FALSE) {
+  to_text <- function(x, default = "") {
+    if (is.null(x) || !length(x) || is.na(x[1])) default else as.character(x[1])
+  }
+  date <- to_text(date, format(Sys.Date(), "%d %b %Y"))
+  citation <- to_text(citation)
+  osf_link <- to_text(osf_link)
+  contact <- to_text(contact)
   out <- glue::glue("<h3>About this analysis</h3>
           <p><b>Last update:</b> {date}</p>
           {if (citation != '') glue::glue('<p><b>Citation:</b> {citation}</p>') else ''}
@@ -106,25 +113,30 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
           <p>Created with <a href='https://github.com/LukasWallrich/metaUI'>metaUI</a> v{utils::packageVersion('metaUI')}</p>
           ")
 
-  if (list_packages == TRUE) {
+  show_packages <- FALSE
+  if (isTRUE(list_packages)) {
     req_packages <- app_dependencies(meta)
+    show_packages <- length(req_packages) > 0L
   } else if (is.character(list_packages)) {
-    req_packages <- list_packages
-    list_packages <- TRUE
+    req_packages <- list_packages[!is.na(list_packages) & nzchar(list_packages)]
+    show_packages <- length(req_packages) > 0L
+  } else if (!isFALSE(list_packages)) {
+    stop("list_packages must be TRUE, FALSE, or a character vector of package names.", call. = FALSE)
   }
 
-  if (list_packages == TRUE) {
+  if (show_packages) {
     # generate_shiny() checks installation later and names any missing package.
     package_versions <- purrr::map_chr(req_packages, \(p) tryCatch(as.character(utils::packageVersion(p)), error = function(e) "not installed"))
+    n_cols <- min(3L, length(req_packages))
+    per_col <- ceiling(length(req_packages) / n_cols)
+    chunks <- split(seq_along(req_packages), ceiling(seq_along(req_packages) / per_col))
 
     HTML(paste0(
       out, "<details class='metaui-help'><summary>Software versions</summary><h4>R packages used</h4><div class='metaui-packages'>",
-      purrr::map(1:3, \(i) {
-        start <- (i - 1) * ceiling(length(req_packages) / 3) + 1
-        end <- min(i * ceiling(length(req_packages) / 3), length(req_packages))
+      purrr::map(chunks, \(idx) {
         glue::glue(
           "<table><tr><th>Package</th><th>Version</th></tr>\n",
-          purrr::map2(req_packages[start:end], package_versions[start:end], \(p, v) glue::glue("<tr><td>{p}</td><td>{v}</td></tr>")) %>% glue::glue_collapse("\n"),
+          purrr::map2(req_packages[idx], package_versions[idx], \(p, v) glue::glue("<tr><td>{p}</td><td>{v}</td></tr>")) %>% glue::glue_collapse("\n"),
           "</table>"
         )
       }) %>% glue::glue_collapse("\n"), "</div></details>"
@@ -174,7 +186,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'   - `selection_list_threshold` Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
 #'   - `correlation_dependent` Numeric, at least 0 and below 1. The assumed correlation between the sampling errors of effects from the same study, used to average them into study-level effects, in the multilevel (CHE) model and for the RVE weights. Defaults to .6.
 #' @inheritParams create_about
-#' @inheritDotParams create_about
+#' @inheritDotParams create_about -dataset_name -meta
 #'
 #' @details
 #' Use `generate_shiny(static_folder = ...)` to generate and publish static files
@@ -201,6 +213,19 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         save_to_folder = NA, launch_app = is.na(save_to_folder) && is.null(static_folder), ...,
         options = list(), overwrite = FALSE, bayesian = NULL, design = NULL, study_info = NULL,
         static_folder = NULL) {
+
+  if (is.null(save_to_folder)) save_to_folder <- NA_character_
+  if (length(save_to_folder) != 1L || (!is.na(save_to_folder) && (!is.character(save_to_folder) || !nzchar(trimws(save_to_folder)))))
+    stop("save_to_folder must be NA or a nonempty folder path.", call. = FALSE)
+  if (!is.character(dataset_name) || length(dataset_name) != 1L || is.na(dataset_name) || !nzchar(trimws(dataset_name)))
+    stop("dataset_name must be a nonempty scalar string.", call. = FALSE)
+  if (is.null(eff_size_type_label)) eff_size_type_label <- NA_character_
+  if (length(eff_size_type_label) != 1L || (!is.na(eff_size_type_label) && (!is.character(eff_size_type_label) || !nzchar(trimws(eff_size_type_label)))))
+    stop("eff_size_type_label must be NA or a nonempty scalar string.", call. = FALSE)
+  if (is.null(filter_popups)) filter_popups <- list()
+  if (!is.list(filter_popups) || (length(filter_popups) && (is.null(names(filter_popups)) || anyNA(names(filter_popups)) ||
+      any(!nzchar(names(filter_popups))) || anyDuplicated(names(filter_popups)))))
+    stop("filter_popups must be a uniquely named list keyed by filter display labels.", call. = FALSE)
 
   if (!is.null(static_folder)) {
     validate_static_folder(static_folder, save_to_folder, overwrite)
@@ -248,6 +273,14 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   metaUI_validate_prepared(dataset)
   filter_cols <- grep("^metaUI__filter_", names(dataset), value = TRUE)
   metaUI_check_filter_columns(filter_cols, dataset[filter_cols])
+  if (length(filter_popups)) {
+    filter_labels <- sub("^metaUI__filter_", "", filter_cols)
+    unmatched_popups <- setdiff(names(filter_popups), filter_labels)
+    if (length(unmatched_popups))
+      warning("filter_popups names no matching filter label(s): ", paste(unmatched_popups, collapse = ", "),
+        if (length(filter_labels)) paste0(". Available filter labels: ", paste(filter_labels, collapse = ", "), ".") else ".",
+        call. = FALSE)
+  }
   if (!is.null(study_info)) study_info <- validate_study_info(study_info, dataset)
 
   if (is.na(eff_size_type_label)) {
@@ -296,7 +329,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   opts$bayesian <- bayesian
   check_app_packages(uses_meta)
   if (!is.null(primary_model) && (!is.character(primary_model) || length(primary_model) != 1L ||
-      sum(models_to_run$name == primary_model) != 1L))
+      is.na(primary_model) || sum(models_to_run$name == primary_model) != 1L))
     stop("primary_model must name exactly one model in models_to_run: ", paste(models_to_run$name, collapse = "; "))
 
   # Custom code can depend on external state or randomness: cache only by opt-in.

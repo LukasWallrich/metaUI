@@ -94,8 +94,7 @@ double; the observed differences above stay below 10⁻¹¹.
 ## Limits
 
 The code reproduces the app's model rows with the same code and data, not an
-independent analysis; `validation/reproduction.md` describes the independent
-reference fits. A first analysis with no eligible rows has no workbook or code
+independent analysis. A first analysis with no eligible rows has no workbook or code
 download, as before. Results from other package versions are compared, not
 guaranteed. The download does not include an `renv` lockfile or rendered HTML;
 rendering would need Quarto on the app's server.

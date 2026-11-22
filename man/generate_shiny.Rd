@@ -56,7 +56,6 @@ Inserted into About as a link (HTML).}
     \item{\code{list_packages}}{Should all packages used by the app be listed on the About page? If TRUE, it lists the packages
 used in the default configuration. To display different packages (e.g., because you added/removed models), pass
 a character vector with all packages to display.}
-    \item{\code{meta}}{Does author model code use meta? If so, the default list includes it.}
   }}
 
 \item{options}{List of more detailed options to customise your app. They all have sensible defaults and are thus rarely needed.

@@ -310,3 +310,87 @@ test_that("LOO refit button avoids double-escaping and ratio help text uses null
     expect_false(grepl("close to 0", panel, fixed = TRUE))
   })
 })
+
+test_that("create_about handles custom list_packages vectors and NULL fields cleanly", {
+  about_two <- as.character(metaUI:::create_about("Test", citation = NULL, osf_link = NULL, contact = NULL,
+    list_packages = c("metafor", "dplyr")))
+  expect_match(about_two, "<td>metafor</td>", fixed = TRUE)
+  expect_match(about_two, "<td>dplyr</td>", fixed = TRUE)
+  expect_false(grepl("<td>NA</td>", about_two, fixed = TRUE))
+
+  about_one <- as.character(metaUI:::create_about("Test", list_packages = "metafor"))
+  expect_equal(lengths(regmatches(about_one, gregexpr("<td>metafor</td>", about_one, fixed = TRUE))), 1L)
+  expect_false(grepl("<td>NA</td>", about_one, fixed = TRUE))
+
+  about_empty <- as.character(metaUI:::create_about("Test", list_packages = character()))
+  expect_false(grepl("Software versions", about_empty, fixed = TRUE))
+
+  expect_error(metaUI:::create_about("Test", list_packages = 123), "list_packages must be TRUE, FALSE")
+})
+
+test_that("se.from.p keeps LLCI <= ULCI for negative effect sizes", {
+  res_diff <- se.from.p(effect.size = c(0.5, -0.5), p = c(0.02, 0.02), N = c(80, 80), effect.size.type = "difference")
+  expect_true(all(res_diff$LLCI < res_diff$ULCI))
+  expect_equal(res_diff$LLCI[2], -res_diff$ULCI[1])
+  expect_equal(res_diff$ULCI[2], -res_diff$LLCI[1])
+
+  res_g <- se.from.p(effect.size = c(0.5, -0.5), p = c(0.02, 0.02), N = c(80, 80),
+    effect.size.type = "difference", calculate.g = TRUE)
+  expect_true(all(res_g$LLCI < res_g$ULCI))
+})
+
+test_that("generate_shiny validates dataset_name, save_to_folder, eff_size_type_label, primary_model, and filter_popups", {
+  skip_without_app_packages()
+  d <- prepared()
+  expect_error(generate_shiny(d, "", save_to_folder = tempfile(), launch_app = FALSE), "dataset_name must be a nonempty scalar string")
+  expect_error(generate_shiny(d, NA_character_, save_to_folder = tempfile(), launch_app = FALSE), "dataset_name must be a nonempty scalar string")
+  expect_error(generate_shiny(d, "Ok", primary_model = NA_character_, save_to_folder = tempfile(), launch_app = FALSE), "primary_model must name exactly one model")
+  expect_error(generate_shiny(d, "Ok", eff_size_type_label = "", save_to_folder = tempfile(), launch_app = FALSE), "eff_size_type_label must be NA or a nonempty scalar string")
+  expect_error(generate_shiny(d, "Ok", save_to_folder = "", launch_app = FALSE), "save_to_folder must be NA or a nonempty folder path")
+
+  root <- tempfile("metaui-null-args-")
+  on.exit(unlink(root, recursive = TRUE))
+  expect_warning(
+    generate_shiny(d, "Ok", eff_size_type_label = NULL, filter_popups = list(NonExistent = "help"),
+      save_to_folder = root, launch_app = FALSE),
+    "filter_popups names no matching filter label"
+  )
+  # JSON about with null citation builds cleanly via build_app()
+  cfg_root <- tempfile("metaui-null-about-"); dir.create(cfg_root)
+  on.exit(unlink(cfg_root, recursive = TRUE), add = TRUE)
+  utils::write.csv(fixture(), file.path(cfg_root, "data.csv"), row.names = FALSE)
+  cfg <- list(schema_version = 1, data = "data.csv", output = "app", dataset_name = "Null about",
+    mapping = list(study_label = "study", es_field = "yi", variance = "vi", es_type = "SMD", es_id = "id"),
+    about = list(citation = NULL))
+  cfg_path <- file.path(cfg_root, "cfg.json")
+  jsonlite::write_json(cfg, cfg_path, auto_unbox = TRUE, null = "null")
+  expect_true(dir.exists(build_app(cfg_path)))
+})
+
+test_that("Egger's test degrades cleanly when all studies have identical SE and numeric-only filters omit hollow-bar note", {
+  skip_without_app_packages()
+  raw <- data.frame(
+    study = LETTERS[1:6],
+    d = c(0.1, 0.2, 0.3, 0.4, 0.2, 0.5),
+    vi = rep(0.02, 6),
+    year = 2001:2006
+  )
+  d <- prepare_data(raw, "study", "d", variance = "vi", filters = c(Year = "year"))
+  root <- tempfile("metaui-equal-se-")
+  on.exit(unlink(root, recursive = TRUE))
+  suppressMessages(generate_shiny(d, "Equal SE", save_to_folder = root, launch_app = FALSE))
+  ui_text <- paste(readLines(file.path(root, "ui.R")), collapse = "\n")
+  expect_false(grepl("Hollow bars: effects without a value", ui_text, fixed = TRUE))
+
+  wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
+  env <- new.env(parent = globalenv()); sys.source("global.R", env)
+  shiny::testServer(env$server, {
+    session$setInputs(outliers_z_scores = c(-10, 10), metaUI__filter_Year = c(2001, 2006),
+      metaUI__filter_Year_include_NA = TRUE, go = 1)
+    # eggers_reading silently req()s out; eggers table yields a shiny.silent.error validation message
+    expect_error(output$eggers_reading, class = "shiny.silent.error")
+    err <- tryCatch(output$eggers, error = identity)
+    expect_s3_class(err, "shiny.silent.error")
+    expect_match(conditionMessage(err), "Needs studies with different standard errors", fixed = TRUE)
+  })
+})

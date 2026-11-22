@@ -159,7 +159,7 @@ If you want to host the app on a Shiny server, shinyapps.io is a good platform w
 rsconnect::deployApp(appDir = "my_app_folder")
 ```
 
-Alternatively, you can publish the app as a **static website** (no Shiny server needed; runs R in the reader's browser via `shinylive`/WebAssembly) using `static_folder` or `export_static()`:
+Alternatively, you can publish the app as a **static website** (experimental; no Shiny server needed — runs R in the reader's browser via `shinylive`/WebAssembly) using `static_folder` or `export_static()`:
 
 ```{r eval = FALSE}
 # Generate editable app and static site in one step:

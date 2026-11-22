@@ -1,7 +1,7 @@
 # metaUI <img src="man/figures/logo.png" align="right" style="height:200px; padding: 10px;" />
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/lukaswallrich/metaUI/workflows/R-CMD-check/badge.svg)](https://github.com/lukaswallrich/metaUI/actions)
+[![R-CMD-check](https://github.com/LukasWallrich/metaUI/workflows/R-CMD-check/badge.svg)](https://github.com/LukasWallrich/metaUI/actions)
 [![Lifecycle:Maturing](https://img.shields.io/badge/Lifecycle-Maturing-007EC6)](https://github.com/LukasWallrich/metaUI)
 <!-- badges: end -->
 
@@ -36,8 +36,8 @@ The [`Getting started` vignette](https://lukaswallrich.github.io/metaUI/articles
 Apps can be built in R with `generate_shiny()` or headlessly from a versioned JSON
 configuration with `build_app()`; either way, the generated R/Shiny files stay
 editable. Schema version 2 adds computation, Bayesian, study-metadata and 2x2-count authoring; version 1
-continues to accept the original configuration fields (plus `design`, `eff_size_type_label`, `filter_popups`, `primary_model` and `static_folder`). See [reproduction and scientific contract](https://github.com/LukasWallrich/metaUI/blob/main/validation/reproduction.md),
-[the tiny synthetic config](https://github.com/LukasWallrich/metaUI/blob/main/inst/examples/tiny.json), and its
+continues to accept the original configuration fields (plus `design`, `eff_size_type_label`, `filter_popups`, `primary_model` and `static_folder`). See
+[the tiny synthetic config](https://github.com/LukasWallrich/metaUI/blob/main/inst/examples/tiny.json) and its
 [JSON schema](https://github.com/LukasWallrich/metaUI/blob/main/inst/examples/config.schema.json). Build and launch are separate:
 
 First copy `tiny.json` and `tiny.csv` from `inst/examples` into a fresh, empty folder, then run:
@@ -108,10 +108,7 @@ refits it. On large dependent data (thousands of effects) one Update can then
 take two full model fits, during which a single R process serves no other reader.
 For apps that several people use at once, run more than one R process (for
 example, several workers on Posit Connect or shinyapps.io), or publish a static
-version (below), where each reader computes in their own browser.
-
-[Performance measurements](https://github.com/LukasWallrich/metaUI/blob/main/validation/performance-optimisation.md) distinguish
-faster p-curve calculations/fit reuse from cache hits and first-time fitting costs.
+version (experimental; below), where each reader computes in their own browser.
 
 ### Downloads, uploads and reproduction code
 
@@ -284,9 +281,9 @@ may still request external stylesheets. The contrast check covers text and accen
 against page, panel and derived tinted backgrounds, not an accessibility audit
 of author-supplied HTML or arbitrary Bootstrap themes.
 
-## Publishing without a server
+## Publishing without a server (experimental)
 
-Generate an editable app and a static website in one step:
+Generate an editable app and a static website in one step (experimental; relies on `shinylive`/webR):
 
 ```r
 app_data <- metaUI::prepare_data("effects.csv", "study", "d", variance = "vi")
@@ -358,9 +355,7 @@ inspiration), the [Cooperation Databank](https://cooperationdatabank.org/)
 (dataset exploration), [PsychOpen CAMA](https://cama.psychopen.eu/)
 (cumulative meta-analysis), and the [taVNS HRV app](https://vinzentwolf.shinyapps.io/taVNSHRVmeta/)
 (a Bayesian living meta-analysis). These are references, not endorsements or
-sources of bundled code. See the [issue follow-up decisions](https://github.com/LukasWallrich/metaUI/blob/main/validation/issue-followup.md)
-for the assessed feature overlap and remaining work.
+sources of bundled code.
 
 Compared with these projects, metaUI's intended contribution is an author-owned
-app with editable R source. See the bounded
-[publication-readiness assessment](https://github.com/LukasWallrich/metaUI/blob/main/validation/publication-readiness.md).
+app with editable R source.

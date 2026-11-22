@@ -51,8 +51,11 @@ P. Simmons (2014), through dmetar's implementation. https://www.p-curve.com/
 Upstream dmetar DESCRIPTION specifies MIT + file LICENSE; LICENSE identifies
 Mathias Harrer (2020). This notice preserves those terms and attribution.
 
-Modified by metaUI on 6 October 2026: dmetar p-curve deduplicates identical
-noncentrality solves and restores process options; original MIT notice above retained.
+Modified by metaUI on 6 October 2026 and 22 November 2026: dmetar p-curve
+deduplicates identical noncentrality solves and restores process options and
+graphics margins; se.from.p handles NA inputs and uses abs(SE) so confidence
+intervals are not inverted for negative effects. Original MIT notice above
+retained.
 
 inst/examples/dannheim/mental-health.csv adapts the mental-health forest plot from:
 Dannheim I, Ludwig-Walz H, Kirsch H, Bujard M, Buyken AE, Richardson KM, Kroke A

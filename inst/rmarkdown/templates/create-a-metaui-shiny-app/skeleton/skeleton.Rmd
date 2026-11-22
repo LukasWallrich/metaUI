@@ -22,8 +22,7 @@ In a first step, you will need to load and import data. For metaUI, your datafil
 
 -   a **study label** to identify individual samples (You can include multiple effect sizes with the same study label to indicate that they are dependent.),
 -   an **effect size** measure,
--   the **variance** of the effect size
--   optionally, the **standard error** (otherwise derived from variance)
+-   the **variance** or the **standard error** of the effect size (at least one; the other is derived)
 -   optionally, the **sample size** (required only for applicable optional models)
 -   optionally, source **p-values**, with their provenance
 -   data on any **moderators / filters** you want to include
@@ -112,9 +111,12 @@ generate_shiny(my_data,
                eff_size_type_label = "____",
                save_to_folder = app_folder,
                launch_app = FALSE,
-               # Details to show on the about page - see ?create_about for all options
+               # Details to show on the about page - see ?generate_shiny for all options
                citation = "____",
                contact = "____"
+               # Optional: primary_model = "____", design = app_design(...),
+               # bayesian = list(enabled = TRUE), study_info = fetch_study_metadata(my_data),
+               # static_folder = "my-static-site" (experimental serverless export via shinylive)
                )
 ```
 

@@ -118,19 +118,19 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
     if (calculate.g == TRUE) {
       ES <- hedges_g(d = ES, totaln = N)
       z <- -0.862 + sqrt(0.743 - 2.404 * log(p))
-      SE <- ES / z
+      SE <- abs(ES / z)
       SD <- SE * sqrt(N)
       LLCI <- ES - qnorm(0.975) * SE
       ULCI <- ES + qnorm(0.975) * SE
-      data <- data.frame(ES, abs(SE), abs(SD), LLCI, ULCI)
+      data <- data.frame(ES, SE, SD, LLCI, ULCI)
       colnames(data) <- c("Hedges.g", "StandardError", "StandardDeviation", "LLCI", "ULCI")
     } else {
       z <- -0.862 + sqrt(0.743 - 2.404 * log(p))
-      SE <- ES / z
+      SE <- abs(ES / z)
       SD <- SE * sqrt(N)
       LLCI <- ES - qnorm(0.975) * SE
       ULCI <- ES + qnorm(0.975) * SE
-      data <- data.frame(ES, abs(SE), abs(SD), LLCI, ULCI)
+      data <- data.frame(ES, SE, SD, LLCI, ULCI)
       colnames(data) <- c("EffectSize", "StandardError", "StandardDeviation", "LLCI", "ULCI")
     }
   }
