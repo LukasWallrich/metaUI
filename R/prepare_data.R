@@ -226,8 +226,9 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
       dplyr::mutate(metaUI__url = {
         raw <- as.character(.data$metaUI__url)
         u <- sub("^doi:\\s*", "", trimws(raw), ignore.case = TRUE)
+        u <- sub("^(https?)://", "\\L\\1://", u, ignore.case = TRUE, perl = TRUE)
         ifelse(!is.na(u) & grepl("^10\\.", u), paste0("https://doi.org/", u),
-          ifelse(!is.na(u) & grepl("^https?://", u, ignore.case = TRUE), u, raw))
+          ifelse(!is.na(u) & grepl("^https?://", u), u, raw))
       })
   }
   if (!is.na(article_label)) {

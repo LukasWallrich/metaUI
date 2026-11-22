@@ -373,17 +373,18 @@ test_that("generate_shiny validates dataset_name, save_to_folder, eff_size_type_
   cfg_ws_path <- file.path(cfg_root, "cfg-ws.json")
   jsonlite::write_json(cfg_ws, cfg_ws_path, auto_unbox = TRUE, null = "null")
   expect_error(build_app(cfg_ws_path), "eff_size_type_label must be a nonempty scalar string")
+})
 
-  # URL column distinctness and doi:https:// normalisation
+test_that("prepare_data validates URL mapping distinctness and normalises DOI and HTTP(S) schemes", {
   raw_url <- data.frame(
-    study = LETTERS[1:4],
-    d = c(0.1, 0.2, 0.3, 0.4),
-    vi = rep(0.02, 4),
-    link = c("doi:https://doi.org/10.1000/a", "DOI: 10.1000/b", "https://example.org/c", NA)
+    study = LETTERS[1:5],
+    d = c(0.1, 0.2, 0.3, 0.4, 0.5),
+    vi = rep(0.02, 5),
+    link = c("doi:HTTPS://doi.org/10.1000/a", "DOI: 10.1000/b", "HTTP://Example.ORG/Path", "https://example.org/c", NA)
   )
   expect_error(prepare_data(raw_url, "study", "d", variance = "vi", url = "study"), "Column mappings must be distinct")
   prep_url <- prepare_data(raw_url, "study", "d", variance = "vi", url = "link")
-  expect_equal(prep_url$metaUI__url, c("https://doi.org/10.1000/a", "https://doi.org/10.1000/b", "https://example.org/c", NA))
+  expect_equal(prep_url$metaUI__url, c("https://doi.org/10.1000/a", "https://doi.org/10.1000/b", "http://Example.ORG/Path", "https://example.org/c", NA))
 })
 
 test_that("Egger's test degrades cleanly when all studies have identical SE and numeric-only filters omit hollow-bar note", {
