@@ -95,7 +95,7 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
     stop("'p' is not of type numeric().")
   }
 
-  if (sum(p < 0 | p > 1) > 0) {
+  if (sum(p < 0 | p > 1, na.rm = TRUE) > 0) {
     stop("values of 'p' must range between 0 and 1.")
   }
 
@@ -107,7 +107,7 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
     stop("'effect.size.type' must be either 'difference' or 'ratio'.")
   }
 
-  if (ES.type == "ratio" & sum(ES < 0) > 0) {
+  if (ES.type == "ratio" && sum(ES < 0, na.rm = TRUE) > 0) {
     stop("when 'effect.size.type' is 'ratio', values of 'effect.size' must be equal to or greater than 0.")
   }
 
@@ -118,19 +118,19 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
     if (calculate.g == TRUE) {
       ES <- hedges_g(d = ES, totaln = N)
       z <- -0.862 + sqrt(0.743 - 2.404 * log(p))
-      SE <- ES / z
+      SE <- abs(ES / z)
       SD <- SE * sqrt(N)
       LLCI <- ES - qnorm(0.975) * SE
       ULCI <- ES + qnorm(0.975) * SE
-      data <- data.frame(ES, abs(SE), abs(SD), LLCI, ULCI)
+      data <- data.frame(ES, SE, SD, LLCI, ULCI)
       colnames(data) <- c("Hedges.g", "StandardError", "StandardDeviation", "LLCI", "ULCI")
     } else {
       z <- -0.862 + sqrt(0.743 - 2.404 * log(p))
-      SE <- ES / z
+      SE <- abs(ES / z)
       SD <- SE * sqrt(N)
       LLCI <- ES - qnorm(0.975) * SE
       ULCI <- ES + qnorm(0.975) * SE
-      data <- data.frame(ES, abs(SE), abs(SD), LLCI, ULCI)
+      data <- data.frame(ES, SE, SD, LLCI, ULCI)
       colnames(data) <- c("EffectSize", "StandardError", "StandardDeviation", "LLCI", "ULCI")
     }
   }
@@ -296,6 +296,7 @@ se.from.p <- function(effect.size, p, N, effect.size.type = "difference", calcul
 #' }
 #'
 #'
+#' @keywords internal
 #' @import stringr poibin
 #' @importFrom graphics abline axis lines mtext par plot points rect segments strheight strwidth text
 #' @importFrom stats as.formula hat influence ks.test optimize pbinom pchisq pf pnorm pt punif qchisq qf qnorm qt reformulate reorder setNames uniroot
@@ -653,7 +654,8 @@ pcurve <- function(x, effect.estimation = FALSE, N, dmin = 0, dmax = 1, compact 
 
   # Make the graph
   x <- c(.01, .02, .03, .04, .05)
-  par(mar = c(if (compact) 4 else 7, 4.6, 1, 1.6))
+  old_par <- par(mar = c(if (compact) 4 else 7, 4.6, 1, 1.6))
+  on.exit(par(old_par), add = TRUE)
   moveup <- max(max(blue[2:5]) - 66, 0)
   ylim <- c(0, 105 + moveup)
   legend.top <- 100 + moveup

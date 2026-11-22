@@ -98,6 +98,13 @@ metaUI_exclusions_html <- function(report) {
 
 create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), citation = "", osf_link = "", contact = "", list_packages = TRUE,
                          meta = FALSE) {
+  to_text <- function(x, default = "") {
+    if (is.null(x) || !length(x) || is.na(x[1])) default else as.character(x[1])
+  }
+  date <- to_text(date, format(Sys.Date(), "%d %b %Y"))
+  citation <- to_text(citation)
+  osf_link <- to_text(osf_link)
+  contact <- to_text(contact)
   out <- glue::glue("<h3>About this analysis</h3>
           <p><b>Last update:</b> {date}</p>
           {if (citation != '') glue::glue('<p><b>Citation:</b> {citation}</p>') else ''}
@@ -106,25 +113,30 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
           <p>Created with <a href='https://github.com/LukasWallrich/metaUI'>metaUI</a> v{utils::packageVersion('metaUI')}</p>
           ")
 
-  if (list_packages == TRUE) {
+  show_packages <- FALSE
+  if (isTRUE(list_packages)) {
     req_packages <- app_dependencies(meta)
+    show_packages <- length(req_packages) > 0L
   } else if (is.character(list_packages)) {
-    req_packages <- list_packages
-    list_packages <- TRUE
+    req_packages <- list_packages[!is.na(list_packages) & nzchar(list_packages)]
+    show_packages <- length(req_packages) > 0L
+  } else if (!isFALSE(list_packages)) {
+    stop("list_packages must be TRUE, FALSE, or a character vector of package names.", call. = FALSE)
   }
 
-  if (list_packages == TRUE) {
+  if (show_packages) {
     # generate_shiny() checks installation later and names any missing package.
     package_versions <- purrr::map_chr(req_packages, \(p) tryCatch(as.character(utils::packageVersion(p)), error = function(e) "not installed"))
+    n_cols <- min(3L, length(req_packages))
+    per_col <- ceiling(length(req_packages) / n_cols)
+    chunks <- split(seq_along(req_packages), ceiling(seq_along(req_packages) / per_col))
 
     HTML(paste0(
       out, "<details class='metaui-help'><summary>Software versions</summary><h4>R packages used</h4><div class='metaui-packages'>",
-      purrr::map(1:3, \(i) {
-        start <- (i - 1) * ceiling(length(req_packages) / 3) + 1
-        end <- min(i * ceiling(length(req_packages) / 3), length(req_packages))
+      purrr::map(chunks, \(idx) {
         glue::glue(
           "<table><tr><th>Package</th><th>Version</th></tr>\n",
-          purrr::map2(req_packages[start:end], package_versions[start:end], \(p, v) glue::glue("<tr><td>{p}</td><td>{v}</td></tr>")) %>% glue::glue_collapse("\n"),
+          purrr::map2(req_packages[idx], package_versions[idx], \(p, v) glue::glue("<tr><td>{p}</td><td>{v}</td></tr>")) %>% glue::glue_collapse("\n"),
           "</table>"
         )
       }) %>% glue::glue_collapse("\n"), "</div></details>"
@@ -141,7 +153,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #' on that folder, or modified by editing server.R, ui.R, global.R and models.R in the folder.
 #'
 #' @param dataset Dataframe as returned from [prepare_data()]
-#' @param eff_size_type_label The label to be used to describe the effect size. If NA, effect type code from dataset is used.
+#' @param eff_size_type_label The label to be used to describe the effect size. If NA, uses `"Correlation r"` for correlations, `"Odds ratio"` or `"Risk ratio"` for ratios, and otherwise the effect type code from the dataset.
 #' @param models The models to be included in the app. Can either be a function to call, a tibble, or the path to a file. Custom models can add an `interval_type` column naming their interval, such as "Confidence interval"; otherwise the app says that its type is unknown. `LCL90` and `UCL90` columns give the 90% interval used by the equivalence assessment; a model without them is not assessed there. A `description` column gives a sentence that the app's Methods section shows for that model. If you want to change the default models, have a look at the vignette and/or the [get_model_tibble()] documentation.
 #' Passing a file (e.g. "my_models.R") is particularly helpful if you include helper functions and save the app. If so,
 #' this must assign the tibble to a variable called models_to_run (i.e. using <-).
@@ -156,7 +168,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'   (a temporary folder when NA), then exported with precomputed results. Must
 #'   be outside save_to_folder. Static generation never launches the app.
 #' @param design Optional settings from [app_design()]. Use [design_app()] to preview and export them.
-#' @param bayesian NULL (default), or list(enabled = TRUE, tau_scale = .5). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior, computed by grid quadrature over the heterogeneity (no extra package needed). Correlation default tau_scale is .25 on Fisher z. An optional `max_studies` (integer, at least 2) caps the number of studies; by default there is no cap. Sensitivity analyses use half and double the scale.
+#' @param bayesian NULL (default), or list(enabled = TRUE, tau_scale = .5). Adds a deterministic study-level normal-normal model with a flat prior on the mean and a half-normal heterogeneity prior, computed by grid quadrature over the heterogeneity (no extra package needed). Correlation default tau_scale is .25 on Fisher z. An optional `max_studies` (integer, at least 2) caps the number of studies; by default there is no cap. Sensitivity analyses use half and double the scale. Cannot be combined with a `models` file path; supply a tibble or `get_model_tibble` instead.
 #' @param study_info Optional study information shown to readers: a data frame (or CSV path) with one row per
 #' study and a `study` column matching the study IDs, as returned by [fetch_study_metadata()] or written by the
 #' authors. Recognised columns: `doi`, `url`, `title`, `authors` (separated by "; "), `year`, `journal`, `volume`,
@@ -174,7 +186,7 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'   - `selection_list_threshold` Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
 #'   - `correlation_dependent` Numeric, at least 0 and below 1. The assumed correlation between the sampling errors of effects from the same study, used to average them into study-level effects, in the multilevel (CHE) model and for the RVE weights. Defaults to .6.
 #' @inheritParams create_about
-#' @inheritDotParams create_about
+#' @inheritDotParams create_about -dataset_name -meta
 #'
 #' @details
 #' Use `generate_shiny(static_folder = ...)` to generate and publish static files
@@ -202,18 +214,50 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
         options = list(), overwrite = FALSE, bayesian = NULL, design = NULL, study_info = NULL,
         static_folder = NULL) {
 
+  if (is.null(save_to_folder)) save_to_folder <- NA_character_
+  if (length(save_to_folder) != 1L || (!is.na(save_to_folder) && (!is.character(save_to_folder) || !nzchar(trimws(save_to_folder)))))
+    stop("save_to_folder must be NA or a nonempty folder path.", call. = FALSE)
+  if (!is.character(dataset_name) || length(dataset_name) != 1L || is.na(dataset_name) || !nzchar(trimws(dataset_name)))
+    stop("dataset_name must be a nonempty scalar string.", call. = FALSE)
+  if (is.null(eff_size_type_label)) eff_size_type_label <- NA_character_
+  if (length(eff_size_type_label) != 1L || (!is.na(eff_size_type_label) && (!is.character(eff_size_type_label) || !nzchar(trimws(eff_size_type_label)))))
+    stop("eff_size_type_label must be NA or a nonempty scalar string.", call. = FALSE)
+  if (is.null(filter_popups)) filter_popups <- list()
+  if (!is.list(filter_popups) || (length(filter_popups) && (is.null(names(filter_popups)) || anyNA(names(filter_popups)) ||
+      any(!nzchar(names(filter_popups))) || anyDuplicated(names(filter_popups)))))
+    stop("filter_popups must be a uniquely named list keyed by filter display labels.", call. = FALSE)
+
   if (!is.null(static_folder)) {
     validate_static_folder(static_folder, save_to_folder, overwrite)
     launch_app <- FALSE
   }
 
   defaults <- list(max_forest_plot_rows = 60, shiny_theme = "yeti", selection_list_threshold = 6)
+  allowed_options <- c("max_forest_plot_rows", "shiny_theme", "selection_list_threshold",
+    "correlation_dependent", "fit_cache_entries", "intro")
+  if (!is.list(options) || (length(options) && (is.null(names(options)) || anyNA(names(options)) ||
+      any(!nzchar(names(options))) || anyDuplicated(names(options)))))
+    stop("options must be a uniquely named list.", call. = FALSE)
+  unknown_options <- setdiff(names(options), allowed_options)
+  if (length(unknown_options))
+    stop("Unknown option(s): ", paste(unknown_options, collapse = ", "),
+      ". Allowed: ", paste(allowed_options, collapse = ", "), ".", call. = FALSE)
   opts <- utils::modifyList(defaults, options)
   opts$design <- if (is.null(design)) NULL else validate_design(design)
   limit <- opts$max_forest_plot_rows
   if (!is.numeric(limit) || length(limit) != 1L || is.na(limit) ||
       !is.finite(limit) || limit < 1 || limit != floor(limit))
     stop("max_forest_plot_rows must be a positive finite whole number.")
+  threshold <- opts$selection_list_threshold
+  if (!is.numeric(threshold) || length(threshold) != 1L || is.na(threshold) ||
+      !is.finite(threshold) || threshold < 1 || threshold != floor(threshold))
+    stop("selection_list_threshold must be a positive finite whole number.")
+  if (!is.character(opts$shiny_theme) || length(opts$shiny_theme) != 1L || is.na(opts$shiny_theme))
+    stop("shiny_theme must be a single theme name, such as \"yeti\".")
+  tryCatch(shinythemes::shinytheme(opts$shiny_theme), error = function(e)
+    stop("Invalid options$shiny_theme: ", conditionMessage(e), call. = FALSE))
+  if (!is.null(opts$intro) && (!is.character(opts$intro) || length(opts$intro) != 1L || is.na(opts$intro)))
+    stop("options$intro must be a single string of HTML.")
 
    # Evaluate so that it is TRUE when save_to_folder is NA initially
    launch_app <- launch_app
@@ -229,6 +273,14 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   metaUI_validate_prepared(dataset)
   filter_cols <- grep("^metaUI__filter_", names(dataset), value = TRUE)
   metaUI_check_filter_columns(filter_cols, dataset[filter_cols])
+  if (length(filter_popups)) {
+    filter_labels <- sub("^metaUI__filter_", "", filter_cols)
+    unmatched_popups <- setdiff(names(filter_popups), filter_labels)
+    if (length(unmatched_popups))
+      warning("filter_popups names no matching filter label(s): ", paste(unmatched_popups, collapse = ", "),
+        if (length(filter_labels)) paste0(". Available filter labels: ", paste(filter_labels, collapse = ", "), ".") else ".",
+        call. = FALSE)
+  }
   if (!is.null(study_info)) study_info <- validate_study_info(study_info, dataset)
 
   if (is.na(eff_size_type_label)) {
@@ -265,7 +317,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     meta = uses_meta), about_args))
   bayesian <- metaUI_bayesian_options(bayesian, dataset$metaUI__es_type[1])
   # The plain random-effects model treats effects as independent; it cannot take nested data.
-  if (any(models_to_run$code == metaUI_code_random & !models_to_run$aggregated) && anyDuplicated(dataset$metaUI__study_id))
+  if (any(models_to_run$code %in% metaUI_code_random & (models_to_run$aggregated %in% FALSE)) && anyDuplicated(dataset$metaUI__study_id))
     stop("The Random-Effects Model treats effects as independent, but study \"", dataset$metaUI__study_id[anyDuplicated(dataset$metaUI__study_id)],
       "\" has several effects. Use get_model_tibble() for its models for dependent effects.", call. = FALSE)
   random_default <- identical(models_to_run, get_model_tibble(one_effect_per_study = TRUE))
@@ -277,7 +329,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   opts$bayesian <- bayesian
   check_app_packages(uses_meta)
   if (!is.null(primary_model) && (!is.character(primary_model) || length(primary_model) != 1L ||
-      sum(models_to_run$name == primary_model) != 1L))
+      is.na(primary_model) || sum(models_to_run$name == primary_model) != 1L))
     stop("primary_model must name exactly one model in models_to_run: ", paste(models_to_run$name, collapse = "; "))
 
   # Custom code can depend on external state or randomness: cache only by opt-in.
@@ -401,8 +453,8 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   writeLines(c(generate_global.R(eff_size_type_label, uses_meta), "",
     "# Draw one small plot when the app starts, so that the first reader's plots do not wait for",
     "# the graphics packages to load and compile.",
-    "invisible(tryCatch(shiny::plotPNG(function() print(ggplot2::ggplot(data.frame(x = 1:3), ggplot2::aes(x)) + ggplot2::geom_histogram(bins = 3)),",
-    "  tempfile(fileext = \".png\"), width = 60, height = 40), error = function(e) NULL))"), file.path(save_to_folder, "global.R"))
+    "invisible(tryCatch(local({ p <- tempfile(fileext = \".png\"); on.exit(unlink(p), add = TRUE); shiny::plotPNG(function() print(ggplot2::ggplot(data.frame(x = 1:3), ggplot2::aes(x)) + ggplot2::geom_histogram(bins = 3)),",
+    "  p, width = 60, height = 40) }), error = function(e) NULL))"), file.path(save_to_folder, "global.R"))
   saveRDS(dataset, file.path(save_to_folder, "dataset.rds"))
   opening_precompute(save_to_folder, enabled = opts$fit_cache_entries > 0L)
 

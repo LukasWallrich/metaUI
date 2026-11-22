@@ -1,4 +1,4 @@
-# Run in a fresh process for each package version; see validation/reproduction.md.
+# Run in a fresh process for each package version.
 args <- commandArgs(TRUE)
 if (length(args) < 2) stop("Usage: measure.R baseline|candidate|candidate-directed output.csv [package-library]")
 if (!args[1] %in% c("baseline", "candidate", "candidate-directed")) stop("Unknown mode: ", args[1])

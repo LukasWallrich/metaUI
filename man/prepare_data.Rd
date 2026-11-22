@@ -53,7 +53,7 @@ prepare_data(
 
 \item{article_label}{Character. Field with article labels. Only used to report number of references in addition to number of independent samples.}
 
-\item{es_label}{Character. Label for individual effect sizes - only needed when there are multiple effect sizes per study/sample. Defaults to NA. Defaults to NA, in that case, multiple effect sizes are simply numbered.}
+\item{es_label}{Character. Label for individual effect sizes - only needed when there are multiple effect sizes per study/sample. Defaults to NA, in which case multiple effect sizes are simply numbered.}
 
 \item{na.rm}{Should rows with any missing values be removed? Can be TRUE, FALSE or "es_related" -
 the last is the default and drops rows with missing values for any of the variables used in the standard meta-analysis models, namely

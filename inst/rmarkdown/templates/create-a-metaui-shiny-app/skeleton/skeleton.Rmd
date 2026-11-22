@@ -22,8 +22,7 @@ In a first step, you will need to load and import data. For metaUI, your datafil
 
 -   a **study label** to identify individual samples (You can include multiple effect sizes with the same study label to indicate that they are dependent.),
 -   an **effect size** measure,
--   the **variance** of the effect size
--   optionally, the **standard error** (otherwise derived from variance)
+-   the **variance** or the **standard error** of the effect size (at least one; the other is derived)
 -   optionally, the **sample size** (required only for applicable optional models)
 -   optionally, source **p-values**, with their provenance
 -   data on any **moderators / filters** you want to include
@@ -86,6 +85,7 @@ my_data <- prepare_data(my_data,
   es_type = "____",
   variance_scale = NULL, # "r" for COR, "z" for ZCOR, "log" for OR/RR; do not guess
   es_id = NULL, # optionally map genuine unique-within-study effect IDs
+  url = NULL, # optionally map study URLs or DOIs (required for fetch_study_metadata())
   direction = "unspecified" # explicitly choose positive/negative for directional models
 )
 
@@ -112,9 +112,13 @@ generate_shiny(my_data,
                eff_size_type_label = "____",
                save_to_folder = app_folder,
                launch_app = FALSE,
-               # Details to show on the about page - see ?create_about for all options
+               # Details to show on the about page - see ?generate_shiny for all options
                citation = "____",
                contact = "____"
+               # Optional: primary_model = "____", design = app_design(...),
+               # bayesian = list(enabled = TRUE),
+               # study_info = fetch_study_metadata(my_data), # requires url mapped in prepare_data()
+               # static_folder = "my-static-site" # experimental (needs shinylive); full dataset and app code go to every visitor, so publish only shareable material
                )
 ```
 
@@ -126,13 +130,13 @@ To further customize the app, consider editing:
 
 -   `ui.R` to edit the user interface (e.g., labels or the About section) or to drop certain parts of the output apart from the main models (e.g., to display only a *z*-curve or only a *p*-curve),
 
--   `server.R` to modify other other parts of the output (for instance, to use a different theme for the graphs),
+-   `server.R` to modify other parts of the output (for instance, to use a different theme for the graphs),
 
 -   `labels_and_options.R` to change the dynamically displayed text (e.g., the welcome message) and some fundamental options (e.g., for aggregating dependent effect sizes).
 
 ## Deploy to shinyapps.io
 
-Follow the instructions provided by Posit/RStudio [here](https://shiny.rstudio.com/articles/shinyapps.html). In essence, you need to create an account, install the `rsconnect` package and authenticate within that package. Then you can run the following to deploy your app:
+Follow the instructions provided by Posit [here](https://shiny.posit.co/r/articles/share/shinyapps/). In essence, you need to create an account, install the `rsconnect` package and authenticate within that package. Then you can run the following to deploy your app:
 
 ```{r eval=FALSE}
 # Public deployment is a separate, deliberate action after validation/review.

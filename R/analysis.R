@@ -757,7 +757,7 @@ metaUI_moderator_fit <- function(df, moderator, primary = NULL, correlation = .6
   if (!anyDuplicated(df$metaUI__study_id)) {
     model <- NULL
     for (control in list(list(), list(stepadj = .5, maxiter = 1000))) {
-      model <- tryCatch(suppressWarnings(metafor::rma.uni(metaUI__effect_size, metaUI__variance, mods = mods, data = df, method = "REML", test = "knha", control = control)),
+      model <- tryCatch(suppressWarnings(metafor::rma.uni(df$metaUI__effect_size, df$metaUI__variance, mods = mods, data = df, method = "REML", test = "knha", control = control)),
         error = function(e) NULL)
       if (!is.null(model)) break
     }

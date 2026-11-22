@@ -13,8 +13,8 @@ metaUI::generate_shiny(data,
     "12 author-composited mental-health effects; original signed g, normal 95% CI-derived SE.",
     "The source-reference row uses REML/Hartung–Knapp; all other rows and diagnostics are explorations.",
     "Aggregation has no effect here: one effect per study. Directional models unsupported because",
-    "no additional selection-model hypothesis is declared. RVE small=FALSE and small-k bias",
-    "diagnostics may be anti-conservative; estimator warnings/failures are retained.",
+    "no additional selection-model hypothesis is declared. RVE (small-sample corrected, flagging df < 4)",
+    "and small-k bias diagnostics should be read cautiously; estimator warnings/failures are retained.",
     "Rounded inputs reproduce the published result approximately. See accompanying provenance.json."),
   date = "2026-10-06")
 file.copy(c("provenance.json", "README.md"), "mental-health-app", overwrite = FALSE)

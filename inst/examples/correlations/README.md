@@ -7,7 +7,8 @@ original GPL-3-or-later examples, not empirical evidence or inferred variances.
 
 `COR` requires `variance_scale = "r"`. Preparation transforms each r with `atanh`
 and its supplied variance with the delta method `var_r / (1 - r^2)^2`. The build
-prints an independent metafor multilevel REML reference fit on Fisher z; Summary
+prints an independent metafor REML/Hartung-Knapp reference fit on Fisher z (matching
+the default random-effects model for one effect per study); Summary
 model estimates and interval endpoints are reported as r using `tanh` once.
 Forest plots also display r and export both scales. Moderation shows each level's estimate as r,
 and bias-adjusted estimates are shown as r too. Slopes of numeric moderators, heterogeneity variances

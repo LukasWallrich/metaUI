@@ -49,8 +49,9 @@ Other models/diagnostics are **explorations with different methods**, not source
 reproductions or recommendations. A two-component multilevel variance split is
 unidentified with one effect per study: only its total is interpretable here.
 Directional bias models are unsupported because no extra selection-model
-hypothesis is specified. RVE `small=FALSE` and sparse-data bias diagnostics can
-be anti-conservative; warnings/failures remain explicit. No moderators from LLM
+hypothesis is specified. Small-k bias diagnostics and RVE with low small-sample
+degrees of freedom (flagged below 4 df) should be read cautiously;
+warnings/failures remain explicit. No moderators from LLM
 enrichment are included. This reanalysis is not endorsed by the source authors.
 
 Z-curve is not estimable for this pool under the installed estimator: only three

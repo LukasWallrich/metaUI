@@ -25,6 +25,25 @@
       "type": "string",
       "minLength": 1
     },
+    "eff_size_type_label": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "Optional display label for the effect size, such as \"Hedges' g\"."
+    },
+    "filter_popups": {
+      "type": "object",
+      "description": "Optional expandable plain-text help keyed by filter display label.",
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
     "output": {
       "type": "string",
       "minLength": 1
@@ -63,7 +82,10 @@
           "type": "string"
         },
         "es_label": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "pvalue": {
           "type": "string"
@@ -72,10 +94,16 @@
           "type": "string"
         },
         "article_label": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "url": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "es_type": {
           "enum": [

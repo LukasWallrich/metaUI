@@ -132,11 +132,17 @@ metaUI_normalise_doi <- function(x) {
   x <- trimws(as.character(x))
   x[!is.na(x) & !nzchar(x)] <- NA
   x <- sub("^(https?://(dx\\.)?doi\\.org/|doi:\\s*)", "", x, ignore.case = TRUE)
-  x[!is.na(x)] <- vapply(x[!is.na(x)], utils::URLdecode, character(1), USE.NAMES = FALSE)
+  decode <- function(s) {
+    if (!grepl("%[0-9A-Fa-f]{2}", s) || grepl("%00", s, fixed = TRUE)) return(s)
+    parts <- gregexpr("(?:%[0-9A-Fa-f]{2})+", s, perl = TRUE)
+    regmatches(s, parts) <- lapply(regmatches(s, parts), function(m) vapply(m, utils::URLdecode, character(1), USE.NAMES = FALSE))
+    s
+  }
+  x[!is.na(x)] <- vapply(x[!is.na(x)], decode, character(1), USE.NAMES = FALSE)
   ifelse(grepl("^10\\.", x), tolower(x), x)
 }
 
-metaUI_valid_doi <- function(x) !is.na(x) & grepl("^10\\.[0-9]{4,9}/\\S+$", x)
+metaUI_valid_doi <- function(x) !is.na(x) & !grepl("%00", x, fixed = TRUE) & grepl("^10\\.[0-9]{4,9}/\\S+$", x)
 
 metaUI_agent <- function(mailto = "") paste0("metaUI/", utils::packageVersion("metaUI"),
   " (https://github.com/LukasWallrich/metaUI", if (nzchar(mailto)) paste0("; mailto:", mailto), ")")
@@ -182,7 +188,8 @@ metaUI_parse_crossref <- function(m, abstracts, today) {
   authors <- vapply(m$author, function(a) {
     if (!is.null(a$family)) paste0(a$family, if (!is.null(a$given)) paste0(", ", a$given)) else if (!is.null(a$name)) a$name else NA_character_
   }, character(1))
-  year <- m$issued$`date-parts`[[1]][[1]]
+  date_parts <- m$issued$`date-parts`
+  year <- if (length(date_parts) && length(date_parts[[1]])) date_parts[[1]][[1]] else NULL
   abstract <- if (is.null(m$abstract) || abstracts == "none") NA_character_ else metaUI_jats_text(m$abstract)
   list(status = "found", title = first(m$title),
     authors = if (length(authors)) paste(stats::na.omit(authors), collapse = "; ") else NA_character_,

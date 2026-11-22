@@ -31,6 +31,7 @@ mod$name[1] <- "RE 2-level model"
 if (exists("app_data")) {
   generate_shiny(app_data,
     dataset_name = "Your meta-analysis",
+    models = mod,
     eff_size_type_label = "Declared effect scale")
 }
 }

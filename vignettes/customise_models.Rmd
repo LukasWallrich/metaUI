@@ -34,7 +34,7 @@ To remove models, you can add a comment (`#`) in front of the line where it is *
 
 ## Add or edit models
 
-To add or edit models, you need to understand a bit more about the structure of the file. If contains two parts - firstly, the `models_to_run` which has the names of the models and the details on how to extract summary data, and then the `models_code` that contains the code to estimate them.
+To add or edit models, you need to understand a bit more about the structure of the file. It contains two parts - firstly, the `models_to_run` which has the names of the models and the details on how to extract summary data, and then the `models_code` that contains the code to estimate them.
 
 For `models_to_run`, you need to provide the following details for each model:
 

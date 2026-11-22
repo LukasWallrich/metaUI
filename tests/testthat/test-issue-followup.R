@@ -76,7 +76,7 @@ test_that("installed correlation example builds and matches its independent fit"
   file.copy(system.file("examples", "correlations", "build.R", package = "metaUI"), root)
   wd <- getwd(); on.exit(setwd(wd), add = TRUE); setwd(root)
   env <- new.env(parent = globalenv()); sys.source("build.R", env)
-  table <- fit(env$d)$table
+  table <- fit(env$d, get_model_tibble(one_effect_per_study = TRUE)[1, ])$table
   expect_equal(table$fit_es[1], as.numeric(env$reference$b), tolerance = 1e-8)
   expect_equal(table$es[1], tanh(as.numeric(env$reference$b)), tolerance = 1e-8)
   expect_equal(table$LCL[1], tanh(env$reference$ci.lb), tolerance = 1e-8)
