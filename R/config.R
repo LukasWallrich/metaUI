@@ -50,7 +50,7 @@ build_app <- function(config, overwrite = FALSE) {
     if (!is.character(config[[key]]) || length(config[[key]]) != 1L || !nzchar(config[[key]])) stop("Required scalar string: ", key)
   if (!is.null(config$eff_size_type_label) &&
       (!is.character(config$eff_size_type_label) || length(config$eff_size_type_label) != 1L ||
-       is.na(config$eff_size_type_label) || !nzchar(config$eff_size_type_label)))
+       is.na(config$eff_size_type_label) || !nzchar(trimws(config$eff_size_type_label))))
     stop("eff_size_type_label must be a nonempty scalar string.")
   if (!is.null(config$filter_popups) &&
       (!is.list(config$filter_popups) ||

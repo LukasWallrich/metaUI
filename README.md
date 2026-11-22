@@ -294,8 +294,12 @@ metaUI::generate_shiny(app_data, "My meta-analysis",
 Omit `save_to_folder` to use temporary source files. With JSON configurations,
 add `"static_folder": "my-site"` alongside the editable app's `"output"` folder.
 After editing the generated app files, re-export with
-`metaUI::export_static("my-app", "my-site", overwrite = TRUE)`; regenerating
-would overwrite your edits. Static export requires the suggested `shinylive` package.
+`metaUI::export_static("my-app", "my-site", overwrite = TRUE)`. Note that
+`export_static(..., overwrite = TRUE)` deletes and rewrites the entire static
+destination (including hand edits and unrelated files), while regenerating with
+`generate_shiny(..., overwrite = TRUE)` replaces generated app files such as
+`www/metaui.css` and `www/metaui.js`—keep hand edits in the editable app folder
+and re-export from there. Static export requires the suggested `shinylive` package.
 
 Host the site over HTTPS (for example, on GitHub Pages), or serve it from
 localhost to preview it. Opening `index.html` as a file does not work.

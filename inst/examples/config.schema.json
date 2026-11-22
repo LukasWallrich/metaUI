@@ -26,8 +26,12 @@
       "minLength": 1
     },
     "eff_size_type_label": {
-      "type": "string",
+      "type": [
+        "string",
+        "null"
+      ],
       "minLength": 1,
+      "pattern": "\\S",
       "description": "Optional display label for the effect size, such as \"Hedges' g\"."
     },
     "filter_popups": {

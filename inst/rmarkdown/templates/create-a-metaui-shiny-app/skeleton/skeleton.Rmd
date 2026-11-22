@@ -85,6 +85,7 @@ my_data <- prepare_data(my_data,
   es_type = "____",
   variance_scale = NULL, # "r" for COR, "z" for ZCOR, "log" for OR/RR; do not guess
   es_id = NULL, # optionally map genuine unique-within-study effect IDs
+  url = NULL, # optionally map study URLs or DOIs (required for fetch_study_metadata())
   direction = "unspecified" # explicitly choose positive/negative for directional models
 )
 
@@ -115,8 +116,9 @@ generate_shiny(my_data,
                citation = "____",
                contact = "____"
                # Optional: primary_model = "____", design = app_design(...),
-               # bayesian = list(enabled = TRUE), study_info = fetch_study_metadata(my_data),
-               # static_folder = "my-static-site" (experimental serverless export via shinylive)
+               # bayesian = list(enabled = TRUE),
+               # study_info = fetch_study_metadata(my_data), # requires url mapped in prepare_data()
+               # static_folder = "my-static-site" # experimental (needs shinylive); full dataset and app code go to every visitor, so publish only shareable material
                )
 ```
 

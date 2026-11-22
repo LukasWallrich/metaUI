@@ -360,11 +360,30 @@ test_that("generate_shiny validates dataset_name, save_to_folder, eff_size_type_
   on.exit(unlink(cfg_root, recursive = TRUE), add = TRUE)
   utils::write.csv(fixture(), file.path(cfg_root, "data.csv"), row.names = FALSE)
   cfg <- list(schema_version = 1, data = "data.csv", output = "app", dataset_name = "Null about",
+    eff_size_type_label = NULL,
     mapping = list(study_label = "study", es_field = "yi", variance = "vi", es_type = "SMD", es_id = "id"),
     about = list(citation = NULL))
   cfg_path <- file.path(cfg_root, "cfg.json")
   jsonlite::write_json(cfg, cfg_path, auto_unbox = TRUE, null = "null")
   expect_true(dir.exists(build_app(cfg_path)))
+
+  cfg_ws <- cfg
+  cfg_ws$output <- "app-ws"
+  cfg_ws$eff_size_type_label <- "   "
+  cfg_ws_path <- file.path(cfg_root, "cfg-ws.json")
+  jsonlite::write_json(cfg_ws, cfg_ws_path, auto_unbox = TRUE, null = "null")
+  expect_error(build_app(cfg_ws_path), "eff_size_type_label must be a nonempty scalar string")
+
+  # URL column distinctness and doi:https:// normalisation
+  raw_url <- data.frame(
+    study = LETTERS[1:4],
+    d = c(0.1, 0.2, 0.3, 0.4),
+    vi = rep(0.02, 4),
+    link = c("doi:https://doi.org/10.1000/a", "DOI: 10.1000/b", "https://example.org/c", NA)
+  )
+  expect_error(prepare_data(raw_url, "study", "d", variance = "vi", url = "study"), "Column mappings must be distinct")
+  prep_url <- prepare_data(raw_url, "study", "d", variance = "vi", url = "link")
+  expect_equal(prep_url$metaUI__url, c("https://doi.org/10.1000/a", "https://doi.org/10.1000/b", "https://example.org/c", NA))
 })
 
 test_that("Egger's test degrades cleanly when all studies have identical SE and numeric-only filters omit hollow-bar note", {

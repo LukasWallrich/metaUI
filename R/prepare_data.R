@@ -140,6 +140,7 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
     article_input <- data[[article_label]]
   }
   if (!is.na(url) && !url %in% names(data)) stop("Mapped URL column not found: ", url)
+  if (!is.na(url) && url %in% mappings) stop("Column mappings must be distinct; the URL column is also mapped elsewhere.")
   if (is.null(se)) {
     data$metaUI_input_se <- sqrt(data[[variance]])
     se <- "metaUI_input_se"
@@ -225,7 +226,8 @@ prepare_data <- function(data, study_label, es_field = NULL, se = NULL, pvalue =
       dplyr::mutate(metaUI__url = {
         raw <- as.character(.data$metaUI__url)
         u <- sub("^doi:\\s*", "", trimws(raw), ignore.case = TRUE)
-        ifelse(!is.na(u) & grepl("^10\\.", u), paste0("https://doi.org/", u), raw)
+        ifelse(!is.na(u) & grepl("^10\\.", u), paste0("https://doi.org/", u),
+          ifelse(!is.na(u) & grepl("^https?://", u, ignore.case = TRUE), u, raw))
       })
   }
   if (!is.na(article_label)) {

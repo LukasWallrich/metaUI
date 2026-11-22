@@ -159,7 +159,7 @@ If you want to host the app on a Shiny server, shinyapps.io is a good platform w
 rsconnect::deployApp(appDir = "my_app_folder")
 ```
 
-Alternatively, you can publish the app as a **static website** (experimental; no Shiny server needed — runs R in the reader's browser via `shinylive`/WebAssembly) using `static_folder` or `export_static()`:
+Alternatively, you can publish the app as a **static website** (experimental; no Shiny server needed — runs R in the reader's browser via `shinylive`/WebAssembly). Install the suggested `shinylive` package first (`install.packages("shinylive")`), then use `static_folder` or `export_static()`:
 
 ```{r eval = FALSE}
 # Generate editable app and static site in one step:
@@ -168,8 +168,10 @@ generate_shiny(app_data,
                save_to_folder = "my_app_folder",
                static_folder = "my_static_site")
 
-# Or re-export after editing files in my_app_folder:
+# Or re-export after editing files in my_app_folder
+# (overwrite = TRUE deletes and rewrites the entire static destination, including
+# hand edits and unrelated files — keep hand edits in my_app_folder):
 export_static("my_app_folder", "my_static_site", overwrite = TRUE)
 ```
 
-Host the static folder over HTTPS (for example, on GitHub Pages) or preview it from `localhost` (e.g., `httpuv::runStaticServer("my_static_site")`). Because the full dataset is sent to every visitor, publish only shareable data.
+Host the static folder over HTTPS (for example, on GitHub Pages) or preview it from `localhost` (e.g., `httpuv::runStaticServer("my_static_site")`). Because the full dataset and generated app code are sent to every visitor, publish only shareable material.
