@@ -183,10 +183,12 @@ Enable study-level Bayesian analysis with
 the heterogeneity prior is half-normal with scale 0.5 for SMD and log odds or risk ratios, or 0.25 for
 Fisher z, configurable with `tau_scale`. Central 95% credible intervals and posterior
 medians are reported, and the sensitivity tab compares half and double that prior
-scale. This uses aggregated studies and the declared within-study correlation.
-Authors who edit `aggregation_method` in the generated `labels_and_options.R` to
-`"first"` switch it to the first-effect rule; the build records the priors and the
-default aggregation.
+scale. This uses aggregated studies and the declared within-study correlation
+(unweighted study averages by default, configurable via
+`options = list(aggregation_method = ...)` using one of `"unweighted"`,
+`"gls"`, or `"first"` in `generate_shiny()` or `build_app()`, or by editing
+`aggregation_method` in `labels_and_options.R`); the build records the priors
+and the aggregation settings.
 The posterior is computed by numerical integration over the between-study SD on a
 2,000-point grid; given that SD, the mean is exactly normal, so its posterior is a
 normal mixture. This needs no extra package and takes well under a second, even

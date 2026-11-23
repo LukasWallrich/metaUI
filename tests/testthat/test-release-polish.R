@@ -149,7 +149,7 @@ test_that("metaUI_reproduction_code does not leave temporary .R files behind", {
       dataset_name = "Tempfile check",
       exported = "2026-11-22",
       correlation = 0.6,
-      aggregation = "aggregate",
+      aggregation = "unweighted",
       known_models = models$name,
       bound = NULL,
       selected_rows = nrow(d),

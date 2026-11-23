@@ -42,16 +42,27 @@ test_that("true per-effect nesting and RVE agree with independent R fits", {
   expect_equal(fit(d2)$table$fit_es, r$fit_es, tolerance = 1e-8)
 })
 
-test_that("GLS aggregation matches explicit covariance algebra", {
-  d <- prepared(); a <- metaUI:::metaUI_aggregate(d, .6)
+test_that("study-level aggregation matches explicit covariance algebra for BHHR and GLS", {
+  d <- prepared()
   idx <- which(d$metaUI__study_id == "B")
   vi <- d$metaUI__variance[idx]; y <- d$metaUI__effect_size[idx]
-  V <- diag(sqrt(vi)) %*% matrix(c(1,.6,.6,1),2) %*% diag(sqrt(vi))
+  V <- diag(sqrt(vi)) %*% matrix(c(1, .6, .6, 1), 2) %*% diag(sqrt(vi))
+
+  # Default unweighted BHHR average
+  u <- metaUI:::metaUI_aggregate(d, .6)
+  expect_equal(u$metaUI__effect_size[2], mean(y), tolerance = 1e-10)
+  expect_equal(u$metaUI__variance[2], sum(V) / (length(vi)^2), tolerance = 1e-10)
+  expect_true(all(is.na(u$metaUI__N)))
+
+  # Inverse-covariance GLS
+  a <- metaUI:::metaUI_aggregate(d, .6, method = "gls")
   inv <- solve(V)
-  expect_equal(a$metaUI__variance[2], 1/sum(inv), tolerance = 1e-10)
-  expect_equal(a$metaUI__effect_size[2], as.numeric(t(rep(1,2)) %*% inv %*% y / sum(inv)), tolerance = 1e-10)
+  expect_equal(a$metaUI__variance[2], 1 / sum(inv), tolerance = 1e-10)
+  expect_equal(a$metaUI__effect_size[2], as.numeric(t(rep(1, 2)) %*% inv %*% y / sum(inv)), tolerance = 1e-10)
   expect_true(all(is.na(a$metaUI__N)))
   expect_error(metaUI:::metaUI_aggregate(d, 1), "correlation")
+  expect_error(metaUI:::metaUI_aggregate(d, .6, method = "aggregate"), "Unknown aggregation method")
+  expect_error(metaUI:::metaUI_aggregate(d, .6, method = "unknown"), "Unknown aggregation method")
 })
 
 test_that("correlation scales are explicit and backtransform exactly once", {

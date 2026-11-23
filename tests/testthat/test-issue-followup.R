@@ -256,7 +256,7 @@ test_that("readers get precomputed default results that match a fresh fit", {
 
 test_that("forest rows combine a study's effects as the study-level models do and keep every effect", {
   d <- prepared()
-  fit <- metaUI:::metaUI_fit_models(d, get_model_tibble(), .6, "aggregate")
+  fit <- metaUI:::metaUI_fit_models(d, get_model_tibble(), .6, "unweighted")
   rows <- metaUI:::metaUI_forest_rows(d, fit$table)
   studies <- metaUI:::metaUI_forest_studies(fit$df_agg)
   expect_equal(studies$es, fit$df_agg$metaUI__effect_size)

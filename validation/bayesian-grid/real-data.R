@@ -1,5 +1,5 @@
 # Real datasets: Coles et al. (2019; 97 studies) and the Diversity app (646 studies), aggregated
-# as the app does (GLS within-study average, correlation .6). Usage (from the package root): Rscript validation/bayesian-grid/real-data.R <with_bayesmeta: 0|1>
+# with GLS within-study averages (correlation .6). Usage (from the package root): Rscript validation/bayesian-grid/real-data.R <with_bayesmeta: 0|1>
 args <- commandArgs(TRUE); with_bm <- identical(args[1], "1")
 here <- "validation/bayesian-grid"  # run from the package root
 suppressPackageStartupMessages(library(metaUI))
@@ -9,7 +9,7 @@ x$study <- paste0(substr(x$title, 1, 60), " (", x$year, ")")
 coles <- suppressMessages(prepare_data(x, "study", "yi", variance = "vi", es_id = "es_id", na.rm = "es_related"))
 # The Diversity dataset is not in this repository; set METAUI_DIVERSITY_RDS to a generated app's dataset.rds.
 div <- as.data.frame(readRDS(Sys.getenv("METAUI_DIVERSITY_RDS")))
-sets <- list(Coles = metaUI:::metaUI_aggregate(coles, .6), Diversity = metaUI:::metaUI_aggregate(div, .6))
+sets <- list(Coles = metaUI:::metaUI_aggregate(coles, .6, method = "gls"), Diversity = metaUI:::metaUI_aggregate(div, .6, method = "gls"))
 summ <- function(fit) c(mu_mean = fit$summary["mean", "mu"], mu_median = fit$qposterior(mu.p = .5),
   mu_q025 = fit$qposterior(mu.p = .025), mu_q05 = fit$qposterior(mu.p = .05), mu_q95 = fit$qposterior(mu.p = .95),
   mu_q975 = fit$qposterior(mu.p = .975), tau_mean = fit$summary["mean", "tau"], tau_median = fit$qposterior(tau.p = .5),

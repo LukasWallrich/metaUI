@@ -65,7 +65,8 @@ a character vector with all packages to display.}
 \item \code{intro} Optional HTML shown under the title: one or two sentences stating the question and, for readers new to the scale, what positive values mean.
 \item \code{fit_cache_entries} Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.
 \item \code{selection_list_threshold} Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
-\item \code{correlation_dependent} Numeric, at least 0 and below 1. The assumed correlation between the sampling errors of effects from the same study, used to average them into study-level effects, in the multilevel (CHE) model and for the RVE weights. Defaults to .6.
+\item \code{correlation_dependent} Numeric, at least 0 and below 1. The assumed correlation between the sampling errors of effects from the same study, used to compute the sampling variance of study-level averages, in the multilevel (CHE) model and for the RVE weights. Defaults to .6.
+\item \code{aggregation_method} Character. How multiple effects from the same study are combined for study-level models (bias analyses, the opt-in Bayesian model) and combined forest-plot rows: \code{"unweighted"} (default; unweighted study-level mean with correlated sampling variance, Borenstein et al., 2009, matching \code{metafor::aggregate.escalc(..., weighted = FALSE)}), \code{"gls"} (inverse-covariance GLS average, matching \code{metafor::aggregate.escalc(..., weighted = TRUE)}; assumes zero within-study heterogeneity and warns when negative weights arise), or \code{"first"} (first selected effect per study).
 }}
 
 \item{overwrite}{Explicit opt-in to replace generated files in a nonempty destination. Unrelated files are retained.}

@@ -69,7 +69,7 @@ test_that("RVE counts studies even though it is fitted to effects", {
 
 test_that("a saved fit does not answer when caching is off", {
   df <- data.frame(a = 1)
-  seed <- list(key = list(data = df, models = "m", correlation = .6, aggregation = "aggregate"), value = list(table = data.frame(es = 1)))
+  seed <- list(key = list(data = df, models = "m", correlation = .6, aggregation = "unweighted"), value = list(table = data.frame(es = 1)))
   on <- metaUI:::metaUI_fit_cache(3L, seed = seed)
   expect_true(on(df, "m")$cache_hit)
   off <- metaUI:::metaUI_fit_cache(0L, seed = seed)

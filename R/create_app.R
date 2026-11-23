@@ -184,7 +184,8 @@ create_about <- function(dataset_name, date = format(Sys.Date(), "%d %b %Y"), ci
 #'   - `intro` Optional HTML shown under the title: one or two sentences stating the question and, for readers new to the scale, what positive values mean.
 #'   - `fit_cache_entries` Integer 0 to 3. Recent exact selections per reader session; 0 disables caching. Defaults to 3 for default models and 0 for custom code.
 #'   - `selection_list_threshold` Numeric. From how many filter levels should a selection box be shown instead of check boxes? Defaults to 6.
-#'   - `correlation_dependent` Numeric, at least 0 and below 1. The assumed correlation between the sampling errors of effects from the same study, used to average them into study-level effects, in the multilevel (CHE) model and for the RVE weights. Defaults to .6.
+#'   - `correlation_dependent` Numeric, at least 0 and below 1. The assumed correlation between the sampling errors of effects from the same study, used to compute the sampling variance of study-level averages, in the multilevel (CHE) model and for the RVE weights. Defaults to .6.
+#'   - `aggregation_method` Character. How multiple effects from the same study are combined for study-level models (bias analyses, the opt-in Bayesian model) and combined forest-plot rows: `"unweighted"` (default; unweighted study-level mean with correlated sampling variance, Borenstein et al., 2009, matching `metafor::aggregate.escalc(..., weighted = FALSE)`), `"gls"` (inverse-covariance GLS average, matching `metafor::aggregate.escalc(..., weighted = TRUE)`; assumes zero within-study heterogeneity and warns when negative weights arise), or `"first"` (first selected effect per study).
 #' @inheritParams create_about
 #' @inheritDotParams create_about -dataset_name -meta
 #'
@@ -232,9 +233,10 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     launch_app <- FALSE
   }
 
-  defaults <- list(max_forest_plot_rows = 60, shiny_theme = "yeti", selection_list_threshold = 6)
+  defaults <- list(max_forest_plot_rows = 60, shiny_theme = "yeti", selection_list_threshold = 6,
+    aggregation_method = "unweighted")
   allowed_options <- c("max_forest_plot_rows", "shiny_theme", "selection_list_threshold",
-    "correlation_dependent", "fit_cache_entries", "intro")
+    "correlation_dependent", "aggregation_method", "fit_cache_entries", "intro")
   if (!is.list(options) || (length(options) && (is.null(names(options)) || anyNA(names(options)) ||
       any(!nzchar(names(options))) || anyDuplicated(names(options)))))
     stop("options must be a uniquely named list.", call. = FALSE)
@@ -244,6 +246,9 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
       ". Allowed: ", paste(allowed_options, collapse = ", "), ".", call. = FALSE)
   opts <- utils::modifyList(defaults, options)
   opts$design <- if (is.null(design)) NULL else validate_design(design)
+  if (!is.character(opts$aggregation_method) || length(opts$aggregation_method) != 1L ||
+      is.na(opts$aggregation_method) || !opts$aggregation_method %in% c("unweighted", "gls", "first"))
+    stop("options$aggregation_method must be one of \"unweighted\", \"gls\", or \"first\".", call. = FALSE)
   limit <- opts$max_forest_plot_rows
   if (!is.numeric(limit) || length(limit) != 1L || is.na(limit) ||
       !is.finite(limit) || limit < 1 || limit != floor(limit))
@@ -340,15 +345,49 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   if (report$retained_rows != nrow(dataset) || (!is.null(report$fingerprint) && !identical(report$fingerprint, metaUI_data_fingerprint(dataset))))
     stop("Validation report is stale: rows or values changed after prepare_data(). Re-run prepare_data() on the intended input.")
   correlation <- if (is.null(options$correlation_dependent)) .6 else options$correlation_dependent
-  metaUI_aggregate(dataset, correlation) # check the aggregation contract before writing
-  report$aggregation <- list(method = "GLS study-level average", correlation = correlation,
-    assumptions = "Distinct studies are independent; the multilevel model (CHE) sets the sampling covariance of effects within a study from their variances and the same within-study correlation (metafor::vcalc). Multilevel t tests use containment df. RVE uses correlated-effects weights with the same within-study correlation and the Tipton small-sample correction (small=TRUE). Neither N nor p is inferred by aggregation.")
+  aggregation <- opts$aggregation_method
+  aggregated <- metaUI_aggregate(dataset, correlation, aggregation) # check the aggregation contract before writing
+  agg_diag <- attr(aggregated, "metaUI_aggregation_diagnostics")
+  if (aggregation == "gls" && isTRUE(agg_diag$n_negative_weights > 0L)) {
+    min_w <- if (abs(agg_diag$min_weight) < 0.01) format(signif(agg_diag$min_weight, 2), scientific = FALSE, trim = TRUE)
+      else formatC(agg_diag$min_weight, format = "f", digits = 2)
+    warning("GLS study-level aggregation assigns negative weights to less-precise effects in ",
+      agg_diag$n_negative_weights, " of ", agg_diag$multi_effect_studies, " multi-effect ",
+      if (agg_diag$multi_effect_studies == 1L) "study" else "studies",
+      if (isTRUE(agg_diag$n_out_of_range > 0L)) paste0(" (", agg_diag$n_out_of_range,
+        if (agg_diag$n_out_of_range == 1L) " composite lies outside its study's observed effect range)"
+        else " composites lie outside their studies' observed effect ranges)") else "",
+      "; minimum weight = ", min_w,
+      ". Consider options = list(aggregation_method = \"unweighted\") unless effects within each study share a common true effect.",
+      call. = FALSE)
+  }
+  agg_label <- c(unweighted = "Unweighted study-level average (Borenstein et al., 2009)",
+    gls = "Inverse-covariance GLS study-level average",
+    first = "First selected effect per study")[[aggregation]]
+  agg_description <- c(
+    unweighted = "Study-level models use unweighted study means with correlated sampling variance (Borenstein et al., 2009; metafor::aggregate.escalc with weighted = FALSE).",
+    gls = "Study-level models use inverse-covariance GLS study averages (metafor::aggregate.escalc with weighted = TRUE), which assumes zero within-study heterogeneity.",
+    first = "Study-level models use the first selected effect per study."
+  )[[aggregation]]
+  report$aggregation <- list(method = aggregation, label = agg_label, correlation = correlation,
+    assumptions = paste(agg_description,
+      "Distinct studies are independent; the multilevel model (CHE) sets the sampling covariance of effects within a study from their variances and the same within-study correlation (metafor::vcalc). Multilevel t tests use containment df. RVE uses correlated-effects weights with the same within-study correlation and the Tipton small-sample correction (small=TRUE). Neither N nor p is inferred by aggregation."))
+  if (!is.null(agg_diag) && isTRUE(agg_diag$multi_effect_studies > 0L)) {
+    report$aggregation$diagnostics <- list(
+      multi_effect_studies = agg_diag$multi_effect_studies,
+      n_negative_weights = agg_diag$n_negative_weights,
+      negative_weight_studies = I(agg_diag$negative_weight_studies),
+      n_out_of_range = agg_diag$n_out_of_range,
+      out_of_range_studies = I(agg_diag$out_of_range_studies),
+      min_weight = agg_diag$min_weight
+    )
+  }
   if (!is.null(bayesian)) report$bayesian <- c(bayesian, list(
     model = "Two-level normal-normal on aggregated studies", mean_prior = "Improper uniform on fitting scale",
     computation = "Grid quadrature over tau (2,000 points, uniform in log(tau + tau0)); mu as the exact normal mixture over the grid. Within 1e-7 posterior SDs of adaptive numerical integration for mu and 2e-4 for tau quantiles (validation/bayesian-grid.md in the metaUI source repository, https://github.com/LukasWallrich/metaUI).",
     latency = paste0("No default study cap", if (!is.null(bayesian$max_studies)) paste0(" (author cap: ", bayesian$max_studies, " studies)"), ". About 0.1 s per fit natively and 0.3 s in webR at 646 studies."),
     tau_prior = "Half-normal on fitting scale", interval = "95% central credible interval; posterior median",
-    sensitivity = "Half and double tau_scale", aggregation = paste("GLS study-level average, within-study correlation", correlation),
+    sensitivity = "Half and double tau_scale", aggregation = if (aggregation == "first") agg_label else paste0(agg_label, ", within-study correlation ", correlation),
     rationale = "Default scale is unit-information SD / 4: 0.5 for SMD and for log odds and risk ratios, 0.25 for Fisher z. An author choice, examined with sensitivity analysis.",
     reference = "https://doi.org/10.1002/jrsm.1475"))
   report$performance <- list(fit_cache_entries = opts$fit_cache_entries,
@@ -358,7 +397,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
     file = basename(models), md5 = unname(tools::md5sum(models))) else list(type = "model_specifications")
   report$models <- lapply(seq_len(nrow(models_to_run)), function(i) {
     spec <- models_to_run[i, , drop = FALSE]
-    x <- if (spec$aggregated) metaUI_aggregate(dataset, correlation) else dataset
+    x <- if (spec$aggregated) aggregated else dataset
     reason <- metaUI_model_reason(spec, x)
     list(name = spec$name, aggregated = spec$aggregated, code = spec$code,
          status = if (is.null(reason)) "eligible_not_fitted" else "unsupported", reason = reason)
@@ -443,6 +482,7 @@ generate_shiny <- function(dataset, dataset_name, eff_size_type_label = NA,
   file.copy(system.file("COPYRIGHTS", package = "metaUI"), file.path(save_to_folder, "COPYRIGHTS"), overwrite = TRUE)
   # Could consider keeping all labels in this file - but then ui.R needs less readable glue::glue syntax
   writeLines(labels_and_options(dataset_name, correlation, primary_model, bayesian = !is.null(bayesian), scale = dataset$metaUI__es_type[1], custom_models = !package_models, random_default = random_default,
+    aggregation = aggregation,
     model_descriptions = { custom <- models_to_run[!models_to_run$name %in% opts$known_interval_models, , drop = FALSE]
       stats::setNames(if ("description" %in% names(custom)) as.character(custom$description) else rep(NA_character_, nrow(custom)), custom$name) },
     effects = nrow(dataset), studies = length(unique(dataset$metaUI__study_id)),

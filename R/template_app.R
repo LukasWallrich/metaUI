@@ -1,9 +1,10 @@
 # Wrap in function so that it can be saved more easily
 
-labels_and_options <- function(dataset_name, correlation = .6, primary_model = NULL, bayesian = FALSE, scale = "SMD", custom_models = FALSE, model_descriptions = character(), effects = NA, studies = NA, strip = "", citation = "", intro = "", random_default = FALSE) {
+labels_and_options <- function(dataset_name, correlation = .6, primary_model = NULL, bayesian = FALSE, scale = "SMD", custom_models = FALSE, model_descriptions = character(), effects = NA, studies = NA, strip = "", citation = "", intro = "", random_default = FALSE, aggregation = "unweighted") {
   glue::glue('
 
-      aggregation_method <- c("aggregate", "first")
+      # Study-level aggregation: "unweighted" (Borenstein et al., 2009), "gls", or "first"
+      aggregation_method <- {paste(deparse(aggregation), collapse = "")}
       correlation_dependent <- {correlation}
 
       ci_width <- "95%"
@@ -54,7 +55,11 @@ labels_and_options <- function(dataset_name, correlation = .6, primary_model = N
       diagnostics_loo <- HTML("<h3>How much does the average change without one study?</h3><p class=\'metaui-note\'>The average effect with each study left out in turn, largest change first.</p>")
       diagnostics_het <- HTML("<h3>Heterogeneity (REML {if (random_default) "random-effects" else "multilevel"} model)</h3>")
 
-      forest_note <- HTML("<p class=\'metaui-note\'>Effects: observed, with normal 95% sampling intervals and no shrinkage. Combined rows: the study-level effects used by the study-level models (see Methods); with correlated effects of unequal precision they can lie away from the simple average. Summaries: the primary model, where the authors chose one, with {if (random_default) "the random-effects model" else "multilevel and robust variance estimation (RVE)"}.<span class=\'metaui-forest-numbering\'> Effects keep their numbers from the full dataset, so a selection can leave gaps.</span>{if (scale == "ZCOR") " Correlations are shown as r; the plot data also include fitting-scale values." else if (scale %in% c("OR", "RR")) " Ratios are drawn on a log scale, around 1, so that each interval is symmetric around its estimate; the plot data also include the log values the models use." else ""}</p>")
+      forest_note <- HTML(paste0("<p class=\'metaui-note\'>Effects: observed, with normal 95% sampling intervals and no shrinkage. Combined rows: ",
+        if (aggregation_method[1] == "first") "the first selected effect from each study, as used by the study-level models (see Methods)."
+        else if (aggregation_method[1] == "gls") "the inverse-covariance GLS study-level averages used by the study-level models (see Methods); with correlated effects of unequal precision they can assign negative weights and lie outside a study&rsquo;s observed effects."
+        else "the unweighted study-level averages (Borenstein et al., 2009) used by the study-level models (see Methods).",
+        " Summaries: the primary model, where the authors chose one, with {if (random_default) "the random-effects model" else "multilevel and robust variance estimation (RVE)"}.<span class=\'metaui-forest-numbering\'> Effects keep their numbers from the full dataset, so a selection can leave gaps.</span>{if (scale == "ZCOR") " Correlations are shown as r; the plot data also include fitting-scale values." else if (scale %in% c("OR", "RR")) " Ratios are drawn on a log scale, around 1, so that each interval is symmetric around its estimate; the plot data also include the log values the models use." else ""}</p>"))
       zscore_help <- HTML("<p class=\'metaui-help-text\'>z = (effect \\u2212 mean of all effects in the full dataset) / their SD, on the fitting scale. This is a simple standardization, not a model-based outlier test; Outlier diagnostics gives the values used.</p>")
       # Result tabs show not_analysed until the first analysis has finished. A tab with
       # precomputed content (opening = TRUE) shows it from the first paint instead.
@@ -362,7 +367,7 @@ generate_ui <- function(data, dataset_name, about, filter_popups, opts = list())
             div(class = "metaui-forest-find", selectizeInput("forest_find", "Find a study", choices = NULL,
               options = list(placeholder = "Type part of a name", maxOptions = 50)),
               htmltools::tagAppendAttributes(uiOutput("forest_found"), `aria-live` = "polite")),
-            shiny::htmlOutput("foreststudies"), forest_note))),
+            shiny::htmlOutput("foreststudies"), forest_note, uiOutput("forest_aggregation_note")))),
           tabPanel(
             "Publication bias", results_panel(qrppb_main, uiOutput("bias_power_note"), funnel_main, uiOutput("funnel_key"), div(class = "metaui-plot", plotOutput("funnel", width = "100%", height = 400) %>% shinycssloaders::withSpinner()),
             eggers_main, uiOutput("eggers_reading"), div(class = "metaui-scroll", tableOutput("eggers")),
@@ -966,9 +971,13 @@ glue_string <- ('
           "Effect-level and study-level models therefore use the same data.") else
       paste0("Effects from the same study are assumed to correlate at ", correlation_dependent, ". ",
       if (aggregation_method[1] == "first") "Study-level models use only the first selected effect from each study; the multilevel model uses the correlation for the sampling errors, and RVE for its weights." else
-      "Study-level models use it to combine the effects within each study (GLS average), the multilevel model for the sampling errors, and RVE for its weights.",
+      if (aggregation_method[1] == "gls") "Study-level models use it to combine the effects within each study (inverse-covariance GLS average), the multilevel model for the sampling errors, and RVE for its weights." else
+      "Study-level models combine the effects within each study as an unweighted average (Borenstein et al., 2009) and use this correlation for its sampling variance. The multilevel model uses it for the sampling errors, and RVE for its weights.",
       " Effect-level models (by default multilevel and RVE) use every selected effect. Studies are assumed independent.")
-    tagList(tags$h4("Scale, direction and dependence"), tags$p(HTML(scale_text)), tags$p(direction_text), tags$p(dependence_text))
+    gls_note <- if (anyDuplicated(df_filtered()$metaUI__study_id) && aggregation_method[1] == "gls")
+      metaUI_gls_note(attr(df_agg(), "metaUI_aggregation_diagnostics")) else ""
+    tagList(tags$h4("Scale, direction and dependence"), tags$p(HTML(scale_text)), tags$p(direction_text), tags$p(dependence_text),
+      if (nzchar(gls_note)) tags$p(class = "metaui-note metaui-warning-text", gls_note))
   })
 
   # MODEL COMPARISON TABLE -------------------------------------------------------------------
@@ -1446,7 +1455,7 @@ glue_string <- ('
   observeEvent(df_filtered(), { forest_view$page <- 1L; forest_view$found <- NULL })
   # Study names are sent on demand, so long lists cost nothing until searched.
   observeEvent(forest_rows(), updateSelectizeInput(session, "forest_find", server = TRUE, selected = character(),
-    choices = sort(unique(as.character(forest_rows()$study[forest_rows()$kind == "Selected effect"])))))
+    choices = unique(as.character(forest_rows()$study[forest_rows()$kind == "Selected effect"]))))
   observeEvent(input$forest_find, {
     req(nzchar(input$forest_find))
     position <- match(input$forest_find, metaUI_forest_order(forest_rows(), forest_studies(), forest_view$sort))
@@ -1467,6 +1476,11 @@ glue_string <- ('
   forest_details <- reactive(metaUI_effect_details(df_filtered()))
   output$foreststudies <- renderText({
     metaUI_forest_html(forest_rows(), metaUI_eff_size_type_label, studies = forest_studies(), details = forest_details(), page = forest_view$page, sort = forest_view$sort, found = forest_view$found, ratio = ratio_scale)
+  })
+  output$forest_aggregation_note <- renderUI({
+    req(aggregation_method[1] == "gls")
+    note <- metaUI_gls_note(attr(df_agg(), "metaUI_aggregation_diagnostics"))
+    if (nzchar(note)) p(class = "metaui-note metaui-warning-text", note)
   })
   output$forest_pdf <- downloadHandler(filename = function() download_name("forest-plot.pdf"), content = function(file) {
     pages <- metaUI_forest_chunks(forest_rows(), forest_screen_order(), <<opts$max_forest_plot_rows>>)
@@ -1989,11 +2003,13 @@ glue_string <- ('
       bayesian_sensitivity = if (!is.null(bayesian_options) && nrow(df_filtered())) bayesian_sensitivity() else data.frame(status = "not enabled"),
       equivalence = if (nrow(df_filtered())) interval_assessment() else data.frame(assessment = "Not assessed", reason = "No eligible rows selected",
         bound = if (is.null(bound <- tryCatch(chosen_bound(), error = function(e) NULL))) NA_real_ else bound),
-      provenance = data.frame(field = c("uploaded", "file", "z_rule", "primary_model"),
+      provenance = data.frame(field = c("uploaded", "file", "z_rule", "primary_model", "aggregation_method", "correlation_dependent"),
         value = c(as.character(!is.null(upload_info)),
           if (is.null(upload_info)) "built dataset" else upload_info$file,
           if (is.null(upload_info)) "prepare_data descriptive standardisation" else upload_info$z_rule,
-          if (is.null(primary_model)) "none chosen" else primary_model))
+          if (is.null(primary_model)) "none chosen" else primary_model,
+          aggregation_method[1],
+          as.character(correlation_dependent)))
     )
   })
 

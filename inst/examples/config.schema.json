@@ -580,6 +580,12 @@
           "minimum": 0,
           "exclusiveMaximum": 1
         },
+        "aggregation_method": {
+          "type": "string",
+          "enum": ["unweighted", "gls", "first"],
+          "default": "unweighted",
+          "description": "How multiple effects per study are combined for study-level models and combined forest rows: unweighted (Borenstein et al., 2009, default), gls (inverse-covariance GLS), or first (first selected effect per study)."
+        },
         "max_forest_plot_rows": {
           "type": "integer",
           "minimum": 1
