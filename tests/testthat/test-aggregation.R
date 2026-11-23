@@ -92,11 +92,18 @@ test_that("GLS negative-weight diagnostics flag Coles Study 117 and Aksayli BHHR
   expect_equal(tf_aks$es, as.numeric(tf_ref$b), tolerance = 1e-10)
 
   # Leave-one-out shortcut rejects metaUI_trimfill() even when zero studies are imputed (k0 == 0).
-  sym <- prepare_data(data.frame(study = paste0("S", 1:6), yi = c(.1, .5, .2, .4, .3, .3), vi = c(.02, .02, .04, .04, .06, .06)),
-    "study", "yi", variance = "vi")
-  tf0 <- metaUI:::metaUI_trimfill(sym)
+  # Keep clear non-zero Egger slope and distinct distances from the centre so k0 == 0 is platform-stable.
+  no_impute <- prepare_data(
+    data.frame(
+      study = paste0("S", 1:6),
+      yi = c(-0.7, -0.35, 0.05, 0.18, 0.30, 0.45),
+      vi = c(0.04, 0.03, 0.01, 0.02, 0.05, 0.08)
+    ),
+    "study", "yi", variance = "vi"
+  )
+  tf0 <- metaUI:::metaUI_trimfill(no_impute)
   expect_equal(tf0$k0, 0)
-  loo0 <- metaUI:::metaUI_loo_blocks(tf0, sym, c(as.numeric(tf0$b), tf0$ci.lb, tf0$ci.ub))
+  loo0 <- metaUI:::metaUI_loo_blocks(tf0, no_impute, c(as.numeric(tf0$b), tf0$ci.lb, tf0$ci.ub))
   expect_false(is.null(loo0$reason))
 })
 
