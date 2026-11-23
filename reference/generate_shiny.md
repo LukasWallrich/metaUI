@@ -158,8 +158,20 @@ generate_shiny(
 
   - `correlation_dependent` Numeric, at least 0 and below 1. The assumed
     correlation between the sampling errors of effects from the same
-    study, used to average them into study-level effects, in the
-    multilevel (CHE) model and for the RVE weights. Defaults to .6.
+    study, used to compute the sampling variance of study-level
+    averages, in the multilevel (CHE) model and for the RVE weights.
+    Defaults to .6.
+
+  - `aggregation_method` Character. How multiple effects from the same
+    study are combined for study-level models (bias analyses, the opt-in
+    Bayesian model) and combined forest-plot rows: `"unweighted"`
+    (default; unweighted study-level mean with correlated sampling
+    variance, Borenstein et al., 2009, matching
+    `metafor::aggregate.escalc(..., weighted = FALSE)`), `"gls"`
+    (inverse-covariance GLS average, matching
+    `metafor::aggregate.escalc(..., weighted = TRUE)`; assumes zero
+    within-study heterogeneity and warns when negative weights arise),
+    or `"first"` (first selected effect per study).
 
 - overwrite:
 

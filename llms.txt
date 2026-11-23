@@ -266,16 +266,23 @@ and log odds or risk ratios, or 0.25 for Fisher z, configurable with
 `tau_scale`. Central 95% credible intervals and posterior medians are
 reported, and the sensitivity tab compares half and double that prior
 scale. This uses aggregated studies and the declared within-study
-correlation. Authors who edit `aggregation_method` in the generated
-`labels_and_options.R` to `"first"` switch it to the first-effect rule;
-the build records the priors and the default aggregation. The posterior
-is computed by numerical integration over the between-study SD on a
-2,000-point grid; given that SD, the mean is exactly normal, so its
-posterior is a normal mixture. This needs no extra package and takes
-well under a second, even for 646 studies in the browser (webR). Across
-412 simulated and two real datasets, its results were within 10⁻⁷
-posterior standard deviations of adaptive numerical integration for the
-mean and 2 × 10⁻⁴ for heterogeneity quantiles (see
+correlation (unweighted study averages by default, matching Borenstein
+et al., 2009). Configure `options = list(aggregation_method = ...)` with
+one of `"unweighted"`, `"gls"`, or `"first"` in
+[`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
+or
+[`build_app()`](https://lukaswallrich.github.io/metaUI/reference/build_app.md)
+— this setting applies to all study-level models (bias analyses and the
+opt-in Bayesian model) as well as combined forest-plot rows, and the
+build records both the priors and the aggregation settings (and GLS
+diagnostics) in `validation.json`. The posterior is computed by
+numerical integration over the between-study SD on a 2,000-point grid;
+given that SD, the mean is exactly normal, so its posterior is a normal
+mixture. This needs no extra package and takes well under a second, even
+for 646 studies in the browser (webR). Across 412 simulated and two real
+datasets, its results were within 10⁻⁷ posterior standard deviations of
+adaptive numerical integration for the mean and 2 × 10⁻⁴ for
+heterogeneity quantiles (see
 [validation/bayesian-grid.md](https://github.com/LukasWallrich/metaUI/blob/main/validation/bayesian-grid.md)).
 There is no study limit by default; authors can set one with
 `max_studies` (an integer of at least 2). See [Röver et

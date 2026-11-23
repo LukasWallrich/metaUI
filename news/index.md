@@ -37,6 +37,16 @@ unreleased 0.1.2 development versions.
   longer depends on `forcats`, `psych`, or `bayesmeta`. Filter help uses
   accessible inline disclosures, and categorical breakdowns use inline
   count bars.
+- Study-level aggregation for bias models, the opt-in Bayesian model,
+  and combined forest-plot rows now defaults to unweighted study
+  averages with correlated sampling variances (Borenstein et al., 2009;
+  `metafor::aggregate.escalc(..., weighted = FALSE)`) instead of
+  inverse-covariance GLS. Choose `"unweighted"` (default), `"gls"`, or
+  `"first"` via `options = list(aggregation_method = ...)` in
+  [`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
+  or
+  [`build_app()`](https://lukaswallrich.github.io/metaUI/reference/build_app.md).
+  The legacy `"aggregate"` method name has been removed.
 - The Barroso et al. (2021) CSV (`inst/extdata/barroso2021.csv`), whose
   redistribution terms could not be verified, has been replaced with a
   stub pointing to the bundled licensed examples (`coles2019.csv` and
@@ -149,7 +159,8 @@ unreleased 0.1.2 development versions.
   [`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
   gains `options` (`intro`, `shiny_theme`, `max_forest_plot_rows`,
   `selection_list_threshold`, `correlation_dependent`,
-  `fit_cache_entries`) and validates them up front.
+  `aggregation_method`, `fit_cache_entries`) and validates them up
+  front.
   [`prepare_data()`](https://lukaswallrich.github.io/metaUI/reference/prepare_data.md)
   gains `arrange_filters`, `categorical_filters`, `es_id`, `counts`,
   `double_zero`, and HTML entity decoding (`&amp;`, `&#8211;`, etc.).
@@ -158,14 +169,27 @@ unreleased 0.1.2 development versions.
 
 ### Statistical improvements
 
+- **Unweighted study-level aggregation and GLS diagnostics:** Bias
+  models, the opt-in Bayesian model, and combined forest-plot rows
+  default to unweighted study averages with correlated sampling
+  variances (`options$aggregation_method = "unweighted"`, matching
+  `metafor::aggregate.escalc(..., weighted = FALSE)`), avoiding negative
+  weights and attenuation bias under within-study heterogeneity. Authors
+  opting into `options$aggregation_method = "gls"` receive build-time
+  warnings, `validation.json` diagnostics, and reader notes in Methods
+  and the Forest plot whenever negative GLS weights occur. Numeric study
+  IDs now sort numerically in the Forest plot and study search.
+  Univariate ML/REML helpers retry once with damped Fisher scoring on
+  convergence failure, and leave-one-out shortcuts reject trim-and-fill
+  fits even when zero studies are imputed.
 - **Correlated and hierarchical effects (CHE) default multilevel
   model:** The default multilevel model correlates sampling errors
   within studies at `options$correlation_dependent` (default 0.6) via
   [`metafor::vcalc()`](https://wviechtb.github.io/metafor/reference/vcalc.html),
-  matching study-level GLS averages and RVE. Multilevel *t* tests use
-  containment degrees of freedom (`dfs = "contain"`), and RVE uses
-  Tipton’s (2015) small-sample correction (`small = TRUE`, flagging df
-  \< 4).
+  matching the within-study correlation used for study-level aggregation
+  and RVE. Multilevel *t* tests use containment degrees of freedom
+  (`dfs = "contain"`), and RVE uses Tipton’s (2015) small-sample
+  correction (`small = TRUE`, flagging df \< 4).
 - **One effect per study default:** When every study has a single
   effect,
   [`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)

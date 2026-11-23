@@ -148,9 +148,13 @@ return the declared fitting scale. <code>NA</code> intervals are allowed
 only when explicitly specified; failed fits are reported.</p>
 <p>The default multilevel and RVE specifications call helpers in the
 generated <code>analysis.R</code>. Study-level aggregation also happens
-there through <code>metaUI_aggregate</code>; <code>df_agg</code> is
-exposed by the server but does not infer N or p-values. Editing those
-helpers requires restarting the app.
+there through <code>metaUI_aggregate</code> (unweighted averages by
+default, configurable with
+<code>options = list(aggregation_method = ...)</code> using one of
+<code>"unweighted"</code>, <code>"gls"</code>, or <code>"first"</code>
+in <code><a href="../reference/generate_shiny.html">generate_shiny()</a></code> or <code><a href="../reference/build_app.html">build_app()</a></code>);
+<code>df_agg</code> is exposed by the server but does not infer N or
+p-values. Editing those helpers requires restarting the app.
 <code>generate_shiny(overwrite=TRUE)</code> replaces all generated
 files, including <code>analysis.R</code>; build into a fresh folder and
 compare changes to preserve hand edits. It never clears unrelated files

@@ -77,11 +77,17 @@ specified; failed fits are reported.
 
 The default multilevel and RVE specifications call helpers in the
 generated `analysis.R`. Study-level aggregation also happens there
-through `metaUI_aggregate`; `df_agg` is exposed by the server but does
-not infer N or p-values. Editing those helpers requires restarting the
-app. `generate_shiny(overwrite=TRUE)` replaces all generated files,
-including `analysis.R`; build into a fresh folder and compare changes to
-preserve hand edits. It never clears unrelated files from the folder.
+through `metaUI_aggregate` (unweighted averages by default, configurable
+with `options = list(aggregation_method = ...)` using one of
+`"unweighted"`, `"gls"`, or `"first"` in
+[`generate_shiny()`](https://lukaswallrich.github.io/metaUI/reference/generate_shiny.md)
+or
+[`build_app()`](https://lukaswallrich.github.io/metaUI/reference/build_app.md));
+`df_agg` is exposed by the server but does not infer N or p-values.
+Editing those helpers requires restarting the app.
+`generate_shiny(overwrite=TRUE)` replaces all generated files, including
+`analysis.R`; build into a fresh folder and compare changes to preserve
+hand edits. It never clears unrelated files from the folder.
 
 ## A worked example: a correlated and hierarchical effects model
 
