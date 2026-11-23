@@ -71,12 +71,24 @@ test_that("GLS negative-weight diagnostics flag Coles Study 117 and Aksayli BHHR
   expect_equal(u8$metaUI__effect_size[as.character(u8$metaUI__study_id) == "117"], 0.7343598, tolerance = 1e-5)
   expect_equal(g8$metaUI__effect_size[as.character(g8$metaUI__study_id) == "117"], -1.323668, tolerance = 1e-5)
 
-  # Aksayli 2019 under default BHHR: trim-and-fill converges cleanly via damped Fisher scoring fallback.
+  # Aksayli 2019 under default BHHR: default ML Fisher scoring fails to converge,
+  # while metaUI_univariate() and metaUI_trimfill() recover cleanly via the damped retry.
   aksayli <- utils::read.csv(system.file("extdata", "aksayli2019.csv", package = "metaUI"))
   d_aks <- suppressMessages(prepare_data(aksayli, "study_id", "yi", variance = "vi", es_id = "es_id", direction = "positive"))
+  agg_aks <- metaUI:::metaUI_aggregate(d_aks, correlation = 0.6, method = "unweighted")
+  expect_error(
+    metafor::rma.uni(yi = agg_aks$metaUI__effect_size, sei = agg_aks$metaUI__se, method = "ML", test = "knha"),
+    "did not converge"
+  )
+  uni_aks <- metaUI:::metaUI_univariate(agg_aks$metaUI__effect_size, agg_aks$metaUI__se, method = "ML")
+  ref_aks <- metafor::rma.uni(yi = agg_aks$metaUI__effect_size, sei = agg_aks$metaUI__se, method = "ML", test = "knha",
+    control = list(stepadj = .5, maxiter = 1000))
+  expect_equal(as.numeric(uni_aks$b), as.numeric(ref_aks$b), tolerance = 1e-10)
+  expect_equal(uni_aks$tau2, ref_aks$tau2, tolerance = 1e-10)
   tf_aks <- metaUI:::metaUI_fit_models(d_aks, get_model_tibble()[3, ], correlation = 0.6, aggregation = "unweighted")$table
+  tf_ref <- metaUI:::metaUI_trimfill(agg_aks, control = list(stepadj = .5, maxiter = 1000))
   expect_identical(tf_aks$status, "ok")
-  expect_equal(tf_aks$es, 0.261, tolerance = 1e-2)
+  expect_equal(tf_aks$es, as.numeric(tf_ref$b), tolerance = 1e-10)
 
   # Leave-one-out shortcut rejects metaUI_trimfill() even when zero studies are imputed (k0 == 0).
   sym <- prepare_data(data.frame(study = paste0("S", 1:6), yi = c(.1, .5, .2, .4, .3, .3), vi = c(.02, .02, .04, .04, .06, .06)),
