@@ -88,6 +88,7 @@ test_that("GLS negative-weight diagnostics flag Coles Study 117 and Aksayli BHHR
   tf_aks <- metaUI:::metaUI_fit_models(d_aks, get_model_tibble()[3, ], correlation = 0.6, aggregation = "unweighted")$table
   tf_ref <- metaUI:::metaUI_trimfill(agg_aks, control = list(stepadj = .5, maxiter = 1000))
   expect_identical(tf_aks$status, "ok")
+  expect_equal(tf_aks$es, 0.261, tolerance = 1e-2)
   expect_equal(tf_aks$es, as.numeric(tf_ref$b), tolerance = 1e-10)
 
   # Leave-one-out shortcut rejects metaUI_trimfill() even when zero studies are imputed (k0 == 0).
