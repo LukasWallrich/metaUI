@@ -33,7 +33,7 @@ The released benchmark compilation carries CC0, but article attribution is retai
 The source authors already composite measures/follow-ups and select arms before
 pooling. Each row here is their mental-health composite for a different study;
 we neither combine other outcomes nor reconstruct unreported covariances.
-Independence across those studies follows the source pooling contract. GLS
+Independence across those studies follows the source pooling contract. Study-level
 aggregation has no effect on singleton studies, whatever its correlation setting.
 
 The **last row**, source-reference REML/Hartung–Knapp, uses the metafor-based

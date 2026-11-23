@@ -55,7 +55,10 @@ For `models_code`, you need to provide code, again in "", that estimates the mod
 If your model code is complicated, it might be worthwhile to create helper functions to call from within the `models_code` entry. Add them above the final `models_to_run` expression in `models.R`, e.g., `my_meta_fun <- function(...)`. The app sources model code in its own environment. Declare and install any extra dependencies yourself; the default manifest does not infer them. Custom models must return the declared fitting scale. `NA` intervals are allowed only when explicitly specified; failed fits are reported.
 
 The default multilevel and RVE specifications call helpers in the generated
-`analysis.R`. Study-level aggregation also happens there through `metaUI_aggregate`;
+`analysis.R`. Study-level aggregation also happens there through `metaUI_aggregate`
+(unweighted averages by default, configurable with
+`options = list(aggregation_method = ...)` using one of `"unweighted"`, `"gls"`,
+or `"first"` in `generate_shiny()` or `build_app()`);
 `df_agg` is exposed by the server but does not infer N or p-values. Editing those
 helpers requires restarting the app. `generate_shiny(overwrite=TRUE)` replaces
 all generated files, including `analysis.R`; build into a fresh folder and compare

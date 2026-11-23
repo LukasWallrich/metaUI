@@ -237,7 +237,8 @@ metaUI_reproduction_code <- function(format = c("R", "qmd"), applied, filters, s
     "selection")
 
   aggregation_text <- if (settings$aggregation == "first") "Study-level models use the first selected effect from each study." else
-    paste0("Study-level models combine the effects within each study by a GLS average that assumes a correlation of ", settings$correlation, " between them.")
+    if (settings$aggregation == "gls") paste0("Study-level models combine the effects within each study by an inverse-covariance GLS average that assumes a correlation of ", settings$correlation, " between them.") else
+    paste0("Study-level models combine the effects within each study as an unweighted average (Borenstein et al., 2009) whose sampling variance assumes a correlation of ", settings$correlation, " between them.")
   fit_section <- section("Fit the models",
     c(paste(aggregation_text, "Effect-level models use every selected effect.",
       if (scale == "r") "Correlations are fitted as Fisher z; `es`, `LCL` and `UCL` are back-transformed to r, and `fit_*` columns keep the fitting scale." else

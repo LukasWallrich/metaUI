@@ -26,9 +26,12 @@ metaUI_default_code <- c(
 
 
 # ML/REML with unmodified Hartung-Knapp intervals (no ad hoc correction).
+# Retries once with damped Fisher scoring if default control fails to converge.
 metaUI_univariate <- function(y, se, method = "ML", control = list()) {
-  fit <- metafor::rma.uni(yi = y, sei = se, method = method,
-    test = if (sum(!is.na(y) & !is.na(se)) == 1L) "z" else "knha", control = control)
+  test <- if (sum(!is.na(y) & !is.na(se)) == 1L) "z" else "knha"
+  fit <- tryCatch(metafor::rma.uni(yi = y, sei = se, method = method, test = test, control = control),
+    error = function(e) if (!length(control) && grepl("did not converge", conditionMessage(e), fixed = TRUE))
+      metafor::rma.uni(yi = y, sei = se, method = method, test = test, control = list(stepadj = .5, maxiter = 1000)) else stop(e))
   if (fit$k == 1L) fit$tau2 <- NA_real_
   fit
 }
@@ -595,7 +598,7 @@ metaUI_effect_details <- function(df) {
 metaUI_forest_sorted <- function(groups, starts, effects, studies, sort) {
   if (!sort %in% c("estimate", "estimate_low")) return(seq_along(starts))
   estimate <- ifelse(groups$lengths > 1L, studies$es[match(groups$values, studies$study)], effects$es[starts])
-  order(if (sort == "estimate") -estimate else estimate, groups$values)
+  order(if (sort == "estimate") -estimate else estimate, seq_along(starts))
 }
 # The studies in the order the forest plot pages through them.
 metaUI_forest_order <- function(rows, studies = NULL, sort = "name") {
@@ -1041,7 +1044,7 @@ metaUI_fit_cache <- function(max_entries = 3L, limit = 3L, seed = NULL) {
     stop("fit_cache_entries must be an integer from 0 to ", limit, ".")
   # Zero means every analysis runs afresh, so a saved fit must not answer either.
   entries <- if (is.null(seed) || max_entries == 0L) list() else list(seed)
-  cached <- function(df, models, correlation = .6, aggregation = "aggregate") {
+  cached <- function(df, models, correlation = .6, aggregation = "unweighted") {
     started <- proc.time()[["elapsed"]]
     key <- list(data = df, models = models, correlation = correlation, aggregation = aggregation)
     match <- which(vapply(entries, function(x) identical(x$key, key), logical(1)))
@@ -1126,27 +1129,87 @@ metaUI_heterogeneity <- function(mod, df) {
     components = if (single) "Between studies only (one effect per study)" else if (identified) "Study and within-study effects" else if (anyDuplicated(df$metaUI__study_id)) "Split not identified: only one study" else "Split not identified: one effect per study")
 }
 
-metaUI_aggregate <- function(df, correlation = .6, method = "aggregate") {
+# Study-level aggregation for study-level models and combined forest rows.
+# "unweighted" (default): unweighted mean with correlated sampling variance
+# (Borenstein et al., 2009), matching metafor::aggregate.escalc(..., struct = "CS", weighted = FALSE).
+# "gls": inverse-covariance GLS average, matching
+# metafor::aggregate.escalc(..., struct = "CS", weighted = TRUE). Assumes zero within-study
+# true-effect heterogeneity; records negative-weight and out-of-range diagnostics as an attribute.
+# "first": first selected effect from each study.
+metaUI_aggregate <- function(df, correlation = .6, method = "unweighted") {
   if (!is.numeric(correlation) || length(correlation) != 1L || !is.finite(correlation) ||
       correlation < 0 || correlation >= 1) stop("Aggregation correlation must be in [0, 1).")
-  if (!method %in% c("aggregate", "first")) stop("Unknown aggregation method.")
+  if (!is.character(method) || length(method) != 1L || is.na(method) ||
+      !method %in% c("unweighted", "gls", "first"))
+    stop("Unknown aggregation method. Use \"unweighted\", \"gls\", or \"first\".")
   groups <- split(seq_len(nrow(df)), as.character(df$metaUI__study_id))
-  dplyr::bind_rows(lapply(groups, function(idx) {
+  items <- lapply(names(groups), function(study) {
+    idx <- groups[[study]]
     x <- df[idx, , drop = FALSE]
-    out <- x[1, , drop = FALSE]
-    if (method == "aggregate") {
+    row <- x[1, , drop = FALSE]
+    info <- NULL
+    if (method == "unweighted") {
       vi <- x$metaUI__variance
       covariance <- tcrossprod(sqrt(vi)) * (correlation + diag(1 - correlation, length(vi)))
-      inverse <- chol2inv(chol(covariance))
-      out$metaUI__variance <- 1 / sum(inverse)
-      out$metaUI__effect_size <- sum(inverse %*% x$metaUI__effect_size) / sum(inverse)
-      out$metaUI__se <- sqrt(out$metaUI__variance)
+      row$metaUI__effect_size <- mean(x$metaUI__effect_size)
+      row$metaUI__variance <- sum(covariance) / (length(vi)^2)
+      row$metaUI__se <- sqrt(row$metaUI__variance)
       # Neither a p-value nor a total sample size can be inferred from effect aggregation.
-      out$metaUI__pvalue <- NA_real_
-      out$metaUI__N <- NA_real_
+      row$metaUI__pvalue <- NA_real_
+      row$metaUI__N <- NA_real_
+    } else if (method == "gls") {
+      vi <- x$metaUI__variance
+      yi <- x$metaUI__effect_size
+      covariance <- tcrossprod(sqrt(vi)) * (correlation + diag(1 - correlation, length(vi)))
+      inverse <- chol2inv(chol(covariance))
+      denom <- sum(inverse)
+      row$metaUI__variance <- 1 / denom
+      row$metaUI__effect_size <- sum(inverse %*% yi) / denom
+      row$metaUI__se <- sqrt(row$metaUI__variance)
+      row$metaUI__pvalue <- NA_real_
+      row$metaUI__N <- NA_real_
+      if (length(vi) > 1L) {
+        weights <- rowSums(inverse) / denom
+        info <- list(
+          study = study,
+          neg = any(weights < -1e-12),
+          min_weight = min(weights),
+          oor = row$metaUI__effect_size < min(yi) - 1e-12 || row$metaUI__effect_size > max(yi) + 1e-12
+        )
+      }
     }
-    out
-  }))
+    list(row = row, info = info)
+  })
+  out <- dplyr::bind_rows(lapply(items, `[[`, "row"))
+  if (method == "gls") {
+    infos <- Filter(Negate(is.null), lapply(items, `[[`, "info"))
+    neg_infos <- Filter(function(z) isTRUE(z$neg), infos)
+    oor_infos <- Filter(function(z) isTRUE(z$oor), infos)
+    attr(out, "metaUI_aggregation_diagnostics") <- list(
+      method = "gls",
+      correlation = correlation,
+      multi_effect_studies = length(infos),
+      n_negative_weights = length(neg_infos),
+      negative_weight_studies = vapply(neg_infos, `[[`, character(1), "study"),
+      n_out_of_range = length(oor_infos),
+      out_of_range_studies = vapply(oor_infos, `[[`, character(1), "study"),
+      min_weight = if (length(neg_infos)) min(vapply(neg_infos, `[[`, numeric(1), "min_weight")) else NA_real_
+    )
+  }
+  out
+}
+
+metaUI_gls_note <- function(diag) {
+  if (is.null(diag) || !isTRUE(diag$n_negative_weights > 0L)) return("")
+  min_w <- if (abs(diag$min_weight) < 0.01) format(signif(diag$min_weight, 2), scientific = FALSE, trim = TRUE)
+    else formatC(diag$min_weight, format = "f", digits = 2)
+  paste0("In this selection, GLS aggregation assigns negative weights to less-precise effects in ",
+    diag$n_negative_weights, " of ", diag$multi_effect_studies,
+    if (diag$multi_effect_studies == 1L) " multi-effect study" else " multi-effect studies",
+    if (isTRUE(diag$n_out_of_range > 0L)) paste0(" (", diag$n_out_of_range,
+      if (diag$n_out_of_range == 1L) " combined estimate lies outside its study\u2019s observed effects)"
+      else " combined estimates lie outside their studies\u2019 observed effects)") else "",
+    ", with minimum weight ", metaUI_minus(min_w), ".")
 }
 
 # Identify default estimators by their complete code, so renaming a model keeps its
@@ -1180,7 +1243,7 @@ metaUI_model_reason <- function(spec, df) {
   NULL
 }
 
-metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "aggregate") {
+metaUI_fit_models <- function(df, models, correlation = .6, aggregation = "unweighted") {
   metaUI_validate_prepared(df)
   if (!nrow(df)) stop("No eligible rows remain after filtering.")
   df_agg <- metaUI_aggregate(df, correlation, aggregation)
@@ -1620,7 +1683,10 @@ metaUI_forest_studies <- function(aggregated) {
 }
 
 metaUI_forest_rows <- function(df, estimates, models = NULL, primary = NULL) {
-  df <- df[order(as.character(df$metaUI__study_id), suppressWarnings(as.numeric(as.character(df$metaUI__effect_id))), as.character(df$metaUI__effect_id)), , drop = FALSE]
+  study_chr <- as.character(df$metaUI__study_id)
+  study_num <- suppressWarnings(as.numeric(study_chr))
+  study_num[!is.finite(study_num)] <- NA_real_
+  df <- df[order(study_num, study_chr, suppressWarnings(as.numeric(as.character(df$metaUI__effect_id))), as.character(df$metaUI__effect_id)), , drop = FALSE]
   label <- if ("metaUI__es_label" %in% names(df)) df$metaUI__es_label else df$metaUI__effect_id
   rows <- data.frame(label = paste(df$metaUI__study_id, label, sep = ": "),
     kind = "Selected effect", study = as.character(df$metaUI__study_id),
@@ -1768,7 +1834,7 @@ metaUI_interval_assessment <- function(estimates, bound = NULL, scale = "SMD", k
 # are kept only when they reproduce the fitted estimate and the reported interval; otherwise the reason.
 metaUI_loo_blocks <- function(fit, x, reported) {
   unsupported <- function(reason) list(reason = reason)
-  if (!inherits(fit, c("rma.uni", "rma.mv")) || inherits(fit, c("robust.rma", "rma.uni.trimfill", "rma.uni.selmodel")) || !is.null(fit$weights))
+  if (!inherits(fit, c("rma.uni", "rma.mv")) || inherits(fit, c("robust.rma", "rma.uni.trimfill", "rma.uni.selmodel")) || !is.null(fit$k0) || !is.null(fit$weights))
     return(unsupported("not a metafor rma.uni or rma.mv model with model-based weights and intervals"))
   if (NCOL(fit$X) != 1L || any(fit$X != 1)) return(unsupported("the model has moderators"))
   full <- as.numeric(fit$yi.f)
@@ -1853,7 +1919,7 @@ metaUI_loo_estimates <- function(loo, leave = TRUE, groups = NULL) {
 # limits the refits to these units (all by default); they stop once `budget` seconds have passed, so
 # the result may cover only the first units. `progress` is called after each refit with the number
 # done and the number asked for.
-metaUI_loo_refit <- function(df, spec, correlation = .6, aggregation = "aggregate", studies = NULL, budget = Inf, progress = NULL, groups = NULL) {
+metaUI_loo_refit <- function(df, spec, correlation = .6, aggregation = "unweighted", studies = NULL, budget = Inf, progress = NULL, groups = NULL) {
   ids <- as.character(df$metaUI__study_id)
   units <- metaUI_loo_unit_of(ids, groups)
   if (is.null(studies)) studies <- unique(units)
